@@ -1,18 +1,11 @@
-#[cfg(feature = "dev")]
 use aes::Aes128;
-#[cfg(feature = "dev")]
 use aes::cipher::{BlockDecryptMut, KeyIvInit, KeyInit};
-#[cfg(feature = "dev")]
 use block_padding::Pkcs7;
-#[cfg(feature = "dev")]
 use md5;
 
-#[cfg(feature = "dev")]
 type Aes128Cbc = cbc::Decryptor<Aes128>;
-#[cfg(feature = "dev")]
 type Aes128Ecb = ecb::Decryptor<Aes128>;
 
-#[cfg(feature = "dev")]
 pub fn get_md5_key(text: &str) -> [u8; 16] {
     let digest = md5::compute(text.as_bytes());
     let mut key = [0u8; 16];
@@ -21,7 +14,6 @@ pub fn get_md5_key(text: &str) -> [u8; 16] {
     key
 }
 
-#[cfg(feature = "dev")]
 fn decrypt_cbc_with_key(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Result<Vec<u8>, String> {
     let decryptor = Aes128Cbc::new(key.into(), iv.into());
     let mut buffer = data.to_vec();
@@ -33,7 +25,6 @@ fn decrypt_cbc_with_key(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Result<Ve
     Ok(buffer)
 }
 
-#[cfg(feature = "dev")]
 pub fn decrypt_ecb_with_key(data: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, String> {
     let decryptor = Aes128Ecb::new(key.into());
     let mut buffer = data.to_vec();
@@ -45,7 +36,6 @@ pub fn decrypt_ecb_with_key(data: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, Stri
     Ok(buffer)
 }
 
-#[cfg(feature = "dev")]
 fn is_content_valid(data: &[u8], filename: &str) -> bool {
     let lower_name = filename.to_lowercase();
     
@@ -67,7 +57,6 @@ fn is_content_valid(data: &[u8], filename: &str) -> bool {
     true
 }
 
-#[cfg(feature = "dev")]
 pub fn decrypt_pack_chunk(data: &[u8], internal_filename: &str) -> Result<(Vec<u8>, String), String> {
     let keys = [
         ("", "", "JP"),

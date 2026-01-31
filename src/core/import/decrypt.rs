@@ -1,25 +1,14 @@
-#[cfg(feature = "dev")]
 use std::fs;
-#[cfg(feature = "dev")]
 use std::path::{Path, PathBuf};
-#[cfg(feature = "dev")]
 use std::sync::mpsc::Sender;
-#[cfg(feature = "dev")]
 use std::sync::atomic::{AtomicI32, Ordering};
-#[cfg(feature = "dev")]
 use std::sync::Arc;
-#[cfg(feature = "dev")]
 use std::io::{Read, Seek, SeekFrom};
-#[cfg(feature = "dev")]
 use rayon::prelude::*;
-#[cfg(feature = "dev")]
 use zip::ZipArchive;
-#[cfg(feature = "dev")]
-use crate::dev::keys; 
-#[cfg(feature = "dev")]
+use crate::core::import::keys; 
 use crate::core::patterns; 
 
-#[cfg(feature = "dev")]
 pub fn run(folder_path: &str, region_code: &str, tx: Sender<String>) -> Result<(), String> {
     let source_dir = Path::new(folder_path);
     let raw_dir = Path::new("game/raw");
@@ -32,12 +21,12 @@ pub fn run(folder_path: &str, region_code: &str, tx: Sender<String>) -> Result<(
     let _ = tx.send("Indexing existing files...".to_string());
     let shared_index = Arc::new(build_index(game_dir));
 
-    let _ = tx.send(format!("Scanning {} version...", region_code));
+    let _ = tx.send(format!("Scanning for {} files...", region_code));
     
     let mut tasks = Vec::new();
     find_game_files(source_dir, &mut tasks).map_err(|e| e.to_string())?;
 
-    let _ = tx.send(format!("Found {} tasks. Starting...", tasks.len()));
+    let _ = tx.send(format!("Found {} decryptable files. Starting...", tasks.len()));
 
     let count = AtomicI32::new(0);
     let region_ref = region_code.to_string(); 
@@ -51,7 +40,6 @@ pub fn run(folder_path: &str, region_code: &str, tx: Sender<String>) -> Result<(
     Ok(())
 }
 
-#[cfg(feature = "dev")]
 fn process_task(
     file_path: &Path, 
     output_dir: &Path, 
@@ -78,7 +66,6 @@ fn process_task(
     }
 }
 
-#[cfg(feature = "dev")]
 fn determine_code(filename: &str, selected_region: &str) -> String {
     if selected_region != "en" {
         return selected_region.to_string();
@@ -92,7 +79,6 @@ fn determine_code(filename: &str, selected_region: &str) -> String {
     "en".to_string()
 }
 
-#[cfg(feature = "dev")]
 fn extract_pack(
     content: &str, 
     pack_path: &Path, 
@@ -149,7 +135,6 @@ fn extract_pack(
     Ok(())
 }
 
-#[cfg(feature = "dev")]
 fn process_apk(
     apk_path: &Path, 
     output_dir: &Path, 
@@ -199,7 +184,6 @@ fn process_apk(
     Ok(())
 }
 
-#[cfg(feature = "dev")]
 fn decrypt_list_content(data: &[u8]) -> Result<String, String> {
     let pack_key = keys::get_md5_key("pack");
     if let Ok(bytes) = keys::decrypt_ecb_with_key(data, &pack_key) {
@@ -212,7 +196,6 @@ fn decrypt_list_content(data: &[u8]) -> Result<String, String> {
     Err("Decryption failed".into())
 }
 
-#[cfg(feature = "dev")]
 fn find_game_files(search_dir: &Path, path_list: &mut Vec<PathBuf>) -> std::io::Result<()> {
     if !search_dir.is_dir() { return Ok(()); }
     for entry_result in fs::read_dir(search_dir)?.flatten() {
@@ -229,7 +212,6 @@ fn find_game_files(search_dir: &Path, path_list: &mut Vec<PathBuf>) -> std::io::
     Ok(())
 }
 
-#[cfg(feature = "dev")]
 fn should_skip(name: &str, size: usize, output_dir: &Path, index: &std::collections::HashMap<String, Vec<PathBuf>>) -> bool {
     if patterns::CHECK_LINE_FILES.contains(&name) { return false; }
     if name.ends_with("img015_th.imgcut") { return true; }
@@ -252,14 +234,12 @@ fn should_skip(name: &str, size: usize, output_dir: &Path, index: &std::collecti
     false
 }
 
-#[cfg(feature = "dev")]
 fn build_index(root_dir: &Path) -> std::collections::HashMap<String, Vec<PathBuf>> {
     let mut index = std::collections::HashMap::new();
     let _ = scan_for_index(root_dir, &mut index);
     index
 }
 
-#[cfg(feature = "dev")]
 fn scan_for_index(dir: &Path, index: &mut std::collections::HashMap<String, Vec<PathBuf>>) -> std::io::Result<()> {
     if !dir.is_dir() { return Ok(()); }
     for entry_result in fs::read_dir(dir)?.flatten() {
@@ -274,12 +254,10 @@ fn scan_for_index(dir: &Path, index: &mut std::collections::HashMap<String, Vec<
     Ok(())
 }
 
-#[cfg(feature = "dev")]
 fn count_lines(data: &[u8]) -> usize {
     data.iter().filter(|&&b| b == b'\n').count()
 }
 
-#[cfg(feature = "dev")]
 fn write_smart(target_path: &Path, data: &[u8], filename: &str) -> bool {
     let new_size = data.len() as u64;
     
