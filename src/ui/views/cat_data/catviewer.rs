@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 use crate::core::cat::scanner::CatEntry;
 use crate::data::global::imgcut::SpriteSheet;
 use crate::data::global::mamodel::Model;
-use crate::ui::components::anim_viewer::AnimViewer;
+use crate::ui::components::anim::viewer::AnimViewer;
 use crate::core::settings::Settings;
 use crate::paths::cat::{self, AnimType};
-use crate::ui::components::anim_controls::{
+use crate::ui::components::anim::controls::{
     IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_SPIRIT, IDX_MODEL, IDX_BURROW, IDX_SURFACE, IDX_NONE
 };
 
@@ -30,8 +30,8 @@ pub fn show(
         (IDX_WALK, "Walk"), 
         (IDX_IDLE, "Idle"), 
         (IDX_ATTACK, "Attack"), 
-        (IDX_KB, "Knockback"),
-        (IDX_BURROW, "Burrow"),
+        (IDX_KB, "Knockback"), 
+        (IDX_BURROW, "Burrow"), 
         (IDX_SURFACE, "Surface")
     ];
     
@@ -243,7 +243,7 @@ pub fn show(
     if anim_viewer.is_expanded {
         egui::Area::new("expanded_anim_viewer_area".into())
             .fixed_pos(egui::pos2(0.0, 0.0))
-            .order(egui::Order::Tooltip) 
+            .order(egui::Order::Middle) 
             .show(ctx, |ui| {
                 let screen_rect = ctx.screen_rect();
                 egui::Frame::window(&ctx.style())
@@ -266,6 +266,7 @@ pub fn show(
                                 &form_viewer_id,
                                 &spirit_pack,
                                 settings.native_fps, 
+                                settings.auto_set_camera_region, // PASSED HERE
                             );
                             ui.allocate_rect(rect, egui::Sense::hover())
                         });
@@ -296,6 +297,7 @@ pub fn show(
                     &form_viewer_id,
                     &spirit_pack,
                     settings.native_fps, 
+                    settings.auto_set_camera_region, // AND HERE
                 );
                 ui.allocate_rect(rect, egui::Sense::hover())
             });
