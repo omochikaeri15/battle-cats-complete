@@ -23,115 +23,13 @@ pub fn execute_pull(
 
     if abort_flag.load(Ordering::Relaxed) { return Err("Aborted".into()); }
 
-    let mut current_serial: String = String::new();
-    let mut fallback_ip_address: Option<String> = None;
-    let mut is_connection_established = false;
-
-    let _ = status_sender.send("Detecting device...".to_string());
-
-    if let Some(usb_serial) = driver::find_usb_device() {
-        if driver::verify_connection(&usb_serial).is_ok() {
-            let _ = status_sender.send(format!("USB Device Found: {}", usb_serial));
-            current_serial = usb_serial.clone();
-            fallback_ip_address = driver::enable_wireless_fallback(&current_serial);
-            is_connection_established = true;
-        }
-    }
-
-    if !is_connection_established {
-        let _ = status_sender.send("Scanning network for Wireless Debugging...".to_string());
-        if let Some(mdns_target) = driver::find_mdns_device() {
-            let _ = status_sender.send(format!("Found via mDNS: {}", mdns_target));
-            if driver::connect_manual_ip(&mdns_target).is_ok() {
-                if let Some(stable_ip) = driver::bootstrap_tcpip(&mdns_target) {
-                    let _ = driver::run_command(&["disconnect", &mdns_target]);
-                    if let Ok(stable_serial) = driver::connect_manual_ip(&stable_ip) {
-                        if driver::verify_connection(&stable_serial).is_ok() {
-                            current_serial = stable_serial;
-                            is_connection_established = true;
-                            let _ = status_sender.send("Auto-Connection Successful!".to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if !is_connection_established && !emulator_config.manual_ip.is_empty() {
-        let _ = status_sender.send(format!("Trying Manual IP: {}", emulator_config.manual_ip));
-        if let Ok(initial_ip) = driver::connect_manual_ip(&emulator_config.manual_ip) {
-            let mut test_serial = initial_ip.clone();
-
-            if initial_ip.contains(':') && !initial_ip.ends_with(":5555") {
-                if let Some(new_target) = driver::bootstrap_tcpip(&initial_ip) {
-                    let _ = driver::run_command(&["disconnect", &initial_ip]);
-                    if let Ok(stable_ip) = driver::connect_manual_ip(&new_target) {
-                        test_serial = stable_ip;
-                    }
-                }
-            }
-
-            if driver::verify_connection(&test_serial).is_ok() {
-                current_serial = test_serial;
-                is_connection_established = true;
-            } else {
-                let _ = status_sender.send("Manual IP failed verification. Scanning for Emulators...".to_string());
-            }
-        }
-    }
-
-    if !is_connection_established {
-        let _ = status_sender.send("Scanning for Emulators...".to_string());
-
-        if let Some(emulator_serial) = driver::find_emulator() {
-            if driver::verify_connection(&emulator_serial).is_ok() {
-                current_serial = emulator_serial;
-                is_connection_established = true;
-            }
-        }
-
-        if !is_connection_established {
-            let waydroid_ip = "192.168.240.112:5555";
-            if driver::connect_manual_ip(waydroid_ip).is_ok() && driver::verify_connection(waydroid_ip).is_ok() {
-                current_serial = waydroid_ip.to_string();
-                is_connection_established = true;
-            }
-        }
-    }
-
-    if !is_connection_established {
-        return Err("No device found. Ensure Wireless Debugging is ON or Emulator is running.".to_string());
-    }
+    let (mut current_serial, fallback_ip_address) = establish_connection(emulator_config, status_sender)?;
 
     let _ = status_sender.send("Device Verified.".to_string());
     if abort_flag.load(Ordering::Relaxed) { return Err("Aborted".into()); }
 
     if import_mode == AdbImportType::All {
-        let _ = status_sender.send("Checking Root Permissions...".to_string());
-
-        let root_check_cmd = "su -c 'echo root_test'";
-        let root_test_output = driver::run_command(&["-s", &current_serial, "shell", root_check_cmd]).unwrap_or_default();
-
-        if root_test_output.contains("root_test") {
-            let _ = status_sender.send("Root access confirmed via su.".to_string());
-        } else {
-            let _ = status_sender.send("Requesting Root Access...".to_string());
-            let _ = driver::run_command(&["-s", &current_serial, "root"]);
-            thread::sleep(Duration::from_secs(3));
-
-            if abort_flag.load(Ordering::Relaxed) { return Err("Aborted".into()); }
-
-            if current_serial.contains(':') {
-                let _ = driver::connect_wireless(&current_serial);
-            } else if !current_serial.starts_with("emulator") {
-                if let Some(new_serial) = driver::find_usb_device() {
-                    current_serial = new_serial;
-                }
-            }
-
-            let _ = status_sender.send("Waiting for device to reconnect...".to_string());
-            let _ = driver::run_command(&["-s", &current_serial, "wait-for-device"]);
-        }
+        ensure_root_access(&mut current_serial, status_sender, abort_flag)?;
     }
 
     let regions_to_process = match target_region {
@@ -143,47 +41,10 @@ pub fn execute_pull(
 
     for current_region in regions_to_process.iter() {
         if abort_flag.load(Ordering::Relaxed) { return Err("Aborted".into()); }
-
-        let region_suffix = current_region.suffix();
-        let package_name = format!("jp.co.ponos.battlecats{}", region_suffix);
-        let check_installed_output = driver::run_command(&["-s", &current_serial, "shell", "pm", "path", &package_name]).unwrap_or_default();
-
-        if check_installed_output.trim().is_empty() || check_installed_output.contains("Error") {
-            let _ = status_sender.send(format!("Skipping {}: Not installed.", package_name));
-            continue;
-        }
-
-        let _ = status_sender.send(format!("Pulling {}...", package_name));
-        let target_directory = base_output_directory.join(&package_name);
-
-        let process_result = process_single_region_adb(status_sender, &current_serial, &package_name, &target_directory, import_mode.clone());
-
-        if process_result.is_ok() {
-            successful_pulls.push(target_directory);
-            continue;
-        }
-
-        let process_error = process_result.unwrap_err();
-        let is_app_warning = process_error.contains("Root Copy Failed") || process_error.contains("APK Path not found") || process_error.contains("Warning:");
-
-        if is_app_warning {
-            let _ = status_sender.send(format!("Skipping {}: {}", package_name, process_error));
-            continue;
-        }
-
-        let Some(ref rescue_ip_address) = fallback_ip_address else {
-            let _ = status_sender.send(format!("Skipping {} due to error: {}", package_name, process_error));
-            continue;
-        };
-
-        let _ = status_sender.send(format!("Error: {}. Engaging Wireless Rescue...", process_error));
-        if driver::connect_wireless(rescue_ip_address).is_ok() {
-            current_serial = rescue_ip_address.clone();
-            if process_single_region_adb(status_sender, &current_serial, &package_name, &target_directory, import_mode.clone()).is_ok() {
-                let _ = status_sender.send("Rescue Successful!".to_string());
-                successful_pulls.push(target_directory);
-            }
-        }
+        pull_region_data(
+            current_region, &mut current_serial, &fallback_ip_address,
+            base_output_directory, &import_mode, status_sender, &mut successful_pulls
+        );
     }
 
     let _ = driver::run_command(&["kill-server"]);
@@ -194,69 +55,176 @@ pub fn execute_pull(
 
     Ok(successful_pulls)
 }
+fn establish_connection(emulator_config: &EmulatorConfig, status_sender: &Sender<String>) -> Result<(String, Option<String>), String> {
+    let _ = status_sender.send("Detecting device...".to_string());
+
+    if let Some((serial, fallback)) = try_usb_connection(status_sender) {
+        return Ok((serial, fallback));
+    }
+
+    if let Some(serial) = try_mdns_connection(status_sender) {
+        return Ok((serial, None));
+    }
+
+    if !emulator_config.manual_ip.is_empty() {
+        if let Some(serial) = try_manual_ip_connection(&emulator_config.manual_ip, status_sender) {
+            return Ok((serial, None));
+        }
+    }
+
+    if let Some(serial) = try_emulator_connection(status_sender) {
+        return Ok((serial, None));
+    }
+
+    if let Some(serial) = try_waydroid_connection(status_sender) {
+        return Ok((serial, None));
+    }
+
+    Err("No device found. Ensure Wireless Debugging is ON or Emulator is running.".to_string())
+}
+
+fn try_usb_connection(status_sender: &Sender<String>) -> Option<(String, Option<String>)> {
+    let usb_serial = driver::find_usb_device()?;
+    driver::verify_connection(&usb_serial).ok()?;
+
+    let _ = status_sender.send(format!("USB Device Found: {}", usb_serial));
+    let fallback = driver::enable_wireless_fallback(&usb_serial);
+    Some((usb_serial, fallback))
+}
+
+fn try_mdns_connection(status_sender: &Sender<String>) -> Option<String> {
+    let _ = status_sender.send("Scanning network for Wireless Debugging...".to_string());
+    let mdns_target = driver::find_mdns_device()?;
+
+    let _ = status_sender.send(format!("Found via mDNS: {}", mdns_target));
+    driver::connect_manual_ip(&mdns_target).ok()?;
+
+    let stable_ip = driver::bootstrap_tcpip(&mdns_target)?;
+    let _ = driver::run_command(&["disconnect", &mdns_target]);
+
+    let stable_serial = driver::connect_manual_ip(&stable_ip).ok()?;
+    driver::verify_connection(&stable_serial).ok()?;
+
+    let _ = status_sender.send("Auto-Connection Successful!".to_string());
+    Some(stable_serial)
+}
+
+fn try_manual_ip_connection(manual_ip: &str, status_sender: &Sender<String>) -> Option<String> {
+    let _ = status_sender.send(format!("Trying Manual IP: {}", manual_ip));
+    let initial_ip = driver::connect_manual_ip(manual_ip).ok()?;
+
+    let test_serial = resolve_tcpip_target(&initial_ip).unwrap_or(initial_ip);
+
+    if driver::verify_connection(&test_serial).is_ok() {
+        return Some(test_serial);
+    }
+
+    let _ = status_sender.send("Manual IP failed verification. Scanning for Emulators...".to_string());
+    None
+}
+
+fn resolve_tcpip_target(initial_ip: &str) -> Option<String> {
+    if !initial_ip.contains(':') || initial_ip.ends_with(":5555") { return None; }
+    let new_target = driver::bootstrap_tcpip(initial_ip)?;
+    let _ = driver::run_command(&["disconnect", initial_ip]);
+    driver::connect_manual_ip(&new_target).ok()
+}
+
+fn try_emulator_connection(status_sender: &Sender<String>) -> Option<String> {
+    let _ = status_sender.send("Scanning for Emulators...".to_string());
+    let emulator_serial = driver::find_emulator()?;
+    driver::verify_connection(&emulator_serial).ok()?;
+    Some(emulator_serial)
+}
+
+fn try_waydroid_connection(_status_sender: &Sender<String>) -> Option<String> {
+    let waydroid_ip = "192.168.240.112:5555";
+    driver::connect_manual_ip(waydroid_ip).ok()?;
+    driver::verify_connection(waydroid_ip).ok()?;
+    Some(waydroid_ip.to_string())
+}
+
+fn ensure_root_access(current_serial: &mut String, status_sender: &Sender<String>, abort_flag: &AtomicBool) -> Result<(), String> {
+    let _ = status_sender.send("Checking Root Permissions...".to_string());
+    let root_check_cmd = "su -c 'echo root_test'";
+    let root_test_output = driver::run_command(&["-s", current_serial, "shell", root_check_cmd]).unwrap_or_default();
+
+    if root_test_output.contains("root_test") {
+        let _ = status_sender.send("Root access confirmed via su.".to_string());
+        return Ok(());
+    }
+
+    let _ = status_sender.send("Requesting Root Access...".to_string());
+    let _ = driver::run_command(&["-s", current_serial, "root"]);
+    thread::sleep(Duration::from_secs(3));
+
+    if abort_flag.load(Ordering::Relaxed) { return Err("Aborted".into()); }
+
+    if current_serial.contains(':') {
+        let _ = driver::connect_wireless(current_serial);
+    } else if !current_serial.starts_with("emulator") {
+        if let Some(new_serial) = driver::find_usb_device() {
+            *current_serial = new_serial;
+        }
+    }
+
+    let _ = status_sender.send("Waiting for device to reconnect...".to_string());
+    let _ = driver::run_command(&["-s", current_serial, "wait-for-device"]);
+    Ok(())
+}
+fn pull_region_data(
+    current_region: &AdbRegion,
+    current_serial: &mut String,
+    fallback_ip_address: &Option<String>,
+    base_output_directory: &PathBuf,
+    import_mode: &AdbImportType,
+    status_sender: &Sender<String>,
+    successful_pulls: &mut Vec<PathBuf>
+) {
+    let region_suffix = current_region.suffix();
+    let package_name = format!("jp.co.ponos.battlecats{}", region_suffix);
+    let check_installed_output = driver::run_command(&["-s", current_serial, "shell", "pm", "path", &package_name]).unwrap_or_default();
+
+    if check_installed_output.trim().is_empty() || check_installed_output.contains("Error") {
+        let _ = status_sender.send(format!("Skipping {}: Not installed.", package_name));
+        return;
+    }
+
+    let _ = status_sender.send(format!("Pulling {}...", package_name));
+    let target_directory = base_output_directory.join(&package_name);
+
+    let Err(process_error) = process_single_region_adb(status_sender, current_serial, &package_name, &target_directory, import_mode.clone()) else {
+        successful_pulls.push(target_directory);
+        return;
+    };
+
+    let is_app_warning = process_error.contains("Root Copy Failed") || process_error.contains("APK Path not found") || process_error.contains("Warning:");
+
+    if is_app_warning {
+        let _ = status_sender.send(format!("Skipping {}: {}", package_name, process_error));
+        return;
+    }
+
+    let Some(rescue_ip_address) = fallback_ip_address else {
+        let _ = status_sender.send(format!("Skipping {} due to error: {}", package_name, process_error));
+        return;
+    };
+
+    let _ = status_sender.send(format!("Error: {}. Engaging Wireless Rescue...", process_error));
+    if driver::connect_wireless(rescue_ip_address).is_err() {
+        return;
+    }
+
+    *current_serial = rescue_ip_address.clone();
+    if process_single_region_adb(status_sender, current_serial, &package_name, &target_directory, import_mode.clone()).is_ok() {
+        let _ = status_sender.send("Rescue Successful!".to_string());
+        successful_pulls.push(target_directory);
+    }
+}
 
 fn process_single_region_adb(status_sender: &Sender<String>, serial_number: &str, package_name: &str, output_directory: &Path, import_mode: AdbImportType) -> Result<(), String> {
     if import_mode == AdbImportType::All {
-        let user_identity = driver::run_command(&["-s", serial_number, "shell", "whoami"]).unwrap_or_default();
-        let remote_source_path = format!("/data/data/{}/files", package_name);
-
-        let Some(output_directory_string) = output_directory.to_str() else {
-            return Err("Invalid path on host machine.".to_string());
-        };
-
-        if !output_directory.exists() {
-            let _ = std::fs::create_dir_all(output_directory);
-        }
-
-        let mut skip_staging = false;
-
-        // Bypass staging entirely if ADB is running as root
-        if user_identity.contains("root") {
-            if driver::run_command(&["-s", serial_number, "pull", &remote_source_path, output_directory_string]).is_ok() {
-                let total_pulled = std::fs::read_dir(output_directory.join("files")).map(|i| i.count()).unwrap_or(0);
-                if total_pulled > 0 {
-                    skip_staging = true;
-                }
-            }
-        }
-
-        if !skip_staging {
-            let remote_staging_directory = "/data/local/tmp";
-            let remote_staging_target = "/data/local/tmp/files";
-
-            let _ = driver::run_command(&["-s", serial_number, "shell", &format!("rm -rf {}", remote_staging_target)]);
-            let _ = driver::run_command(&["-s", serial_number, "shell", &format!("mkdir -p {}", remote_staging_directory)]);
-            let cmd = format!("su -c 'cp -r {} {}'", remote_source_path, remote_staging_directory);
-            let mut copy_successful = driver::run_command(&["-s", serial_number, "shell", &cmd]).is_ok();
-
-            if !copy_successful {
-                let cmd = format!("su 0 cp -r {} {}", remote_source_path, remote_staging_directory);
-                copy_successful = driver::run_command(&["-s", serial_number, "shell", &cmd]).is_ok();
-            }
-
-            if !copy_successful {
-                return Err("Root Copy Failed. Device might not be rooted.".to_string());
-            }
-
-            let chmod_cmd = format!("su -c 'chmod -R 777 {}'", remote_staging_target);
-            let _ = driver::run_command(&["-s", serial_number, "shell", &chmod_cmd]);
-
-            let find_cmd = format!("su -c 'find {} -name \"*:*\" -delete'", remote_staging_target);
-            let _ = driver::run_command(&["-s", serial_number, "shell", &find_cmd]);
-
-            if driver::run_command(&["-s", serial_number, "pull", remote_staging_target, output_directory_string]).is_err() {
-                return Err("ADB Pull Failed.".to_string());
-            }
-
-            let total_pulled_files = std::fs::read_dir(output_directory.join("files")).map(|iterator| iterator.count()).unwrap_or(0);
-
-            if total_pulled_files == 0 {
-                return Err("Pull verification failed: empty directory.".to_string());
-            }
-
-            let rm_cmd = format!("su -c 'rm -rf {}'", remote_staging_target);
-            let _ = driver::run_command(&["-s", serial_number, "shell", &rm_cmd]);
-        }
+        pull_game_data_files(serial_number, package_name, output_directory)?;
     }
 
     let package_manager_output = driver::run_command(&["-s", serial_number, "shell", "pm", "path", package_name]).unwrap_or_default();
@@ -268,21 +236,77 @@ fn process_single_region_adb(status_sender: &Sender<String>, serial_number: &str
         }
         let _ = status_sender.send("Warning: Update APK missing.".to_string());
     }
+
+    Ok(())
+}
+
+fn pull_game_data_files(serial_number: &str, package_name: &str, output_directory: &Path) -> Result<(), String> {
+    let user_identity = driver::run_command(&["-s", serial_number, "shell", "whoami"]).unwrap_or_default();
+    let remote_source_path = format!("/data/data/{}/files", package_name);
+
+    let output_directory_string = output_directory.to_str().ok_or("Invalid path on host machine.")?;
+
+    if !output_directory.exists() {
+        let _ = std::fs::create_dir_all(output_directory);
+    }
+
+    if user_identity.contains("root") && driver::run_command(&["-s", serial_number, "pull", &remote_source_path, output_directory_string]).is_ok() {
+        let total_pulled = std::fs::read_dir(output_directory.join("files")).map(|i| i.count()).unwrap_or(0);
+        if total_pulled > 0 {
+            return Ok(());
+        }
+    }
+
+    let remote_staging_directory = "/data/local/tmp";
+    let remote_staging_target = "/data/local/tmp/files";
+
+    let _ = driver::run_command(&["-s", serial_number, "shell", &format!("rm -rf {}", remote_staging_target)]);
+    let _ = driver::run_command(&["-s", serial_number, "shell", &format!("mkdir -p {}", remote_staging_directory)]);
+
+    let cmd_su_cp = format!("su -c 'cp -r {} {}'", remote_source_path, remote_staging_directory);
+    let cmd_su0_cp = format!("su 0 cp -r {} {}", remote_source_path, remote_staging_directory);
+
+    let copy_successful = driver::run_command(&["-s", serial_number, "shell", &cmd_su_cp]).is_ok()
+        || driver::run_command(&["-s", serial_number, "shell", &cmd_su0_cp]).is_ok();
+
+    if !copy_successful {
+        return Err("Root Copy Failed. Device might not be rooted.".to_string());
+    }
+
+    let chmod_cmd = format!("su -c 'chmod -R 777 {}'", remote_staging_target);
+    let _ = driver::run_command(&["-s", serial_number, "shell", &chmod_cmd]);
+
+    let find_cmd = format!("su -c 'find {} -name \"*:*\" -delete'", remote_staging_target);
+    let _ = driver::run_command(&["-s", serial_number, "shell", &find_cmd]);
+
+    let pull_result = driver::run_command(&["-s", serial_number, "pull", remote_staging_target, output_directory_string]);
+
+    let rm_cmd = format!("su -c 'rm -rf {}'", remote_staging_target);
+    let _ = driver::run_command(&["-s", serial_number, "shell", &rm_cmd]);
+
+    if pull_result.is_err() {
+        return Err("ADB Pull Failed.".to_string());
+    }
+
+    let total_pulled_files = std::fs::read_dir(output_directory.join("files")).map(|iterator| iterator.count()).unwrap_or(0);
+
+    if total_pulled_files == 0 {
+        return Err("Pull verification failed: empty directory.".to_string());
+    }
+
     Ok(())
 }
 
 fn pull_target_apk(serial_number: &str, package_manager_output: &str, target_filename: &str, output_directory: &Path) -> Result<(), String> {
-    let mut remote_apk_path = package_manager_output.lines().find(|line| line.contains(target_filename))
-        .map(|line| line.trim().strip_prefix("package:").unwrap_or("").to_string());
-
-    if remote_apk_path.is_none() {
-        remote_apk_path = package_manager_output.lines().find(|line| line.contains("base.apk"))
-            .map(|line| line.trim().strip_prefix("package:").unwrap_or("").replace("base.apk", target_filename));
-    }
-
-    let Some(final_remote_path) = remote_apk_path else {
-        return Err("APK Path not found on device.".to_string());
-    };
+    let remote_apk_path = package_manager_output.lines()
+        .find(|line| line.contains(target_filename))
+        .map(|line| line.trim().strip_prefix("package:").unwrap_or("").to_string())
+        .or_else(|| {
+            package_manager_output.lines()
+                .find(|line| line.contains("base.apk"))
+                .map(|line| line.trim().strip_prefix("package:").unwrap_or("").replace("base.apk", target_filename))
+        })
+        .ok_or("APK Path not found on device.")?;
 
     let local_destination_path = output_directory.join(target_filename);
 
@@ -290,11 +314,9 @@ fn pull_target_apk(serial_number: &str, package_manager_output: &str, target_fil
         let _ = std::fs::create_dir_all(output_directory);
     }
 
-    let Some(local_destination_string) = local_destination_path.to_str() else {
-        return Err("Invalid path on host machine.".to_string());
-    };
+    let local_destination_string = local_destination_path.to_str().ok_or("Invalid path on host machine.")?;
 
-    let _ = driver::run_command(&["-s", serial_number, "pull", &final_remote_path, local_destination_string])?;
+    let _ = driver::run_command(&["-s", serial_number, "pull", &remote_apk_path, local_destination_string])?;
 
     let downloaded_apk_size = local_destination_path.metadata().map(|metadata| metadata.len()).unwrap_or(0);
 
