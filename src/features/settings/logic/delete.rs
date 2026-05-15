@@ -28,7 +28,7 @@ impl FolderDeleter {
     pub fn start(&mut self, path: impl Into<PathBuf>) {
         let path = path.into();
         let state_clone = Arc::clone(&self.state);
-        
+
         self.state.store(DELETING, Ordering::SeqCst);
         self.success_time = None;
 
@@ -41,7 +41,7 @@ impl FolderDeleter {
 
     pub fn update(&mut self) {
         let current = self.state.load(Ordering::SeqCst);
-        
+
         // If the thread just finished, start the 2-second timer
         if current == DONE && self.success_time.is_none() {
             self.success_time = Some(Instant::now());

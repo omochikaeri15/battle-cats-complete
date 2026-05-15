@@ -8,7 +8,7 @@ use zip::ZipArchive;
 use crate::features::addons::toolpaths::{get_tools_dir, AddonStatus};
 
 const RELEASE_TAG: &str = "tools"; 
-const REPO_OWNER: &str = "WonderMOMOCO";
+const REPO_OWNER: &str = "Battle-Cats-Complete";
 const REPO_NAME: &str = "Battle-Cats-Complete";
 
 #[allow(dead_code)]
@@ -91,11 +91,14 @@ fn download_thread(tx: Sender<AddonStatus>, config: DownloadConfig) -> Result<()
 #[cfg(unix)]
 fn set_executable_permissions(out_path: &Path, binary_name: &str) {
     use std::os::unix::fs::PermissionsExt;
-    
+
     let Some(fname) = out_path.file_name() else { return; };
-    if fname != binary_name { return; }
+    let is_target = fname == binary_name;
+    let in_bin_folder = out_path.parent().map_or(false, |p| p.ends_with("bin"));
     
-    let _ = fs::set_permissions(out_path, fs::Permissions::from_mode(0o755));
+    if is_target || in_bin_folder {
+        let _ = fs::set_permissions(out_path, fs::Permissions::from_mode(0o755));
+    }
 }
 
 #[cfg(not(unix))]

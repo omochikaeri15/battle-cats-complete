@@ -4,3 +4,6 @@ pub mod decrypt;
 pub mod extract;
 pub mod manager;
 pub mod metadata;
+mod modify;
+mod pack;
+pub mod engine;

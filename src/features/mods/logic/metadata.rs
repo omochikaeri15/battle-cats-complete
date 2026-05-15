@@ -6,13 +6,18 @@ fn default_source() -> String {
     "Battle Cats Complete".to_string()
 }
 
+fn default_package() -> String {
+    "".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModMetadata {
     #[serde(default)] pub title: String,
     #[serde(default)] pub author: String,
     #[serde(default)] pub version: String,
     #[serde(default)] pub description: String,
-    #[serde(default = "default_source")] pub source: String, 
+    #[serde(default = "default_package")] pub package: String,
+    #[serde(default = "default_source")] pub source: String,
 }
 
 impl Default for ModMetadata {
@@ -22,6 +27,7 @@ impl Default for ModMetadata {
             author: String::new(),
             version: String::new(),
             description: String::new(),
+            package: default_package(),
             source: default_source(),
         }
     }

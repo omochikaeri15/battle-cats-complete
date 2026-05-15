@@ -15,7 +15,6 @@ pub enum Presence {
     Missing,
 }
 
-// BINARY NAMES
 #[cfg(target_os = "windows")]
 pub const ADB_BIN: &str = "adb.exe";
 #[cfg(not(target_os = "windows"))]
@@ -31,6 +30,15 @@ pub const FFMPEG_BIN: &str = "ffmpeg.exe";
 #[cfg(not(target_os = "windows"))]
 pub const FFMPEG_BIN: &str = "ffmpeg";
 
+#[cfg(target_os = "windows")]
+pub const JAVA_BIN: &str = "bin/java.exe";
+#[cfg(not(target_os = "windows"))]
+pub const JAVA_BIN: &str = "bin/java";
+
+pub const APKTOOL_JAR: &str = "apktool.jar";
+pub const UBER_SIGNER_JAR: &str = "uber-apk-signer.jar";
+pub const APKEDITOR_JAR: &str = "APKEditor.jar";
+
 pub fn get_tools_dir() -> PathBuf {
     let base_dir = if let Some(proj_dirs) = directories::ProjectDirs::from("", "", "Battle_Cats_Complete") {
         proj_dirs.data_dir().join("tools")
@@ -44,8 +52,6 @@ pub fn get_tools_dir() -> PathBuf {
 
     base_dir
 }
-
-// STATUS TRACKING
 
 pub fn adb_status() -> Presence {
     if get_tools_dir().join("adb").join(ADB_BIN).exists() { Presence::Installed } else { Presence::Missing }

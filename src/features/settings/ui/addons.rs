@@ -1,9 +1,10 @@
 use eframe::egui;
 use crate::features::addons::adb::download::AdbManager;
+use crate::features::addons::apktool::download::ApktoolManager; // Imported new manager
 use crate::features::addons::avifenc::download::AvifManager;
 use crate::features::addons::ffmpeg::download::FfmpegManager;
 #[cfg(target_os = "windows")]
-use crate::features::addons::oem::download::{OemManager, OemDriver}; 
+use crate::features::addons::oem::download::{OemManager, OemDriver};
 use crate::features::addons::toolpaths::AddonStatus;
 use crate::global::ui::shared::DragGuard;
 use std::sync::Mutex;
@@ -15,13 +16,14 @@ pub struct AddonDeleteState {
 }
 
 static ADB_MANAGER: Mutex<Option<AdbManager>> = Mutex::new(None);
+static APKTOOL_MANAGER: Mutex<Option<ApktoolManager>> = Mutex::new(None); // Added Mutex
 static AVIF_MANAGER: Mutex<Option<AvifManager>> = Mutex::new(None);
 static FFMPEG_MANAGER: Mutex<Option<FfmpegManager>> = Mutex::new(None);
 
 #[cfg(target_os = "windows")]
 static OEM_MANAGER: Mutex<Option<OemManager>> = Mutex::new(None);
 
-pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {    
+pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
     {
         let mut adb_lock = ADB_MANAGER.lock().unwrap();
         let adb_manager = adb_lock.get_or_insert_with(AdbManager::default);
@@ -31,6 +33,11 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
         let mut oem_lock = OEM_MANAGER.lock().unwrap();
         #[cfg(target_os = "windows")]
         let oem_manager = oem_lock.get_or_insert_with(OemManager::default);
+
+        // Apktool Manager Loop
+        let mut apktool_lock = APKTOOL_MANAGER.lock().unwrap();
+        let apktool_manager = apktool_lock.get_or_insert_with(ApktoolManager::default);
+        apktool_manager.poll();
 
         let mut avif_lock = AVIF_MANAGER.lock().unwrap();
         let avif_manager = avif_lock.get_or_insert_with(AvifManager::default);
@@ -48,8 +55,8 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
                 ui.add_space(5.0);
                 ui.label("Enables \"Android\" option for Game Data Import allowing Android Device & Emulator imports\nMake sure you have \"USB Debugging\" or \"Wireless Debugging\" Enabled on your Android Device");
                 ui.add_space(8.0);
-                
-                let adb_status = adb_manager.status.clone(); 
+
+                let adb_status = adb_manager.status.clone();
                 render_addon_controls(ui, &adb_status, "ADB", || adb_manager.install(), "adb_delete");
 
                 #[cfg(target_os = "windows")]
@@ -57,17 +64,17 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
                     ui.add_space(20.0);
                     ui.heading(egui::RichText::new("ADB OEM Drivers").strong());
                     ui.label("Allows Windows devices to connect to a real Android device for game files during \"Android\" export method\nWindows only, requires Android Bridge Add-On, and manual set-up");
-                    
+
                     ui.horizontal(|ui| {
                         egui::ComboBox::from_id_salt("oem_combo")
-                            .selected_text(OemManager::label(oem_manager.selected)) 
+                            .selected_text(OemManager::label(oem_manager.selected))
                             .width(150.0)
                             .show_ui(ui, |ui| {
                                 for driver in OemManager::all_drivers() {
                                     ui.selectable_value(
-                                        &mut oem_manager.selected, 
-                                        driver, 
-                                        OemManager::label(driver) 
+                                        &mut oem_manager.selected,
+                                        driver,
+                                        OemManager::label(driver)
                                     );
                                 }
                             });
@@ -83,6 +90,15 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
                         }
                     });
                 }
+
+                // New Apktool Section
+                ui.add_space(20.0);
+                ui.heading("Apktool & Java Runtime");
+                ui.add_space(5.0);
+                ui.label("Bundled Java Environment (JRE), Apktool v3.0.2, and uber-apk-signer.\nRequired to rebuild and sign Universal APKs during Mod Export.");
+                ui.add_space(8.0);
+                let apktool_status = apktool_manager.status.clone();
+                render_addon_controls(ui, &apktool_status, "Apktool", || apktool_manager.install(), "apktool_delete");
 
                 ui.add_space(20.0);
                 ui.heading("FFMPEG");
@@ -111,6 +127,9 @@ fn handle_modals(ctx: &egui::Context, drag_guard: &mut DragGuard) {
     let mut adb_lock = ADB_MANAGER.lock().unwrap();
     let adb_manager = adb_lock.get_or_insert_with(AdbManager::default);
 
+    let mut apktool_lock = APKTOOL_MANAGER.lock().unwrap();
+    let apktool_manager = apktool_lock.get_or_insert_with(ApktoolManager::default);
+
     let mut avif_lock = AVIF_MANAGER.lock().unwrap();
     let avif_manager = avif_lock.get_or_insert_with(AvifManager::default);
 
@@ -118,6 +137,7 @@ fn handle_modals(ctx: &egui::Context, drag_guard: &mut DragGuard) {
     let ffmpeg_manager = ffmpeg_lock.get_or_insert_with(FfmpegManager::default);
 
     handle_delete_modal(ctx, drag_guard, "adb_delete", || adb_manager.uninstall());
+    handle_delete_modal(ctx, drag_guard, "apktool_delete", || apktool_manager.uninstall());
     handle_delete_modal(ctx, drag_guard, "avif_delete", || avif_manager.uninstall());
     handle_delete_modal(ctx, drag_guard, "ffmpeg_delete", || ffmpeg_manager.uninstall());
 }
@@ -127,9 +147,9 @@ fn render_addon_controls(ui: &mut egui::Ui, status: &AddonStatus, name: &str, on
         AddonStatus::Installed => {
             let btn = egui::Button::new(format!("Delete {}", name)).fill(egui::Color32::from_rgb(180, 50, 50));
             if ui.add_sized([140.0, 30.0], btn).clicked() {
-                ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(confirm_id), AddonDeleteState { 
-                    is_open: true, 
-                    target_name: name.to_string() 
+                ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(confirm_id), AddonDeleteState {
+                    is_open: true,
+                    target_name: name.to_string()
                 }));
             }
         },
@@ -166,42 +186,42 @@ fn handle_delete_modal(ctx: &egui::Context, drag_guard: &mut DragGuard, id: &str
             .collapsible(false)
             .resizable(false)
             .constrain(false)
-            .movable(allow_drag) 
+            .movable(allow_drag)
             .default_pos(ctx.screen_rect().center() - egui::vec2(110.0, 50.0));
-            
+
         if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-            
+
         window.show(ctx, |ui| {
-                ui.set_min_width(220.0);
-                ui.vertical_centered(|ui| {
-                    ui.add_space(5.0);
-                    ui.label(format!("Are you sure you want to delete {}?", state.target_name)); 
-                    ui.add_space(15.0);
-                    
-                    ui.horizontal(|ui| {
-                        let total_width = 130.0;
-                        let x_offset = (ui.available_width() - total_width) / 2.0;
-                        ui.add_space(x_offset);
+            ui.set_min_width(220.0);
+            ui.vertical_centered(|ui| {
+                ui.add_space(5.0);
+                ui.label(format!("Are you sure you want to delete {}?", state.target_name));
+                ui.add_space(15.0);
 
-                        if ui.add_sized([60.0, 30.0], egui::Button::new("Yes")).clicked() {
-                            on_yes();
-                            should_close = true;
-                        }
-                        
-                        ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    let total_width = 130.0;
+                    let x_offset = (ui.available_width() - total_width) / 2.0;
+                    ui.add_space(x_offset);
 
-                        if ui.add_sized([60.0, 30.0], egui::Button::new("No")).clicked() {
-                            should_close = true;
-                        }
-                    });
-                    ui.add_space(5.0);
+                    if ui.add_sized([60.0, 30.0], egui::Button::new("Yes")).clicked() {
+                        on_yes();
+                        should_close = true;
+                    }
+
+                    ui.add_space(10.0);
+
+                    if ui.add_sized([60.0, 30.0], egui::Button::new("No")).clicked() {
+                        should_close = true;
+                    }
                 });
+                ui.add_space(5.0);
             });
-        
+        });
+
         if should_close {
             state.is_open = false;
         }
-        
+
         ctx.data_mut(|d| d.insert_temp(state_id, state));
     }
 }

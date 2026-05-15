@@ -5,10 +5,10 @@ use crate::features::mods::logic::state::ModState;
 use crate::global::ui::shared::DragGuard;
 use crate::features::mods::logic::manager;
 
-const HEADER_BOTTOM_PADDING: f32 = 4.0; 
+const HEADER_BOTTOM_PADDING: f32 = 4.0;
 const HEADER_TOP_PADDING: f32 = 3.8;
 const MOD_TITLE_SIZE: f32 = 25.0;
-const BTN_SIZE: [f32; 2] = [115.0, 28.0]; 
+const BTN_SIZE: [f32; 2] = [105.0, 28.0];
 
 const META_LEFT_HEADER_OFFSET: f32 = 38.0;
 const META_LEFT_TOP_PADDING: f32 = 7.0;
@@ -30,10 +30,10 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
     };
 
     let Some(mod_idx) = state.loaded_mods.iter().position(|m| m.folder_name == selected_id) else { return; };
-    
+
     let tracking_id = egui::Id::new("details_tracking_mod");
     let last_viewed = ui.ctx().data(|d| d.get_temp::<String>(tracking_id)).unwrap_or_default();
-    
+
     if last_viewed != selected_id {
         state.rename_buffer = selected_id.clone();
         ui.ctx().data_mut(|d| d.insert_temp(tracking_id, selected_id.clone()));
@@ -41,7 +41,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
 
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing.y = 0.0;
-        
+
         ui.add_space(HEADER_TOP_PADDING);
 
         let header_response = ui.add(
@@ -55,19 +55,19 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
         if header_response.lost_focus() && state.rename_buffer != state.loaded_mods[mod_idx].folder_name {
             let old_name = state.loaded_mods[mod_idx].folder_name.clone();
             let new_name = state.rename_buffer.clone();
-            
+
             if !new_name.is_empty() {
                 let old_path = Path::new("mods").join(&old_name);
                 let new_path = Path::new("mods").join(&new_name);
-                
+
                 if !new_path.exists() && old_path.exists() && std::fs::rename(&old_path, &new_path).is_ok() {
                     if state.loaded_mods[mod_idx].enabled {
                         crate::global::resolver::set_active_mod(Some(new_name.clone()));
                     }
                     state.loaded_mods[mod_idx].folder_name = new_name.clone();
                     state.selected_mod = Some(new_name.clone());
-                    ui.ctx().data_mut(|d| d.insert_temp(tracking_id, new_name.clone())); 
-                    
+                    ui.ctx().data_mut(|d| d.insert_temp(tracking_id, new_name.clone()));
+
                     state.loaded_mods[mod_idx].metadata.title = new_name.clone();
                     let _ = state.loaded_mods[mod_idx].metadata.save(&new_path);
                 } else {
@@ -93,7 +93,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
     render_action_buttons(ui, state, &mod_path, has_icon, is_enabled, &mod_folder, &mut toggle_clicked);
 
     if state.selected_mod.is_none() {
-        return; 
+        return;
     }
 
     ui.add_space(5.0);
@@ -104,13 +104,13 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
 
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.set_width(160.0); 
+            ui.set_width(160.0);
 
             ui.horizontal(|ui| {
                 ui.add_space(META_LEFT_HEADER_OFFSET);
                 ui.label(egui::RichText::new("Information").heading().strong());
             });
-            
+
             ui.add_space(META_LEFT_TOP_PADDING);
 
             ui.horizontal(|ui| {
@@ -121,7 +121,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
                 }
             });
 
-            ui.add_space(META_LEFT_INNER_PADDING); 
+            ui.add_space(META_LEFT_INNER_PADDING);
 
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Version:").strong());
@@ -130,8 +130,19 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
                     metadata_changed = true;
                 }
             });
-            
-            ui.add_space(META_LEFT_BOTTOM_PADDING); 
+
+            ui.add_space(META_LEFT_INNER_PADDING);
+
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("Package:").strong());
+                if ui.add(egui::TextEdit::singleline(&mut state.loaded_mods[mod_idx].metadata.package)
+                    .hint_text("en")
+                    .desired_width(100.0)).lost_focus() {
+                    metadata_changed = true;
+                }
+            });
+
+            ui.add_space(META_LEFT_BOTTOM_PADDING);
         });
 
         ui.add_space(5.0);
@@ -142,16 +153,16 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new("Description").heading().strong());
             });
-            
+
             ui.add_space(2.0);
-            
+
             let desc_hint = egui::RichText::new("Enter mod description here...").color(egui::Color32::GRAY);
-            
+
             if ui.add(
                 egui::TextEdit::multiline(&mut state.loaded_mods[mod_idx].metadata.description)
                     .hint_text(desc_hint)
                     .desired_width(ui.available_width())
-                    .desired_rows(4) 
+                    .desired_rows(5)
             ).lost_focus() {
                 metadata_changed = true;
             }
@@ -178,21 +189,23 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
         } else {
             crate::global::resolver::set_active_mod(None);
         }
-        state.needs_rescan = true; 
+        state.needs_rescan = true;
     }
+    
+    crate::features::mods::ui::export::show(ui.ctx(), state, _settings);
 }
 
 fn render_action_buttons(
-    ui: &mut egui::Ui, 
-    state: &mut ModState, 
-    path: &Path, 
-    has_icon: bool, 
-    is_enabled: bool, 
-    mod_name: &str, 
+    ui: &mut egui::Ui,
+    state: &mut ModState,
+    path: &Path,
+    has_icon: bool,
+    is_enabled: bool,
+    mod_name: &str,
     toggle_clicked: &mut bool
 ) {
     let ctx = ui.ctx().clone();
-    
+
     let icon_id = egui::Id::new("mod_icon_action_state");
     let mut icon_state = ctx.data(|d| d.get_temp::<ActionState>(icon_id)).unwrap_or_default();
 
@@ -208,9 +221,9 @@ fn render_action_buttons(
     ui.horizontal(|ui| {
         let spacing = 5.0;
         let btn_w = BTN_SIZE[0];
-        let total_w = (btn_w * 4.0) + (spacing * 3.0); 
+        let total_w = (btn_w * 5.0) + (spacing * 4.0);
         let available_w = ui.available_width();
-        
+
         ui.add_space((available_w - total_w) / 2.0);
         ui.spacing_mut().item_spacing.x = spacing;
 
@@ -228,9 +241,17 @@ fn render_action_buttons(
             let _ = open::that(path);
         }
 
+        let export_btn = egui::Button::new("Export Mod").fill(egui::Color32::from_rgb(30, 100, 180));
+        if ui.add_sized(BTN_SIZE, export_btn).clicked() {
+            state.export.is_open = true;
+            if let Some(mod_idx) = state.loaded_mods.iter().position(|m| m.folder_name == mod_name) {
+                state.export.package_suffix = state.loaded_mods[mod_idx].metadata.package.clone();
+            }
+        }
+
         if icon_state.completion_time.is_some() {
             let btn = egui::Button::new("Icon Deleted!").fill(egui::Color32::from_rgb(40, 160, 40));
-            let _ = ui.add_sized(BTN_SIZE, btn); 
+            let _ = ui.add_sized(BTN_SIZE, btn);
         } else if has_icon {
             let btn = egui::Button::new("Delete Icon").fill(egui::Color32::from_rgb(180, 50, 50));
             if ui.add_sized(BTN_SIZE, btn).clicked() { icon_state.is_open = true; }
@@ -256,7 +277,7 @@ fn render_action_buttons(
         manager::delete_mod_folder(path.to_path_buf());
         state.selected_mod = None;
         state.needs_rescan = true;
-        del_is_open = false; 
+        del_is_open = false;
     }
 
     ctx.data_mut(|d| {
@@ -276,7 +297,7 @@ fn show_confirmation_modal(
 
     let mut yes_clicked = false;
     let mut should_close = false;
-    
+
     let window_id = egui::Id::new(format!("{}_window", id_str));
     let (allow_drag, fixed_pos) = drag_guard.assign_bounds(ctx, window_id);
 
@@ -285,19 +306,19 @@ fn show_confirmation_modal(
         .collapsible(false)
         .resizable(false)
         .constrain(false)
-        .movable(allow_drag) 
+        .movable(allow_drag)
         .default_pos(ctx.screen_rect().center() - egui::vec2(150.0, 50.0));
-        
+
     if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-        
+
     window.show(ctx, |ui| {
         ui.set_min_width(280.0);
         ui.vertical_centered(|ui| {
             ui.add_space(5.0);
-            ui.label(content); 
+            ui.label(content);
 
             ui.add_space(15.0);
-            
+
             ui.horizontal(|ui| {
                 let total_width = 130.0;
                 let x_offset = (ui.available_width() - total_width) / 2.0;
@@ -307,7 +328,7 @@ fn show_confirmation_modal(
                     yes_clicked = true;
                     should_close = true;
                 }
-                
+
                 ui.add_space(10.0);
 
                 if ui.add_sized([60.0, 30.0], egui::Button::new("No")).clicked() {
@@ -319,6 +340,6 @@ fn show_confirmation_modal(
     });
 
     if should_close { *is_open = false; }
-    
+
     yes_clicked
 }
