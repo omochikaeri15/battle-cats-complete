@@ -1,6 +1,7 @@
 use std::sync::{mpsc::{self, Receiver}, Mutex};
 use std::thread;
 use std::fs;
+use std::path::PathBuf;
 use crate::features::mods::logic::state::{ModState, TargetRegion};
 use crate::features::settings::logic::keys::UserKeys;
 
@@ -22,20 +23,20 @@ pub fn start_apk_export(state: &mut ModState) {
     state.export.is_busy = true;
 
     let suffix = state.export.package_suffix.clone();
-    let mod_folder = state.selected_mod.clone().unwrap();
-    let input_apk_path = state.export.selected_apk.clone().unwrap();
+    let Some(mod_folder) = state.selected_mod.clone() else { state.export.is_busy = false; return; };
+    let Some(input_apk_path) = state.export.selected_apk.clone() else { state.export.is_busy = false; return; };
     let java_sign_type = state.export.sign_type.clone();
     let user_keys = UserKeys::load();
     let detected_region = state.export.target_region.clone();
-
     let (tx, rx) = mpsc::channel();
     if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(rx); }
 
     thread::spawn(move || {
-        let mod_dir = std::env::current_dir().unwrap().join("mods").join(&mod_folder);
+        let base_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let mod_dir = base_dir.join("mods").join(&mod_folder);
         let workspace_dir = mod_dir.join("apk_workspace");
         let decode_dir = mod_dir.join("apktool_decode");
-        let export_dir = std::env::current_dir().unwrap().join("exports");
+        let export_dir = base_dir.join("exports");
 
         let _ = fs::remove_dir_all(&workspace_dir);
         let _ = fs::create_dir_all(&export_dir);
@@ -47,15 +48,15 @@ pub fn start_apk_export(state: &mut ModState) {
 
         let region_key = match detected_region {
             TargetRegion::En => &user_keys.en,
-            TargetRegion::Jp => &user_keys.jp,
-            TargetRegion::Kr => &user_keys.kr,
+            TargetRegion::Jp => &user_keys.ja,
+            TargetRegion::Kr => &user_keys.ko,
             TargetRegion::Tw => &user_keys.tw,
         };
 
         let pack_result = pack::build_pack_and_list(&mod_dir, "DownloadLocal", region_key, &log_cb);
         let (pack_data, list_data) = match pack_result {
             Ok(data) => data,
-            Err(e) => { tx.send(ExportEvent::Error(e)).unwrap(); return; }
+            Err(e) => { let _ = tx.send(ExportEvent::Error(e)); return; }
         };
 
         if !is_xapk && suffix.trim().is_empty() {
@@ -68,7 +69,7 @@ pub fn start_apk_export(state: &mut ModState) {
             let _ = fs::rename(&unsigned_temp, &final_apk_path);
             let _ = fs::remove_dir_all(&workspace_dir);
 
-            tx.send(ExportEvent::Success).unwrap();
+            let _ = tx.send(ExportEvent::Success);
             return;
         }
 
@@ -80,20 +81,20 @@ pub fn start_apk_export(state: &mut ModState) {
         if is_xapk {
             let merged_temp_path = workspace_dir.join("merged_xapk.apk");
             if let Err(e) = xapk::merge_xapk(&working_apk, &merged_temp_path, &log_cb) {
-                tx.send(ExportEvent::Error(e)).unwrap(); return;
+                let _ = tx.send(ExportEvent::Error(e)); return;
             }
             working_apk = merged_temp_path;
         }
 
         if let Err(e) = apk::decode(&working_apk, &decode_dir, &log_cb) {
-            tx.send(ExportEvent::Error(e)).unwrap(); return;
+            let _ = tx.send(ExportEvent::Error(e)); return;
         }
 
         let final_id_result = modify::patch_identity(&decode_dir, &suffix, &log_cb);
         if let Err(e) = final_id_result {
-            tx.send(ExportEvent::Error(e)).unwrap(); return;
+            let _ = tx.send(ExportEvent::Error(e)); return;
         }
-        let final_id = final_id_result.unwrap();
+        let final_id = final_id_result.unwrap_or_else(|_| "jp.co.ponos.battlecats".to_string());
 
         let _ = modify::replace_icons(&mod_dir, &decode_dir, &log_cb);
 
@@ -106,28 +107,28 @@ pub fn start_apk_export(state: &mut ModState) {
         let unsigned_apk_path = workspace_dir.join("unsigned_final.apk");
 
         if let Err(e) = apk::build(&decode_dir, &unsigned_apk_path, &log_cb) {
-            tx.send(ExportEvent::Error(e)).unwrap(); return;
+            let _ = tx.send(ExportEvent::Error(e)); return;
         }
 
         let output_apk = export_dir.join(format!("{}.apk", final_id));
         if let Err(e) = sign::sign_apk(&unsigned_apk_path, &output_apk, &java_sign_type, &log_cb) {
-            tx.send(ExportEvent::Error(format!("Signing Error: {}", e))).unwrap(); return;
+            let _ = tx.send(ExportEvent::Error(format!("Signing Error: {}", e))); return;
         }
 
         let _ = fs::remove_dir_all(&workspace_dir);
         let _ = fs::remove_dir_all(&decode_dir);
 
-        tx.send(ExportEvent::Success).unwrap();
+        let _ = tx.send(ExportEvent::Success);
     });
 }
 
 pub fn start_pack_export(state: &mut ModState) {
     if state.export.is_busy { return; }
+    let Some(mod_folder) = state.selected_mod.clone() else { return; };
     state.export.log_content.clear();
     state.export.is_busy = true;
     state.export.status_message = "Initializing Pack Export...".to_string();
 
-    let mod_folder = state.selected_mod.clone().unwrap();
     let pack_name = if state.export.pack_name.trim().is_empty() { "mod".to_string() } else { state.export.pack_name.clone() };
     let user_keys = UserKeys::load();
     let target_region = state.export.target_region.clone();
@@ -136,14 +137,15 @@ pub fn start_pack_export(state: &mut ModState) {
     if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(rx); }
 
     thread::spawn(move || {
-        let mod_path = std::env::current_dir().unwrap().join("mods").join(&mod_folder);
-        let export_dir = std::env::current_dir().unwrap().join("exports");
+        let base_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let mod_path = base_dir.join("mods").join(&mod_folder);
+        let export_dir = base_dir.join("exports");
         let _ = std::fs::create_dir_all(&export_dir);
 
         let region_key = match target_region {
             TargetRegion::En => &user_keys.en,
-            TargetRegion::Jp => &user_keys.jp,
-            TargetRegion::Kr => &user_keys.kr,
+            TargetRegion::Jp => &user_keys.ja,
+            TargetRegion::Kr => &user_keys.ko,
             TargetRegion::Tw => &user_keys.tw,
         };
 
@@ -152,9 +154,9 @@ pub fn start_pack_export(state: &mut ModState) {
             Ok((p, l)) => {
                 let _ = std::fs::write(export_dir.join(format!("{}.pack", pack_name)), p);
                 let _ = std::fs::write(export_dir.join(format!("{}.list", pack_name)), l);
-                tx.send(ExportEvent::Success).unwrap();
+                let _ = tx.send(ExportEvent::Success);
             },
-            Err(e) => { tx.send(ExportEvent::Error(e)).unwrap(); }
+            Err(e) => { let _ = tx.send(ExportEvent::Error(e)); }
         }
     });
 }

@@ -3,15 +3,15 @@ use super::lang;
 use super::upd::UpdateMode;
 
 #[derive(Serialize, Deserialize, Default)]
-#[serde(default)] 
+#[serde(default)]
 pub struct Settings {
     pub general: GeneralSettings,
     pub cat_data: CatDataSettings,
     pub enemy_data: EnemyDataSettings,
     pub game_data: GameDataSettings,
     pub animation: AnimSettings,
-    
-    #[serde(skip)] 
+
+    #[serde(skip)]
     pub runtime: RuntimeState,
 }
 
@@ -19,7 +19,7 @@ pub struct Settings {
 #[serde(default)]
 pub struct GeneralSettings {
     #[serde(default = "crate::features::settings::logic::lang::default_priority")]
-    pub language_priority: Vec<String>, 
+    pub language_priority: Vec<String>,
     pub update_mode: UpdateMode,
 }
 
@@ -81,6 +81,7 @@ pub struct GameDataSettings {
     pub last_compression_level: i32,
     pub adb_import_type_idx: usize,
     pub adb_region_idx: usize,
+    pub enforce_key_validation: bool,
 }
 
 impl Default for GameDataSettings {
@@ -92,6 +93,7 @@ impl Default for GameDataSettings {
             last_compression_level: 9,
             adb_import_type_idx: 0,
             adb_region_idx: 4,
+            enforce_key_validation: true,
         }
     }
 }
@@ -99,7 +101,7 @@ impl Default for GameDataSettings {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct AnimSettings {
-    pub centering_behavior: usize, 
+    pub centering_behavior: usize,
     pub interpolation: bool,
     pub native_fps: f32,
     pub debug_view: bool,

@@ -6,5 +6,6 @@ pub mod utils;
 pub mod ui;
 pub mod resolver; 
 pub mod context;
+pub mod region;
 
 pub use self::resolver::get;

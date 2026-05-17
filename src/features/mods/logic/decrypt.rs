@@ -63,7 +63,7 @@ pub fn run(pack_dir: &Path, tx: Sender<String>) -> Result<(), String> {
         
         if entry.offset + aligned_size <= pack_data.len() {
             let chunk = &pack_data[entry.offset .. entry.offset + aligned_size];
-            
+
             match crypto::decrypt_pack_chunk(chunk, &entry.name, &user_keys) {
                 Ok((decrypted_bytes, _)) => {
                     let final_data = &decrypted_bytes[..std::cmp::min(entry.size, decrypted_bytes.len())];

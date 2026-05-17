@@ -6,7 +6,7 @@ use crate::features::mods::logic::engine;
 pub fn show(ctx: &egui::Context, state: &mut ModState, _settings: &Settings) {
     let mut is_open = state.export.is_open;
     let window_id = egui::Id::new("export_mod_window");
-    
+
     let is_busy = engine::process_events(state);
     if is_busy {
         ctx.request_repaint();
@@ -34,8 +34,8 @@ pub fn show(ctx: &egui::Context, state: &mut ModState, _settings: &Settings) {
             let inactive_color = egui::Color32::from_gray(60);
 
             let tabs = [
-                (ExportType::Apk, "APK / XAPK"),
-                (ExportType::Pack, "Pack (.pack/.list)"),
+                (ExportType::Apk, "APK"),
+                (ExportType::Pack, "Pack"),
             ];
 
             for (tab_enum, label) in tabs {

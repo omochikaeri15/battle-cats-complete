@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 use std::time::Instant;
+use crate::global::region::Region;
 
 #[derive(PartialEq, Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum AdbImportType {
@@ -14,22 +15,23 @@ pub enum AdbImportType {
 }
 
 #[derive(PartialEq, Clone, Copy, Debug, Deserialize, Serialize)]
-pub enum AdbRegion {
-    English,
-    Japanese,
-    Taiwan,
-    Korean,
-    All, 
+pub enum AdbTarget {
+    Specific(Region),
+    All,
 }
 
-impl AdbRegion {
+impl AdbTarget {
     pub fn suffix(&self) -> &'static str {
         match self {
-            AdbRegion::English => "en",
-            AdbRegion::Japanese => "", 
-            AdbRegion::Taiwan => "tw",
-            AdbRegion::Korean => "kr",
-            AdbRegion::All => "all", 
+            AdbTarget::Specific(region) => region.metadata().package_suffix,
+            AdbTarget::All => "all",
+        }
+    }
+
+    pub fn as_name(&self) -> &'static str {
+        match self {
+            AdbTarget::Specific(region) => region.metadata().display_name,
+            AdbTarget::All => "All Regions",
         }
     }
 }
@@ -60,7 +62,7 @@ pub struct ImportState {
     #[serde(skip)] pub import_censored: String,
     pub import_mode: ImportMode,
     pub adb_import_type: AdbImportType,
-    pub adb_region: AdbRegion,
+    pub adb_target: AdbTarget,
     pub decrypt_path: String,
     #[serde(skip)] pub decrypt_censored: String,
     
@@ -96,7 +98,7 @@ impl Default for ImportState {
             import_censored: String::new(),
             import_mode: ImportMode::Zip,
             adb_import_type: AdbImportType::All,
-            adb_region: AdbRegion::English,
+            adb_target: AdbTarget::Specific(Region::En),
             decrypt_path: String::new(),
             decrypt_censored: String::new(),
             export_filename: String::new(),

@@ -3,6 +3,7 @@ use aes::cipher::{BlockDecryptMut, KeyIvInit, KeyInit};
 use block_padding::Pkcs7;
 use md5;
 use crate::features::settings::logic::keys::UserKeys;
+use crate::global::region::Region;
 
 type Aes128Cbc = cbc::Decryptor<Aes128>;
 type Aes128Ecb = ecb::Decryptor<Aes128>;
@@ -43,16 +44,16 @@ fn is_content_valid(data: &[u8], filename: &str) -> bool {
         return data.len() >= 4 && data.starts_with(&[0x89, 0x50, 0x4E, 0x47]);
     }
     if lower_name.ends_with(".csv") || lower_name.ends_with(".list") || lower_name.ends_with(".json")
-        || lower_name.ends_with(".maanim") || lower_name.ends_with(".mamodel") || lower_name.ends_with(".imgcut") 
+        || lower_name.ends_with(".maanim") || lower_name.ends_with(".mamodel") || lower_name.ends_with(".imgcut")
     {
         return std::str::from_utf8(data).is_ok();
     }
     true
 }
 
-pub fn decrypt_pack_chunk(data: &[u8], internal_filename: &str, user_keys: &UserKeys) -> Result<(Vec<u8>, String), String> {
+pub fn decrypt_pack_chunk(data: &[u8], internal_filename: &str, user_keys: &UserKeys) -> Result<(Vec<u8>, Option<Region>), String> {
     let key_tuples = user_keys.as_tuples();
-    
+
     for (k_hex, iv_hex, region) in key_tuples {
         let Ok(key_bytes) = hex::decode(k_hex) else { continue; };
         let Ok(iv_bytes) = hex::decode(iv_hex) else { continue; };
@@ -60,7 +61,7 @@ pub fn decrypt_pack_chunk(data: &[u8], internal_filename: &str, user_keys: &User
 
         if let Ok(result) = decrypt_cbc_with_key(data, &key_arr, &iv_arr) {
             if is_content_valid(&result, internal_filename) {
-                return Ok((result, region));
+                return Ok((result, Some(region)));
             }
         }
     }
@@ -68,9 +69,9 @@ pub fn decrypt_pack_chunk(data: &[u8], internal_filename: &str, user_keys: &User
     let server_key = get_md5_key("battlecats");
     if let Ok(result) = decrypt_ecb_with_key(data, &server_key) {
         if is_content_valid(&result, internal_filename) {
-            return Ok((result, "Server".to_string()));
+            return Ok((result, None));
         }
     }
 
-    Ok((data.to_vec(), "None".to_string()))
+    Ok((data.to_vec(), None))
 }

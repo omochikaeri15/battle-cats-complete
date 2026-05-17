@@ -11,14 +11,16 @@ const COL_INPUT_WIDTH: f32 = 250.0;
 struct ManageKeysState {
     is_open: bool,
     keys: UserKeys,
+    validation_status: Option<[(bool, bool); 4]>,
 }
 
 pub fn open(ctx: &egui::Context) {
     let state_id = egui::Id::new("manage_keys_state");
     let mut state = ctx.data(|d| d.get_temp::<ManageKeysState>(state_id)).unwrap_or_else(|| {
-        ManageKeysState { 
-            is_open: false, 
-            keys: UserKeys::load()
+        ManageKeysState {
+            is_open: false,
+            keys: UserKeys::load(),
+            validation_status: None,
         }
     });
     state.is_open = true;
@@ -28,13 +30,18 @@ pub fn open(ctx: &egui::Context) {
 pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
     let state_id = egui::Id::new("manage_keys_state");
     let mut state = ctx.data(|d| d.get_temp::<ManageKeysState>(state_id)).unwrap_or_else(|| {
-        ManageKeysState { 
-            is_open: false, 
-            keys: UserKeys::load()
+        ManageKeysState {
+            is_open: false,
+            keys: UserKeys::load(),
+            validation_status: None,
         }
     });
 
-    if !state.is_open { return; }
+    if !state.is_open {
+        state.validation_status = None;
+        ctx.data_mut(|d| d.insert_temp(state_id, state));
+        return;
+    }
 
     let window_id = egui::Id::new("manage_keys_window");
     let (allow_drag, fixed_pos) = drag_guard.assign_bounds(ctx, window_id);
@@ -43,7 +50,7 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
 
     let mut window = egui::Window::new("Manage Decryption Keys")
         .id(window_id)
-        .open(&mut is_open) 
+        .open(&mut is_open)
         .collapsible(false)
         .resizable(false)
         .constrain(false)
@@ -57,7 +64,7 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
         ui.add_space(10.0);
 
         let btn_h = 24.0;
-        let btn_w = 140.0;
+        let btn_w = 110.0;
         let default_color = egui::Color32::from_rgb(31, 106, 165);
         let success_color = egui::Color32::from_rgb(40, 160, 60);
         let fail_color = egui::Color32::from_rgb(200, 40, 40);
@@ -68,8 +75,8 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
             ui.horizontal(|ui| {
                 let table_width = COL_REGION_WIDTH + (COL_INPUT_WIDTH * 2.0) + (15.0 * 2.0);
                 let spacing = ui.spacing().item_spacing.x;
-                let total_btn_width = (btn_w * 3.0) + (spacing * 2.0); 
-                
+                let total_btn_width = (btn_w * 4.0) + (spacing * 3.0);
+
                 let x_offset = (table_width - total_btn_width) / 2.0;
                 ui.add_space(x_offset.max(0.0));
 
@@ -87,6 +94,7 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
                                 if let Ok(parsed_keys) = serde_json::from_str::<UserKeys>(&data) {
                                     state.keys = parsed_keys;
                                     state.keys.save();
+                                    state.validation_status = None;
                                     true
                                 } else { false }
                             },
@@ -109,20 +117,26 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
                 if ui.add_sized([btn_w, btn_h], egui::Button::new(egui::RichText::new(export_text).size(12.0).strong().color(egui::Color32::WHITE)).fill(export_color).rounding(4.0)).clicked() {
                     let export_dir = Path::new("exports");
                     let _ = fs::create_dir_all(export_dir);
-                    
+
                     let export_path = export_dir.join("keys");
                     let json_data = serde_json::to_string_pretty(&state.keys).unwrap_or_default();
                     let success = fs::write(&export_path, json_data).is_ok();
-                    
+
                     ctx.data_mut(|d| {
                         d.insert_temp(egui::Id::new("keys_export_time"), current_time);
                         d.insert_temp(egui::Id::new("keys_export_res"), success);
                     });
                 }
 
+                // --- Validate Keys ---
+                if ui.add_sized([btn_w, btn_h], egui::Button::new(egui::RichText::new("Validate Keys").size(12.0).strong().color(egui::Color32::WHITE)).fill(default_color).rounding(4.0)).clicked() {
+                    state.validation_status = Some(state.keys.validate());
+                }
+
                 // --- Delete Keys ---
                 if ui.add_sized([btn_w, btn_h], egui::Button::new(egui::RichText::new("Delete Keys").size(12.0).strong().color(egui::Color32::WHITE)).fill(danger_color).rounding(4.0)).clicked() {
                     state.keys = UserKeys::default();
+                    state.validation_status = None;
                     state.keys.save();
                 }
             });
@@ -138,17 +152,41 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
             ui.vertical_centered(|ui| { ui.set_min_width(COL_INPUT_WIDTH); ui.label(egui::RichText::new("Initialization Vector").strong()); });
             ui.end_row();
 
-            let regions = [
-                ("JP", &mut state.keys.jp),
-                ("EN", &mut state.keys.en),
-                ("TW", &mut state.keys.tw),
-                ("KR", &mut state.keys.kr),
+            let mut regions = [
+                ("Japan", &mut state.keys.ja),
+                ("Global", &mut state.keys.en),
+                ("Taiwan", &mut state.keys.tw),
+                ("Korea", &mut state.keys.ko),
             ];
 
-            for (name, region_data) in regions {
-                ui.centered_and_justified(|ui| { ui.label(egui::RichText::new(name).strong()); });
-                ui.add(egui::TextEdit::singleline(&mut region_data.key).desired_width(COL_INPUT_WIDTH));
-                ui.add(egui::TextEdit::singleline(&mut region_data.iv).desired_width(COL_INPUT_WIDTH));
+            let default_validations = [(true, true); 4];
+            let current_validations = state.validation_status.unwrap_or(default_validations);
+
+            for (i, (name, region_data)) in regions.iter_mut().enumerate() {
+                ui.centered_and_justified(|ui| { ui.label(egui::RichText::new(*name).strong()); });
+
+                let (key_valid, iv_valid) = current_validations[i];
+                
+                ui.scope(|ui| {
+                    if state.validation_status.is_some() {
+                        let color = if key_valid { egui::Color32::from_rgb(30, 80, 40) } else { egui::Color32::from_rgb(120, 30, 30) };
+                        ui.visuals_mut().extreme_bg_color = color;
+                    }
+                    if ui.add(egui::TextEdit::singleline(&mut region_data.key).desired_width(COL_INPUT_WIDTH)).changed() {
+                        state.validation_status = None;
+                    }
+                });
+
+                ui.scope(|ui| {
+                    if state.validation_status.is_some() {
+                        let color = if iv_valid { egui::Color32::from_rgb(30, 80, 40) } else { egui::Color32::from_rgb(120, 30, 30) };
+                        ui.visuals_mut().extreme_bg_color = color;
+                    }
+                    if ui.add(egui::TextEdit::singleline(&mut region_data.iv).desired_width(COL_INPUT_WIDTH)).changed() {
+                        state.validation_status = None;
+                    }
+                });
+
                 ui.end_row();
             }
         })
@@ -157,6 +195,8 @@ pub fn show(ctx: &egui::Context, drag_guard: &mut DragGuard) {
     if state.keys != original_keys || (state.is_open && !is_open) {
         state.keys.save();
     }
+
+    if !is_open { state.validation_status = None; }
 
     state.is_open = is_open;
     ctx.data_mut(|d| d.insert_temp(state_id, state));

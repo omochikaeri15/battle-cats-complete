@@ -5,16 +5,17 @@ use std::sync::Arc;
 use std::thread;
 
 use crate::features::data::utilities::engine;
-use crate::features::data::state::{AdbImportType, AdbRegion};
+use crate::features::data::state::{AdbImportType, AdbTarget};
 use crate::features::addons::adb::bridge;
 use crate::features::settings::logic::state::EmulatorConfig;
 use crate::features::settings::logic::keys::UserKeys;
 
 pub fn run(
-    status_sender: Sender<String>, 
-    import_mode: AdbImportType, 
-    target_region: AdbRegion, 
+    status_sender: Sender<String>,
+    import_mode: AdbImportType,
+    target_region: AdbTarget,
     emulator_config: EmulatorConfig,
+    enforce_validation: bool,
     abort_flag: Arc<AtomicBool>,
     job_status: Arc<AtomicU8>,
     progress_current: Arc<AtomicUsize>,
@@ -22,10 +23,10 @@ pub fn run(
 ) {
     let _ = thread::Builder::new()
         .name("android_import_worker".to_string())
-        .stack_size(8 * 1024 * 1024) 
+        .stack_size(8 * 1024 * 1024)
         .spawn(move || {
-            let terminate_job = |status_tracker: Arc<AtomicU8>, is_error: bool| { 
-                status_tracker.store(if is_error { 3 } else { 2 }, Ordering::Relaxed); 
+            let terminate_job = |status_tracker: Arc<AtomicU8>, is_error: bool| {
+                status_tracker.store(if is_error { 3 } else { 2 }, Ordering::Relaxed);
             };
 
             let user_keys = UserKeys::load();
@@ -34,26 +35,27 @@ pub fn run(
                 let _ = status_sender.send("Please add them in Settings -> Data -> Manage Keys.".to_string());
                 return terminate_job(job_status, true);
             }
-            
+
             let app_repository_directory = PathBuf::from("game/app");
 
+            // Bridge execute_pull requires AdbTarget now!
             let pull_result = bridge::execute_pull(
-                &app_repository_directory, 
-                import_mode, 
-                target_region, 
-                &emulator_config, 
-                &status_sender, 
+                &app_repository_directory,
+                import_mode,
+                target_region,
+                &emulator_config,
+                &status_sender,
                 &abort_flag
             );
 
-            if abort_flag.load(Ordering::Relaxed) { 
-                return terminate_job(job_status, true); 
+            if abort_flag.load(Ordering::Relaxed) {
+                return terminate_job(job_status, true);
             }
 
             match pull_result {
                 Ok(pulled_package_directories) => {
                     let _ = status_sender.send("Starting Processing Phase...".to_string());
-                    
+
                     if let Err(engine_error) = engine::run_universal_import(&pulled_package_directories, &status_sender, &abort_flag, &progress_current, &progress_maximum) {
                         let _ = status_sender.send(format!("Universal Import Failed: {}", engine_error));
                         return terminate_job(job_status, true);

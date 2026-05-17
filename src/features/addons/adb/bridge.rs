@@ -4,13 +4,14 @@ use std::time::Duration;
 use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, Ordering};
 use super::driver;
-use crate::features::data::state::{AdbImportType, AdbRegion};
+use crate::features::data::state::{AdbImportType, AdbTarget};
+use crate::global::region::Region;
 use crate::features::settings::logic::state::EmulatorConfig;
 
 pub fn execute_pull(
     base_output_directory: &PathBuf,
     import_mode: AdbImportType,
-    target_region: AdbRegion,
+    target_region: AdbTarget,
     emulator_config: &EmulatorConfig,
     status_sender: &Sender<String>,
     abort_flag: &AtomicBool
@@ -33,7 +34,12 @@ pub fn execute_pull(
     }
 
     let regions_to_process = match target_region {
-        AdbRegion::All => vec![AdbRegion::English, AdbRegion::Japanese, AdbRegion::Taiwan, AdbRegion::Korean],
+        AdbTarget::All => vec![
+            AdbTarget::Specific(Region::En),
+            AdbTarget::Specific(Region::Ja),
+            AdbTarget::Specific(Region::Tw),
+            AdbTarget::Specific(Region::Ko)
+        ],
         _ => vec![target_region],
     };
 
@@ -55,6 +61,7 @@ pub fn execute_pull(
 
     Ok(successful_pulls)
 }
+
 fn establish_connection(emulator_config: &EmulatorConfig, status_sender: &Sender<String>) -> Result<(String, Option<String>), String> {
     let _ = status_sender.send("Detecting device...".to_string());
 
@@ -172,8 +179,9 @@ fn ensure_root_access(current_serial: &mut String, status_sender: &Sender<String
     let _ = driver::run_command(&["-s", current_serial, "wait-for-device"]);
     Ok(())
 }
+
 fn pull_region_data(
-    current_region: &AdbRegion,
+    current_region: &AdbTarget,
     current_serial: &mut String,
     fallback_ip_address: &Option<String>,
     base_output_directory: &PathBuf,

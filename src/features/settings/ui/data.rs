@@ -65,24 +65,24 @@ fn show_folder_delete_modal(
             .collapsible(false)
             .resizable(false)
             .constrain(false)
-            .movable(allow_drag) 
+            .movable(allow_drag)
             .default_pos(ctx.screen_rect().center() - egui::vec2(150.0, 50.0));
-            
+
         if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-            
+
         window.show(ctx, |ui| {
             ui.set_min_width(280.0);
             ui.vertical_centered(|ui| {
                 ui.add_space(5.0);
-                ui.label(content); 
-                
+                ui.label(content);
+
                 if let Some(size) = &state.size_str {
                     ui.add_space(5.0);
                     ui.label(egui::RichText::new(format!("Folder size: {}", size)).color(ui.visuals().weak_text_color()));
                 }
 
                 ui.add_space(15.0);
-                
+
                 ui.horizontal(|ui| {
                     let total_width = 130.0;
                     let x_offset = (ui.available_width() - total_width) / 2.0;
@@ -92,7 +92,7 @@ fn show_folder_delete_modal(
                         yes_clicked = true;
                         should_close = true;
                     }
-                    
+
                     ui.add_space(10.0);
 
                     if ui.add_sized([60.0, 30.0], egui::Button::new("No")).clicked() {
@@ -102,14 +102,14 @@ fn show_folder_delete_modal(
                 ui.add_space(5.0);
             });
         });
-        
+
         if should_close {
             state.is_open = false;
         }
-        
+
         ctx.data_mut(|d| d.insert_temp(state_id, state));
     }
-    
+
     yes_clicked
 }
 
@@ -131,7 +131,7 @@ pub fn show(ui: &mut egui::Ui, settings: &mut GameDataSettings, runtime: &mut Ru
 
     let game_exists = Path::new("game").exists();
     let raw_exists = Path::new("game/raw").exists();
-    
+
     let cache_dir_opt = crate::global::io::cache::get_cache_dir();
     let cache_size = cache_dir_opt.as_ref().map(|path| get_folder_size(path)).unwrap_or(0);
     let cache_exists = cache_size > 0;
@@ -140,28 +140,27 @@ pub fn show(ui: &mut egui::Ui, settings: &mut GameDataSettings, runtime: &mut Ru
         .id_salt("game_data_scroll")
         .auto_shrink([false, true])
         .show(ui, |ui| {
-
             ui.heading("Disk");
             ui.add_space(5.0);
 
             if game_deleter.is_deleting() {
                 let btn = egui::Button::new("Deleting \"game\" Folder...")
-                    .fill(egui::Color32::from_rgb(200, 180, 50)); 
+                    .fill(egui::Color32::from_rgb(200, 180, 50));
                 ui.add_sized([180.0, 30.0], btn);
             } else if game_deleter.is_done() {
                 let btn = egui::Button::new("Deleted \"game\" Folder!")
-                    .fill(egui::Color32::from_rgb(40, 160, 40)); 
+                    .fill(egui::Color32::from_rgb(40, 160, 40));
                 ui.add_sized([180.0, 30.0], btn);
             } else if game_exists {
                 let btn = egui::Button::new("Delete \"game\" Folder")
-                    .fill(egui::Color32::from_rgb(180, 50, 50)); 
+                    .fill(egui::Color32::from_rgb(180, 50, 50));
                 if ui.add_sized([180.0, 30.0], btn).clicked() {
                     let state_id = egui::Id::new("delete_game_modal");
                     ctx.data_mut(|d| d.insert_temp(state_id, FolderDeleteState { is_open: true, size_str: None }));
                 }
             } else {
                 let btn = egui::Button::new("No \"game\" Folder")
-                    .fill(egui::Color32::from_rgb(60, 60, 60)); 
+                    .fill(egui::Color32::from_rgb(60, 60, 60));
                 ui.add_sized([180.0, 30.0], btn);
             }
 
@@ -169,26 +168,26 @@ pub fn show(ui: &mut egui::Ui, settings: &mut GameDataSettings, runtime: &mut Ru
 
             if raw_deleter.is_deleting() {
                 let btn = egui::Button::new("Deleting \"raw\" Folder...")
-                    .fill(egui::Color32::from_rgb(200, 180, 50)); 
+                    .fill(egui::Color32::from_rgb(200, 180, 50));
                 ui.add_sized([180.0, 30.0], btn);
             } else if raw_deleter.is_done() {
                 let btn = egui::Button::new("Deleted \"raw\" Folder!")
-                    .fill(egui::Color32::from_rgb(40, 160, 40)); 
+                    .fill(egui::Color32::from_rgb(40, 160, 40));
                 ui.add_sized([180.0, 30.0], btn);
             } else if raw_exists {
                 let btn = egui::Button::new("Delete \"raw\" Folder")
-                    .fill(egui::Color32::from_rgb(180, 50, 50)); 
+                    .fill(egui::Color32::from_rgb(180, 50, 50));
                 if ui.add_sized([180.0, 30.0], btn).clicked() {
                     let size = get_folder_size(Path::new("game/raw"));
                     let state_id = egui::Id::new("delete_raw_modal");
-                    ctx.data_mut(|d| d.insert_temp(state_id, FolderDeleteState { 
-                        is_open: true, 
-                        size_str: Some(format_size(size)) 
+                    ctx.data_mut(|d| d.insert_temp(state_id, FolderDeleteState {
+                        is_open: true,
+                        size_str: Some(format_size(size))
                     }));
                 }
             } else {
                 let btn = egui::Button::new("No \"raw\" Folder")
-                    .fill(egui::Color32::from_rgb(60, 60, 60)); 
+                    .fill(egui::Color32::from_rgb(60, 60, 60));
                 ui.add_sized([180.0, 30.0], btn);
             }
 
@@ -196,93 +195,57 @@ pub fn show(ui: &mut egui::Ui, settings: &mut GameDataSettings, runtime: &mut Ru
 
             if cache_deleter.is_deleting() {
                 let btn = egui::Button::new("Clearing Cache...")
-                    .fill(egui::Color32::from_rgb(200, 180, 50)); 
+                    .fill(egui::Color32::from_rgb(200, 180, 50));
                 ui.add_sized([180.0, 30.0], btn);
             } else if cache_deleter.is_done() {
                 let btn = egui::Button::new("Cleared Cache!")
-                    .fill(egui::Color32::from_rgb(40, 160, 40)); 
+                    .fill(egui::Color32::from_rgb(40, 160, 40));
                 ui.add_sized([180.0, 30.0], btn);
             } else if cache_exists {
                 let btn = egui::Button::new("Clear Cache")
-                    .fill(egui::Color32::from_rgb(180, 50, 50)); 
+                    .fill(egui::Color32::from_rgb(180, 50, 50));
                 if ui.add_sized([180.0, 30.0], btn).clicked() {
                     let state_id = egui::Id::new("delete_cache_modal");
-                    ctx.data_mut(|d| d.insert_temp(state_id, FolderDeleteState { 
-                        is_open: true, 
-                        size_str: Some(format_size(cache_size)) 
+                    ctx.data_mut(|d| d.insert_temp(state_id, FolderDeleteState {
+                        is_open: true,
+                        size_str: Some(format_size(cache_size))
                     }));
                 }
             } else {
                 let btn = egui::Button::new("Cache Empty")
-                    .fill(egui::Color32::from_rgb(60, 60, 60)); 
+                    .fill(egui::Color32::from_rgb(60, 60, 60));
                 ui.add_sized([180.0, 30.0], btn);
             }
-
             ui.add_space(20.0);
-            ui.heading("Android");
-            ui.add_space(5.0);
-
-            ui.horizontal(|ui| {
-                let tooltip = "Attempt to connect to this IP Address Wirelessly if not automatically found when using Android import method\nMake sure you have \"Wireless USB Debugging\" enabled in your devices developer settings\nRequires ABD OEM Drivers Add-On to function";
-                
-                ui.label("Fallback IP Address").on_hover_text(tooltip);
-                ui.spacing_mut().item_spacing.x = 4.0; 
-
-                ui.allocate_ui(egui::vec2(100.0, 20.0), |ui| {
-                    ui.centered_and_justified(|ui| {
-                        if runtime.show_ip_field {
-                            let hint = egui::RichText::new("192.168.X.X").color(egui::Color32::GRAY);
-                            ui.add(egui::TextEdit::singleline(&mut settings.manual_ip)
-                                .hint_text(hint)
-                                .vertical_align(egui::Align::Center))
-                                .on_hover_text(tooltip); 
-                        } else {
-                            if ui.button("Click to Reveal").on_hover_text(tooltip).clicked() {
-                                runtime.show_ip_field = true;
-                            }
-                        }
-                    });
-                });
-
-                ui.add_space(2.0);
-
-                if ui.button("👁").on_hover_text("Toggle Visibility").clicked() {
-                    runtime.show_ip_field = !runtime.show_ip_field;
-                }
-            });
-            
-            ui.add_space(5.0);
-
-            ui.horizontal(|ui| {
-                let label_response = ui.label("App Folder Persistence");
-                let tooltip_text = "Skip the deletion of the \"game/app\" directory after android import";
-                label_response.on_hover_text(tooltip_text);
-
-                let toggle_response = toggle_ui(ui, &mut settings.app_folder_persistence).on_hover_text(tooltip_text);
-                if toggle_response.changed() { refresh_needed = true; }
-            });
-
-            ui.add_space(20.0);
-            ui.heading("Import");
+            ui.heading("Management");
             ui.add_space(5.0);
 
             let keys_btn = egui::Button::new("Manage Keys")
-                    .fill(egui::Color32::from_rgb(40, 90, 160));
-                
+                .fill(egui::Color32::from_rgb(40, 90, 160));
             if ui.add_sized([180.0, 30.0], keys_btn).clicked() {
                 crate::features::settings::ui::keys::open(&ctx);
             }
 
+            ui.add_space(5.0);
+
             let import_btn = egui::Button::new("Manage Exceptions")
                 .fill(egui::Color32::from_rgb(40, 90, 160));
-            
             if ui.add_sized([180.0, 30.0], import_btn).clicked() {
                 crate::features::settings::ui::exceptions::open(&ctx);
             }
 
-            ui.add_space(20.0);
-            ui.heading("Export");
             ui.add_space(10.0);
+
+            ui.horizontal(|ui| {
+                let label_response = ui.label("Enforce Key Validation");
+                let tooltip_text = "Prevents decryption/encryption if the cryptographic keys don't match the known official file hashes\nTurn this off only if the game keys have changed and you haven't updated BCC yet";
+                label_response.on_hover_text(tooltip_text);
+
+                let toggle_response = toggle_ui(ui, &mut settings.enforce_key_validation).on_hover_text(tooltip_text);
+                if toggle_response.changed() { refresh_needed = true; }
+            });
+
+            ui.add_space(5.0);
 
             ui.horizontal(|ui| {
                 let label_response = ui.label("Enable Ultra Compression");
@@ -298,7 +261,53 @@ pub fn show(ui: &mut egui::Ui, settings: &mut GameDataSettings, runtime: &mut Ru
                     }
                 }
             });
-    });
+
+            ui.add_space(20.0);
+            ui.heading("Android");
+            ui.add_space(5.0);
+
+            ui.horizontal(|ui| {
+                let tooltip = "Attempt to connect to this IP Address Wirelessly if not automatically found when using Android import method\nMake sure you have \"Wireless USB Debugging\" enabled in your devices developer settings\nRequires ABD OEM Drivers Add-On to function";
+
+                ui.label("Fallback IP Address").on_hover_text(tooltip);
+                ui.spacing_mut().item_spacing.x = 4.0;
+
+                ui.allocate_ui(egui::vec2(100.0, 20.0), |ui| {
+                    ui.centered_and_justified(|ui| {
+                        if runtime.show_ip_field {
+                            let hint = egui::RichText::new("192.168.X.X").color(egui::Color32::GRAY);
+                            ui.add(egui::TextEdit::singleline(&mut settings.manual_ip)
+                                .hint_text(hint)
+                                .vertical_align(egui::Align::Center))
+                                .on_hover_text(tooltip);
+                        } else {
+                            if ui.button("Click to Reveal").on_hover_text(tooltip).clicked() {
+                                runtime.show_ip_field = true;
+                            }
+                        }
+                    });
+                });
+
+                ui.add_space(2.0);
+
+                if ui.button("👁").on_hover_text("Toggle Visibility").clicked() {
+                    runtime.show_ip_field = !runtime.show_ip_field;
+                }
+            });
+
+            ui.add_space(5.0);
+
+            ui.horizontal(|ui| {
+                let label_response = ui.label("App Folder Persistence");
+                let tooltip_text = "Skip the deletion of the \"game/app\" directory after android import";
+                label_response.on_hover_text(tooltip_text);
+
+                let toggle_response = toggle_ui(ui, &mut settings.app_folder_persistence).on_hover_text(tooltip_text);
+                if toggle_response.changed() { refresh_needed = true; }
+            });
+
+            ui.add_space(10.0);
+        });
 
     if show_folder_delete_modal(&ctx, drag_guard, "delete_game_modal", "Are you sure you want to delete the \"game\" folder?\nMost app function will be lost.") {
         game_deleter.start("game");
