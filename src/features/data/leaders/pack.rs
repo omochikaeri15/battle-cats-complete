@@ -3,9 +3,8 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
-use crate::features::data::utilities::engine;
+use crate::features::data::utilities::{engine, keys};
 use crate::features::data::state::{ImportMode, AdbTarget};
-use crate::features::settings::logic::keys::UserKeys;
 
 pub fn run(
     source_path_string: &str,
@@ -17,14 +16,11 @@ pub fn run(
     progress_current: Arc<AtomicUsize>,
     progress_maximum: Arc<AtomicUsize>
 ) -> Result<(), String> {
-
-    let user_keys = UserKeys::load();
-    if user_keys.is_empty() {
-        let _ = status_sender.send("ERROR: No decryption keys found.".to_string());
-        let _ = status_sender.send("Please add them in Settings -> Data -> Manage Keys.".to_string());
-        return Err("Missing decryption keys".to_string());
+    
+    if keys::verify(enforce_validation, &status_sender).is_err() {
+        return Err("Decryption blocked: Invalid signature keys detected.".to_string());
     }
-
+    
     let source_directory = match import_mode {
         ImportMode::Folder => PathBuf::from(source_path_string),
         ImportMode::Zip => {
@@ -36,7 +32,13 @@ pub fn run(
 
     let directories_to_process = vec![source_directory.clone()];
 
-    let engine_result = engine::run_universal_import(&directories_to_process, &status_sender, &abort_flag, &progress_current, &progress_maximum);
+    let engine_result = engine::run_universal_import(
+        &directories_to_process,
+        &status_sender,
+        &abort_flag,
+        &progress_current,
+        &progress_maximum
+    );
 
     if import_mode == ImportMode::Zip {
         let _ = fs::remove_dir_all(source_directory);

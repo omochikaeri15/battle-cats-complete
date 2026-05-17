@@ -61,9 +61,10 @@ impl UserKeys {
 
     pub fn validate(&self) -> [(bool, bool); 4] {
         let check = |val: &str, expected: &str| -> bool {
+            if expected.is_empty() { return true; }
             let clean_val = val.trim();
             if clean_val.is_empty() { return false; }
-            if expected.is_empty() { return true; }
+
             let hash = format!("{:x}", md5::compute(clean_val.as_bytes()));
             hash == expected
         };
