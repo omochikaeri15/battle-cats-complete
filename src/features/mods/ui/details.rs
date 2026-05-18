@@ -87,7 +87,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
     let mod_folder = state.loaded_mods[mod_idx].folder_name.clone();
     let mod_path = Path::new("mods").join(&mod_folder);
     let is_enabled = state.loaded_mods[mod_idx].enabled;
-    let has_icon = mod_path.join("icon.png").exists() || mod_path.join("icon.ico").exists();
+    let icons_dir = mod_path.join("icons");
+    let has_icon = icons_dir.join("icon.png").exists() || icons_dir.join("icon.ico").exists();
 
     let mut toggle_clicked = false;
     render_action_buttons(ui, state, &mod_path, has_icon, is_enabled, &mod_folder, &mut toggle_clicked);
@@ -243,7 +244,6 @@ fn render_action_buttons(
 
         let export_btn = egui::Button::new("Export Mod").fill(egui::Color32::from_rgb(30, 100, 180));
         if ui.add_sized(BTN_SIZE, export_btn).clicked() {
-            // ROGUE CODE REMOVED HERE
             state.export.is_open = true;
         }
 

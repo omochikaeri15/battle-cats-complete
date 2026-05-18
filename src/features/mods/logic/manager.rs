@@ -73,24 +73,31 @@ pub fn start_pack_import(state: &mut ModState, path: PathBuf) {
 
     std::thread::spawn(move || {
         let settings: crate::features::settings::logic::state::Settings = crate::global::io::json::load("settings.json").unwrap_or_default();
-        if crate::features::data::utilities::keys::verify(settings.game_data.enforce_key_validation, &tx).is_err() {
-            return;
-        }
+
+        let user_keys = match crate::features::data::utilities::keys::verify(settings.game_data.enforce_key_validation, &tx) {
+            Ok(keys) => keys,
+            Err(_) => return,
+        };
 
         let pkg_name = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
         let target_dir = PathBuf::from(format!("mods/packages/{}", pkg_name));
 
         let res = match pack_type {
             ModPackType::Apk | ModPackType::Zip => {
-                let r = extract::run_archive(&path, &target_dir, tx.clone());
+                let r = extract::run_archive(&path, &target_dir, tx.clone(), &user_keys);
 
                 let _ = tx.send("Cleaning up temporary pack files...".to_string());
 
+                // Prevent the OS Error 2 if the folder doesn't exist
                 if let Err(e) = std::fs::remove_dir_all(&target_dir) {
-                    let _ = tx.send(format!("Warning: Could not fully delete {}: {}", target_dir.display(), e));
+                    if e.kind() != std::io::ErrorKind::NotFound {
+                        let _ = tx.send(format!("Warning: Could not fully delete {}: {}", target_dir.display(), e));
+                    }
                 }
 
-                let _ = std::fs::remove_dir("mods/packages");
+                if Path::new("mods/packages").exists() {
+                    let _ = std::fs::remove_dir("mods/packages"); // Ignore error if not empty
+                }
 
                 r
             },
@@ -98,11 +105,16 @@ pub fn start_pack_import(state: &mut ModState, path: PathBuf) {
                 let _ = tx.send("Folder import coming soon...".to_string());
                 Err("Not implemented".to_string())
             },
-            ModPackType::Pack => decrypt::run(&path, tx.clone())
+            ModPackType::Pack => decrypt::run(&path, tx.clone(), &user_keys)
         };
 
-        if let Err(e) = res {
-            let _ = tx.send(format!("Error: {}", e));
+        match res {
+            Ok(_) => {
+                let _ = tx.send("Import Complete!".to_string());
+            }
+            Err(e) => {
+                let _ = tx.send(format!("Error: {}", e));
+            }
         }
     });
 }
@@ -207,17 +219,18 @@ pub fn add_mod_icon(path: &Path) {
 
     if ext_str != "png" && ext_str != "ico" { return; }
 
-    let target_path = path.join(format!("icon.{}", ext_str));
-
+    let icons_dir = path.join("icons");
+    let _ = fs::create_dir_all(&icons_dir);
+    let target_path = icons_dir.join(format!("icon.{}", ext_str));
     let other_ext = if ext_str == "png" { "ico" } else { "png" };
-    let _ = fs::remove_file(path.join(format!("icon.{}", other_ext)));
-
+    let _ = fs::remove_file(icons_dir.join(format!("icon.{}", other_ext)));
     let _ = fs::copy(image_path, target_path);
 }
 
 pub fn delete_mod_icon(path: &Path) {
-    let png_path = path.join("icon.png");
-    let ico_path = path.join("icon.ico");
+    let icons_dir = path.join("icons");
+    let png_path = icons_dir.join("icon.png");
+    let ico_path = icons_dir.join("icon.ico");
 
     if png_path.exists() { let _ = fs::remove_file(png_path); }
     if ico_path.exists() { let _ = fs::remove_file(ico_path); }

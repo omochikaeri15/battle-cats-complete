@@ -35,7 +35,7 @@ impl Default for ModMetadata {
 
 impl ModMetadata {
     pub fn load<P: AsRef<Path>>(mod_folder_path: P) -> Self {
-        let meta_path = mod_folder_path.as_ref().join("metadata.json");
+        let meta_path = mod_folder_path.as_ref().join("patch").join("metadata.json");
         if let Ok(data) = fs::read_to_string(meta_path) {
             serde_json::from_str(&data).unwrap_or_default()
         } else {
@@ -44,7 +44,13 @@ impl ModMetadata {
     }
 
     pub fn save<P: AsRef<Path>>(&self, mod_folder_path: P) -> Result<(), std::io::Error> {
-        let meta_path = mod_folder_path.as_ref().join("metadata.json");
+        let dl_dir = mod_folder_path.as_ref().join("patch");
+        
+        if !dl_dir.exists() {
+            let _ = fs::create_dir_all(&dl_dir);
+        }
+
+        let meta_path = dl_dir.join("metadata.json");
         let data = serde_json::to_string_pretty(self)?;
         fs::write(meta_path, data)
     }

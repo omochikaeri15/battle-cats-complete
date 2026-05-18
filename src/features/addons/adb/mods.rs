@@ -2,8 +2,10 @@ use std::path::PathBuf;
 use std::thread;
 use std::sync::mpsc::Sender;
 use std::fs;
-use crate::features::addons::adb::driver; 
+use crate::features::addons::adb::driver;
 use crate::features::mods::import::extract;
+use crate::features::settings::logic::state::Settings;
+use crate::features::data::utilities::keys;
 
 pub enum ModAdbEvent {
     Status(String),
@@ -15,7 +17,7 @@ pub fn spawn_mod_import(tx: Sender<ModAdbEvent>, suffix: String) {
     thread::spawn(move || {
         let _ = tx.send(ModAdbEvent::Status("Starting ADB Server...".to_string()));
         let _ = driver::run_command(&["start-server"]);
-        
+
         let pkg = format!("jp.co.ponos.battlecats{}", suffix);
         let _ = tx.send(ModAdbEvent::Status(format!("Targeting Package: {}", pkg)));
 
@@ -56,7 +58,7 @@ pub fn spawn_mod_import(tx: Sender<ModAdbEvent>, suffix: String) {
         }
 
         let _ = tx.send(ModAdbEvent::Status("Extracting DownloadLocal data...".to_string()));
-        
+
         // Setup a proxy channel to catch the String messages from extract/decrypt
         let (e_tx, e_rx) = std::sync::mpsc::channel();
         let tx_clone = tx.clone();
@@ -65,17 +67,27 @@ pub fn spawn_mod_import(tx: Sender<ModAdbEvent>, suffix: String) {
                 let _ = tx_clone.send(ModAdbEvent::Status(msg));
             }
         });
-        
+
+        // Load Settings and Verify Keys
+        let settings: Settings = crate::global::io::json::load("settings.json").unwrap_or_default();
+        let user_keys = match keys::verify(settings.game_data.enforce_key_validation, &e_tx) {
+            Ok(k) => k,
+            Err(e) => {
+                let _ = tx.send(ModAdbEvent::Error(e));
+                return;
+            }
+        };
+
         // Run the extraction and decryption pipeline
-        if let Err(e) = extract::run_archive(&local_apk_path, &target_dir, e_tx) {
+        if let Err(e) = extract::run_archive(&local_apk_path, &target_dir, e_tx, &user_keys) {
             let _ = tx.send(ModAdbEvent::Error(format!("Extraction/Decryption failed: {}", e)));
             return;
         }
-        
+
         // CLEANUP
         let _ = tx.send(ModAdbEvent::Status("Cleaning up temporary base.apk and pack files...".to_string()));
         let _ = fs::remove_dir_all(&target_dir); // Nukes the APK, the .list, and the .pack
-        
+
         let _ = tx.send(ModAdbEvent::Success("ADB Mod Import Complete!".to_string()));
     });
 }

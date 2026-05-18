@@ -3,8 +3,8 @@ use std::path::Path;
 use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use rayon::prelude::*;
-use crate::features::data::utilities::{crypto, keys};
-use crate::features::settings::logic::state::Settings;
+use crate::features::data::utilities::crypto;
+use crate::features::settings::logic::keys::UserKeys;
 
 struct PackEntry {
     name: String,
@@ -12,26 +12,16 @@ struct PackEntry {
     size: usize,
 }
 
-pub fn run(pack_dir: &Path, tx: Sender<String>) -> Result<(), String> {
-    let settings: Settings = crate::global::io::json::load("settings.json").unwrap_or_default();
-    let user_keys = keys::verify(settings.game_data.enforce_key_validation, &tx)?;
+pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
     let list_path = pack_dir.join("DownloadLocal.list");
     let pack_path = pack_dir.join("DownloadLocal.pack");
 
     if !list_path.exists() || !pack_path.exists() {
-        return Err("DownloadLocal.list or .pack missing from target folder".to_string());
+        return Ok(());
     }
 
-    let mods_root = Path::new("mods");
-    let mut mod_num = 1;
-    while mods_root.join(format!("NewMod{}", mod_num)).exists() {
-        mod_num += 1;
-    }
-
-    let target_dir = mods_root.join(format!("NewMod{}", mod_num));
-    fs::create_dir_all(&target_dir).map_err(|e| e.to_string())?;
-
-    let _ = tx.send("Extracting to new mod workspace...".to_string());
+    let patch_dir = pack_dir.join("patch");
+    fs::create_dir_all(&patch_dir).map_err(|e| e.to_string())?;
 
     let list_data = fs::read(&list_path).map_err(|e| e.to_string())?;
     let content = decrypt_list_content(&list_data)?;
@@ -59,11 +49,11 @@ pub fn run(pack_dir: &Path, tx: Sender<String>) -> Result<(), String> {
         if entry.offset + aligned_size <= pack_data.len() {
             let chunk = &pack_data[entry.offset .. entry.offset + aligned_size];
 
-            match crypto::decrypt_pack_chunk(chunk, &entry.name, &user_keys) {
+            match crypto::decrypt_pack_chunk(chunk, &entry.name, user_keys) {
                 Ok((decrypted_bytes, _)) => {
                     let final_data = &decrypted_bytes[..std::cmp::min(entry.size, decrypted_bytes.len())];
-                    let out_file = target_dir.join(&entry.name);
 
+                    let out_file = patch_dir.join(&entry.name);
                     if let Some(parent) = out_file.parent() { let _ = fs::create_dir_all(parent); }
                     let _ = fs::write(out_file, final_data);
 
@@ -76,37 +66,11 @@ pub fn run(pack_dir: &Path, tx: Sender<String>) -> Result<(), String> {
         }
     });
 
-    let mut final_name = format!("NewMod{}", mod_num);
-    let meta_path = target_dir.join("metadata.json");
-    if meta_path.exists() {
-        let meta = crate::features::mods::logic::metadata::ModMetadata::load(&target_dir);
-        let safe_title = meta.title.replace(&['<', '>', ':', '"', '/', '\\', '|', '?', '*'][..], "").trim().to_string();
-
-        if !safe_title.is_empty() {
-            let mut attempt = safe_title.clone();
-            let mut counter = 1;
-            let mut new_path = mods_root.join(&attempt);
-
-            if new_path != target_dir {
-                while new_path.exists() {
-                    attempt = format!("{}{}", safe_title, counter);
-                    new_path = mods_root.join(&attempt);
-                    counter += 1;
-                }
-                if std::fs::rename(&target_dir, &new_path).is_ok() {
-                    final_name = attempt;
-                }
-            }
-        }
-    }
-
     let final_errors = failed_count.load(Ordering::Relaxed);
     if final_errors > 0 {
         let _ = tx.send(format!("Encountered {} errors decrypting pack chunks.", final_errors));
     }
 
-    let final_count = extracted_count.load(Ordering::Relaxed);
-    let _ = tx.send(format!("Decryption complete! Extracted {} files. Saved as '{}'.", final_count, final_name));
     Ok(())
 }
 

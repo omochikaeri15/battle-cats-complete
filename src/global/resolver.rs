@@ -21,17 +21,17 @@ pub fn is_mod_active() -> bool {
     get_active_mod().is_some()
 }
 
-pub fn get<I, S>(dir: &Path, filenames: I, priority: &[String]) -> Vec<PathBuf> 
-where 
+pub fn get<I, S>(dir: &Path, filenames: I, priority: &[String]) -> Vec<PathBuf>
+where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
     let names: Vec<String> = filenames.into_iter().map(|s| s.as_ref().to_string()).collect();
-    
+
     let mut targets = Vec::new();
     for code in priority {
         if code == "--" { break; }
-        
+
         for filename in &names {
             if code.is_empty() {
                 targets.push(filename.clone());
@@ -65,13 +65,21 @@ fn check_mod_override(filename: &str) -> Option<PathBuf> {
         let guard = ACTIVE_MOD.read().ok()?;
         guard.as_ref().cloned()?
     };
-    
+
     let mod_dir = Path::new("mods").join(active_mod);
-    let flat_path = mod_dir.join(filename);
-    if flat_path.exists() {
-        return Some(flat_path);
-    }
     
+    if let Ok(entries) = std::fs::read_dir(&mod_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let target = path.join(filename);
+                if target.exists() {
+                    return Some(target);
+                }
+            }
+        }
+    }
+
     None
 }
 
@@ -81,6 +89,6 @@ fn build_regional_name(base_filename: &str, lang_code: &str) -> Option<String> {
     let stem = path_obj.file_stem()?.to_str()?;
     let ext = path_obj.extension().unwrap_or_default().to_str().unwrap_or("");
     let ext_str = if ext.is_empty() { String::new() } else { format!(".{}", ext) };
-    
+
     Some(format!("{}_{}{}", stem, lang_code, ext_str))
 }
