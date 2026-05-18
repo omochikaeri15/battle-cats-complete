@@ -79,10 +79,11 @@ pub fn patch_identity(decode_dir: &Path, new_suffix: &str, log_cb: &impl Fn(Stri
 }
 
 pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, log_cb: &impl Fn(String)) -> Result<(), String> {
+    let icons_dir = mod_dir.join("icons");
     let targets = [
-        (mod_dir.join("icon.png"), "icon.png"),
-        (mod_dir.join("icon_foreground.png"), "icon_foreground.png"),
-        (mod_dir.join("push_icon.png"), "push_icon.png"),
+        (icons_dir.join("icon.png"), "icon.png"),
+        (icons_dir.join("icon_foreground.png"), "icon_foreground.png"),
+        (icons_dir.join("push_icon.png"), "push_icon.png"),
     ];
 
     if targets.iter().all(|(p, _)| !p.exists()) { return Ok(()); }
@@ -91,18 +92,74 @@ pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, log_cb: &impl Fn(String)
     let res_dir = decode_dir.join("res");
     if !res_dir.exists() { return Ok(()); }
 
-    let walker = walkdir::WalkDir::new(res_dir).into_iter().filter_map(|e| e.ok());
+    let target_dirs = [
+        "drawable-xhdpi",
+        "drawable-xxhdpi",
+        "drawable-xxxhdpi"
+    ];
 
-    for entry in walker {
-        let path = entry.path();
-        if path.is_file() {
-            let filename = path.file_name().unwrap_or_default().to_string_lossy();
-            for (src_path, target_name) in &targets {
-                if src_path.exists() && filename == *target_name {
-                    let _ = fs::copy(src_path, path);
+    for dir_name in target_dirs {
+        let target_dir = res_dir.join(dir_name);
+        if !target_dir.exists() { continue; }
+
+        for (src_path, target_name) in &targets {
+            if src_path.exists() {
+                let dest_path = target_dir.join(target_name);
+                if dest_path.exists() {
+                    let _ = fs::copy(src_path, &dest_path);
                 }
             }
         }
     }
+
+    Ok(())
+}
+
+pub fn inject_loose_assets(mod_dir: &Path, decode_dir: &Path, log_cb: &impl Fn(String)) -> Result<(), String> {
+    let loose_dir = mod_dir.join("loose");
+    if !loose_dir.exists() { return Ok(()); }
+
+    let assets_dir = decode_dir.join("assets");
+    let _ = fs::create_dir_all(&assets_dir);
+
+    let mut copied_count = 0;
+
+    if let Ok(entries) = fs::read_dir(&loose_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                let filename = path.file_name().unwrap_or_default();
+                let dest_path = assets_dir.join(filename);
+
+                let mut should_copy = true;
+
+                if dest_path.exists() {
+                    let src_meta = fs::metadata(&path).ok();
+                    let dest_meta = fs::metadata(&dest_path).ok();
+
+                    if let (Some(sm), Some(dm)) = (src_meta, dest_meta) {
+                        if sm.len() == dm.len() {
+                            if let (Ok(src_data), Ok(dest_data)) = (fs::read(&path), fs::read(&dest_path)) {
+                                if src_data == dest_data {
+                                    should_copy = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if should_copy {
+                    if fs::copy(&path, &dest_path).is_ok() {
+                        copied_count += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    if copied_count > 0 {
+        log_cb(format!("Injected {} modified loose asset(s).", copied_count));
+    }
+
     Ok(())
 }

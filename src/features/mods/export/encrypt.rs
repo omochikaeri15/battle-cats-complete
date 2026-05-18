@@ -76,7 +76,10 @@ pub fn start_apk_export(state: &mut ModState) {
             Region::Tw => &user_keys.tw,
         };
 
-        let pack_result = pack::build_pack_and_list(&mod_dir, "DownloadLocal", region_key, &log_cb);
+        // TARGET the patch folder specifically for pack data
+        let patch_dir = mod_dir.join("patch");
+        let pack_result = pack::build_pack_and_list(&patch_dir, "DownloadLocal", region_key, &log_cb);
+
         let (pack_data, list_data) = match pack_result {
             Ok(data) => data,
             Err(e) => { let _ = tx.send(ExportEvent::Error(e)); return; }
@@ -125,6 +128,7 @@ pub fn start_apk_export(state: &mut ModState) {
         let final_id = final_id_result.unwrap_or_else(|_| "jp.co.ponos.battlecats".to_string());
 
         let _ = modify::replace_icons(&mod_dir, &decode_dir, &log_cb);
+        let _ = modify::inject_loose_assets(&mod_dir, &decode_dir, &log_cb);
 
         let assets_dir = decode_dir.join("assets");
         let _ = fs::create_dir_all(&assets_dir);
@@ -197,7 +201,10 @@ pub fn start_pack_export(state: &mut ModState) {
         };
 
         let log_cb = |msg: String| { let _ = tx.send(ExportEvent::Log(msg)); };
-        match pack::build_pack_and_list(&mod_path, &pack_name, region_key, &log_cb) {
+
+        // TARGET the patch folder specifically
+        let patch_dir = mod_path.join("patch");
+        match pack::build_pack_and_list(&patch_dir, &pack_name, region_key, &log_cb) {
             Ok((p, l)) => {
                 let _ = std::fs::write(export_dir.join(format!("{}.pack", pack_name)), p);
                 let _ = std::fs::write(export_dir.join(format!("{}.list", pack_name)), l);
