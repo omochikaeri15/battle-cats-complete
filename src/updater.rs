@@ -9,12 +9,12 @@ use std::process::Command;
 use crate::features::settings::logic::{Settings, upd::UpdateMode};
 use crate::global::ui::shared::DragGuard;
 
-const REPO_OWNER: &str = "Battle-Cats-Complete"; 
+const REPO_OWNER: &str = "Battle-Cats-Complete";
 const REPO_NAME: &str = "Battle-Cats-Complete";
-const BIN_NAME: &str = "Battle Cats Complete"; 
+const BIN_NAME: &str = "Battle Cats Complete";
 
-const PROMPT_BUTTON_SIZE: [f32; 2] = [80.0, 40.0];  
-const RESTART_BUTTON_SIZE: [f32; 2] = [80.0, 40.0]; 
+const PROMPT_BUTTON_SIZE: [f32; 2] = [80.0, 40.0];
+const RESTART_BUTTON_SIZE: [f32; 2] = [80.0, 40.0];
 
 pub fn cleanup_temp_files() {
     let temp_files = [
@@ -26,17 +26,28 @@ pub fn cleanup_temp_files() {
     for file in temp_files {
         let path = Path::new(file);
         if path.exists() {
-            let _ = fs::remove_file(path); 
+            let _ = fs::remove_file(path);
         }
     }
 }
 
 #[cfg(unix)]
 fn restart_app() {
-    use std::os::unix::process::CommandExt;
     let Ok(exe) = std::env::current_exe() else { return; };
-    let _ = Command::new(exe).exec(); 
-    std::process::exit(1); 
+    let path = exe.to_string_lossy();
+
+    let clean_path = if path.ends_with(" (deleted)") {
+        path.trim_end_matches(" (deleted)").to_string()
+    } else {
+        path.to_string()
+    };
+
+    let _ = Command::new("sh")
+        .arg("-c")
+        .arg(format!("sleep 1 && \"{}\" &", clean_path))
+        .spawn();
+
+    std::process::exit(0);
 }
 
 #[cfg(not(unix))]
@@ -89,20 +100,20 @@ impl Updater {
     pub fn check_for_updates(&mut self, ctx: egui::Context, is_manual: bool) {
         let is_valid_state = matches!(self.status, UpdateStatus::Idle | UpdateStatus::UpToDate | UpdateStatus::CheckFailed);
         if !is_valid_state { return; }
-        
+
         let tx = self.tx.clone();
         self.status = UpdateStatus::Checking;
-        
+
         thread::spawn(move || {
             let result = check_remote();
             match result {
                 Ok(Some(release)) => { let _ = tx.send(UpdaterMsg::UpdateFound(release)); },
                 Ok(None) if is_manual => { let _ = tx.send(UpdaterMsg::UpToDate); },
-                Ok(None) => { let _ = tx.send(UpdaterMsg::SilentFail); }, 
+                Ok(None) => { let _ = tx.send(UpdaterMsg::SilentFail); },
                 Err(_) if is_manual => { let _ = tx.send(UpdaterMsg::CheckFailed); }
                 Err(_) => { let _ = tx.send(UpdaterMsg::SilentFail); }
             }
-            
+
             ctx.request_repaint();
         });
     }
@@ -115,41 +126,41 @@ impl Updater {
         thread::spawn(move || {
             cleanup_temp_files();
             let _ = tx.send(UpdaterMsg::DownloadStarted(version.clone()));
-            
+
             let target_tag = if version.starts_with('v') { version.clone() } else { format!("v{}", version) };
-            
-            let target_asset_name = if cfg!(target_os = "windows") { 
-                "bcc_windows.zip" 
+
+            let target_asset_name = if cfg!(target_os = "windows") {
+                "bcc_windows.zip"
             } else if cfg!(target_os = "macos") {
                 "bcc_mac.zip"
-            } else { 
-                "bcc_linux.zip" 
+            } else {
+                "bcc_linux.zip"
             };
-            
+
             let Ok(update_box) = self_update::backends::github::Update::configure()
                 .repo_owner(REPO_OWNER)
                 .repo_name(REPO_NAME)
                 .bin_name(BIN_NAME)
                 .show_download_progress(false)
-                .show_output(false)            
-                .no_confirm(true)              
+                .show_output(false)
+                .no_confirm(true)
                 .current_version(cargo_crate_version!())
                 .target_version_tag(&target_tag)
-                .target(target_asset_name)     
+                .target(target_asset_name)
                 .build() else {
-                    cleanup_temp_files();
-                    let _ = tx.send(UpdaterMsg::CheckFailed); 
-                    return;
-                };
-                
+                cleanup_temp_files();
+                let _ = tx.send(UpdaterMsg::CheckFailed);
+                return;
+            };
+
             if update_box.update().is_err() {
                 cleanup_temp_files();
-                let _ = tx.send(UpdaterMsg::CheckFailed); 
+                let _ = tx.send(UpdaterMsg::CheckFailed);
                 return;
             }
 
             cleanup_temp_files();
-            let _ = tx.send(UpdaterMsg::DownloadFinished(version)); 
+            let _ = tx.send(UpdaterMsg::DownloadFinished(version));
         });
     }
 
@@ -185,7 +196,7 @@ impl Updater {
             self.status = UpdateStatus::Idle;
             self.clear_time = None;
         }
-        
+
         ctx.request_repaint();
     }
 
@@ -227,9 +238,9 @@ impl Updater {
             .constrain(false).movable(allow_drag)
             .pivot(egui::Align2::CENTER_CENTER)
             .default_pos(screen_rect.center());
-            
+
         if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-            
+
         window.show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.label(format!("New Battle Cats Complete update found: {}", display_ver));
@@ -245,13 +256,13 @@ impl Updater {
             ui.set_style(style);
 
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0; 
+                ui.spacing_mut().item_spacing.x = 10.0;
 
                 let btn_w = PROMPT_BUTTON_SIZE[0];
-                let count = 3.0; 
+                let count = 3.0;
                 let spacing = 10.0;
-                let total_w = (btn_w * count) + (spacing * (count - 1.0)); 
-                
+                let total_w = (btn_w * count) + (spacing * (count - 1.0));
+
                 let available_w = ui.available_width();
                 let margin_left = (available_w - total_w) / 2.0;
                 if margin_left > 0.0 {
@@ -282,19 +293,19 @@ impl Updater {
     fn show_downloading_window(&self, ctx: &egui::Context, drag_guard: &mut DragGuard, tag: String) {
         ctx.request_repaint();
         let screen_rect = ctx.screen_rect();
-        
+
         let window_id = egui::Id::new(format!("Downloading_Update_{}", tag));
         let (allow_drag, fixed_pos) = drag_guard.assign_bounds(ctx, window_id);
 
         let mut window = egui::Window::new("Downloading Update")
             .id(window_id)
-            .collapsible(false).resizable(false).title_bar(false) 
+            .collapsible(false).resizable(false).title_bar(false)
             .order(egui::Order::Tooltip).constrain(false).movable(allow_drag)
             .pivot(egui::Align2::CENTER_CENTER)
             .default_pos(screen_rect.center());
-            
+
         if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-            
+
         window.show(ctx, |ui| {
             ui.add_space(10.0);
             ui.vertical_centered(|ui| {
@@ -302,7 +313,7 @@ impl Updater {
                 ui.label(format!("Downloading {}...", display_tag));
                 ui.add_space(10.0);
                 let progress = (ctx.input(|i| i.time) % 1.0) as f32;
-                ui.add(egui::ProgressBar::new(progress).animate(false)); 
+                ui.add(egui::ProgressBar::new(progress).animate(false));
             });
         });
     }
@@ -313,7 +324,7 @@ impl Updater {
             return;
         }
         if matches!(settings.general.update_mode, UpdateMode::AutoLoad) {
-            self.status = UpdateStatus::Idle; 
+            self.status = UpdateStatus::Idle;
             return;
         }
 
@@ -332,9 +343,9 @@ impl Updater {
             .constrain(false).movable(allow_drag)
             .pivot(egui::Align2::CENTER_CENTER)
             .default_pos(screen_rect.center());
-            
+
         if let Some(pos) = fixed_pos { window = window.current_pos(pos); }
-            
+
         window.show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.label(format!("{} update complete!", display_tag));
@@ -350,13 +361,13 @@ impl Updater {
             ui.set_style(style);
 
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0; 
+                ui.spacing_mut().item_spacing.x = 10.0;
 
                 let btn_w = RESTART_BUTTON_SIZE[0];
-                let count = 2.0; 
+                let count = 2.0;
                 let spacing = 10.0;
-                let total_w = (btn_w * count) + (spacing * (count - 1.0)); 
-                
+                let total_w = (btn_w * count) + (spacing * (count - 1.0));
+
                 let available_w = ui.available_width();
                 let margin_left = (available_w - total_w) / 2.0;
                 if margin_left > 0.0 {
@@ -367,7 +378,7 @@ impl Updater {
                 if ui.add_sized(RESTART_BUTTON_SIZE, egui::Button::new("No")).clicked() { close = true; }
             });
         });
-        
+
         if should_restart {
             restart_app();
         }
@@ -382,12 +393,12 @@ fn check_remote() -> Result<Option<self_update::update::Release>, Box<dyn std::e
         .repo_name(REPO_NAME)
         .build()?
         .fetch()?;
-        
+
     let Some(latest) = releases.first() else { return Ok(None); };
-    
+
     if !self_update::version::bump_is_greater(current, &latest.version)? {
         return Ok(None);
     }
-    
+
     Ok(Some(latest.clone()))
 }
