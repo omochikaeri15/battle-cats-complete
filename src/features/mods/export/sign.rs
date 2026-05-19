@@ -9,9 +9,8 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
+use rayon::prelude::*;
 
-// 100-Year Universal Native Signer Key
-// Valid until May 2126
 const DEBUG_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCmBNx3G6wn5h63
 9cvUxyul2ik3/a4uBBfmGAccldsdawLzg4X7y4nYvBjNo1KWWnKekIWnDHxULtH3
@@ -112,25 +111,24 @@ impl Signer {
         let cert_start_tag = "-----BEGIN CERTIFICATE-----";
         let cert_end_tag = "-----END CERTIFICATE-----";
 
-        let cert_start_idx = pem_string.find(cert_start_tag).context("No BEGIN CERTIFICATE tag found in PEM")?;
-        let cert_end_idx = pem_string.find(cert_end_tag).context("No END CERTIFICATE tag found in PEM")?;
+        let cert_start_index = pem_string.find(cert_start_tag).context("No BEGIN CERTIFICATE tag found in PEM")?;
+        let cert_end_index = pem_string.find(cert_end_tag).context("No END CERTIFICATE tag found in PEM")?;
 
-        // Extract ONLY the private key portion before the certificate
-        let priv_key_str = &pem_string[..cert_start_idx].trim();
+        let private_key_string = &pem_string[..cert_start_index].trim();
 
-        let private_key = RsaPrivateKey::from_pkcs8_pem(priv_key_str)
-            .or_else(|_| RsaPrivateKey::from_pkcs1_pem(priv_key_str))
-            .context("Failed to parse RSA Private Key from PEM. Ensure your debug.pem contains a valid PKCS#8 or PKCS#1 RSA key.")?;
+        let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_string)
+            .or_else(|_| RsaPrivateKey::from_pkcs1_pem(private_key_string))
+            .context("Failed to parse RSA Private Key from PEM.")?;
 
         let public_key = private_key.to_public_key();
 
-        let base64_cert = &pem_string[cert_start_idx + cert_start_tag.len()..cert_end_idx]
+        let base64_certificate = &pem_string[cert_start_index + cert_start_tag.len()..cert_end_index]
             .replace('\n', "")
             .replace('\r', "");
 
-        let raw_der_bytes = BASE64_STANDARD.decode(base64_cert).context("Failed to base64 decode certificate")?;
+        let raw_der_bytes = BASE64_STANDARD.decode(base64_certificate).context("Failed to base64 decode certificate")?;
         let certificate_der = rasn::der::decode::<Certificate>(&raw_der_bytes)
-            .map_err(|err| anyhow::anyhow!("Failed to parse ASN.1 Certificate: {}", err))?;
+            .map_err(|error| anyhow::anyhow!("Failed to parse ASN.1 Certificate: {}", error))?;
 
         Ok(Self {
             private_key,
@@ -159,10 +157,10 @@ pub fn sign(apk_path: &Path, custom_signer: Option<Signer>) -> Result<()> {
 
     let apk_bytes = std::fs::read(apk_path)?;
     let mut reader = Cursor::new(&apk_bytes);
-
     let block_info = parse_apk_signing_block(&mut reader)?;
-    let zip_hash = compute_digest(
-        &mut reader,
+    
+    let zip_hash = compute_digest_parallel(
+        &apk_bytes,
         block_info.signing_block_start,
         block_info.central_directory_start,
         block_info.eocd_start
@@ -174,96 +172,61 @@ pub fn sign(apk_path: &Path, custom_signer: Option<Signer>) -> Result<()> {
 
     let mut output_file = File::create(apk_path)?;
 
-    // Contents before signing block
     output_file.write_all(&apk_bytes[..(block_info.signing_block_start as usize)])?;
-
-    // v2 signing block
     output_file.write_all(&new_signature_block)?;
     let new_cd_start_offset = output_file.stream_position()?;
 
-    // Central Directory
     output_file.write_all(&apk_bytes[(block_info.central_directory_start as usize)..(block_info.eocd_start as usize)])?;
     let new_eocd_offset = output_file.stream_position()?;
 
-    // End of Central Directory
     output_file.write_all(&apk_bytes[(block_info.eocd_start as usize)..])?;
 
-    // Update EOCD pointer to the new Central Directory offset
     output_file.seek(SeekFrom::Start(new_eocd_offset + 16))?;
     output_file.write_u32::<LittleEndian>(new_cd_start_offset as u32)?;
 
     Ok(())
 }
 
-fn compute_digest<R: Read + Seek>(
-    reader: &mut R,
+fn compute_digest_parallel(
+    apk_bytes: &[u8],
     signing_block_start: u64,
     central_directory_start: u64,
     eocd_start: u64,
 ) -> Result<[u8; 32]> {
-    let mut hash_chunks = vec![];
-    let mut hasher = Sha256::new();
-    let mut buffer_chunk = vec![0u8; MAX_CHUNK_SIZE];
+    let mut final_hasher = Sha256::new();
 
-    // Contents
-    reader.rewind()?;
-    let mut current_position = 0;
-    while current_position < signing_block_start {
-        hash_chunk(&mut hash_chunks, reader, signing_block_start, &mut hasher, &mut buffer_chunk, &mut current_position)?;
-    }
+    let contents_bytes = &apk_bytes[..signing_block_start as usize];
+    let cd_bytes = &apk_bytes[(central_directory_start as usize)..(eocd_start as usize)];
 
-    // Central Directory
-    current_position = reader.seek(SeekFrom::Start(central_directory_start))?;
-    while current_position < eocd_start {
-        hash_chunk(&mut hash_chunks, reader, eocd_start, &mut hasher, &mut buffer_chunk, &mut current_position)?;
-    }
-
-    // EOCD (with adjusted CD offset)
-    buffer_chunk.clear();
-    reader.read_to_end(&mut buffer_chunk)?;
-
-    let mut eocd_cursor = Cursor::new(&mut buffer_chunk);
+    let mut eocd_buffer = apk_bytes[(eocd_start as usize)..].to_vec();
+    let mut eocd_cursor = Cursor::new(&mut eocd_buffer);
     eocd_cursor.seek(SeekFrom::Start(16))?;
     eocd_cursor.write_u32::<LittleEndian>(signing_block_start as u32)?;
+    
+    let mut all_chunks: Vec<&[u8]> = Vec::new();
+    all_chunks.extend(contents_bytes.chunks(MAX_CHUNK_SIZE));
+    all_chunks.extend(cd_bytes.chunks(MAX_CHUNK_SIZE));
+    all_chunks.extend(eocd_buffer.chunks(MAX_CHUNK_SIZE));
+    
+    let hash_chunks: Vec<[u8; 32]> = all_chunks
+        .into_par_iter()
+        .map(|chunk| {
+            let mut chunk_hasher = Sha256::new();
+            chunk_hasher.update([0xa5]);
+            chunk_hasher.update((chunk.len() as u32).to_le_bytes());
+            chunk_hasher.update(chunk);
+            chunk_hasher.finalize().into()
+        })
+        .collect();
 
-    hasher.update([0xa5]);
-    assert!(buffer_chunk.len() <= MAX_CHUNK_SIZE);
-    hasher.update((buffer_chunk.len() as u32).to_le_bytes());
-    hasher.update(buffer_chunk);
-    hash_chunks.push(hasher.finalize_reset().into());
+    final_hasher.update([0x5a]);
+    final_hasher.update((hash_chunks.len() as u32).to_le_bytes());
 
-    // Final Top-Level Hash
-    hasher.update([0x5a]);
-    hasher.update((hash_chunks.len() as u32).to_le_bytes());
-    for chunk in &hash_chunks {
-        hasher.update(chunk);
+    for chunk_hash in &hash_chunks {
+        final_hasher.update(chunk_hash);
     }
 
-    Ok(hasher.finalize().into())
-}
-
-fn hash_chunk<R: Read + Seek>(
-    chunks: &mut Vec<[u8; 32]>,
-    reader: &mut R,
-    target_size: u64,
-    hasher: &mut Sha256,
-    buffer: &mut Vec<u8>,
-    position: &mut u64,
-) -> Result<()> {
-    let end_position = std::cmp::min(*position + MAX_CHUNK_SIZE as u64, target_size);
-    let chunk_length = (end_position - *position) as usize;
-
-    buffer.resize(chunk_length, 0);
-    reader.read_exact(buffer).unwrap();
-
-    hasher.update([0xa5]);
-    hasher.update((chunk_length as u32).to_le_bytes());
-    hasher.update(buffer);
-
-    chunks.push(hasher.finalize_reset().into());
-    *position = end_position;
-
-    Ok(())
+    Ok(final_hasher.finalize().into())
 }
 
 #[derive(Debug, Default)]
@@ -305,26 +268,26 @@ impl SignedData {
         Ok(Self {
             digests: vec![Digest::new(hash)],
             certificates: vec![
-                rasn::der::encode(signer.cert()).map_err(|err| anyhow::anyhow!("{}", err))?
+                rasn::der::encode(signer.cert()).map_err(|error| anyhow::anyhow!("{}", error))?
             ],
             additional_attributes: vec![],
         })
     }
 
     fn write(&self, writer: &mut impl Write) -> Result<()> {
-        writer.write_u32::<LittleEndian>(self.digests.iter().map(|d| d.size()).sum())?;
+        writer.write_u32::<LittleEndian>(self.digests.iter().map(|digest| digest.size()).sum())?;
         for digest in &self.digests { digest.write(writer)?; }
 
-        writer.write_u32::<LittleEndian>(self.certificates.iter().map(|c| c.len() as u32 + 4).sum())?;
-        for cert in &self.certificates {
-            writer.write_u32::<LittleEndian>(cert.len() as u32)?;
-            writer.write_all(cert)?;
+        writer.write_u32::<LittleEndian>(self.certificates.iter().map(|cert| cert.len() as u32 + 4).sum())?;
+        for certificate in &self.certificates {
+            writer.write_u32::<LittleEndian>(certificate.len() as u32)?;
+            writer.write_all(certificate)?;
         }
 
-        writer.write_u32::<LittleEndian>(self.additional_attributes.iter().map(|(_, v)| v.len() as u32 + 8).sum())?;
-        for (id, value) in &self.additional_attributes {
+        writer.write_u32::<LittleEndian>(self.additional_attributes.iter().map(|(_, val)| val.len() as u32 + 8).sum())?;
+        for (identifier, value) in &self.additional_attributes {
             writer.write_u32::<LittleEndian>(value.len() as u32 + 4)?;
-            writer.write_u32::<LittleEndian>(*id)?;
+            writer.write_u32::<LittleEndian>(*identifier)?;
             writer.write_all(value)?;
         }
         Ok(())
@@ -374,15 +337,15 @@ impl ApkSignatureBlockV2 {
             signer_buffer.write_u32::<LittleEndian>(signer.signed_data.len() as u32)?;
             signer_buffer.write_all(&signer.signed_data)?;
 
-            let mut sig_buffer = vec![];
+            let mut signature_buffer = vec![];
             for sig in &signer.signatures {
-                sig_buffer.write_u32::<LittleEndian>(sig.signature.len() as u32 + 8)?;
-                sig_buffer.write_u32::<LittleEndian>(sig.algorithm)?;
-                sig_buffer.write_u32::<LittleEndian>(sig.signature.len() as u32)?;
-                sig_buffer.write_all(&sig.signature)?;
+                signature_buffer.write_u32::<LittleEndian>(sig.signature.len() as u32 + 8)?;
+                signature_buffer.write_u32::<LittleEndian>(sig.algorithm)?;
+                signature_buffer.write_u32::<LittleEndian>(sig.signature.len() as u32)?;
+                signature_buffer.write_all(&sig.signature)?;
             }
-            signer_buffer.write_u32::<LittleEndian>(sig_buffer.len() as u32)?;
-            signer_buffer.write_all(&sig_buffer)?;
+            signer_buffer.write_u32::<LittleEndian>(signature_buffer.len() as u32)?;
+            signer_buffer.write_all(&signature_buffer)?;
 
             signer_buffer.write_u32::<LittleEndian>(signer.public_key.len() as u32)?;
             signer_buffer.write_all(&signer.public_key)?;
@@ -411,12 +374,12 @@ fn write_apk_signing_block<W: Write + Seek>(
     let mut buffer = vec![];
     ApkSignatureBlockV2::new(hash, signer)?.write(&mut buffer)?;
 
-    let size = buffer.len() as u64 + 36;
-    writer.write_u64::<LittleEndian>(size)?;
+    let block_size = buffer.len() as u64 + 36;
+    writer.write_u64::<LittleEndian>(block_size)?;
     writer.write_u64::<LittleEndian>(buffer.len() as u64 + 4)?;
     writer.write_u32::<LittleEndian>(APK_SIGNING_BLOCK_V2_ID)?;
     writer.write_all(&buffer)?;
-    writer.write_u64::<LittleEndian>(size)?;
+    writer.write_u64::<LittleEndian>(block_size)?;
     writer.write_all(APK_SIGNING_BLOCK_MAGIC)?;
 
     Ok(())
@@ -432,10 +395,10 @@ fn parse_apk_signing_block<R: Read + Seek>(reader: &mut R) -> Result<ApkSignatur
 
     reader.seek(SeekFrom::Start(block.central_directory_start - 16 - 8))?;
     let remaining_size = reader.read_u64::<LittleEndian>()?;
-    let mut magic = [0; 16];
-    reader.read_exact(&mut magic)?;
+    let mut magic_buffer = [0; 16];
+    reader.read_exact(&mut magic_buffer)?;
 
-    if magic != APK_SIGNING_BLOCK_MAGIC {
+    if magic_buffer != APK_SIGNING_BLOCK_MAGIC {
         block.signing_block_start = block.central_directory_start;
         return Ok(block);
     }

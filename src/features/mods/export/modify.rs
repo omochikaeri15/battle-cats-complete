@@ -1,10 +1,10 @@
 use std::fs;
-use std::io::{Read, Write};
 use std::path::Path;
 use regex::Regex;
 use zip::{ZipArchive, ZipWriter};
+use rayon::prelude::*;
 
-pub fn patch_identity(decode_dir: &Path, new_suffix: &str, app_title: &str, _log_cb: &impl Fn(String)) -> Result<String, String> {
+pub fn patch_identity(decode_dir: &Path, new_suffix: &str, app_title: &str, _log_callback: &impl Fn(String)) -> Result<String, String> {
     let suffix = new_suffix.trim();
     if suffix.is_empty() {
         return Ok("jp.co.ponos.battlecats".to_string());
@@ -17,7 +17,7 @@ pub fn patch_identity(decode_dir: &Path, new_suffix: &str, app_title: &str, _log
         return Err("Decoded AndroidManifest.xml not found. Apktool decode may have failed.".into());
     }
 
-    let mut manifest_text = fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
+    let mut manifest_text = fs::read_to_string(&manifest_path).map_err(|error| error.to_string())?;
 
     let targets = [
         "battlecatsen",
@@ -55,36 +55,36 @@ pub fn patch_identity(decode_dir: &Path, new_suffix: &str, app_title: &str, _log
     manifest_text = manifest_text.replace("android:isSplitRequired=\"true\"", "android:isSplitRequired=\"false\"");
     manifest_text = manifest_text.replace("android:extractNativeLibs=\"false\"", "android:extractNativeLibs=\"true\"");
 
-    let split_re = Regex::new(r#"split="[^"]*""#).expect("Failed to compile split regex");
-    let is_feature_split_re = Regex::new(r#"android:isFeatureSplit="true""#).expect("Failed to compile feature split regex");
-    manifest_text = split_re.replace_all(&manifest_text, "").to_string();
-    manifest_text = is_feature_split_re.replace_all(&manifest_text, "").to_string();
+    let split_regex = Regex::new(r#"split="[^"]*""#).expect("Failed to compile split regex");
+    let feature_split_regex = Regex::new(r#"android:isFeatureSplit="true""#).expect("Failed to compile feature split regex");
+    manifest_text = split_regex.replace_all(&manifest_text, "").to_string();
+    manifest_text = feature_split_regex.replace_all(&manifest_text, "").to_string();
 
-    if let Some(start) = manifest_text.find("<split") {
-        if let Some(end) = manifest_text[start..].find("/>") {
-            manifest_text.replace_range(start..start+end+2, "");
+    if let Some(start_index) = manifest_text.find("<split") {
+        if let Some(end_index) = manifest_text[start_index..].find("/>") {
+            manifest_text.replace_range(start_index..start_index + end_index + 2, "");
         }
     }
 
-    fs::write(&manifest_path, manifest_text).map_err(|e| e.to_string())?;
+    fs::write(&manifest_path, manifest_text).map_err(|error| error.to_string())?;
 
     if strings_path.exists() {
-        let mut strings_text = fs::read_to_string(&strings_path).map_err(|e| e.to_string())?;
+        let mut strings_text = fs::read_to_string(&strings_path).map_err(|error| error.to_string())?;
         strings_text = strings_text.replace(active_token, &new_token);
 
         if !app_title.trim().is_empty() {
-            let app_name_re = Regex::new(r#"<string name="app_name">[^<]*</string>"#).unwrap();
+            let app_name_regex = Regex::new(r#"<string name="app_name">[^<]*</string>"#).unwrap();
             let new_title_element = format!("<string name=\"app_name\">{}</string>", app_title.trim());
-            strings_text = app_name_re.replace_all(&strings_text, new_title_element.as_str()).to_string();
+            strings_text = app_name_regex.replace_all(&strings_text, new_title_element.as_str()).to_string();
         }
 
-        fs::write(&strings_path, strings_text).map_err(|e| e.to_string())?;
+        fs::write(&strings_path, strings_text).map_err(|error| error.to_string())?;
     }
 
     Ok(final_package_id)
 }
 
-pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, _log_cb: &impl Fn(String)) -> Result<(), String> {
+pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, _log_callback: &impl Fn(String)) -> Result<(), String> {
     let icons_dir = mod_dir.join("icons");
     let targets = [
         (icons_dir.join("icon.png"), "icon.png"),
@@ -92,7 +92,7 @@ pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, _log_cb: &impl Fn(String
         (icons_dir.join("push_icon.png"), "push_icon.png"),
     ];
 
-    if targets.iter().all(|(p, _)| !p.exists()) { return Ok(()); }
+    if targets.iter().all(|(path, _)| !path.exists()) { return Ok(()); }
 
     let res_dir = decode_dir.join("res");
     if !res_dir.exists() { return Ok(()); }
@@ -107,12 +107,12 @@ pub fn replace_icons(mod_dir: &Path, decode_dir: &Path, _log_cb: &impl Fn(String
         let target_dir = res_dir.join(dir_name);
         if !target_dir.exists() { continue; }
 
-        for (src_path, target_name) in &targets {
-            if src_path.exists() {
-                let dest_path = target_dir.join(target_name);
-                if dest_path.exists() {
-                    let _ = fs::copy(src_path, &dest_path);
-                }
+        for (source_path, target_name) in &targets {
+            if !source_path.exists() { continue; }
+
+            let destination_path = target_dir.join(target_name);
+            if destination_path.exists() {
+                let _ = fs::copy(source_path, &destination_path);
             }
         }
     }
@@ -127,85 +127,86 @@ pub fn inject_loose_assets(mod_dir: &Path, decode_dir: &Path) -> Result<usize, S
     let assets_dir = decode_dir.join("assets");
     let _ = fs::create_dir_all(&assets_dir);
 
-    let mut copied_count = 0;
+    let directory_entries: Vec<_> = fs::read_dir(&loose_dir)
+        .map_err(|error| error.to_string())?
+        .flatten()
+        .collect();
 
-    if let Ok(entries) = fs::read_dir(&loose_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                let filename = path.file_name().unwrap_or_default();
-                let dest_path = assets_dir.join(filename);
+    let copied_count: usize = directory_entries.into_par_iter().map(|entry| {
+        let source_path = entry.path();
+        if !source_path.is_file() { return 0; }
 
-                let mut should_copy = true;
+        let filename = source_path.file_name().unwrap_or_default();
+        let destination_path = assets_dir.join(filename);
 
-                if dest_path.exists() {
-                    let src_meta = fs::metadata(&path).ok();
-                    let dest_meta = fs::metadata(&dest_path).ok();
+        if destination_path.exists() {
+            let source_meta = fs::metadata(&source_path).ok();
+            let destination_meta = fs::metadata(&destination_path).ok();
 
-                    if let (Some(sm), Some(dm)) = (src_meta, dest_meta) {
-                        if sm.len() == dm.len() {
-                            if let (Ok(src_data), Ok(dest_data)) = (fs::read(&path), fs::read(&dest_path)) {
-                                if src_data == dest_data {
-                                    should_copy = false;
-                                }
-                            }
-                        }
-                    }
-                }
+            if let (Some(src_metadata), Some(dest_metadata)) = (source_meta, destination_meta) {
+                if src_metadata.len() == dest_metadata.len() {
+                    let source_data = fs::read(&source_path).unwrap_or_default();
+                    let destination_data = fs::read(&destination_path).unwrap_or_default();
 
-                if should_copy {
-                    if fs::copy(&path, &dest_path).is_ok() {
-                        copied_count += 1;
+                    if source_data == destination_data {
+                        return 0;
                     }
                 }
             }
         }
-    }
+
+        if fs::copy(&source_path, &destination_path).is_ok() {
+            return 1;
+        }
+
+        0
+    }).sum();
 
     Ok(copied_count)
 }
 
 pub fn normalize_apk(input_apk: &Path, output_apk: &Path) -> Result<(), String> {
-    let source_file = fs::File::open(input_apk).map_err(|e| format!("Failed to open APK: {}", e))?;
-    let mut archive = ZipArchive::new(source_file).map_err(|e| format!("Failed to read APK archive: {}", e))?;
+    let source_file = fs::File::open(input_apk).map_err(|error| format!("Failed to open APK: {}", error))?;
+    let mut archive = ZipArchive::new(source_file).map_err(|error| format!("Failed to read APK archive: {}", error))?;
 
-    let dest_file = fs::File::create(output_apk).map_err(|e| format!("Failed to create normalized APK: {}", e))?;
-    let mut zip_writer = ZipWriter::new(dest_file);
+    let destination_file = fs::File::create(output_apk).map_err(|error| format!("Failed to create normalized APK: {}", error))?;
+    let mut zip_writer = ZipWriter::new(destination_file);
 
-    let uncompressed_exts = ["dex", "arsc", "so", "pack", "list", "ogg"];
+    let uncompressed_extensions = ["dex", "arsc", "so", "pack", "list", "ogg"];
 
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i).unwrap();
-        let name = file.name().to_string();
-        let ext = Path::new(&name).extension().and_then(|e| e.to_str()).unwrap_or("");
+    for index in 0..archive.len() {
+        let archive_file = archive.by_index(index).unwrap();
+        let file_name = archive_file.name().to_string();
+        let file_extension = Path::new(&file_name).extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
-        let force_store = uncompressed_exts.contains(&ext);
-        let is_already_stored = file.compression() == zip::CompressionMethod::Stored;
+        let force_store = uncompressed_extensions.contains(&file_extension);
+        let is_already_stored = archive_file.compression() == zip::CompressionMethod::Stored;
 
-        if force_store || is_already_stored {
-            #[cfg(target_os = "windows")]
-            {
-                let mut data = Vec::new();
-                file.read_to_end(&mut data).map_err(|e| format!("Failed reading {}: {}", name, e))?;
+        if !force_store && !is_already_stored {
+            zip_writer.raw_copy_file(archive_file).map_err(|error| error.to_string())?;
+            continue;
+        }
 
-                let alignment = if ext == "so" { 4096 } else { 4 };
+        #[cfg(target_os = "windows")]
+        {
+            let mut file_data = Vec::new();
+            archive_file.read_to_end(&mut file_data).map_err(|error| format!("Failed reading {}: {}", file_name, error))?;
 
-                let options = zip::write::SimpleFileOptions::default()
-                    .compression_method(zip::CompressionMethod::Stored)
-                    .with_alignment(alignment);
+            let byte_alignment = if file_extension == "so" { 4096 } else { 4 };
 
-                zip_writer.start_file(&name, options).map_err(|e| e.to_string())?;
-                zip_writer.write_all(&data).map_err(|e| e.to_string())?;
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                zip_writer.raw_copy_file(file).map_err(|e| e.to_string())?;
-            }
-        } else {
-            zip_writer.raw_copy_file(file).map_err(|e| e.to_string())?;
+            let write_options = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored)
+                .with_alignment(byte_alignment);
+
+            zip_writer.start_file(&file_name, write_options).map_err(|error| error.to_string())?;
+            zip_writer.write_all(&file_data).map_err(|error| error.to_string())?;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            zip_writer.raw_copy_file(archive_file).map_err(|error| error.to_string())?;
         }
     }
 
-    zip_writer.finish().map_err(|e| e.to_string())?;
+    zip_writer.finish().map_err(|error| error.to_string())?;
     Ok(())
 }

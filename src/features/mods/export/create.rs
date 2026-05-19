@@ -19,22 +19,28 @@ pub fn start_apk_export(state: &mut ModState) {
 
     let app_title = state.export.app_title.clone();
     let suffix = state.export.package_suffix.clone();
-    let Some(mod_folder) = state.selected_mod.clone() else { state.export.is_busy = false; return; };
-    let Some(input_apk_path) = state.export.selected_apk.clone() else { state.export.is_busy = false; return; };
+    let Some(mod_folder) = state.selected_mod.clone() else {
+        state.export.is_busy = false;
+        return;
+    };
+    let Some(input_apk_path) = state.export.selected_apk.clone() else {
+        state.export.is_busy = false;
+        return;
+    };
     let detected_region = state.export.target_region.clone();
 
-    let (tx, rx) = mpsc::channel();
-    if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(rx); }
+    let (transmitter, receiver) = mpsc::channel();
+    if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(receiver); }
 
     thread::spawn(move || {
-        let str_tx = spawn_log_adapter(tx.clone());
-        let log_cb = |msg: String| { let _ = tx.send(ExportEvent::Log(msg)); };
+        let string_transmitter = spawn_log_adapter(transmitter.clone());
+        let log_callback = |message: String| { let _ = transmitter.send(ExportEvent::Log(message)); };
 
         let settings: Settings = crate::global::io::json::load("settings.json").unwrap_or_default();
-        let user_keys = match keys::verify(settings.game_data.enforce_key_validation, &str_tx) {
-            Ok(k) => k,
-            Err(e) => {
-                let _ = tx.send(ExportEvent::Error(e));
+        let user_keys = match keys::verify(settings.game_data.enforce_key_validation, &string_transmitter) {
+            Ok(keys) => keys,
+            Err(error) => {
+                let _ = transmitter.send(ExportEvent::Error(error));
                 return;
             }
         };
@@ -51,34 +57,37 @@ pub fn start_apk_export(state: &mut ModState) {
         let _ = fs::create_dir_all(&export_dir);
         let _ = fs::create_dir_all(&app_dir);
 
-        let is_xapk = input_apk_path.extension().and_then(|e| e.to_str()) == Some("xapk");
+        let is_xapk = input_apk_path.extension().and_then(|extension| extension.to_str()) == Some("xapk");
         let mut working_apk = input_apk_path.clone();
 
         if is_xapk {
-            log_cb("Merging XAPK into APK...".to_string());
+            log_callback("Merging XAPK into APK...".to_string());
             let _ = fs::create_dir_all(&xapk_dir);
             let merged_temp_path = xapk_dir.join("merged_xapk.apk");
 
-            if let Err(e) = xapk::merge_xapk(&working_apk, &merged_temp_path, &log_cb) {
-                let _ = tx.send(ExportEvent::Error(e)); return;
+            if let Err(error) = xapk::merge_xapk(&working_apk, &merged_temp_path, &log_callback) {
+                let _ = transmitter.send(ExportEvent::Error(error));
+                return;
             }
             working_apk = merged_temp_path;
         }
 
-        log_cb("Decoding APK...".to_string());
-        if let Err(e) = apk::decode(&working_apk, &apk_dir, &log_cb) {
-            let _ = tx.send(ExportEvent::Error(e)); return;
+        log_callback("Decoding APK...".to_string());
+        if let Err(error) = apk::decode(&working_apk, &apk_dir, &log_callback) {
+            let _ = transmitter.send(ExportEvent::Error(error));
+            return;
         }
 
-        log_cb("Applying package...".to_string());
-        let final_id_result = modify::patch_identity(&apk_dir, &suffix, &app_title, &log_cb);
-        if let Err(e) = final_id_result {
-            let _ = tx.send(ExportEvent::Error(e)); return;
+        log_callback("Applying package...".to_string());
+        let final_id_result = modify::patch_identity(&apk_dir, &suffix, &app_title, &log_callback);
+        if let Err(error) = final_id_result {
+            let _ = transmitter.send(ExportEvent::Error(error));
+            return;
         }
         let final_id = final_id_result.unwrap_or_else(|_| "jp.co.ponos.battlecats".to_string());
 
-        log_cb("Replacing icons...".to_string());
-        let _ = modify::replace_icons(&mod_dir, &apk_dir, &log_cb);
+        log_callback("Replacing icons...".to_string());
+        let _ = modify::replace_icons(&mod_dir, &apk_dir, &log_callback);
 
         let region_key = match detected_region {
             Region::En => &user_keys.en,
@@ -91,40 +100,45 @@ pub fn start_apk_export(state: &mut ModState) {
         let assets_dir = apk_dir.join("assets");
         let _ = fs::create_dir_all(&assets_dir);
 
-        if let Err(e) = pack::stream_pack_and_list(&patch_dir, &assets_dir, "DownloadLocal", region_key, &log_cb) {
-            let _ = tx.send(ExportEvent::Error(e)); return;
+        if let Err(error) = pack::stream_pack_and_list(&patch_dir, &assets_dir, "DownloadLocal", region_key, &log_callback) {
+            let _ = transmitter.send(ExportEvent::Error(error));
+            return;
         }
 
         let loose_count = modify::inject_loose_assets(&mod_dir, &apk_dir).unwrap_or(0);
         if loose_count > 0 {
-            log_cb(format!("Injected {} loose files.", loose_count));
+            log_callback(format!("Injected {} loose files.", loose_count));
         }
 
-        log_cb("Successfully patched data.".to_string());
-        log_cb("Rebuilding APK...".to_string());
+        log_callback("Successfully patched data.".to_string());
+        log_callback("Rebuilding APK...".to_string());
 
         let unsigned_apk_path = app_dir.join("unsigned_final.apk");
-        if let Err(e) = apk::build(&apk_dir, &unsigned_apk_path, &log_cb) {
-            let _ = tx.send(ExportEvent::Error(e)); return;
+        if let Err(error) = apk::build(&apk_dir, &unsigned_apk_path, &log_callback) {
+            let _ = transmitter.send(ExportEvent::Error(error));
+            return;
         }
 
-        log_cb("Normalizing binaries...".to_string());
+        log_callback("Normalizing binaries...".to_string());
         let normalized_apk_path = app_dir.join("normalized_final.apk");
-        if let Err(e) = modify::normalize_apk(&unsigned_apk_path, &normalized_apk_path) {
-            let _ = tx.send(ExportEvent::Error(format!("Normalization Error: {}", e))); return;
+        if let Err(error) = modify::normalize_apk(&unsigned_apk_path, &normalized_apk_path) {
+            let _ = transmitter.send(ExportEvent::Error(format!("Normalization Error: {}", error)));
+            return;
         }
 
-        log_cb("Signing APK...".to_string());
-        if let Err(e) = sign::sign(&normalized_apk_path, None) {
-            let _ = tx.send(ExportEvent::Error(format!("Native Signing Error: {}", e))); return;
+        log_callback("Signing APK...".to_string());
+        if let Err(error) = sign::sign(&normalized_apk_path, None) {
+            let _ = transmitter.send(ExportEvent::Error(format!("Native Signing Error: {}", error)));
+            return;
         }
 
         let output_apk = export_dir.join(format!("{}.apk", final_id));
-        if let Err(e) = fs::copy(&normalized_apk_path, &output_apk) {
-            let _ = tx.send(ExportEvent::Error(format!("Filesystem Error: {}", e))); return;
+        if let Err(error) = fs::copy(&normalized_apk_path, &output_apk) {
+            let _ = transmitter.send(ExportEvent::Error(format!("Filesystem Error: {}", error)));
+            return;
         }
 
         let _ = fs::remove_dir_all(&app_dir);
-        let _ = tx.send(ExportEvent::Success(format!("Successfully Built {}.apk!", final_id)));
+        let _ = transmitter.send(ExportEvent::Success(format!("Successfully Built {}.apk!", final_id)));
     });
 }
