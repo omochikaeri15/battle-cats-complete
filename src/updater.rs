@@ -1,7 +1,6 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::fs;
-use std::path::Path;
 use self_update::cargo_crate_version;
 use eframe::egui;
 use std::process::Command;
@@ -24,10 +23,7 @@ pub fn cleanup_temp_files() {
     ];
 
     for file in temp_files {
-        let path = Path::new(file);
-        if path.exists() {
-            let _ = fs::remove_file(path);
-        }
+        let _ = fs::remove_file(file);
     }
 }
 
@@ -36,11 +32,8 @@ fn restart_app() {
     let Ok(exe) = std::env::current_exe() else { return; };
     let path = exe.to_string_lossy();
 
-    let clean_path = if path.ends_with(" (deleted)") {
-        path.trim_end_matches(" (deleted)").to_string()
-    } else {
-        path.to_string()
-    };
+    // Trim the deleted artifact directly without nesting
+    let clean_path = path.trim_end_matches(" (deleted)");
 
     let _ = Command::new("sh")
         .arg("-c")
@@ -105,8 +98,7 @@ impl Updater {
         self.status = UpdateStatus::Checking;
 
         thread::spawn(move || {
-            let result = check_remote();
-            match result {
+            match check_remote() {
                 Ok(Some(release)) => { let _ = tx.send(UpdaterMsg::UpdateFound(release)); },
                 Ok(None) if is_manual => { let _ = tx.send(UpdaterMsg::UpToDate); },
                 Ok(None) => { let _ = tx.send(UpdaterMsg::SilentFail); },
@@ -129,12 +121,10 @@ impl Updater {
 
             let target_tag = if version.starts_with('v') { version.clone() } else { format!("v{}", version) };
 
-            let target_asset_name = if cfg!(target_os = "windows") {
-                "bcc_windows.zip"
-            } else if cfg!(target_os = "macos") {
-                "bcc_mac.zip"
-            } else {
-                "bcc_linux.zip"
+            let target_asset_name = match () {
+                _ if cfg!(target_os = "windows") => "bcc_windows.zip",
+                _ if cfg!(target_os = "macos") => "bcc_mac.zip",
+                _ => "bcc_linux.zip",
             };
 
             let Ok(update_box) = self_update::backends::github::Update::configure()
@@ -265,9 +255,8 @@ impl Updater {
 
                 let available_w = ui.available_width();
                 let margin_left = (available_w - total_w) / 2.0;
-                if margin_left > 0.0 {
-                    ui.add_space(margin_left);
-                }
+
+                ui.add_space(margin_left.max(0.0));
 
                 if ui.add_sized(PROMPT_BUTTON_SIZE, egui::Button::new("Yes")).clicked() { start_download = true; }
                 if ui.add_sized(PROMPT_BUTTON_SIZE, egui::Button::new("No")).clicked() { close_modal = true; }
@@ -278,16 +267,12 @@ impl Updater {
             });
         });
 
-        if start_download {
-            self.download_and_install(release);
-        }
+        if start_download { self.download_and_install(release); }
         if disable_future {
             settings.general.update_mode = UpdateMode::Ignore;
             close_modal = true;
         }
-        if close_modal {
-            self.status = UpdateStatus::Idle;
-        }
+        if close_modal { self.status = UpdateStatus::Idle; }
     }
 
     fn show_downloading_window(&self, ctx: &egui::Context, drag_guard: &mut DragGuard, tag: String) {
@@ -370,18 +355,15 @@ impl Updater {
 
                 let available_w = ui.available_width();
                 let margin_left = (available_w - total_w) / 2.0;
-                if margin_left > 0.0 {
-                    ui.add_space(margin_left);
-                }
+
+                ui.add_space(margin_left.max(0.0));
 
                 if ui.add_sized(RESTART_BUTTON_SIZE, egui::Button::new("Yes")).clicked() { should_restart = true; }
                 if ui.add_sized(RESTART_BUTTON_SIZE, egui::Button::new("No")).clicked() { close = true; }
             });
         });
 
-        if should_restart {
-            restart_app();
-        }
+        if should_restart { restart_app(); }
         if close { self.status = UpdateStatus::Idle; }
     }
 }
