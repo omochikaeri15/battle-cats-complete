@@ -4,6 +4,9 @@ use regex::Regex;
 use zip::{ZipArchive, ZipWriter};
 use rayon::prelude::*;
 
+#[cfg(target_os = "windows")]
+use std::io::{Read, Write};
+
 pub fn patch_identity(decode_dir: &Path, new_suffix: &str, app_title: &str, _log_callback: &impl Fn(String)) -> Result<String, String> {
     let suffix = new_suffix.trim();
     if suffix.is_empty() {
@@ -189,6 +192,7 @@ pub fn normalize_apk(input_apk: &Path, output_apk: &Path) -> Result<(), String> 
 
         #[cfg(target_os = "windows")]
         {
+            let mut archive_file = archive_file;
             let mut file_data = Vec::new();
             archive_file.read_to_end(&mut file_data).map_err(|error| format!("Failed reading {}: {}", file_name, error))?;
 
