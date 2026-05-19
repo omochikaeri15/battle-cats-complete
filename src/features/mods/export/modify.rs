@@ -179,20 +179,28 @@ pub fn normalize_apk(input_apk: &Path, output_apk: &Path) -> Result<(), String> 
         let name = file.name().to_string();
         let ext = Path::new(&name).extension().and_then(|e| e.to_str()).unwrap_or("");
 
-        let needs_store = uncompressed_exts.contains(&ext);
+        let force_store = uncompressed_exts.contains(&ext);
+        let is_already_stored = file.compression() == zip::CompressionMethod::Stored;
 
-        if needs_store && file.compression() != zip::CompressionMethod::Stored {
-            let mut data = Vec::new();
-            file.read_to_end(&mut data).map_err(|e| format!("Failed reading {}: {}", name, e))?;
+        if force_store || is_already_stored {
+            #[cfg(target_os = "windows")]
+            {
+                let mut data = Vec::new();
+                file.read_to_end(&mut data).map_err(|e| format!("Failed reading {}: {}", name, e))?;
 
-            let alignment = if ext == "so" { 4096 } else { 4 };
+                let alignment = if ext == "so" { 4096 } else { 4 };
 
-            let options = zip::write::SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored)
-                .with_alignment(alignment);
+                let options = zip::write::SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored)
+                    .with_alignment(alignment);
 
-            zip_writer.start_file(&name, options).map_err(|e| e.to_string())?;
-            zip_writer.write_all(&data).map_err(|e| e.to_string())?;
+                zip_writer.start_file(&name, options).map_err(|e| e.to_string())?;
+                zip_writer.write_all(&data).map_err(|e| e.to_string())?;
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                zip_writer.raw_copy_file(file).map_err(|e| e.to_string())?;
+            }
         } else {
             zip_writer.raw_copy_file(file).map_err(|e| e.to_string())?;
         }
