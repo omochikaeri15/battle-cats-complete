@@ -31,10 +31,7 @@ pub fn cleanup_temp_files() {
 fn restart_app() {
     let Ok(exe) = std::env::current_exe() else { return; };
     let path = exe.to_string_lossy();
-
-    // Trim the deleted artifact directly without nesting
     let clean_path = path.trim_end_matches(" (deleted)");
-
     let _ = Command::new("sh")
         .arg("-c")
         .arg(format!("sleep 1 && \"{}\" &", clean_path))
@@ -43,17 +40,10 @@ fn restart_app() {
     std::process::exit(0);
 }
 
-#[cfg(windows)]
+#[cfg(not(unix))]
 fn restart_app() {
-    use std::os::windows::process::CommandExt;
     let Ok(exe) = std::env::current_exe() else { return; };
-    let exe_path = exe.to_string_lossy();
-    let _ = Command::new("cmd")
-        .arg("/C")
-        .arg(format!("timeout /t 1 /nobreak > NUL && start \"\" \"{}\"", exe_path))
-        .creation_flags(0x08000000)
-        .spawn();
-
+    let _ = Command::new(exe).spawn();
     std::process::exit(0);
 }
 

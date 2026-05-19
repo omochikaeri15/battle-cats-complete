@@ -10,9 +10,24 @@ pub struct Settings {
     pub enemy_data: EnemyDataSettings,
     pub game_data: GameDataSettings,
     pub animation: AnimSettings,
+    pub mods: ModsSettings,
 
     #[serde(skip)]
     pub runtime: RuntimeState,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct ModsSettings {
+    pub replace_on_update: bool,
+}
+
+impl Default for ModsSettings {
+    fn default() -> Self {
+        Self {
+            replace_on_update: true,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

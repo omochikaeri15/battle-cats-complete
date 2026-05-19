@@ -45,7 +45,7 @@ pub fn show(context: &egui::Context, settings: &mut Settings, drag_guard: &mut D
                     "General" => super::general::show(tab_ui, &mut settings.general, &mut settings.runtime),
                     "Cats" => super::cats::show(tab_ui, &mut settings.cat_data),
                     "Enemies" => super::enemies::show(tab_ui, &mut settings.enemy_data),
-                    "Mods" => super::mods::show(tab_ui, drag_guard),
+                    "Mods" => super::mods::show(tab_ui, &mut settings.mods, drag_guard),
                     "Data" => super::data::show(tab_ui, &mut settings.game_data, &mut settings.runtime, drag_guard),
                     "Animation" => super::animation::show(tab_ui, &mut settings.animation),
                     "Add-Ons" => super::addons::show(tab_ui, drag_guard),
@@ -60,6 +60,7 @@ pub fn show(context: &egui::Context, settings: &mut Settings, drag_guard: &mut D
                 };
 
                 if action_result { refresh_needed = true; }
+                let _ = crate::global::io::json::save("settings.json", &*settings);
             });
         });
     });

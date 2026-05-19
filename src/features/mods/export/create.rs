@@ -132,13 +132,19 @@ pub fn start_apk_export(state: &mut ModState) {
             return;
         }
 
-        let output_apk = export_dir.join(format!("{}.apk", final_id));
+        let output_name = if app_title.trim().is_empty() {
+            final_id
+        } else {
+            app_title.trim().to_string()
+        };
+
+        let output_apk = export_dir.join(format!("{}.apk", output_name));
         if let Err(error) = fs::copy(&normalized_apk_path, &output_apk) {
             let _ = transmitter.send(ExportEvent::Error(format!("Filesystem Error: {}", error)));
             return;
         }
 
         let _ = fs::remove_dir_all(&app_dir);
-        let _ = transmitter.send(ExportEvent::Success(format!("Successfully Built {}.apk!", final_id)));
+        let _ = transmitter.send(ExportEvent::Success(format!("Successfully Built {}.apk!", output_name)));
     });
 }

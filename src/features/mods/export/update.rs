@@ -32,8 +32,12 @@ pub fn start_fast_track_export(state: &mut ModState) {
     };
 
     let target_region = state.export.target_region.clone();
-    let suffix = state.export.package_suffix.clone();
-    let final_name = if suffix.is_empty() { "battlecats".to_string() } else { format!("battlecats{}", suffix) };
+
+    let original_filename = input_apk_path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or("updated_battlecats")
+        .to_string();
 
     let (transmitter, receiver) = mpsc::channel();
     if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(receiver); }
@@ -218,6 +222,8 @@ pub fn start_fast_track_export(state: &mut ModState) {
             }
         }
 
+        drop(archive);
+
         for (zip_path, local_path) in inject_map {
             let chunk_data = fs::read(&local_path).unwrap_or_default();
             let file_extension = Path::new(&zip_path).extension().and_then(|extension| extension.to_str()).unwrap_or("");
@@ -250,7 +256,21 @@ pub fn start_fast_track_export(state: &mut ModState) {
             return;
         }
 
-        let final_apk_path = export_dir.join(format!("{}.apk", final_name));
+        let is_in_exports = input_apk_path.parent().map_or(false, |parent| {
+            parent.canonicalize().unwrap_or_default() == export_dir.canonicalize().unwrap_or_default()
+        });
+
+        let final_name = if !settings.mods.replace_on_update && is_in_exports {
+            format!("{}_updated", original_filename)
+        } else {
+            original_filename.clone()
+        };
+
+        let final_apk_path = if settings.mods.replace_on_update {
+            input_apk_path.with_extension("apk")
+        } else {
+            export_dir.join(format!("{}.apk", final_name))
+        };
 
         if let Err(error) = fs::copy(&unsigned_apk_path, &final_apk_path) {
             let _ = transmitter.send(ExportEvent::Error(format!("Filesystem Error: {}", error)));
