@@ -1,6 +1,6 @@
 use eframe::egui;
 use crate::features::addons::adb::download::AdbManager;
-use crate::features::addons::apktool::download::ApktoolManager; // Imported new manager
+use crate::features::addons::apktool::download::ApktoolManager;
 use crate::features::addons::avifenc::download::AvifManager;
 use crate::features::addons::ffmpeg::download::FfmpegManager;
 #[cfg(target_os = "windows")]
@@ -16,7 +16,7 @@ pub struct AddonDeleteState {
 }
 
 static ADB_MANAGER: Mutex<Option<AdbManager>> = Mutex::new(None);
-static APKTOOL_MANAGER: Mutex<Option<ApktoolManager>> = Mutex::new(None); // Added Mutex
+static APKTOOL_MANAGER: Mutex<Option<ApktoolManager>> = Mutex::new(None);
 static AVIF_MANAGER: Mutex<Option<AvifManager>> = Mutex::new(None);
 static FFMPEG_MANAGER: Mutex<Option<FfmpegManager>> = Mutex::new(None);
 
@@ -34,7 +34,6 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
         #[cfg(target_os = "windows")]
         let oem_manager = oem_lock.get_or_insert_with(OemManager::default);
 
-        // Apktool Manager Loop
         let mut apktool_lock = APKTOOL_MANAGER.lock().unwrap();
         let apktool_manager = apktool_lock.get_or_insert_with(ApktoolManager::default);
         apktool_manager.poll();
@@ -91,11 +90,10 @@ pub fn show(ui: &mut egui::Ui, drag_guard: &mut DragGuard) -> bool {
                     });
                 }
 
-                // New Apktool Section
                 ui.add_space(20.0);
-                ui.heading("Apktool & Java Runtime");
+                ui.heading("Apktool");
                 ui.add_space(5.0);
-                ui.label("Bundled Java Environment (JRE), Apktool v3.0.2, and uber-apk-signer.\nRequired to rebuild and sign Universal APKs during Mod Export.");
+                ui.label("Allows proper APK decompilation and recompilation for Mod Exports\nEnables \"Create\" Mod Export option");
                 ui.add_space(8.0);
                 let apktool_status = apktool_manager.status.clone();
                 render_addon_controls(ui, &apktool_status, "Apktool", || apktool_manager.install(), "apktool_delete");
