@@ -100,6 +100,13 @@ impl ModList {
                 }
             });
     }
+    
+    pub fn flush_icon(&mut self, folder_name: &str) {
+        self.texture_cache.remove(folder_name);
+        self.missing_ids.remove(folder_name);
+        self.pending_requests.remove(folder_name);
+        self.fallback_texture = None;
+    }
 
     fn process_incoming_textures(&mut self, ctx: &egui::Context) {
         while let Ok(loaded) = self.rx_result.try_recv() {

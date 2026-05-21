@@ -209,33 +209,6 @@ pub fn apply_metadata_rename(mods_root: &Path, target_dir: &Path, default_num: u
     final_name
 }
 
-pub fn add_mod_icon(path: &Path) {
-    let Some(image_path) = rfd::FileDialog::new()
-        .add_filter("Images", &["png", "ico"])
-        .pick_file() else { return; };
-
-    let Some(ext) = image_path.extension() else { return; };
-    let ext_str = ext.to_string_lossy().to_lowercase();
-
-    if ext_str != "png" && ext_str != "ico" { return; }
-
-    let icons_dir = path.join("icons");
-    let _ = fs::create_dir_all(&icons_dir);
-    let target_path = icons_dir.join(format!("icon.{}", ext_str));
-    let other_ext = if ext_str == "png" { "ico" } else { "png" };
-    let _ = fs::remove_file(icons_dir.join(format!("icon.{}", other_ext)));
-    let _ = fs::copy(image_path, target_path);
-}
-
-pub fn delete_mod_icon(path: &Path) {
-    let icons_dir = path.join("icons");
-    let png_path = icons_dir.join("icon.png");
-    let ico_path = icons_dir.join("icon.ico");
-
-    if png_path.exists() { let _ = fs::remove_file(png_path); }
-    if ico_path.exists() { let _ = fs::remove_file(ico_path); }
-}
-
 pub fn delete_mod_folder(path: PathBuf) {
     thread::spawn(move || {
         let _ = fs::remove_dir_all(path);

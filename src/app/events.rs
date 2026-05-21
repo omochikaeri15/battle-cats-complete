@@ -26,12 +26,14 @@ impl BattleCatsApp {
         }
 
         if paths.is_empty() { return; }
-        
+
         if self.import_state.import_rx.is_some() || self.import_state.import_job_status.load(Ordering::Relaxed) == 1 { return; }
         if self.import_state.export_rx.is_some() || self.import_state.export_job_status.load(Ordering::Relaxed) == 1 { return; }
 
         let mut cat_ids_to_refresh = HashSet::new();
-        let mut enemy_ids_to_refresh = HashSet::new(); 
+        let mut enemy_ids_to_refresh = HashSet::new();
+        let mut mod_icons_to_refresh = HashSet::new();
+
         let mut global_cat_refresh = false;
         let mut global_enemy_refresh = false;
         let mut global_stage_refresh = false;
@@ -41,18 +43,26 @@ impl BattleCatsApp {
         let active_mod = self.mod_state.loaded_mods.iter()
             .find(|mod_item| mod_item.enabled)
             .map(|mod_item| mod_item.folder_name.to_lowercase());
-        
+
         resolver::set_active_mod(active_mod.clone());
 
         for path in paths {
             let path_str = path.to_string_lossy().to_lowercase();
             let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
-            
+
             let is_mod_path = path_str.contains("mods") && !path_str.contains("packages");
             if is_mod_path {
                 mods_refresh = true;
                 if Self::check_if_active_mod_changed(&path, active_mod.as_deref()) {
                     active_mod_file_changed = true;
+                }
+
+                if path_str.contains("icons") && (file_name == "icon.png" || file_name == "icon.ico") {
+                    if let Some(mods_idx) = path.components().position(|c| c.as_os_str().to_string_lossy().to_lowercase() == "mods") {
+                        if let Some(mod_folder) = path.components().nth(mods_idx + 1) {
+                            mod_icons_to_refresh.insert(mod_folder.as_os_str().to_string_lossy().into_owned());
+                        }
+                    }
                 }
             }
 
@@ -64,8 +74,8 @@ impl BattleCatsApp {
 
             if path_str.contains("ui") || path_str.contains("gatyaitem") || path_str.contains("sheets") {
                 self.cat_list_state.gatya_item_textures.clear();
-                self.cat_list_state.sprite_sheet = SpriteSheet::default(); 
-                self.cat_list_state.texture_cache_version += 1; 
+                self.cat_list_state.sprite_sheet = SpriteSheet::default();
+                self.cat_list_state.texture_cache_version += 1;
             }
 
             if path_str.contains("tables") {
@@ -75,7 +85,7 @@ impl BattleCatsApp {
             }
 
             let is_cat_global_file = cat_patterns::CAT_UNIVERSAL_FILES.contains(&file_name);
-            
+
             if is_cat_global_file {
                 global_cat_refresh = true;
             } else if file_name == cat_paths::UNIT_BUY {
@@ -105,10 +115,18 @@ impl BattleCatsApp {
             self.mod_state.refresh_mods();
         }
 
+        if !mod_icons_to_refresh.is_empty() {
+            if let Some(list) = &mut self.mod_state.list {
+                for mod_name in mod_icons_to_refresh {
+                    list.flush_icon(&mod_name);
+                }
+            }
+        }
+
         if active_mod_file_changed || global_cat_refresh || global_enemy_refresh || global_stage_refresh {
             self.perform_full_data_reload();
             ctx.request_repaint();
-            return; 
+            return;
         }
 
         let mass_threshold = 5;
@@ -123,9 +141,9 @@ impl BattleCatsApp {
             for &id in &cat_ids_to_refresh {
                 self.cat_list_state.cat_list.flush_icon(id);
                 if self.cat_list_state.selected_cat == Some(id) {
-                    self.cat_list_state.detail_texture = None; 
+                    self.cat_list_state.detail_texture = None;
                     self.cat_list_state.detail_key.clear();
-                    self.cat_list_state.texture_cache_version += 1; 
+                    self.cat_list_state.texture_cache_version += 1;
                 }
                 cat_loader::refresh_cat(&mut self.cat_list_state, id, self.settings.scanner_config());
             }
@@ -146,12 +164,12 @@ impl BattleCatsApp {
             }
         }
 
-        if (!cat_ids_to_refresh.is_empty() || !enemy_ids_to_refresh.is_empty() || global_cat_refresh || global_enemy_refresh || global_stage_refresh) 
+        if (!cat_ids_to_refresh.is_empty() || !enemy_ids_to_refresh.is_empty() || global_cat_refresh || global_enemy_refresh || global_stage_refresh)
             && !crate::global::resolver::is_mod_active() {
-            
+
             let cats = self.cat_list_state.cats.clone();
             let enemies = self.enemy_list_state.enemies.clone();
-            
+
             std::thread::spawn(move || {
                 let hash = crate::global::io::cache::get_game_hash(None);
                 crate::global::io::cache::save("cats_cache.bin", hash, &cats);
@@ -165,16 +183,16 @@ impl BattleCatsApp {
     pub fn check_if_active_mod_changed(path: &Path, active_mod: Option<&str>) -> bool {
         let Some(active) = active_mod else { return false; };
         let components: Vec<_> = path.components().map(|comp| comp.as_os_str().to_string_lossy().to_lowercase()).collect();
-        
+
         let Some(mods_idx) = components.iter().position(|comp| comp == "mods") else { return false; };
         let Some(mod_folder) = components.get(mods_idx + 1) else { return false; };
-        
+
         mod_folder == active
     }
 
     pub fn process_cat_path(&mut self, path: &Path, cat_ids_to_refresh: &mut HashSet<u32>) -> bool {
         let components: Vec<_> = path.components().map(|comp| comp.as_os_str().to_string_lossy()).collect();
-        
+
         let Some(cats_idx) = components.iter().position(|comp| comp == "cats") else { return false; };
         let Some(folder_name) = components.get(cats_idx + 1) else { return false; };
 
@@ -196,24 +214,24 @@ impl BattleCatsApp {
 
         let form_char = components.get(cats_idx + 2).map(|string_val| string_val.to_string()).unwrap_or_else(|| "f".to_string());
         let marker = format!("_{}_", form_char);
-        
+
         let loaded = &mut self.cat_list_state.anim_viewer.loaded_id;
         if loaded.is_empty() || loaded.contains(&marker) {
             loaded.clear();
-            self.cat_list_state.anim_viewer.texture_version += 1; 
+            self.cat_list_state.anim_viewer.texture_version += 1;
         }
-        
+
         false
     }
-    
+
     pub fn process_enemy_path(&mut self, path: &Path, enemy_ids_to_refresh: &mut HashSet<u32>) -> bool {
         let components: Vec<_> = path.components().map(|comp| comp.as_os_str().to_string_lossy()).collect();
-        
+
         let Some(enemies_idx) = components.iter().position(|comp| comp == "enemies") else { return false; };
         let Some(folder_name) = components.get(enemies_idx + 1) else { return false; };
-        
+
         let Ok(id) = folder_name.parse::<u32>() else { return true; };
-        
+
         let is_anim = components.get(enemies_idx + 2).map(|s| s.as_ref()) == Some("anim");
         if !is_anim || self.enemy_list_state.selected_enemy != Some(id) {
             enemy_ids_to_refresh.insert(id);
@@ -223,7 +241,7 @@ impl BattleCatsApp {
         let loaded = &mut self.enemy_list_state.anim_viewer.loaded_id;
         loaded.clear();
         self.enemy_list_state.anim_viewer.texture_version += 1;
-        
+
         false
     }
 }

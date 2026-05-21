@@ -8,18 +8,12 @@ use crate::features::mods::logic::manager;
 const HEADER_BOTTOM_PADDING: f32 = 4.0;
 const HEADER_TOP_PADDING: f32 = 3.8;
 const MOD_TITLE_SIZE: f32 = 25.0;
-const BTN_SIZE: [f32; 2] = [105.0, 28.0];
+const BTN_SIZE: [f32; 2] = [135.0, 28.0];
 
 const META_LEFT_HEADER_OFFSET: f32 = 38.0;
 const META_LEFT_TOP_PADDING: f32 = 13.0;
 const META_LEFT_INNER_PADDING: f32 = 9.0;
 const META_LEFT_BOTTOM_PADDING: f32 = 0.0;
-
-#[derive(Clone, Default)]
-struct ActionState {
-    is_open: bool,
-    completion_time: Option<f64>,
-}
 
 pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings) {
     let Some(selected_id) = state.selected_mod.clone() else {
@@ -87,11 +81,9 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
     let mod_folder = state.loaded_mods[mod_idx].folder_name.clone();
     let mod_path = Path::new("mods").join(&mod_folder);
     let is_enabled = state.loaded_mods[mod_idx].enabled;
-    let icons_dir = mod_path.join("icons");
-    let has_icon = icons_dir.join("icon.png").exists() || icons_dir.join("icon.ico").exists();
 
     let mut toggle_clicked = false;
-    render_action_buttons(ui, state, &mod_path, has_icon, is_enabled, &mod_folder, &mut toggle_clicked);
+    render_action_buttons(ui, state, &mod_path, is_enabled, &mod_folder, &mut toggle_clicked);
 
     if state.selected_mod.is_none() {
         return;
@@ -200,29 +192,20 @@ fn render_action_buttons(
     ui: &mut egui::Ui,
     state: &mut ModState,
     path: &Path,
-    has_icon: bool,
     is_enabled: bool,
     mod_name: &str,
     toggle_clicked: &mut bool
 ) {
     let ctx = ui.ctx().clone();
 
-    let icon_id = egui::Id::new("mod_icon_action_state");
-    let mut icon_state = ctx.data(|d| d.get_temp::<ActionState>(icon_id)).unwrap_or_default();
-
     let del_id = egui::Id::new("mod_delete_action_state");
     let mut del_is_open = ctx.data(|d| d.get_temp::<bool>(del_id)).unwrap_or_default();
-
-    let current_time = ctx.input(|i| i.time);
-
-    if let Some(t) = icon_state.completion_time {
-        if current_time > t { icon_state.completion_time = None; }
-    }
 
     ui.horizontal(|ui| {
         let spacing = 5.0;
         let btn_w = BTN_SIZE[0];
-        let total_w = (btn_w * 5.0) + (spacing * 4.0);
+
+        let total_w = (btn_w * 4.0) + (spacing * 3.0);
         let available_w = ui.available_width();
 
         ui.add_space((available_w - total_w) / 2.0);
@@ -247,28 +230,9 @@ fn render_action_buttons(
             state.export.is_open = true;
         }
 
-        if icon_state.completion_time.is_some() {
-            let btn = egui::Button::new("Icon Deleted!").fill(egui::Color32::from_rgb(40, 160, 40));
-            let _ = ui.add_sized(BTN_SIZE, btn);
-        } else if has_icon {
-            let btn = egui::Button::new("Delete Icon").fill(egui::Color32::from_rgb(180, 50, 50));
-            if ui.add_sized(BTN_SIZE, btn).clicked() { icon_state.is_open = true; }
-        } else {
-            let btn = egui::Button::new("Add Icon").fill(egui::Color32::from_rgb(40, 160, 40));
-            if ui.add_sized(BTN_SIZE, btn).clicked() {
-                manager::add_mod_icon(path);
-            }
-        }
-
         let btn = egui::Button::new("Delete Mod").fill(egui::Color32::from_rgb(180, 50, 50));
         if ui.add_sized(BTN_SIZE, btn).clicked() { del_is_open = true; }
     });
-
-    let icon_msg = format!("Are you sure you want to delete the icon for {}?", mod_name);
-    if show_confirmation_modal(&ctx, &mut state.drag_guard, "confirm_icon_delete", &icon_msg, &mut icon_state.is_open) {
-        manager::delete_mod_icon(path);
-        icon_state.completion_time = Some(current_time + 2.0);
-    }
 
     let mod_msg = format!("Are you sure you want to completely delete {}?", mod_name);
     if show_confirmation_modal(&ctx, &mut state.drag_guard, "confirm_mod_delete", &mod_msg, &mut del_is_open) {
@@ -279,7 +243,6 @@ fn render_action_buttons(
     }
 
     ctx.data_mut(|d| {
-        d.insert_temp(icon_id, icon_state);
         d.insert_temp(del_id, del_is_open);
     });
 }
