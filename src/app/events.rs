@@ -57,7 +57,7 @@ impl BattleCatsApp {
                     active_mod_file_changed = true;
                 }
 
-                if path_str.contains("icons") && (file_name == "icon.png" || file_name == "icon.ico") {
+                if path_str.contains("icons") && (file_name == "icon.png") {
                     if let Some(mods_idx) = path.components().position(|c| c.as_os_str().to_string_lossy().to_lowercase() == "mods") {
                         if let Some(mod_folder) = path.components().nth(mods_idx + 1) {
                             mod_icons_to_refresh.insert(mod_folder.as_os_str().to_string_lossy().into_owned());

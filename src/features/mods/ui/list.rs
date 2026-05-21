@@ -285,8 +285,6 @@ fn process_image(mod_path: &PathBuf) -> Option<egui::ColorImage> {
 
     let icon_path = if icons_dir.join("icon.png").exists() {
         icons_dir.join("icon.png")
-    } else if icons_dir.join("icon.ico").exists() {
-        icons_dir.join("icon.ico")
     } else {
         return None;
     };
