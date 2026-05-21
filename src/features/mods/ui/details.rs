@@ -129,7 +129,6 @@ pub fn render(ui: &mut egui::Ui, state: &mut ModState, _settings: &mut Settings)
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Package:").strong());
                 if ui.add(egui::TextEdit::singleline(&mut state.loaded_mods[mod_idx].metadata.package)
-                    .hint_text("en")
                     .desired_width(100.0)).lost_focus() {
                     metadata_changed = true;
                 }

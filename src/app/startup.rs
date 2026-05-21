@@ -118,49 +118,36 @@ fn migrate_legacy_mods() {
 
         mod_dirs.into_par_iter().for_each(|mod_dir| {
             let patch_dir = mod_dir.join("patch");
-            if patch_dir.exists() { return; } // Already modern
+            let icons_dir = mod_dir.join("icons");
+            let loose_dir = mod_dir.join("loose");
 
-            let dl_dir = mod_dir.join("DownloadLocal");
+            // Cache whether it was modern before we force create the folders
+            let is_modern = patch_dir.exists();
 
-            // Push root into DownloadLocal folder
+            // Create mandatory directories for EVERY mod
+            let _ = fs::create_dir_all(&patch_dir);
+            let _ = fs::create_dir_all(&icons_dir);
+            let _ = fs::create_dir_all(&loose_dir);
+
+            if is_modern { return; } // Already modern, skip migration
+
+            // Move root files into patch
             if let Ok(contents) = fs::read_dir(&mod_dir) {
-                let mut to_move = Vec::new();
                 for entry in contents.flatten() {
                     let path = entry.path();
                     let name = path.file_name().unwrap_or_default().to_string_lossy();
 
-                    if name != "DownloadLocal" && name != "patch" && name != "icons" && name != "loose" {
-                        to_move.push(path);
+                    if name != "patch" && name != "icons" && name != "loose" {
+                        let _ = fs::rename(&path, patch_dir.join(name.as_ref()));
                     }
                 }
-
-                if !to_move.is_empty() {
-                    let _ = fs::create_dir_all(&dl_dir);
-                    for path in to_move {
-                        if let Some(file_name) = path.file_name() {
-                            let _ = fs::rename(&path, dl_dir.join(file_name));
-                        }
-                    }
-                }
-            }
-
-            // Rename DownloadLocal to patch
-            if dl_dir.exists() {
-                let _ = fs::rename(&dl_dir, &patch_dir);
             }
 
             // Hunt for the icons in patch and move them to icons
-            let icons_dir = mod_dir.join("icons");
             let icon_names = ["icon.png", "icon_foreground.png", "push_icon.png"];
-            let mut icons_created = false;
-
             for icon_name in &icon_names {
                 let patch_icon = patch_dir.join(icon_name);
                 if patch_icon.exists() {
-                    if !icons_created {
-                        let _ = fs::create_dir_all(&icons_dir);
-                        icons_created = true;
-                    }
                     let _ = fs::rename(patch_icon, icons_dir.join(icon_name));
                 }
             }
