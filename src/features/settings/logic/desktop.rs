@@ -43,6 +43,12 @@ pub fn create_desktop_data() -> Result<(), String> {
     let executable_string = current_executable.to_str()
         .ok_or("Executable path contains invalid UTF-8")?;
 
+    let working_directory = current_executable.parent()
+        .ok_or("Could not determine parent directory of executable")?;
+
+    let working_directory_string = working_directory.to_str()
+        .ok_or("Working directory path contains invalid UTF-8")?;
+
     let cargo_version = env!("CARGO_PKG_VERSION");
 
     let desktop_file_content = format!(
@@ -52,11 +58,13 @@ pub fn create_desktop_data() -> Result<(), String> {
         Name=Battle Cats Complete\n\
         Comment=Toolkit for The Battle Cats\n\
         Exec=\"{}\"\n\
+        Path={}\n\
         Icon=battle_cats_complete\n\
         Terminal=false\n\
         Categories=Development;Game;\n\
         X-AppVersion={}\n",
         executable_string,
+        working_directory_string,
         cargo_version
     );
 
@@ -99,15 +107,26 @@ pub fn sync_desktop_data() -> Result<(), String> {
 
     let current_executable = env::current_exe()
         .map_err(|error| format!("Could not get executable path: {}", error))?;
+
     let executable_string = current_executable.to_str()
         .ok_or("Executable path contains invalid UTF-8")?;
+
+    let working_directory = current_executable.parent()
+        .ok_or("Could not determine parent directory of executable")?;
+
+    let working_directory_string = working_directory.to_str()
+        .ok_or("Working directory path contains invalid UTF-8")?;
 
     let cargo_version = env!("CARGO_PKG_VERSION");
 
     let expected_exec_line = format!("Exec=\"{}\"", executable_string);
+    let expected_path_line = format!("Path=\"{}\"", working_directory_string);
     let expected_version_line = format!("X-AppVersion={}", cargo_version);
 
-    if !file_content.contains(&expected_exec_line) || !file_content.contains(&expected_version_line) {
+    if !file_content.contains(&expected_exec_line)
+        || !file_content.contains(&expected_path_line)
+        || !file_content.contains(&expected_version_line)
+    {
         create_desktop_data()?;
     }
 
