@@ -4,38 +4,39 @@ use eframe::egui;
 use crate::features::settings::logic::keys::UserKeys;
 use crate::global::ui::shared::DragGuard;
 
-const COL_REGION_WIDTH: f32 = 40.0;
-const COL_INPUT_WIDTH: f32 = 250.0;
+const COLUMN_REGION_WIDTH: f32 = 40.0;
+const COLUMN_INPUT_WIDTH: f32 = 250.0;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct ManageKeysState {
     is_open: bool,
+    reset_position: bool,
     keys: UserKeys,
     validation_status: Option<[(bool, bool); 4]>,
 }
 
-pub fn open(context: &egui::Context) {
-    let state_id = egui::Id::new("manage_keys_state");
-    let mut state = context.data(|data_map| data_map.get_temp::<ManageKeysState>(state_id)).unwrap_or_else(|| {
-        ManageKeysState {
+impl Default for ManageKeysState {
+    fn default() -> Self {
+        Self {
             is_open: false,
+            reset_position: false,
             keys: UserKeys::load(),
             validation_status: None,
         }
-    });
+    }
+}
+
+pub fn open(context: &egui::Context) {
+    let state_id = egui::Id::new("manage_keys_state");
+    let mut state = context.data(|data_map| data_map.get_temp::<ManageKeysState>(state_id)).unwrap_or_default();
     state.is_open = true;
+    state.reset_position = true;
     context.data_mut(|data_map| data_map.insert_temp(state_id, state));
 }
 
 pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
     let state_id = egui::Id::new("manage_keys_state");
-    let mut state = context.data(|data_map| data_map.get_temp::<ManageKeysState>(state_id)).unwrap_or_else(|| {
-        ManageKeysState {
-            is_open: false,
-            keys: UserKeys::load(),
-            validation_status: None,
-        }
-    });
+    let mut state = context.data(|data_map| data_map.get_temp::<ManageKeysState>(state_id)).unwrap_or_default();
 
     if !state.is_open {
         state.validation_status = None;
@@ -58,7 +59,12 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
         .pivot(egui::Align2::CENTER_CENTER)
         .default_pos(context.screen_rect().center());
 
-    if let Some(position) = fixed_position { window = window.current_pos(position); }
+    if state.reset_position {
+        window = window.current_pos(context.screen_rect().center());
+        state.reset_position = false;
+    } else if let Some(position) = fixed_position {
+        window = window.current_pos(position);
+    }
 
     window.show(context, |ui_container| {
         ui_container.add_space(10.0);
@@ -73,16 +79,15 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
 
         ui_container.vertical_centered(|centered_ui| {
             centered_ui.horizontal(|ui_row| {
-                let table_width = COL_REGION_WIDTH + (COL_INPUT_WIDTH * 2.0) + (15.0 * 2.0);
+                let table_width = COLUMN_REGION_WIDTH + (COLUMN_INPUT_WIDTH * 2.0) + (15.0 * 2.0);
                 let spacing = ui_row.spacing().item_spacing.x;
                 let total_button_width = (button_width * 4.0) + (spacing * 3.0);
 
                 let x_offset = (table_width - total_button_width) / 2.0;
                 ui_row.add_space(x_offset.max(0.0));
-
-                // --- Load Keys ---
+                
                 let import_time = context.data(|data_map| data_map.get_temp::<f64>(egui::Id::new("keys_import_time"))).unwrap_or(-10.0);
-                let import_result = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("keys_import_res"))).unwrap_or(false);
+                let import_result = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("keys_import_result"))).unwrap_or(false);
 
                 let (import_text, import_color) = if (current_time - import_time) < 2.0 {
                     ui_row.ctx().request_repaint();
@@ -104,14 +109,13 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                         };
                         context.data_mut(|data_map| {
                             data_map.insert_temp(egui::Id::new("keys_import_time"), current_time);
-                            data_map.insert_temp(egui::Id::new("keys_import_res"), success);
+                            data_map.insert_temp(egui::Id::new("keys_import_result"), success);
                         });
                     }
                 }
 
-                // --- Export Keys ---
                 let export_time = context.data(|data_map| data_map.get_temp::<f64>(egui::Id::new("keys_export_time"))).unwrap_or(-10.0);
-                let export_result = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("keys_export_res"))).unwrap_or(false);
+                let export_result = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("keys_export_result"))).unwrap_or(false);
 
                 let (export_text, export_color) = if (current_time - export_time) < 2.0 {
                     ui_row.ctx().request_repaint();
@@ -119,25 +123,23 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                 } else { ("Export Keys", default_color) };
 
                 if ui_row.add_sized([button_width, button_height], egui::Button::new(egui::RichText::new(export_text).size(12.0).strong().color(egui::Color32::WHITE)).fill(export_color).rounding(4.0)).clicked() {
-                    let export_dir = Path::new("exports");
-                    let _ = fs::create_dir_all(export_dir);
+                    let export_directory = Path::new("exports");
+                    let _ = fs::create_dir_all(export_directory);
 
-                    let export_path = export_dir.join("keys");
+                    let export_path = export_directory.join("keys");
                     let json_data = serde_json::to_string_pretty(&state.keys).unwrap_or_default();
                     let success = fs::write(&export_path, json_data).is_ok();
 
                     context.data_mut(|data_map| {
                         data_map.insert_temp(egui::Id::new("keys_export_time"), current_time);
-                        data_map.insert_temp(egui::Id::new("keys_export_res"), success);
+                        data_map.insert_temp(egui::Id::new("keys_export_result"), success);
                     });
                 }
-
-                // --- Validate Keys ---
+                
                 if ui_row.add_sized([button_width, button_height], egui::Button::new(egui::RichText::new("Validate Keys").size(12.0).strong().color(egui::Color32::WHITE)).fill(default_color).rounding(4.0)).clicked() {
                     state.validation_status = Some(state.keys.validate());
                 }
-
-                // --- Delete Keys ---
+                
                 let delete_time = context.data(|data_map| data_map.get_temp::<f64>(egui::Id::new("keys_delete_time"))).unwrap_or(-10.0);
                 let mut is_confirming_delete = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("keys_confirm_delete"))).unwrap_or(false);
 
@@ -173,9 +175,9 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
         ui_container.add_space(5.0);
 
         egui::Grid::new("keys_grid").striped(true).spacing(egui::vec2(15.0, 10.0)).show(ui_container, |grid_ui| {
-            grid_ui.vertical_centered(|col_ui| { col_ui.set_min_width(COL_REGION_WIDTH); col_ui.label(egui::RichText::new("Region").strong()); });
-            grid_ui.vertical_centered(|col_ui| { col_ui.set_min_width(COL_INPUT_WIDTH); col_ui.label(egui::RichText::new("Decryption Key").strong()); });
-            grid_ui.vertical_centered(|col_ui| { col_ui.set_min_width(COL_INPUT_WIDTH); col_ui.label(egui::RichText::new("Initialization Vector").strong()); });
+            grid_ui.vertical_centered(|column_ui| { column_ui.set_min_width(COLUMN_REGION_WIDTH); column_ui.label(egui::RichText::new("Region").strong()); });
+            grid_ui.vertical_centered(|column_ui| { column_ui.set_min_width(COLUMN_INPUT_WIDTH); column_ui.label(egui::RichText::new("Decryption Key").strong()); });
+            grid_ui.vertical_centered(|column_ui| { column_ui.set_min_width(COLUMN_INPUT_WIDTH); column_ui.label(egui::RichText::new("Initialization Vector").strong()); });
             grid_ui.end_row();
 
             let mut regions = [
@@ -188,8 +190,8 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
             let default_validations = [(true, true); 4];
             let current_validations = state.validation_status.unwrap_or(default_validations);
 
-            for (index, (name, region_data)) in regions.iter_mut().enumerate() {
-                grid_ui.centered_and_justified(|col_ui| { col_ui.label(egui::RichText::new(*name).strong()); });
+            for (index, (region_name, region_data)) in regions.iter_mut().enumerate() {
+                grid_ui.centered_and_justified(|column_ui| { column_ui.label(egui::RichText::new(*region_name).strong()); });
 
                 let (key_valid, iv_valid) = current_validations[index];
 
@@ -198,7 +200,7 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                         let color = if key_valid { egui::Color32::from_rgb(30, 80, 40) } else { egui::Color32::from_rgb(120, 30, 30) };
                         scope_ui.visuals_mut().extreme_bg_color = color;
                     }
-                    if scope_ui.add(egui::TextEdit::singleline(&mut region_data.key).desired_width(COL_INPUT_WIDTH)).changed() {
+                    if scope_ui.add(egui::TextEdit::singleline(&mut region_data.key).desired_width(COLUMN_INPUT_WIDTH)).changed() {
                         state.validation_status = None;
                     }
                 });
@@ -208,7 +210,7 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                         let color = if iv_valid { egui::Color32::from_rgb(30, 80, 40) } else { egui::Color32::from_rgb(120, 30, 30) };
                         scope_ui.visuals_mut().extreme_bg_color = color;
                     }
-                    if scope_ui.add(egui::TextEdit::singleline(&mut region_data.iv).desired_width(COL_INPUT_WIDTH)).changed() {
+                    if scope_ui.add(egui::TextEdit::singleline(&mut region_data.iv).desired_width(COLUMN_INPUT_WIDTH)).changed() {
                         state.validation_status = None;
                     }
                 });

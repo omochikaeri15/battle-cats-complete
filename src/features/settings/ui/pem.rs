@@ -7,6 +7,7 @@ use crate::global::ui::shared::DragGuard;
 #[derive(Clone)]
 struct ManagePemState {
     is_open: bool,
+    reset_position: bool,
     active_pem: String,
     is_custom: bool,
 
@@ -18,7 +19,7 @@ struct ManagePemState {
     confirm_delete: bool,
 
     export_time: f64,
-    export_res: bool,
+    export_result: bool,
 
     receiver: Option<Arc<Mutex<mpsc::Receiver<Option<String>>>>>,
 }
@@ -28,6 +29,7 @@ impl Default for ManagePemState {
         let (active_pem, is_custom) = pem::get_active_pem();
         Self {
             is_open: false,
+            reset_position: false,
             active_pem,
             is_custom,
             generate_click_time: -10.0,
@@ -36,7 +38,7 @@ impl Default for ManagePemState {
             delete_click_time: -10.0,
             confirm_delete: false,
             export_time: -10.0,
-            export_res: false,
+            export_result: false,
             receiver: None,
         }
     }
@@ -46,6 +48,7 @@ pub fn open(context: &egui::Context) {
     let state_id = egui::Id::new("manage_pem_state_v3");
     let mut state = context.data(|data_map| data_map.get_temp::<ManagePemState>(state_id)).unwrap_or_default();
     state.is_open = true;
+    state.reset_position = true;
     context.data_mut(|data_map| data_map.insert_temp(state_id, state));
 }
 
@@ -96,7 +99,10 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
         .pivot(egui::Align2::CENTER_CENTER)
         .default_pos(context.screen_rect().center());
 
-    if let Some(position) = fixed_position {
+    if state.reset_position {
+        window = window.current_pos(context.screen_rect().center());
+        state.reset_position = false;
+    } else if let Some(position) = fixed_position {
         window = window.current_pos(position);
     }
 
@@ -120,8 +126,7 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                 let total_buttons_width = (button_width * 4.0) + (spacing * 3.0);
                 let x_offset = (ui_row.available_width() - total_buttons_width) / 2.0;
                 ui_row.add_space(x_offset.max(0.0));
-
-                // --- Import PEM ---
+                
                 let import_button = egui::Button::new(
                     egui::RichText::new("Import PEM").size(12.0).strong().color(egui::Color32::WHITE)
                 ).fill(default_blue).rounding(4.0);
@@ -141,11 +146,10 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                         }
                     }
                 });
-
-                // --- Export PEM ---
+                
                 let (export_text, export_color) = if (current_time - state.export_time) < 2.0 {
                     ui_row.ctx().request_repaint();
-                    if state.export_res { ("Exported!", success_green) } else { ("Failed!", danger_red) }
+                    if state.export_result { ("Exported!", success_green) } else { ("Failed!", danger_red) }
                 } else {
                     ("Export PEM", default_blue)
                 };
@@ -156,19 +160,18 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
 
                 ui_row.add_enabled_ui(!state.is_generating, |enabled_ui| {
                     if enabled_ui.add_sized([button_width, button_height], export_button).clicked() {
-                        let export_dir = std::path::Path::new("exports");
-                        let _ = fs::create_dir_all(export_dir);
+                        let export_directory = std::path::Path::new("exports");
+                        let _ = fs::create_dir_all(export_directory);
 
                         let filename = if state.is_custom { "identity.pem" } else { "bcc.pem" };
-                        let export_path = export_dir.join(filename);
+                        let export_path = export_directory.join(filename);
 
                         let success = fs::write(export_path, &state.active_pem).is_ok();
                         state.export_time = current_time;
-                        state.export_res = success;
+                        state.export_result = success;
                     }
                 });
-
-                // --- Generate PEM ---
+                
                 if state.confirm_generate {
                     if current_time - state.generate_click_time > 2.0 {
                         state.confirm_generate = false;
@@ -211,8 +214,7 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                         }
                     }
                 });
-
-                // --- Delete PEM ---
+                
                 if state.confirm_delete {
                     if current_time - state.delete_click_time > 2.0 {
                         state.confirm_delete = false;
