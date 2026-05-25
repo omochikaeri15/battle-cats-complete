@@ -130,15 +130,30 @@ fn fmt_effective_range(stats: &EnemyRaw) -> String {
     format!("{} {}\nStands at {} Range relative to Cat Base", label_prefix, range_strings.join(" / "), primary_anchor)
 }
 
-fn fmt_multihit(stats: &EnemyRaw) -> String {
+fn fmt_multihit(stats: &EnemyRaw, magnification: Magnification) -> String {
+    let magnification_factor = magnification.attack as f32 / 100.0;
+
+    let damage_hit_1 = (stats.attack_1 as f32 * magnification_factor).round() as i32;
+    let damage_hit_2 = (stats.attack_2 as f32 * magnification_factor).round() as i32;
+    let damage_hit_3 = (stats.attack_3 as f32 * magnification_factor).round() as i32;
+
     let ability_flag_1 = if stats.attack_1_abilities > 0 { "True" } else { "False" };
     let ability_flag_2 = if stats.attack_2_abilities > 0 { "True" } else { "False" };
-    let ability_flag_3 = if stats.attack_3 > 0 { if stats.attack_3_abilities > 0 { " / True" } else { " / False" } } else { "" };
-    let damage_string = if stats.attack_3 > 0 { 
-        format!("{} / {} / {}", stats.attack_1, stats.attack_2, stats.attack_3) 
-    } else { 
-        format!("{} / {}", stats.attack_1, stats.attack_2) 
+
+    let ability_flag_3 = if stats.attack_3 == 0 {
+        ""
+    } else if stats.attack_3_abilities > 0 {
+        " / True"
+    } else {
+        " / False"
     };
+
+    let damage_string = if stats.attack_3 > 0 {
+        format!("{} / {} / {}", damage_hit_1, damage_hit_2, damage_hit_3)
+    } else {
+        format!("{} / {}", damage_hit_1, damage_hit_2)
+    };
+
     format!("Damage split {}\nAbility split {} / {}{}", damage_string, ability_flag_1, ability_flag_2, ability_flag_3)
 }
 
@@ -493,7 +508,7 @@ pub static ENEMY_ABILITY_REGISTRY: &[EnemyAbilityDef] = &[
         group: DisplayGroup::Body1,
         schema: &[],
         get_attributes: |stats| if stats.attack_2 > 0 { vec![("Active", 1, AttrUnit::None)] } else { vec![] },
-        formatter: |_,stats,_,_,_| fmt_multihit(stats),
+        formatter: |_,stats,_,magnification,_| fmt_multihit(stats, magnification),
         minus_one_is_inf: false,
     },
     EnemyAbilityDef {
