@@ -1014,7 +1014,7 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "core"
-version = "0.14.4"
+version = "0.14.7"
 dependencies = [
  "aes",
  "anyhow",
@@ -3341,7 +3341,7 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "nyanko"
-version = "0.1.0"
+version = "0.1.0-alpha.2"
 
 [[package]]
 name = "objc"

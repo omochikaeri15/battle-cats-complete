@@ -22,10 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Get version from GUI Cargo.toml
+      - name: Get version from root Cargo.toml
         id: get_version
         run: |
-          VERSION=$(grep "^version" gui/Cargo.toml | head -1 | awk -F '"' '{print $2}')
+          VERSION=$(grep "^version" Cargo.toml | head -1 | awk -F '"' '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
 
