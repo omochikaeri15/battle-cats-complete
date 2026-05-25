@@ -1,5 +1,5 @@
 use crate::global::formats::mamodel::{Model, ModelPart};
-use super::bounds::Vector2; // Importing our framework-agnostic Vector2
+use super::bounds::Vector2;
 
 #[derive(Clone, Copy, Debug)]
 pub struct WorldTransform {

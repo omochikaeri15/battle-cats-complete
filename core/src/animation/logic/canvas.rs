@@ -131,14 +131,14 @@ impl GlowRenderer {
                 let green_linear = to_linear(pixel[1]);
                 let blue_linear = to_linear(pixel[2]);
                 let alpha_linear = alpha_byte as f32 / 255.0;
+                
+                let red_monitor = to_monitor(red_linear) as f32;
+                let green_monitor = to_monitor(green_linear) as f32;
+                let blue_monitor = to_monitor(blue_linear) as f32;
 
-                let red_premultiplied = red_linear * alpha_linear;
-                let green_premultiplied = green_linear * alpha_linear;
-                let blue_premultiplied = blue_linear * alpha_linear;
-
-                data.push(to_monitor(red_premultiplied));
-                data.push(to_monitor(green_premultiplied));
-                data.push(to_monitor(blue_premultiplied));
+                data.push((red_monitor * alpha_linear) as u8);
+                data.push((green_monitor * alpha_linear) as u8);
+                data.push((blue_monitor * alpha_linear) as u8);
                 data.push(alpha_byte);
             }
 
