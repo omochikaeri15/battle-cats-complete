@@ -1236,7 +1236,7 @@ pub static CAT_ABILITY_REGISTRY: &[CatAbilityDef] = &[
         name: "Immune Explosion",
         fallback: "NoExp",
         icon: AbilityIcon::Standard(img015::ICON_IMMUNE_EXPLOSION),
-        talent_id: 116,
+        talent_id: 69,
         group: DisplayGroup::Footer,
         schema: &[],
         get_attributes: |stats| if stats.explosion_immune > 0 { vec![("Active", 1, AttrUnit::None)] } else { vec![] },

@@ -4,6 +4,7 @@ default-run = "gui"
 members = [
     "core",
     "gui",
+    "lib",
     #"cli",
     "xtask",
 ]

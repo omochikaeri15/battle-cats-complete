@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'Cargo.toml'
+      - 'gui/Cargo.toml'
   workflow_dispatch:
 
 env:
@@ -20,14 +21,14 @@ jobs:
       app_version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
-      
-      - name: Get version from Cargo.toml
+
+      - name: Get version from GUI Cargo.toml
         id: get_version
         run: |
-          VERSION=$(grep "^version" Cargo.toml | head -1 | awk -F '"' '{print $2}')
+          VERSION=$(grep "^version" gui/Cargo.toml | head -1 | awk -F '"' '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
-          
+
       - name: Check if tag exists
         id: check
         env:
@@ -50,7 +51,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
@@ -61,15 +62,15 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Build Release
-        run: cargo build --release --verbose
-        
+
+      - name: Build Release (GUI)
+        run: cargo build -p gui --release --verbose
+
       - name: Rename and Zip (Windows)
         run: |
-          move target/release/*.exe "${{ env.BIN_NAME }}.exe"
+          move target\release\gui.exe "${{ env.BIN_NAME }}.exe"
           Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows.zip
-          
+
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -84,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
@@ -95,17 +96,16 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Build Release
-        run: cargo build --release --verbose
-        
+
+      - name: Build Release (GUI)
+        run: cargo build -p gui --release --verbose
+
       - name: Prepare and Zip (Linux)
         run: |
-          ORIGINAL_BIN_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          mv "target/release/$ORIGINAL_BIN_NAME" "${{ env.BIN_NAME }}"
+          mv target/release/gui "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
           zip bcc_linux.zip "${{ env.BIN_NAME }}"
-          
+
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -120,8 +120,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
-      
-      # THE FIX: Using official GitHub cache action
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
@@ -132,17 +131,16 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Build Release
-        run: cargo build --release --verbose
-        
+
+      - name: Build Release (GUI)
+        run: cargo build -p gui --release --verbose
+
       - name: Prepare and Zip (Mac)
         run: |
-          ORIGINAL_BIN_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          mv "target/release/$ORIGINAL_BIN_NAME" "${{ env.BIN_NAME }}"
+          mv target/release/gui "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
           zip bcc_mac.zip "${{ env.BIN_NAME }}"
-          
+
       - name: Upload Mac Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -156,21 +154,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-          
+
       - name: List artifacts (Verification)
-        run: ls -R artifacts
-        
+        run: ls -R
+
       - name: Create Release Draft
         env:
           GITHUB_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
         run: |
-          # THE FIX: Added --repo to explicitly tell the CLI where we are!
           gh release create "v${{ needs.check-version.outputs.app_version }}" \
             --repo "${{ github.repository }}" \
             --title "Battle Cats Complete v${{ needs.check-version.outputs.app_version }}" \
             --draft \
             --prerelease \
-            artifacts/*
+            windows-build/bcc_windows.zip \
+            linux-build/bcc_linux.zip \
+            mac-build/bcc_mac.zip
