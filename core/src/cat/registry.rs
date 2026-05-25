@@ -119,15 +119,36 @@ fn fmt_multihit(stats: &CatRaw) -> String {
     let damage_hit_1 = stats.attack_1;
     let damage_hit_2 = stats.attack_2;
     let damage_hit_3 = stats.attack_3;
+
     let ability_flag_1 = if stats.attack_1_abilities > 0 { "True" } else { "False" };
     let ability_flag_2 = if stats.attack_2_abilities > 0 { "True" } else { "False" };
-    let ability_flag_3 = if stats.attack_3 > 0 { if stats.attack_3_abilities > 0 { " / True" } else { " / False" } } else { "" };
-    let damage_string = if stats.attack_3 > 0 { 
-        format!("{} / {} / {}", damage_hit_1, damage_hit_2, damage_hit_3) 
-    } else { 
-        format!("{} / {}", damage_hit_1, damage_hit_2) 
+
+    let ability_flag_3 = if stats.attack_3 == 0 {
+        ""
+    } else if stats.attack_3_abilities > 0 {
+        " / True"
+    } else {
+        " / False"
     };
-    format!("Damage split {}\nAbility split {} / {}{}", damage_string, ability_flag_1, ability_flag_2, ability_flag_3)
+
+    let format_time = |frames: i32| -> String {
+        format!("{:.2}s^{}f", frames as f32 / 30.0, frames)
+    };
+
+    let damage_string = if stats.attack_3 > 0 {
+        format!("{} / {} / {}", damage_hit_1, damage_hit_2, damage_hit_3)
+    } else {
+        format!("{} / {}", damage_hit_1, damage_hit_2)
+    };
+
+    // FIX: Swap time_between_attacks for time_until_attack_1
+    let timing_string = if stats.attack_3 > 0 {
+        format!("{} / {} / {}", format_time(stats.time_until_attack_1), format_time(stats.time_until_attack_2), format_time(stats.time_until_attack_3))
+    } else {
+        format!("{} / {}", format_time(stats.time_until_attack_1), format_time(stats.time_until_attack_2))
+    };
+
+    format!("Damage split {}\nTiming split {}\nAbility split {} / {}{}", damage_string, timing_string, ability_flag_1, ability_flag_2, ability_flag_3)
 }
 
 fn fmt_sage(param: &Param) -> String {
@@ -1507,8 +1528,8 @@ pub static CAT_ABILITY_REGISTRY: &[CatAbilityDef] = &[
         get_attributes: |_stats| vec![],
         formatter: |_,_,_,_,_| "".into(),
         apply_func: Some(|stats, percent, _, _| {
-             let time_reduction = (stats.time_before_attack_1 as f32 * percent as f32 / 100.0).round() as i32;
-             stats.time_before_attack_1 = stats.time_before_attack_1.saturating_sub(time_reduction);
+             let time_reduction = (stats.time_between_attacks as f32 * percent as f32 / 100.0).round() as i32;
+             stats.time_between_attacks = stats.time_between_attacks.saturating_sub(time_reduction);
         }),
     },
     CatAbilityDef {
@@ -1581,10 +1602,10 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
         display_name: "DPS",
         get_value: |stats, animation_frames| {
             let total_attack_damage = stats.attack_1 + stats.attack_2 + stats.attack_3;
-            let mut effective_foreswing = stats.pre_attack_animation;
-            if stats.attack_3 > 0 && stats.time_before_attack_3 > 0 { effective_foreswing = stats.time_before_attack_3; } 
-            else if stats.attack_2 > 0 && stats.time_before_attack_2 > 0 { effective_foreswing = stats.time_before_attack_2; }
-            let cooldown_frames = stats.time_before_attack_1.saturating_sub(1);
+            let mut effective_foreswing = stats.time_until_attack_1;
+            if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 { effective_foreswing = stats.time_until_attack_3; }
+            else if stats.attack_2 > 0 && stats.time_until_attack_2 > 0 { effective_foreswing = stats.time_until_attack_2; }
+            let cooldown_frames = stats.time_between_attacks.saturating_sub(1);
             let attack_cycle = (effective_foreswing + cooldown_frames).max(animation_frames);
             if attack_cycle > 0 { ((total_attack_damage as f32 * 30.0) / attack_cycle as f32).round() as i32 } else { 0 }
         },
@@ -1596,10 +1617,10 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
         name: "Atk Cycle",
         display_name: "Atk Cycle",
         get_value: |stats, animation_frames| {
-            let mut effective_foreswing = stats.pre_attack_animation;
-            if stats.attack_3 > 0 && stats.time_before_attack_3 > 0 { effective_foreswing = stats.time_before_attack_3; } 
-            else if stats.attack_2 > 0 && stats.time_before_attack_2 > 0 { effective_foreswing = stats.time_before_attack_2; }
-            let cooldown_frames = stats.time_before_attack_1.saturating_sub(1);
+            let mut effective_foreswing = stats.time_until_attack_1;
+            if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 { effective_foreswing = stats.time_until_attack_3; }
+            else if stats.attack_2 > 0 && stats.time_until_attack_2 > 0 { effective_foreswing = stats.time_until_attack_2; }
+            let cooldown_frames = stats.time_between_attacks.saturating_sub(1);
             (effective_foreswing + cooldown_frames).max(animation_frames)
         },
         formatter: |frames| format!("{}f", frames), 
@@ -1633,7 +1654,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "TBA",
         display_name: "TBA",
-        get_value: |stats, _| stats.time_before_attack_1,
+        get_value: |stats, _| stats.time_between_attacks,
         formatter: |tba| format!("{}f", tba),
         linked_talent_id: Some(61),
         talent_modifier_fmt: Some(|percent, _| format!("(-{}%)", percent)),

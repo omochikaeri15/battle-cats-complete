@@ -33,7 +33,7 @@ pub fn text_with_superscript(ui: &mut egui::Ui, text: &str) {
 
     let body_font = ui.style().text_styles.get(&egui::TextStyle::Body)
         .cloned().unwrap_or(egui::FontId::proportional(14.0));
-        
+
     let mut job = egui::text::LayoutJob::default();
     job.wrap.max_width = ui.spacing().tooltip_width;
 
@@ -44,9 +44,9 @@ pub fn text_with_superscript(ui: &mut egui::Ui, text: &str) {
     };
 
     let super_format = egui::TextFormat {
-        font_id: egui::FontId::proportional(body_font.size * 0.70), 
+        font_id: egui::FontId::proportional(body_font.size * 0.70),
         color: ui.visuals().text_color(),
-        valign: egui::Align::Min, 
+        valign: egui::Align::Min,
         ..Default::default()
     };
 
@@ -59,26 +59,27 @@ pub fn text_with_superscript(ui: &mut egui::Ui, text: &str) {
         }
     }
 
-    // Subsequent parts start as superscript, and revert to normal at the first space
+    // Subsequent parts start as superscript, and revert to normal at the first space or newline
     for part in parts {
-        if let Some(space_idx) = part.find(' ') {
-            let super_str = &part[..space_idx];
-            let normal_str = &part[space_idx..]; // Includes the space
+        // Find the index of either a space or a newline
+        if let Some(break_idx) = part.find([' ', '\n']) {
+            let super_str = &part[..break_idx];
+            let normal_str = &part[break_idx..]; // Includes the space or newline
 
             if !super_str.is_empty() {
-                job.append(super_str, 0.0, super_format.clone()); 
+                job.append(super_str, 0.0, super_format.clone());
             }
             if !normal_str.is_empty() {
                 job.append(normal_str, 0.0, normal_format.clone());
             }
         } else {
-            // No space found, the entire remaining text is superscript
+            // No space or newline found, the entire remaining text is superscript
             if !part.is_empty() {
                 job.append(part, 0.0, super_format.clone());
             }
         }
     }
-    
+
     ui.label(job);
 }
 

@@ -9,7 +9,7 @@ pub struct EnemyRaw {
     pub knockbacks: i32,
     pub speed: i32,
     pub attack_1: i32,
-    pub time_before_attack_1: i32, 
+    pub time_between_attacks: i32,
     pub standing_range: i32,
     pub cash_drop: i32,            
     pub hitbox_position: i32,
@@ -17,7 +17,7 @@ pub struct EnemyRaw {
     pub unused: i32,
     pub type_red: i32,
     pub area_attack: i32,
-    pub pre_attack_animation: i32,
+    pub time_until_attack_1: i32,
     pub type_floating: i32,
     pub type_dark: i32,
     pub type_metal: i32,
@@ -62,8 +62,8 @@ pub struct EnemyRaw {
     pub soul_animation: i32,
     pub attack_2: i32,
     pub attack_3: i32,
-    pub time_before_attack_2: i32,
-    pub time_before_attack_3: i32,
+    pub time_until_attack_2: i32,
+    pub time_until_attack_3: i32,
     pub attack_1_abilities: i32,
     pub attack_2_abilities: i32,
     pub attack_3_abilities: i32,
@@ -123,16 +123,16 @@ pub struct EnemyRaw {
 
 impl EnemyRaw {
     pub fn attack_cycle(&self, animation_frames: i32) -> i32 {
-        let mut effective_foreswing = self.pre_attack_animation;
+        let mut effective_foreswing = self.time_until_attack_1;
         
-        if self.attack_3 > 0 && self.time_before_attack_3 > 0 {
-            effective_foreswing = self.time_before_attack_3;
+        if self.attack_3 > 0 && self.time_until_attack_3 > 0 {
+            effective_foreswing = self.time_until_attack_3;
         } 
-        else if self.attack_2 > 0 && self.time_before_attack_2 > 0 {
-            effective_foreswing = self.time_before_attack_2;
+        else if self.attack_2 > 0 && self.time_until_attack_2 > 0 {
+            effective_foreswing = self.time_until_attack_2;
         }
 
-        let cooldown_frames = self.time_before_attack_1.saturating_sub(1);
+        let cooldown_frames = self.time_between_attacks.saturating_sub(1);
         
         (effective_foreswing + cooldown_frames).max(animation_frames)
     }
@@ -165,7 +165,7 @@ pub fn load_all(dir: &Path, filename: &str, priority: &[String]) -> Option<Vec<E
             knockbacks: get_int(1),
             speed: get_int(2),
             attack_1: get_int(3),
-            time_before_attack_1: get_int(4) * 2,
+            time_between_attacks: get_int(4) * 2,
             standing_range: get_int(5),
             cash_drop: get_int(6),
             hitbox_position: get_int(7),
@@ -173,7 +173,7 @@ pub fn load_all(dir: &Path, filename: &str, priority: &[String]) -> Option<Vec<E
             unused: get_int(9),
             type_red: get_int(10),
             area_attack: get_int(11),
-            pre_attack_animation: get_int(12),
+            time_until_attack_1: get_int(12),
             type_floating: get_int(13),
             type_dark: get_int(14),
             type_metal: get_int(15),
@@ -218,8 +218,8 @@ pub fn load_all(dir: &Path, filename: &str, priority: &[String]) -> Option<Vec<E
             soul_animation: get_int(54),
             attack_2: get_int(55),
             attack_3: get_int(56),
-            time_before_attack_2: get_int(57),
-            time_before_attack_3: get_int(58),
+            time_until_attack_2: get_int(57),
+            time_until_attack_3: get_int(58),
             attack_1_abilities: get_int(59),
             attack_2_abilities: get_int(60),
             attack_3_abilities: get_int(61),

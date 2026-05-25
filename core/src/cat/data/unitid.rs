@@ -13,16 +13,16 @@ pub struct CatRaw {
     pub knockbacks: i32,
     pub speed: i32,
     pub attack_1: i32,
-    pub time_before_attack_1: i32,
+    pub time_between_attacks: i32,
     pub standing_range: i32,
     pub eoc1_cost: i32,
-    pub cooldown: i32, 
+    pub cooldown: i32,
     pub hitbox_position: i32,
     pub hitbox_width: i32,
     pub target_red: i32,
     pub unused: i32,
     pub area_attack: i32,
-    pub pre_attack_animation: i32,
+    pub time_until_attack_1: i32,
     pub minimum_z_layer: i32,
     pub maximum_z_layer: i32,
     pub target_floating: i32,
@@ -70,12 +70,12 @@ pub struct CatRaw {
     pub attack_count_state: i32,
     pub attack_2: i32,
     pub attack_3: i32,
-    pub time_before_attack_2: i32,
-    pub time_before_attack_3: i32,
+    pub time_until_attack_2: i32,
+    pub time_until_attack_3: i32,
     pub attack_1_abilities: i32,
     pub attack_2_abilities: i32,
     pub attack_3_abilities: i32,
-    pub spawn_animation_type: i32,       
+    pub spawn_animation_type: i32,
     pub soul_animation_type: i32,
     pub spawn_animation_flag: i32,
     pub soul_animation_flag: i32,
@@ -96,8 +96,8 @@ pub struct CatRaw {
     pub dodge_chance: i32,
     pub dodge_duration: i32,
     pub surge_chance: i32,
-    pub surge_spawn_anchor: i32, 
-    pub surge_spawn_span: i32,   
+    pub surge_spawn_anchor: i32,
+    pub surge_spawn_span: i32,
     pub surge_level: i32,
     pub toxic_immune: i32,
     pub surge_immune: i32,
@@ -123,8 +123,8 @@ pub struct CatRaw {
     pub sage_slayer: i32,
     pub metal_killer_percent: i32,
     pub explosion_chance: i32,
-    pub explosion_spawn_anchor: i32,     
-    pub explosion_spawn_span: i32, 
+    pub explosion_spawn_anchor: i32,
+    pub explosion_spawn_span: i32,
     pub explosion_immune: i32,
     pub has_unknown_abilities: i32,
 }
@@ -140,7 +140,7 @@ impl CatRaw {
             max_read.set(max_read.get().max(index));
             line_parts.get(index).and_then(|s: &&str| s.trim().parse::<i32>().ok()).unwrap_or(0)
         };
-        
+
         let get_int_neg = |index: usize| {
             max_read.set(max_read.get().max(index));
             line_parts.get(index).and_then(|s: &&str| s.trim().parse::<i32>().ok()).unwrap_or(-1)
@@ -151,7 +151,7 @@ impl CatRaw {
             knockbacks: get_int(1),
             speed: get_int(2),
             attack_1: get_int(3),
-            time_before_attack_1: get_int(4) * 2,
+            time_between_attacks: get_int(4) * 2,
             standing_range: get_int(5),
             eoc1_cost: get_int(6),
             cooldown: get_int(7) * 2,
@@ -160,7 +160,7 @@ impl CatRaw {
             target_red: get_int(10),
             unused: get_int(11),
             area_attack: get_int(12),
-            pre_attack_animation: get_int(13),
+            time_until_attack_1: get_int(13),
             minimum_z_layer: get_int(14),
             maximum_z_layer: get_int(15),
             target_floating: get_int(16),
@@ -208,8 +208,8 @@ impl CatRaw {
             attack_count_state: get_int(58),
             attack_2: get_int(59),
             attack_3: get_int(60),
-            time_before_attack_2: get_int(61),
-            time_before_attack_3: get_int(62),
+            time_until_attack_2: get_int(61),
+            time_until_attack_3: get_int(62),
             attack_1_abilities: get_int(63),
             attack_2_abilities: get_int(64),
             attack_3_abilities: get_int(65),
@@ -280,12 +280,12 @@ impl CatRaw {
 
 pub fn load_from_id(cat_id: i32, priority: &[String]) -> Option<Vec<CatRaw>> {
     let path_object = paths::stats(Path::new(paths::DIR_CATS), cat_id as u32);
-    
+
     let base_dir = path_object.parent().unwrap_or(Path::new(""));
     let file_name = path_object.file_name().unwrap().to_string_lossy().to_string();
 
     if let Some(resolved_path) = crate::global::resolver::get(base_dir, &[file_name.as_str()], priority).into_iter().next() {
-        
+
         if let Ok(bytes) = fs::read(resolved_path) {
             let file_content = String::from_utf8_lossy(&bytes);
             let delimiter = utils::detect_csv_separator(&file_content);

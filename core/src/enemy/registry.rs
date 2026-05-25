@@ -148,13 +148,23 @@ fn fmt_multihit(stats: &EnemyRaw, magnification: Magnification) -> String {
         " / False"
     };
 
+    let format_time = |frames: i32| -> String {
+        format!("{:.2}s^{}f", frames as f32 / 30.0, frames)
+    };
+
     let damage_string = if stats.attack_3 > 0 {
         format!("{} / {} / {}", damage_hit_1, damage_hit_2, damage_hit_3)
     } else {
         format!("{} / {}", damage_hit_1, damage_hit_2)
     };
 
-    format!("Damage split {}\nAbility split {} / {}{}", damage_string, ability_flag_1, ability_flag_2, ability_flag_3)
+    let timing_string = if stats.attack_3 > 0 {
+        format!("{} / {} / {}", format_time(stats.time_between_attacks), format_time(stats.time_until_attack_2), format_time(stats.time_until_attack_3))
+    } else {
+        format!("{} / {}", format_time(stats.time_between_attacks), format_time(stats.time_until_attack_2))
+    };
+
+    format!("Damage split {}\nTiming split {}\nAbility split {} / {}{}", damage_string, timing_string, ability_flag_1, ability_flag_2, ability_flag_3)
 }
 
 fn fmt_sage(param: &Param) -> String {
@@ -1283,13 +1293,13 @@ pub const ENEMY_STATS_REGISTRY: &[EnemyStatsDef] = &[
             let damage_hit_3 = (stats.attack_3 as f32 * magnification_factor).round() as i32;
             let total_attack_damage = damage_hit_1 + damage_hit_2 + damage_hit_3;
             
-            let mut effective_foreswing = stats.pre_attack_animation;
-            if stats.attack_3 > 0 && stats.time_before_attack_3 > 0 {
-                effective_foreswing = stats.time_before_attack_3;
-            } else if stats.attack_2 > 0 && stats.time_before_attack_2 > 0 {
-                effective_foreswing = stats.time_before_attack_2;
+            let mut effective_foreswing = stats.time_until_attack_1;
+            if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 {
+                effective_foreswing = stats.time_until_attack_3;
+            } else if stats.attack_2 > 0 && stats.time_until_attack_2 > 0 {
+                effective_foreswing = stats.time_until_attack_2;
             }
-            let cooldown_frames = stats.time_before_attack_1.saturating_sub(1);
+            let cooldown_frames = stats.time_between_attacks.saturating_sub(1);
             let attack_cycle = (effective_foreswing + cooldown_frames).max(animation_frames);
 
             if attack_cycle > 0 { ((total_attack_damage as f32 * 30.0) / attack_cycle as f32).round() as i32 } else { 0 }
@@ -1300,13 +1310,13 @@ pub const ENEMY_STATS_REGISTRY: &[EnemyStatsDef] = &[
         name: "Atk Cycle",
         display_name: "Atk Cycle",
         get_value: |stats, animation_frames, _| {
-            let mut effective_foreswing = stats.pre_attack_animation;
-            if stats.attack_3 > 0 && stats.time_before_attack_3 > 0 {
-                effective_foreswing = stats.time_before_attack_3;
-            } else if stats.attack_2 > 0 && stats.time_before_attack_2 > 0 {
-                effective_foreswing = stats.time_before_attack_2;
+            let mut effective_foreswing = stats.time_until_attack_1;
+            if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 {
+                effective_foreswing = stats.time_until_attack_3;
+            } else if stats.attack_2 > 0 && stats.time_until_attack_2 > 0 {
+                effective_foreswing = stats.time_until_attack_2;
             }
-            let cooldown_frames = stats.time_before_attack_1.saturating_sub(1);
+            let cooldown_frames = stats.time_between_attacks.saturating_sub(1);
             (effective_foreswing + cooldown_frames).max(animation_frames)
         },
         formatter: |cycle| format!("{}f", cycle), 

@@ -389,37 +389,41 @@ fn build_statblock_image(
         for (index, spirit_item) in spirit_items.iter().enumerate() {
             let icon_surface = get_icon_image(spirit_item, &cuts_map, &img015_base, &custom_assets, export_icon_size as u32);
             image::imageops::overlay(spirit_image, &icon_surface, start_x_absolute as i64, current_y as i64);
-            
+
             let text_lines: Vec<&str> = spirit_item.text.split('\n').collect();
-            let mut current_text_y = current_y;
             let total_text_height = text_lines.len() as i32 * ability_line_height;
-            if total_text_height < export_icon_size as i32 { current_text_y += (export_icon_size as i32 - total_text_height) / 2; }
-            current_text_y += list_text_y_offset;
-            
+
+            let mut current_text_y = current_y + list_text_y_offset;
+            current_text_y += (export_icon_size as i32 - total_text_height) / 2;
+
             for line in text_lines {
                 draw_text_with_superscript(spirit_image, text_white, start_x_absolute + export_icon_size as i32 + list_text_gap_x, current_text_y, PxScale::from(ABILITY_FONT_SIZE * scale_f), font, line);
                 current_text_y += ability_line_height;
             }
-            current_y += (export_icon_size as i32).max(total_text_height);
+
+            current_y = (current_y + export_icon_size as i32).max(current_text_y);
             if index < spirit_items.len() - 1 { current_y += icon_gap_y; }
         }
         current_y
     };
 
     let draw_spirit_card = |canvas_image: &mut RgbaImage, spirit: &SpiritData, card_start_y: i32| -> i32 {
-        let card_inner_y = card_start_y + icon_gap_y; 
+        let card_inner_y = card_start_y + icon_gap_y;
         let start_x_absolute = padding as i32 + 8 * scale;
         let spirit_panel_width = (calc_spirit_width(spirit) * scale_f) as i32 + (SPIRIT_PADDING_X * scale_f) as i32;
 
         let damage_lines: Vec<&str> = spirit.dmg_text.split('\n').collect();
         let damage_total_height = damage_lines.len() as i32 * ability_line_height;
-        
+
+        let damage_text_start_y = list_text_y_offset + (export_icon_size as i32 - damage_total_height) / 2;
+        let damage_footprint = (export_icon_size as i32).max(damage_text_start_y + damage_total_height);
+
         let mut final_panel_height = 8 * scale;
-        final_panel_height += (export_icon_size as i32).max(damage_total_height) + icon_gap_y;
-        
+        final_panel_height += damage_footprint + icon_gap_y;
+
         let mut has_previous_section = false;
         let mut last_section_was_trait = false;
-        
+
         let add_gap = |total_height: &mut i32, has_previous_element: &mut bool, current_is_trait: bool, was_last_element_trait: &mut bool| {
             if *has_previous_element { *total_height += if *was_last_element_trait { trait_gap_y } else { icon_gap_y }; }
             *has_previous_element = true;
@@ -429,14 +433,18 @@ fn build_statblock_image(
         if !spirit.traits.is_empty() { final_panel_height += export_icon_size as i32; has_previous_section = true; last_section_was_trait = true; }
         if !spirit.h1.is_empty() { add_gap(&mut final_panel_height, &mut has_previous_section, false, &mut last_section_was_trait); final_panel_height += export_icon_size as i32; }
         if !spirit.h2.is_empty() { add_gap(&mut final_panel_height, &mut has_previous_section, false, &mut last_section_was_trait); final_panel_height += export_icon_size as i32; }
-        
+
         if !spirit.b1.is_empty() || !spirit.b2.is_empty() {
             add_gap(&mut final_panel_height, &mut has_previous_section, false, &mut last_section_was_trait);
             let calc_list_height = |items: &[AbilityItem]| -> i32 {
                 let mut accumulated_height = 0;
                 for (index, list_item) in items.iter().enumerate() {
                     let lines_count = list_item.text.split('\n').count() as i32;
-                    accumulated_height += (export_icon_size as i32).max(lines_count * ability_line_height);
+                    // FIX: Match the accurate footprint height calculation for list items inside the spirit card
+                    let text_height = lines_count * ability_line_height;
+                    let text_start_y = list_text_y_offset + (export_icon_size as i32 - text_height) / 2;
+                    accumulated_height += (export_icon_size as i32).max(text_start_y + text_height);
+
                     if index < items.len() - 1 { accumulated_height += icon_gap_y; }
                 }
                 accumulated_height
@@ -445,7 +453,7 @@ fn build_statblock_image(
             if !spirit.b1.is_empty() && !spirit.b2.is_empty() { final_panel_height += icon_gap_y; }
             if !spirit.b2.is_empty() { final_panel_height += calc_list_height(&spirit.b2); }
         }
-        
+
         if !spirit.footer.is_empty() { add_gap(&mut final_panel_height, &mut has_previous_section, false, &mut last_section_was_trait); final_panel_height += export_icon_size as i32; }
         final_panel_height += 8 * scale;
 
@@ -458,12 +466,14 @@ fn build_statblock_image(
         image::imageops::overlay(canvas_image, &area_icon, start_x_absolute as i64, current_y_offset as i64);
 
         let mut damage_text_y = current_y_offset + list_text_y_offset;
-        if damage_total_height < export_icon_size as i32 { damage_text_y += (export_icon_size as i32 - damage_total_height) / 2; }
+        damage_text_y += (export_icon_size as i32 - damage_total_height) / 2;
+
         for line in damage_lines {
             draw_text_with_superscript(canvas_image, text_white, start_x_absolute + export_icon_size as i32 + list_text_gap_x, damage_text_y, PxScale::from(ABILITY_FONT_SIZE * scale_f), font, line);
             damage_text_y += ability_line_height;
         }
-        current_y_offset += (export_icon_size as i32).max(damage_total_height) + icon_gap_y;
+
+        current_y_offset = (current_y_offset + export_icon_size as i32).max(damage_text_y) + icon_gap_y;
 
         has_previous_section = false;
         last_section_was_trait = false;
@@ -471,14 +481,14 @@ fn build_statblock_image(
         if !spirit.traits.is_empty() { current_y_offset = draw_spirit_icons(canvas_image, &spirit.traits, current_y_offset, start_x_absolute); has_previous_section = true; last_section_was_trait = true; }
         if !spirit.h1.is_empty() { add_gap(&mut current_y_offset, &mut has_previous_section, false, &mut last_section_was_trait); current_y_offset = draw_spirit_icons(canvas_image, &spirit.h1, current_y_offset, start_x_absolute); }
         if !spirit.h2.is_empty() { add_gap(&mut current_y_offset, &mut has_previous_section, false, &mut last_section_was_trait); current_y_offset = draw_spirit_icons(canvas_image, &spirit.h2, current_y_offset, start_x_absolute); }
-        
+
         if !spirit.b1.is_empty() || !spirit.b2.is_empty() {
             add_gap(&mut current_y_offset, &mut has_previous_section, false, &mut last_section_was_trait);
             if !spirit.b1.is_empty() { current_y_offset = draw_spirit_list(canvas_image, &spirit.b1, current_y_offset, start_x_absolute); }
             if !spirit.b1.is_empty() && !spirit.b2.is_empty() { current_y_offset += icon_gap_y; }
             if !spirit.b2.is_empty() { current_y_offset = draw_spirit_list(canvas_image, &spirit.b2, current_y_offset, start_x_absolute); }
         }
-        
+
         if !spirit.footer.is_empty() { add_gap(&mut current_y_offset, &mut has_previous_section, false, &mut last_section_was_trait); draw_spirit_icons(canvas_image, &spirit.footer, current_y_offset, start_x_absolute); }
 
         card_inner_y + final_panel_height
@@ -490,19 +500,19 @@ fn build_statblock_image(
         for (index, item) in items.iter().enumerate() {
             let icon_surface = get_icon_image(item, &cuts_map, &img015_base, &custom_assets, export_icon_size as u32);
             image::imageops::overlay(canvas_image, &icon_surface, padding as i64, current_y as i64);
-            
+
             let text_lines: Vec<&str> = item.text.split('\n').collect();
             let total_text_height = text_lines.len() as i32 * ability_line_height;
-            
+
             let mut current_text_y = current_y + list_text_y_offset;
-            if total_text_height < export_icon_size as i32 { current_text_y += (export_icon_size as i32 - total_text_height) / 2; }
-            
+            current_text_y += (export_icon_size as i32 - total_text_height) / 2;
+
             for line in text_lines {
                 draw_text_with_superscript(canvas_image, text_white, padding + export_icon_size as i32 + list_text_gap_x, current_text_y, PxScale::from(ABILITY_FONT_SIZE * scale_f), font, line);
                 current_text_y += ability_line_height;
             }
-            
-            current_y += (export_icon_size as i32).max(total_text_height);
+
+            current_y = (current_y + export_icon_size as i32).max(current_text_y);
 
             if item.icon_id == Some(core::global::game::img015::ICON_CONJURE) {
                 if let Some(spirit) = &data.spirit_data {
@@ -512,7 +522,7 @@ fn build_statblock_image(
 
             if index < items.len() - 1 { current_y += icon_gap_y; }
         }
-        current_y 
+        current_y
     };
 
     let mut previously_drew_section = false;
