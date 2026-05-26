@@ -20,7 +20,7 @@ pub enum Region {
 }
 
 /// A pure representation of the cryptographic keys required for pack decryption.
-pub struct PackKeys {
+pub struct Keys {
     /// A list of tuples containing `(Key Hex String, IV Hex String, Region)`.
     pub tuples: Vec<(String, String, Region)>,
 }
@@ -42,7 +42,7 @@ pub struct PackKeys {
 pub fn decrypt_pack_chunk(
     data: &[u8],
     internal_filename: &str,
-    keys: &PackKeys
+    keys: &Keys
 ) -> Result<(Vec<u8>, Option<Region>), String> {
     for (k_hex, iv_hex, region) in &keys.tuples {
         let Ok(key_bytes) = hex::decode(k_hex) else { continue; };
