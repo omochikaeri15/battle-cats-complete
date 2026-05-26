@@ -3439,7 +3439,7 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "nyanko"
-version = "0.1.0-alpha.2"
+version = "0.1.0"
 dependencies = [
  "aes 0.9.0",
  "block-padding 0.4.2",
