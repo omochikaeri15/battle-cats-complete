@@ -22,7 +22,6 @@ pub fn start_pack_export(state: &mut ModDataState) {
     state.export.is_busy = true;
     state.export.status_message = "Initializing Pack Export...".to_string();
 
-    // Changed fallback from "mod" to "DownloadLocal" for safety
     let pack_name = if state.export.pack_name.trim().is_empty() {
         "DownloadLocal".to_string()
     } else {
@@ -94,11 +93,34 @@ pub fn stream_pack_and_list(
     if total_files == 0 {
         return Err("No files found in the patch directory.".to_string());
     }
-
-    let is_imagedata = pack_name.to_lowercase().contains("imagedatalocal");
-    let is_server = pack_name.to_lowercase().contains("server");
+    
+    let pack_name_lower = pack_name.to_lowercase();
+    let pack_type = if pack_name_lower.contains("imagedatalocal") {
+        cryptology::PackType::ImageData
+    } else if pack_name_lower.contains("server") {
+        cryptology::PackType::Server
+    } else {
+        cryptology::PackType::Standard
+    };
 
     log_callback(format!("Found {} files to patch.", total_files));
+
+    // Decode hex keys ONCE before the loop.
+    let standard_keys = if pack_type == cryptology::PackType::Standard {
+        let key_bytes = hex::decode(&region_key.key).map_err(|_| "Invalid Region Key Hex".to_string())?;
+        let iv_bytes = hex::decode(&region_key.iv).map_err(|_| "Invalid Region IV Hex".to_string())?;
+
+        if key_bytes.len() != 16 || iv_bytes.len() != 16 {
+            return Err("Region Key/IV length is incorrect. Check settings.".to_string());
+        }
+
+        let key_array: [u8; 16] = key_bytes.try_into().map_err(|_| "Failed to map key array")?;
+        let iv_array: [u8; 16] = iv_bytes.try_into().map_err(|_| "Failed to map IV array")?;
+
+        Some((key_array, iv_array))
+    } else {
+        None
+    };
 
     let log_interval = (total_files / 10).max(1);
 
@@ -120,23 +142,12 @@ pub fn stream_pack_and_list(
 
         let mut file_data = fs::read(&file_path).map_err(|error| format!("Failed to read {}: {}", filename, error))?;
 
-        if !is_imagedata {
-            if is_server {
-                file_data = cryptology::encrypt_server_data(&file_data)?;
-            } else {
-                let key_bytes = hex::decode(&region_key.key).map_err(|_| "Invalid Region Key Hex".to_string())?;
-                let iv_bytes = hex::decode(&region_key.iv).map_err(|_| "Invalid Region IV Hex".to_string())?;
-
-                if key_bytes.len() != 16 || iv_bytes.len() != 16 {
-                    return Err("Region Key/IV length is incorrect. Check settings.".to_string());
-                }
-
-                let key_array: [u8; 16] = key_bytes.try_into().unwrap_or([0; 16]);
-                let iv_array: [u8; 16] = iv_bytes.try_into().unwrap_or([0; 16]);
-
-                file_data = cryptology::encrypt_game_data(&file_data, &key_array, &iv_array)?;
-            }
-        }
+        let (cipher_key, cipher_iv) = match &standard_keys {
+            Some((k, i)) => (Some(k), Some(i)),
+            None => (None, None),
+        };
+        
+        file_data = cryptology::encrypt_chunk(&file_data, pack_type, cipher_key, cipher_iv)?;
 
         pack_writer.write_all(&file_data).map_err(|error| format!("Failed to write to pack buffer: {}", error))?;
 

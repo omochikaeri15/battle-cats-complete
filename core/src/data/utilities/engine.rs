@@ -52,7 +52,7 @@ fn cleanup_temporary_directories(directories: &[PathBuf]) {
     for directory in directories { let _ = fs::remove_dir_all(directory); }
 }
 
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::PackKeys {
+fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::Keys {
     let tuples = user_keys.as_tuples().into_iter().map(|(k, iv, r)| {
         let nyanko_region = match r {
             crate::global::region::Region::En => NyankoRegion::En,
@@ -63,7 +63,7 @@ fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::PackKeys {
         (k.to_string(), iv.to_string(), nyanko_region)
     }).collect();
 
-    cryptology::PackKeys { tuples }
+    cryptology::Keys { tuples }
 }
 
 pub fn run_universal_import(
@@ -368,7 +368,7 @@ pub fn run_universal_import(
             if input_pack_file.seek(SeekFrom::Start(processing_task.byte_offset)).is_err() { continue; }
             if input_pack_file.read_exact(&mut encrypted_byte_buffer).is_err() { continue; }
 
-            match cryptology::decrypt_pack_chunk(&encrypted_byte_buffer, &processing_task.original_name, &nyanko_keys) {
+            match cryptology::decrypt_chunk(&encrypted_byte_buffer, &processing_task.original_name, &nyanko_keys) {
                 Ok((decrypted_byte_vector, _)) => {
                     let strict_size_limit = std::cmp::min(processing_task.byte_size, decrypted_byte_vector.len());
                     let exact_data_slice = &decrypted_byte_vector[..strict_size_limit];

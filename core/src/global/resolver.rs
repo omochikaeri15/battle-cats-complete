@@ -1,11 +1,16 @@
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+use std::collections::HashMap;
 
 static ACTIVE_MOD: RwLock<Option<String>> = RwLock::new(None);
+static OVERRIDE_CACHE: RwLock<Option<HashMap<String, Option<PathBuf>>>> = RwLock::new(None);
 
 pub fn set_active_mod(mod_name: Option<String>) {
     if let Ok(mut active) = ACTIVE_MOD.write() {
         *active = mod_name;
+    }
+    if let Ok(mut cache) = OVERRIDE_CACHE.write() {
+        *cache = Some(HashMap::new());
     }
 }
 
@@ -61,26 +66,43 @@ where
 }
 
 fn check_mod_override(filename: &str) -> Option<PathBuf> {
+    // 1. Check RAM Cache First (Instant)
+    if let Ok(cache) = OVERRIDE_CACHE.read() {
+        if let Some(map) = cache.as_ref() {
+            if let Some(cached_result) = map.get(filename) {
+                return cached_result.clone();
+            }
+        }
+    }
+
     let active_mod = {
         let guard = ACTIVE_MOD.read().ok()?;
         guard.as_ref().cloned()?
     };
 
     let mod_dir = Path::new("mods").join(active_mod);
-    
+    let mut found_path = None;
+
     if let Ok(entries) = std::fs::read_dir(&mod_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
                 let target = path.join(filename);
                 if target.exists() {
-                    return Some(target);
+                    found_path = Some(target);
+                    break;
                 }
             }
         }
     }
 
-    None
+    if let Ok(mut cache) = OVERRIDE_CACHE.write() {
+        if let Some(map) = cache.as_mut() {
+            map.insert(filename.to_string(), found_path.clone());
+        }
+    }
+
+    found_path
 }
 
 fn build_regional_name(base_filename: &str, lang_code: &str) -> Option<String> {

@@ -14,7 +14,7 @@ struct PackEntry {
     size: usize,
 }
 
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::PackKeys {
+fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::Keys {
     let tuples = user_keys.as_tuples().into_iter().map(|(k, iv, r)| {
         let nyanko_region = match r {
             crate::global::region::Region::En => NyankoRegion::En,
@@ -25,7 +25,7 @@ fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::PackKeys {
         (k.to_string(), iv.to_string(), nyanko_region)
     }).collect();
 
-    cryptology::PackKeys { tuples }
+    cryptology::Keys { tuples }
 }
 
 pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
@@ -67,7 +67,7 @@ pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<
         if entry.offset + aligned_size <= pack_data.len() {
             let chunk = &pack_data[entry.offset .. entry.offset + aligned_size];
 
-            match cryptology::decrypt_pack_chunk(chunk, &entry.name, &nyanko_keys) {
+            match cryptology::decrypt_chunk(chunk, &entry.name, &nyanko_keys) {
                 Ok((decrypted_bytes, _)) => {
                     let final_data = &decrypted_bytes[..std::cmp::min(entry.size, decrypted_bytes.len())];
 

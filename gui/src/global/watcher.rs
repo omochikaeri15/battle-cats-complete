@@ -1,4 +1,3 @@
-// bcc-gui/src/global/watcher.rs (or wherever you prefer)
 use eframe::egui;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
@@ -27,6 +26,18 @@ impl GuiWatcher {
                     for path in event.paths {
                         let path_str = path.to_string_lossy().to_lowercase();
                         if path_str.contains("raw") { continue; }
+
+                        let components: Vec<_> = path.components().map(|c| c.as_os_str().to_string_lossy().to_lowercase()).collect();
+                        if let Some(mods_idx) = components.iter().position(|c| c == "mods") {
+                            // mods_idx + 1 = The Mod Name
+                            // mods_idx + 2 = The Subfolder (patch, icons, loose, or background junk)
+                            if let Some(sub_folder) = components.get(mods_idx + 2) {
+                                if sub_folder != "patch" && sub_folder != "icons" && sub_folder != "loose" {
+                                    continue; // Drop the event entirely
+                                }
+                            }
+                        }
+
                         let _ = internal_tx.send(path);
                     }
                 }
