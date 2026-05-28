@@ -1,4 +1,4 @@
 pub mod cryptology;
 pub mod chronology;
 
-mod utils;
+pub(crate) mod utils;

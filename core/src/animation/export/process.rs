@@ -19,7 +19,6 @@ pub fn start_export(state: &mut ExporterState) {
     state.encoded_frames = 0;
     state.completion_time = None;
 
-    // Initialize the abort signal
     let abort_signal = Arc::new(AtomicBool::new(false));
     state.abort = Some(abort_signal.clone());
 
@@ -113,7 +112,6 @@ pub fn start_export(state: &mut ExporterState) {
     leader::start_encoding_thread(config, receiver, status_sender, abort_signal);
 }
 
-// Extracted the pure math portion from the old process_frame
 pub fn calculate_export_frame(
     state: &ExporterState,
     model: &Model,
@@ -155,7 +153,9 @@ pub fn calculate_export_frame(
         if state.interpolation {
             smooth::animate(model, animation, frame_to_render)
         } else {
-            animator::animate(model, animation, frame_to_render)
+            let mut buffer = model.parts.clone();
+            animator::animate(model, animation, frame_to_render, &mut buffer);
+            buffer
         }
     } else {
         model.parts.clone()

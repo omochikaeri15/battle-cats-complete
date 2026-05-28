@@ -1,5 +1,6 @@
 use eframe::egui;
 use std::collections::HashMap;
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 pub use core::cat::logic::state::DetailTab;
@@ -9,6 +10,9 @@ use crate::global::sheet::GuiSpriteSheet;
 use crate::global::assets::CustomAssets;
 use core::settings::logic::Settings;
 use core::global::game::param::Param;
+
+// We now import Rig instead of Model
+use nyanko::animation::build::Rig;
 
 use crate::features::cat::list::CatList;
 use crate::features::animation::viewer::AnimViewer;
@@ -22,7 +26,7 @@ pub const SPACE_AFTER_SEPARATOR: f32 = 2.0;
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct CatListState {
-    pub data: CatDataState, // The core logic wrapper
+    pub data: CatDataState,
 
     // UI Elements
     #[serde(skip)] pub cat_list: CatList,
@@ -35,13 +39,15 @@ pub struct CatListState {
     #[serde(skip)] pub detail_texture: Option<egui::TextureHandle>,
     #[serde(skip)] pub img015_sheets: Vec<GuiSpriteSheet>,
     #[serde(skip)] pub img022_sheets: Vec<GuiSpriteSheet>,
-    #[serde(skip)] pub sprite_sheet: GuiSpriteSheet,
     #[serde(skip)] pub talent_name_textures: HashMap<String, egui::TextureHandle>,
     #[serde(skip)] pub gatya_item_textures: HashMap<i32, Option<egui::TextureHandle>>,
     #[serde(skip)] pub texture_cache_version: u64,
+
+    // NEW: Replaces old Model and SpriteSheet with the unified pure Rig
+    #[serde(skip)] pub rig: Option<Arc<Rig>>,
 }
 
-pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settings, param: &Param, drag_guard: &mut DragGuard,) {
+pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settings, param: &Param, drag_guard: &mut DragGuard) {
     if state.custom_assets.is_none() {
         state.custom_assets = Some(CustomAssets::new(ctx));
     }
@@ -96,8 +102,8 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
             if state.data.selected_cat != old_selection_id {
                 state.detail_texture = None;
                 state.data.detail_key.clear();
-                state.sprite_sheet = GuiSpriteSheet::default();
-                state.data.model_data = None;
+                // FIX: Clear rig instead of model and sheet
+                state.rig = None;
                 state.data.saved_pre_ultra_level = None;
                 state.data.is_in_ultra_state = false;
 
@@ -203,7 +209,7 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
             &mut state.data.level_input, &mut state.data.current_level,
             &mut state.detail_texture, &mut state.data.detail_key,
             &mut state.img015_sheets, &mut state.img022_sheets,
-            &mut state.sprite_sheet, &mut state.data.model_data,
+            &mut state.rig, // Pass rig instead of model and sheet
             &mut state.anim_viewer, &mut state.talent_name_textures,
             &mut state.gatya_item_textures, Some(cat_entry.skill_descriptions.as_ref()),
             settings, talent_map, cat_entry.talent_costs.as_ref(),
@@ -250,8 +256,8 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
         }
 
         if state.data.selected_form != prev_form {
-            state.sprite_sheet = GuiSpriteSheet::default();
-            state.data.model_data = None;
+            // FIX: Clear rig on form swap
+            state.rig = None;
         }
     });
 

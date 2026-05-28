@@ -1,6 +1,20 @@
 use glow::HasContext;
-use crate::global::formats::imgcut::SpriteSheet;
+use crate::common::data::imgcut::SpriteSheet;
 use super::transform::WorldTransform;
+use std::sync::Arc;
+
+#[derive(Debug)]
+pub enum CanvasError {
+    ProgramCreation,
+    VertexShaderCreation,
+    FragmentShaderCreation,
+    ShaderCompile(String),
+    ProgramLink(String),
+    VaoCreation,
+    VboCreation,
+    TboCreation,
+    TextureAllocation,
+}
 
 const VERTEX_SHADER_SOURCE: &str = r#"
 #ifdef GL_ES
@@ -46,16 +60,16 @@ pub struct GlowRenderer {
     vbo: glow::Buffer,
     tbo: glow::Buffer,
     texture: Option<glow::Texture>,
-    last_sheet_name: String,
+    last_image_id: usize, // We now track the raw memory address pointer ID!
 }
 
 impl GlowRenderer {
-    pub fn new(gl_context: &glow::Context) -> Self {
+    pub fn new(gl_context: &glow::Context) -> Result<Self, CanvasError> {
         unsafe {
-            let program = compile_program(gl_context, VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
-            let vertex_array = gl_context.create_vertex_array().expect("Failed to create VAO - GL Context invalid");
-            let vbo = gl_context.create_buffer().expect("Failed to create VBO - GL Context invalid");
-            let tbo = gl_context.create_buffer().expect("Failed to create TBO - GL Context invalid");
+            let program = compile_program(gl_context, VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE)?;
+            let vertex_array = gl_context.create_vertex_array().map_err(|_| CanvasError::VaoCreation)?;
+            let vbo = gl_context.create_buffer().map_err(|_| CanvasError::VboCreation)?;
+            let tbo = gl_context.create_buffer().map_err(|_| CanvasError::TboCreation)?;
 
             gl_context.bind_vertex_array(Some(vertex_array));
 
@@ -71,36 +85,35 @@ impl GlowRenderer {
 
             gl_context.bind_vertex_array(None);
 
-            Self {
+            Ok(Self {
                 program,
                 vertex_array,
                 vbo,
                 tbo,
                 texture: None,
-                last_sheet_name: String::new(),
-            }
+                last_image_id: 0,
+            })
         }
     }
 
-    fn upload_texture(&mut self, gl_context: &glow::Context, sheet: &SpriteSheet, allow_update: bool) {
+    fn upload_texture(&mut self, gl_context: &glow::Context, sheet: &SpriteSheet) -> Result<(), CanvasError> {
         unsafe {
-            if self.last_sheet_name == sheet.sheet_name && self.texture.is_some() {
-                return;
-            }
-
-            if !allow_update && self.texture.is_some() {
-                return;
-            }
-
             let Some(image) = &sheet.image_data else {
-                return;
+                return Ok(());
             };
+
+            // Cast the Arc pointer to a usize ID to check if it's the exact same image in memory
+            let current_image_id = Arc::as_ptr(image) as usize;
+
+            if self.last_image_id == current_image_id && self.texture.is_some() {
+                return Ok(());
+            }
 
             let texture_id = if let Some(existing_texture) = self.texture {
                 gl_context.bind_texture(glow::TEXTURE_2D, Some(existing_texture));
                 existing_texture
             } else {
-                let new_texture = gl_context.create_texture().expect("Failed to allocate texture on GPU");
+                let new_texture = gl_context.create_texture().map_err(|_| CanvasError::TextureAllocation)?;
                 gl_context.bind_texture(glow::TEXTURE_2D, Some(new_texture));
 
                 gl_context.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::CLAMP_TO_EDGE as i32);
@@ -149,7 +162,9 @@ impl GlowRenderer {
             );
 
             self.texture = Some(texture_id);
-            self.last_sheet_name = sheet.sheet_name.clone();
+            self.last_image_id = current_image_id; // Update our tracker!
+
+            Ok(())
         }
     }
 
@@ -163,12 +178,11 @@ impl GlowRenderer {
         pan_x: f32,
         pan_y: f32,
         zoom: f32,
-        allow_update: bool
-    ) {
+    ) -> Result<(), CanvasError> {
         unsafe {
-            self.upload_texture(gl_context, sheet, allow_update);
+            self.upload_texture(gl_context, sheet)?;
 
-            if self.texture.is_none() { return; }
+            if self.texture.is_none() { return Ok(()); }
 
             gl_context.disable(glow::DEPTH_TEST);
             gl_context.depth_mask(false);
@@ -258,6 +272,8 @@ impl GlowRenderer {
             }
 
             gl_context.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
+
+            Ok(())
         }
     }
 }
@@ -278,9 +294,9 @@ fn multiply_mat3(matrix_a: &[f32; 9], matrix_b: &[f32; 9]) -> [f32; 9] {
     ]
 }
 
-unsafe fn compile_program(gl_context: &glow::Context, vertex_shader_source: &str, fragment_shader_source: &str) -> glow::Program {
+unsafe fn compile_program(gl_context: &glow::Context, vertex_shader_source: &str, fragment_shader_source: &str) -> Result<glow::Program, CanvasError> {
     unsafe {
-        let program = gl_context.create_program().expect("Cannot create OpenGL program");
+        let program = gl_context.create_program().map_err(|_| CanvasError::ProgramCreation)?;
 
         let shader_version = if cfg!(target_arch = "wasm32") {
             "#version 300 es\n"
@@ -291,30 +307,30 @@ unsafe fn compile_program(gl_context: &glow::Context, vertex_shader_source: &str
         let compiled_vertex_source = format!("{}{}", shader_version, vertex_shader_source);
         let compiled_fragment_source = format!("{}{}", shader_version, fragment_shader_source);
 
-        let vertex_shader = gl_context.create_shader(glow::VERTEX_SHADER).expect("Cannot create vertex shader");
+        let vertex_shader = gl_context.create_shader(glow::VERTEX_SHADER).map_err(|_| CanvasError::VertexShaderCreation)?;
         gl_context.shader_source(vertex_shader, &compiled_vertex_source);
         gl_context.compile_shader(vertex_shader);
         if !gl_context.get_shader_compile_status(vertex_shader) {
-            panic!("Vertex Shader Error: {}", gl_context.get_shader_info_log(vertex_shader));
+            return Err(CanvasError::ShaderCompile(gl_context.get_shader_info_log(vertex_shader)));
         }
         gl_context.attach_shader(program, vertex_shader);
 
-        let fragment_shader = gl_context.create_shader(glow::FRAGMENT_SHADER).expect("Cannot create fragment shader");
+        let fragment_shader = gl_context.create_shader(glow::FRAGMENT_SHADER).map_err(|_| CanvasError::FragmentShaderCreation)?;
         gl_context.shader_source(fragment_shader, &compiled_fragment_source);
         gl_context.compile_shader(fragment_shader);
         if !gl_context.get_shader_compile_status(fragment_shader) {
-            panic!("Fragment Shader Error: {}", gl_context.get_shader_info_log(fragment_shader));
+            return Err(CanvasError::ShaderCompile(gl_context.get_shader_info_log(fragment_shader)));
         }
         gl_context.attach_shader(program, fragment_shader);
 
         gl_context.link_program(program);
         if !gl_context.get_program_link_status(program) {
-            panic!("Program Link Error: {}", gl_context.get_program_info_log(program));
+            return Err(CanvasError::ProgramLink(gl_context.get_program_info_log(program)));
         }
 
         gl_context.delete_shader(vertex_shader);
         gl_context.delete_shader(fragment_shader);
 
-        program
+        Ok(program)
     }
 }

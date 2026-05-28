@@ -1,10 +1,11 @@
 use eframe::egui;
 use std::collections::HashMap;
+use std::sync::Arc;
 use core::cat::logic::scanner::CatEntry;
 use crate::features::cat::header::DetailTab;
 use crate::global::sheet::GuiSpriteSheet;
+use nyanko::animation::build::Rig; // Add Rig import
 use core::settings::logic::Settings;
-use core::global::formats::mamodel::Model;
 use crate::features::animation::viewer::AnimViewer;
 use core::cat::data::skilllevel::TalentCost;
 use crate::global::assets::CustomAssets;
@@ -29,8 +30,7 @@ pub fn show(
     current_key: &mut String,
     img015_sheets: &mut Vec<GuiSpriteSheet>,
     img022_sheets: &mut Vec<GuiSpriteSheet>,
-    anim_sheet: &mut GuiSpriteSheet,
-    model_data: &mut Option<Model>,
+    rig_sync: &mut Option<Arc<Rig>>, // Swapped Model/Sheet for Rig
     anim_viewer: &mut AnimViewer,
     talent_name_cache: &mut HashMap<String, egui::TextureHandle>,
     gatya_item_textures: &mut HashMap<i32, Option<egui::TextureHandle>>,
@@ -50,7 +50,6 @@ pub fn show(
         ctx, ui, cat_entry, current_form, current_tab, current_level, level_input, texture_cache, current_key, settings, talent_levels, talent_costs, img022_sheets
     );
 
-    // Bypass scanner cache and fetch modded stats dynamically
     let dynamic_stats = core::cat::logic::stats::load_from_id(cat_entry.id as i32, &settings.general.language_priority);
     let base_stats = dynamic_stats.as_ref().and_then(|v| v.get(*current_form));
     let form_allows_talents = *current_form >= 2;
@@ -70,7 +69,7 @@ pub fn show(
     match export_action {
         ExportAction::Copy | ExportAction::Save => {
             if let (Some(final_s), Some(base_s)) = (final_stats_owned.as_ref(), base_stats) {
-                
+
                 let expand_id = egui::Id::new(format!("conjure_expand_{}", cat_entry.id));
                 let is_conjure_expanded = ctx.data(|d| d.get_temp::<bool>(expand_id).unwrap_or(settings.cat_data.expand_spirit_details));
 
@@ -110,24 +109,23 @@ pub fn show(
         ExportAction::None => {}
     }
 
-    ui.separator(); 
+    ui.separator();
     ui.add_space(0.0);
 
+    // FIX: Clear the new held_rig structure
     if *current_tab != DetailTab::Animation {
         if !anim_viewer.loaded_id.is_empty() {
-             anim_viewer.held_model = None;
-             anim_viewer.held_sheet = None;
-             anim_viewer.current_anim = None;
-             anim_viewer.loaded_id.clear();
-             anim_viewer.staging_model = None;
-             anim_viewer.staging_sheet = None;
+            anim_viewer.held_rig = None;
+            anim_viewer.current_anim = None;
+            anim_viewer.loaded_id.clear();
+            *rig_sync = None;
         }
     }
 
     match current_tab {
         DetailTab::Abilities => {
             if let (Some(final_s), Some(base_s)) = (final_stats_owned.as_ref(), base_stats) {
-                
+
                 let cat_ctx = CatRenderContext {
                     global: global_ctx,
                     base_stats: base_s,
@@ -141,9 +139,9 @@ pub fn show(
 
                 stats::render(ui, cat_entry, final_s, *current_form);
                 ui.spacing_mut().item_spacing.y = 7.0;
-                ui.separator(); 
+                ui.separator();
                 egui::ScrollArea::vertical()
-                    .auto_shrink([false, false]) 
+                    .auto_shrink([false, false])
                     .show(ui, |ui| {
                         abilities::render(
                             ui, &cat_ctx, cat_entry, img015_sheets, assets, settings
@@ -152,29 +150,29 @@ pub fn show(
             }
         },
         DetailTab::Talents => {
-             if let Some(raw) = &cat_entry.talent_data {
+            if let Some(raw) = &cat_entry.talent_data {
                 talents::render(ui, raw, img015_sheets, img022_sheets, talent_name_cache, skill_descriptions, settings, base_stats, cat_entry.curve.as_ref(), *current_level, talent_levels, cat_entry.id, talent_costs, assets);
-             }
+            }
         },
         DetailTab::Details => {
-             let fallback = Vec::new();
-             let desc = cat_entry.description.get(*current_form).unwrap_or(&fallback);
-             details::render(ui, desc);
-             let text_fallback = Vec::new();
-             let ev_text = cat_entry.evolve_text.get(*current_form).unwrap_or(&text_fallback);
-             details::render_evolve(
-                ui, 
-                ctx, 
-                &cat_entry.unit_buy, 
-                ev_text, 
-                *current_form, 
-                gatya_item_textures, 
-                cache_version, 
-                &settings.general.language_priority 
+            let fallback = Vec::new();
+            let desc = cat_entry.description.get(*current_form).unwrap_or(&fallback);
+            details::render(ui, desc);
+            let text_fallback = Vec::new();
+            let ev_text = cat_entry.evolve_text.get(*current_form).unwrap_or(&text_fallback);
+            details::render_evolve(
+                ui,
+                ctx,
+                &cat_entry.unit_buy,
+                ev_text,
+                *current_form,
+                gatya_item_textures,
+                cache_version,
+                &settings.general.language_priority
             );
         }
         DetailTab::Animation => {
-            viewer::show(ui, ctx, cat_entry, *current_form, anim_viewer, model_data, anim_sheet, settings, drag_guard);
+            viewer::show(ui, ctx, cat_entry, *current_form, anim_viewer, rig_sync, settings, drag_guard);
         }
     }
 }

@@ -1,9 +1,9 @@
 [package]
 name = "core"
 version.workspace = true
-authors.workspace = true
 edition.workspace = true
 license-file.workspace = true
+authors.workspace = true
 repository.workspace = true
 publish = false
 

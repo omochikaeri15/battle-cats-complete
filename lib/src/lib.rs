@@ -1,3 +1,4 @@
 pub mod pack;
+pub mod animation;
 
-// mod common;
+pub(crate) mod common;

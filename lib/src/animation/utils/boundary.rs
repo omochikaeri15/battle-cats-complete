@@ -1,15 +1,8 @@
-use std::path::PathBuf;
-use crate::global::formats::mamodel::Model;
-use crate::global::formats::maanim::Animation;
-use crate::global::formats::imgcut::SpriteSheet;
-use crate::animation::logic::constants;
-use crate::animation::logic::{animator, transform};
-
-#[derive(Clone, Copy, Debug)]
-pub struct Vector2 {
-    pub x: f32,
-    pub y: f32,
-}
+use crate::animation::data::mamodel::Model;
+use crate::animation::data::maanim::Animation;
+use crate::common::data::imgcut::SpriteSheet;
+use crate::animation::graphics::transform::{Vector, self};
+use crate::animation::graphics::timeline;
 
 #[derive(Clone, Copy, Debug)]
 pub struct BoundingBox {
@@ -28,8 +21,8 @@ impl BoundingBox {
         self.max_y - self.min_y
     }
 
-    pub fn center(&self) -> Vector2 {
-        Vector2 {
+    pub fn center(&self) -> Vector {
+        Vector {
             x: (self.min_x + self.max_x) / 2.0,
             y: (self.min_y + self.max_y) / 2.0,
         }
@@ -48,43 +41,27 @@ impl BoundingBox {
 pub fn calculate_showcase_bounds(
     model: &Model,
     sheet: &SpriteSheet,
-    available_anims: &[(usize, PathBuf)],
-    walk_len: i32,
-    idle_len: i32,
-    attack_len: i32,
-    kb_len: i32,
+    animations: &[&Animation],
     use_tight_bounds: bool,
 ) -> Option<BoundingBox> {
     let mut master_bounds: Option<BoundingBox> = None;
 
-    let target_animations = [
-        (constants::IDX_WALK, walk_len),
-        (constants::IDX_IDLE, idle_len),
-        (constants::IDX_ATTACK, attack_len),
-        (constants::IDX_KB, kb_len),
-    ];
+    for loaded_animation in animations {
+        let bounds_option = if use_tight_bounds {
+            calculate_tight_bounds(model, Some(*loaded_animation), sheet)
+        } else {
+            calculate_loose_bounds(model, Some(*loaded_animation), sheet)
+        };
 
-    for (anim_index, anim_length) in target_animations {
-        if anim_length > 0 {
-            if let Some((_, path)) = available_anims.iter().find(|(i, _)| *i == anim_index) {
-                if let Some(loaded_animation) = Animation::load(path) {
-                    let bounds_option = if use_tight_bounds {
-                        calculate_tight_bounds(model, Some(&loaded_animation), sheet)
-                    } else {
-                        calculate_loose_bounds(model, Some(&loaded_animation), sheet)
-                    };
-
-                    if let Some(new_bounds) = bounds_option {
-                        master_bounds = Some(if let Some(existing_bounds) = master_bounds {
-                            existing_bounds.union(&new_bounds)
-                        } else {
-                            new_bounds
-                        });
-                    }
-                }
-            }
+        if let Some(new_bounds) = bounds_option {
+            master_bounds = Some(if let Some(existing_bounds) = master_bounds {
+                existing_bounds.union(&new_bounds)
+            } else {
+                new_bounds
+            });
         }
     }
+    
     master_bounds
 }
 
@@ -117,7 +94,7 @@ pub fn calculate_initial_view(
     viewport_width: f32,
     viewport_height: f32,
     use_tight_bounds: bool,
-) -> Option<(Vector2, f32)> {
+) -> Option<(Vector, f32)> {
 
     let frame_zero = Some((0, 0));
 
@@ -130,7 +107,7 @@ pub fn calculate_initial_view(
 
     if let Some(bounds) = bounds_option {
         let center = bounds.center();
-        let pan = Vector2 {
+        let pan = Vector {
             x: -center.x,
             y: -center.y,
         };
@@ -142,7 +119,6 @@ pub fn calculate_initial_view(
         let scale_y = viewport_height / height;
 
         let breathing_room = 0.45;
-
         let zoom = scale_x.min(scale_y).clamp(0.05, 5.0) * breathing_room;
 
         return Some((pan, zoom));
@@ -178,8 +154,7 @@ fn scan_bounds(
         let current_frame = frame_index as f32;
 
         let posed_parts = if let Some(loaded_anim) = anim {
-            // Modify the buffer in-place
-            animator::animate(model, loaded_anim, current_frame, &mut state_buffer);
+            let _ = timeline::animate(model, loaded_anim, current_frame, &mut state_buffer);
             &state_buffer
         } else {
             &model.parts
@@ -213,10 +188,10 @@ fn scan_bounds(
                 let pivot_y = part.pivot.y;
 
                 let local_corners = [
-                    Vector2 { x: -pivot_x, y: -pivot_y },
-                    Vector2 { x: sprite_width - pivot_x, y: -pivot_y },
-                    Vector2 { x: sprite_width - pivot_x, y: sprite_height - pivot_y },
-                    Vector2 { x: -pivot_x, y: sprite_height - pivot_y },
+                    Vector { x: -pivot_x, y: -pivot_y },
+                    Vector { x: sprite_width - pivot_x, y: -pivot_y },
+                    Vector { x: sprite_width - pivot_x, y: sprite_height - pivot_y },
+                    Vector { x: -pivot_x, y: sprite_height - pivot_y },
                 ];
 
                 let transform_matrix = part.matrix;

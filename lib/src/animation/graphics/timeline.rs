@@ -1,22 +1,24 @@
-use crate::global::formats::mamodel::{Model, ModelPart};
-use crate::global::formats::maanim::{Animation, AnimModification};
+use crate::animation::data::mamodel::{Model, ModelPart};
+use crate::animation::data::maanim::{Animation, AnimModification};
 
-/// Animates a model by modifying a pre-allocated state buffer in-place.
-/// `state_buffer` must have the exact same length as `model.parts`.
-pub fn animate(model: &Model, animation: &Animation, global_frame: f32, state_buffer: &mut [ModelPart]) {
+#[derive(Debug)]
+pub enum TimelineError {
+    BufferMismatch,
+}
+
+pub fn animate(model: &Model, animation: &Animation, global_frame: f32, state_buffer: &mut [ModelPart]) -> Result<(), TimelineError> {
     if state_buffer.len() != model.parts.len() {
-        return; // Alternatively, panic!("Buffer size mismatch"); if you prefer strict failure
+        return Err(TimelineError::BufferMismatch);
     }
 
-    // Rapidly copy the base model state into our working buffer for this frame
     state_buffer.clone_from_slice(&model.parts);
 
     for curve in &animation.curves {
         if curve.part_id >= state_buffer.len() { continue; }
         if curve.keyframes.is_empty() { continue; }
 
-        let keyframe_min = curve.keyframes.first().map(|keyframe| keyframe.frame as f32).unwrap_or(0.0);
-        let keyframe_max = curve.keyframes.last().map(|keyframe| keyframe.frame as f32).unwrap_or(0.0);
+        let keyframe_min = curve.keyframes.first().map(|k| k.frame as f32).unwrap_or(0.0);
+        let keyframe_max = curve.keyframes.last().map(|k| k.frame as f32).unwrap_or(0.0);
 
         let duration = (keyframe_max - keyframe_min).max(1.0);
         let mut local_frame = global_frame;
@@ -37,7 +39,7 @@ pub fn animate(model: &Model, animation: &Animation, global_frame: f32, state_bu
         match curve.modification_type {
             0 => part.parent_id = interpolated_value as i32,
             1 => part.unit_id = interpolated_value as i32,
-            2 => { part.sprite_index = interpolated_value as i32; },
+            2 => part.sprite_index = interpolated_value as i32,
             3 => part.drawing_layer = interpolated_value as i32,
             4 => part.position_x = (base_part.position_x + interpolated_value).trunc(),
             5 => part.position_y = (base_part.position_y + interpolated_value).trunc(),
@@ -47,26 +49,17 @@ pub fn animate(model: &Model, animation: &Animation, global_frame: f32, state_bu
                 part.scale_x = (base_part.scale_x * interpolated_value / model.scale_unit).trunc();
                 part.scale_y = (base_part.scale_y * interpolated_value / model.scale_unit).trunc();
             },
-            9 => {
-                part.scale_x = (base_part.scale_x * interpolated_value / model.scale_unit).trunc();
-            },
-            10 => {
-                part.scale_y = (base_part.scale_y * interpolated_value / model.scale_unit).trunc();
-            },
+            9 => part.scale_x = (base_part.scale_x * interpolated_value / model.scale_unit).trunc(),
+            10 => part.scale_y = (base_part.scale_y * interpolated_value / model.scale_unit).trunc(),
             11 => part.rotation = (base_part.rotation + interpolated_value).trunc(),
-            12 => {
-                part.alpha = (base_part.alpha * interpolated_value / model.alpha_unit).trunc();
-            },
-
-            13 => {
-                part.flip_x = interpolated_value != 0.0;
-            },
-            14 => {
-                part.flip_y = interpolated_value != 0.0;
-            },
+            12 => part.alpha = (base_part.alpha * interpolated_value / model.alpha_unit).trunc(),
+            13 => part.flip_x = interpolated_value != 0.0,
+            14 => part.flip_y = interpolated_value != 0.0,
             _ => {}
         }
     }
+    
+    Ok(())
 }
 
 fn interpolate_curve(curve: &AnimModification, frame: f32, is_discrete: bool) -> Option<f32> {
@@ -105,7 +98,6 @@ fn interpolate_curve(curve: &AnimModification, frame: f32, is_discrete: bool) ->
     if is_discrete { return Some((start_keyframe.value as f32).trunc()); }
     if start_keyframe.frame == end_keyframe.frame { return Some((start_keyframe.value as f32).trunc()); }
 
-    // 12-bit fixed-point integer math for EASE_POLYNOMIAL
     if start_keyframe.ease_mode == 3 {
         let mut points = Vec::new();
         let mut backward_index = start_index as isize;
@@ -133,13 +125,12 @@ fn interpolate_curve(curve: &AnimModification, frame: f32, is_discrete: bool) ->
 
         for outer_index in 0..total_points {
             let (xj, yj) = points[outer_index];
-            let mut v = yj << 12; // Initial 12-bit shift
+            let mut v = yj << 12;
 
             for inner_index in 0..total_points {
                 if outer_index == inner_index { continue; }
                 let (xm, _) = points[inner_index];
                 if xj - xm != 0 {
-                    // Sequential integer division creates the "correct" artifacts
                     v = v * (frame_int - xm) / (xj - xm);
                 }
             }

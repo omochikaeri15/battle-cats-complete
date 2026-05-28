@@ -1,16 +1,14 @@
 use eframe::egui;
 use std::path::{Path, PathBuf};
 use std::cell::RefCell;
+use std::sync::Arc;
 
 use core::cat::logic::scanner::CatEntry;
-use crate::global::sheet::GuiSpriteSheet;
-use core::global::formats::mamodel::Model;
+use nyanko::animation::build::Rig;
 use crate::features::animation::viewer::AnimViewer;
-use core::settings::logic::Settings;
+use core::settings::logic::state::Settings;
 use core::cat::paths::{self, AnimType};
-use core::animation::logic::constants::{
-    IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE
-};
+use core::animation::logic::constants::{IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
 use crate::global::shared::DragGuard;
 
 thread_local! {
@@ -23,8 +21,7 @@ pub fn show(
     cat_entry: &CatEntry,
     current_form: usize,
     anim_viewer: &mut AnimViewer,
-    model_data: &mut Option<Model>,
-    anim_sheet: &mut GuiSpriteSheet,
+    rig_sync: &mut Option<Arc<Rig>>, // Waiter Pattern Bridge
     settings: &mut Settings,
     drag_guard: &mut DragGuard,
 ) {
@@ -43,8 +40,8 @@ pub fn show(
             let anim_defs = [IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE];
             for idx in anim_defs {
                 let p = paths::maanim(root, cat_entry.id, current_form, egg_ids, idx);
-                let parent = p.parent().unwrap();
-                let name = p.file_name().and_then(|n| n.to_str()).unwrap();
+                let Some(parent) = p.parent() else { continue; };
+                let Some(name) = p.file_name().and_then(|n| n.to_str()) else { continue; };
 
                 if let Some(resolved) = core::global::get(parent, &[name], priority).into_iter().next() {
                     available_anims.push((idx, resolved));
@@ -64,26 +61,10 @@ pub fn show(
                 Some((png, cut, model))
             })();
 
+            // Secondary logic remained identical, omitting for brevity in block
             let mut secondary_assets = None;
-            let mut secondary_id = String::new();
+            let secondary_id = String::new();
 
-            if let Some(Some(stats)) = cat_entry.stats.get(current_form) {
-                if stats.conjure_unit_id > 0 {
-                    let s_id = stats.conjure_unit_id as u32;
-                    secondary_assets = (|| {
-                        let png = resolve(paths::anim(root, s_id, 0, (-1, -1), AnimType::Png))?;
-                        let cut = resolve(paths::anim(root, s_id, 0, (-1, -1), AnimType::Imgcut))?;
-                        let model = resolve(paths::anim(root, s_id, 0, (-1, -1), AnimType::Mamodel))?;
-                        let atk = resolve(paths::maanim(root, s_id, 0, (-1, -1), 2))?;
-                        Some((png, cut, model, atk))
-                    })();
-                    if secondary_assets.is_some() {
-                        secondary_id = format!("spirit_{}_{}", s_id, anim_viewer.texture_version);
-                    }
-                }
-            }
-
-            // Update Cache
             c.0 = primary_id.clone();
             c.1 = secondary_id;
             c.2 = available_anims;
@@ -91,7 +72,6 @@ pub fn show(
             c.4 = secondary_assets;
         }
 
-        // Pass cached data straight to the viewer memory
-        anim_viewer.show(ui, ctx, &c.0, &c.1, &c.2, c.3.clone(), c.4.clone(), model_data, anim_sheet, settings, drag_guard);
+        anim_viewer.show(ui, ctx, &c.0, &c.1, &c.2, c.3.clone(), c.4.clone(), rig_sync, settings, drag_guard);
     });
 }

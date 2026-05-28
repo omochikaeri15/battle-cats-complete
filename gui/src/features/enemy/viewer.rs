@@ -1,16 +1,14 @@
 use eframe::egui;
 use std::path::{Path, PathBuf};
 use std::cell::RefCell;
+use std::sync::Arc;
 
 use core::enemy::logic::scanner::EnemyEntry;
-use crate::global::sheet::GuiSpriteSheet;
-use core::global::formats::mamodel::Model;
+use nyanko::animation::build::Rig;
 use crate::features::animation::viewer::AnimViewer;
-use core::settings::logic::Settings;
+use core::settings::logic::state::Settings;
 use core::enemy::paths::{self, AnimType};
-use core::animation::logic::constants::{
-    IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE
-};
+use core::animation::logic::constants::{IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
 use crate::global::shared::DragGuard;
 
 thread_local! {
@@ -22,8 +20,7 @@ pub fn show(
     ctx: &egui::Context,
     enemy_entry: &EnemyEntry,
     anim_viewer: &mut AnimViewer,
-    model_data: &mut Option<Model>,
-    anim_sheet: &mut GuiSpriteSheet,
+    rig_sync: &mut Option<Arc<Rig>>, // Waiter Pattern Bridge
     settings: &mut Settings,
     drag_guard: &mut DragGuard,
 ) {
@@ -41,24 +38,19 @@ pub fn show(
                 let parent = p.parent()?;
                 let name = p.file_name()?.to_str()?;
                 let iname = format!("i{}", name);
-
-                // Pass the array of fallback names directly to the unified get function
                 core::global::get(parent, &[name, &iname], priority).into_iter().next()
             };
 
-            // Standard anims
             for idx in [IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB] {
                 if let Some(path) = resolve(paths::maanim(root, enemy_entry.id, idx)) {
                     available_anims.push((idx, path));
                 }
             }
 
-            // Zombie anims
             if let Some(p) = resolve(paths::zombie_maanim(root, enemy_entry.id, 0)) { available_anims.push((IDX_BURROW, p)); }
             if let Some(p) = resolve(paths::zombie_maanim(root, enemy_entry.id, 1)) { available_anims.push((7, p)); }
             if let Some(p) = resolve(paths::zombie_maanim(root, enemy_entry.id, 2)) { available_anims.push((IDX_SURFACE, p)); }
 
-            // Primary Assets
             let primary_assets = (|| {
                 let png = resolve(paths::anim(root, enemy_entry.id, AnimType::Png))?;
                 let cut = resolve(paths::anim(root, enemy_entry.id, AnimType::Imgcut))?;
@@ -71,6 +63,6 @@ pub fn show(
             c.2 = primary_assets;
         }
 
-        anim_viewer.show(ui, ctx, &c.0, &String::new(), &c.1, c.2.clone(), None, model_data, anim_sheet, settings, drag_guard);
+        anim_viewer.show(ui, ctx, &c.0, &String::new(), &c.1, c.2.clone(), None, rig_sync, settings, drag_guard);
     });
 }

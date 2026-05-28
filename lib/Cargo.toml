@@ -1,13 +1,14 @@
 [package]
 name = "nyanko"
 version = "0.1.0"
-description = "Pure stateless library for handling game data, animations, and mods from The Battle Cats"
-authors.workspace = true
 edition.workspace = true
 license-file.workspace = true
+authors.workspace = true
 repository.workspace = true
+description = "Pure stateless library for handling game data, animations, and mods from The Battle Cats"
 
 [dependencies]
+# pack/
 aes = "0.9.0"
 block-padding = "0.4.2"
 md5 = "0.8.0"
@@ -15,3 +16,10 @@ cbc = "0.2.1"
 hex = "0.4.3"
 cipher = "0.5.2"
 ecb = "0.2.0"
+
+# animation/
+bytemuck = "1.19"
+glow = "0.14.2"
+
+# common/data/imgcut.rs
+image = { version = "0.25", features = ["png"] }

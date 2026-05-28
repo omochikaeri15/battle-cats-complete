@@ -4,7 +4,8 @@ use crate::features::enemy::state::EnemyDetailTab;
 use core::settings::logic::Settings;
 use core::enemy::registry::Magnification;
 use crate::global::sheet::GuiSpriteSheet;
-use core::global::formats::mamodel::Model;
+use nyanko::animation::build::Rig; // Add Rig import
+use std::sync::Arc;
 use crate::features::animation::viewer::AnimViewer;
 use crate::global::assets::CustomAssets;
 use core::global::game::param::Param;
@@ -13,19 +14,18 @@ use core::enemy::logic::context::EnemyRenderContext;
 use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
 use crate::features::enemy::statblock::build_enemy_statblock;
 use crate::global::shared::DragGuard;
-use super::{header, stats, abilities, details, viewer}; 
+use super::{header, stats, abilities, details, viewer};
 use super::header::ExportAction;
 
 pub fn show(
-    ctx: &egui::Context, 
-    ui: &mut egui::Ui, 
-    enemy_entry: &EnemyEntry, 
-    current_tab: &mut EnemyDetailTab, 
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    enemy_entry: &EnemyEntry,
+    current_tab: &mut EnemyDetailTab,
     mag_input: &mut String,
     magnification: &mut Magnification,
     img015_sheets: &mut Vec<GuiSpriteSheet>,
-    anim_sheet: &mut GuiSpriteSheet,
-    model_data: &mut Option<Model>,
+    rig_sync: &mut Option<Arc<Rig>>, // Swapped Model/Sheet for Rig
     anim_viewer: &mut AnimViewer,
     settings: &mut Settings,
     detail_texture: &mut Option<egui::TextureHandle>,
@@ -70,17 +70,16 @@ pub fn show(
         ExportAction::None => {}
     }
 
-    ui.separator(); 
+    ui.separator();
     ui.add_space(0.0);
 
+    // FIX: Clear the new held_rig structure
     if *current_tab != EnemyDetailTab::Animation {
         if !anim_viewer.loaded_id.is_empty() {
-             anim_viewer.held_model = None;
-             anim_viewer.held_sheet = None;
-             anim_viewer.current_anim = None;
-             anim_viewer.loaded_id.clear();
-             anim_viewer.staging_model = None;
-             anim_viewer.staging_sheet = None;
+            anim_viewer.held_rig = None;
+            anim_viewer.current_anim = None;
+            anim_viewer.loaded_id.clear();
+            *rig_sync = None;
         }
     }
 
@@ -90,10 +89,10 @@ pub fn show(
             ui.spacing_mut().item_spacing.y = 7.0;
             ui.separator();
             egui::ScrollArea::vertical()
-                .auto_shrink([false, false]) 
+                .auto_shrink([false, false])
                 .show(ui, |ui| {
                     abilities::render(
-                        ui, 
+                        ui,
                         &enemy_ctx,
                         img015_sheets,
                         assets
@@ -104,7 +103,7 @@ pub fn show(
             details::render(ui, &enemy_entry.description);
         },
         EnemyDetailTab::Animation => {
-            viewer::show(ui, ctx, enemy_entry, anim_viewer, model_data, anim_sheet, settings, drag_guard);
+            viewer::show(ui, ctx, enemy_entry, anim_viewer, rig_sync, settings, drag_guard);
         }
     }
 }

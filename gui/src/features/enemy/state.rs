@@ -1,5 +1,6 @@
 use eframe::egui;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use core::enemy::logic::state::EnemyDataState;
 use core::settings::logic::Settings;
@@ -15,6 +16,9 @@ use crate::global::shared::DragGuard;
 use crate::features::enemy::filter::EnemyFilterState;
 use crate::global::sheet::GuiSpriteSheet;
 
+// We now import Rig instead of Model
+use nyanko::animation::build::Rig;
+
 pub const TOP_PANEL_PADDING: f32 = 2.5;
 pub const SEARCH_FILTER_GAP: f32 = 5.0;
 pub const SPACE_BEFORE_SEPARATOR: f32 = 2.0;
@@ -23,7 +27,7 @@ pub const SPACE_AFTER_SEPARATOR: f32 = 2.0;
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct EnemyListState {
-    pub data: EnemyDataState, // The core logic wrapper
+    pub data: EnemyDataState,
 
     // UI Elements
     #[serde(skip)] pub enemy_list: EnemyList,
@@ -35,7 +39,9 @@ pub struct EnemyListState {
     // Texture Caches
     #[serde(skip)] pub detail_texture: Option<egui::TextureHandle>,
     #[serde(skip)] pub img015_sheets: Vec<GuiSpriteSheet>,
-    #[serde(skip)] pub anim_sheet: GuiSpriteSheet,
+
+    // NEW: Replaces old Model and SpriteSheet with the unified pure Rig
+    #[serde(skip)] pub rig: Option<Arc<Rig>>,
 }
 
 pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Settings, param: &Param, drag_guard: &mut DragGuard) {
@@ -103,8 +109,8 @@ pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Sett
     if state.data.selected_enemy != old_selection_id {
         state.detail_texture = None;
         state.data.detail_key.clear();
-        state.anim_sheet = GuiSpriteSheet::default();
-        state.data.model_data = None;
+        // FIX: Clear rig instead of model and sheet
+        state.rig = None;
     }
 
     egui::CentralPanel::default().show(ctx, |ui| {
@@ -144,8 +150,9 @@ pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Sett
         master::show(
             ctx, ui, enemy_entry,
             &mut state.data.selected_tab, &mut state.data.mag_input, &mut state.data.magnification,
-            &mut state.img015_sheets, &mut state.anim_sheet,
-            &mut state.data.model_data, &mut state.anim_viewer, settings,
+            &mut state.img015_sheets,
+            &mut state.rig, // Pass rig down to master
+            &mut state.anim_viewer, settings,
             &mut state.detail_texture, &mut state.data.detail_key, param, &assets, drag_guard
         );
     });

@@ -6,7 +6,6 @@ use std::sync::atomic::Ordering;
 use crate::app::BattleCatsApp;
 use crate::global::watcher::GuiWatcher;
 use core::global::resolver;
-use crate::global::sheet::GuiSpriteSheet;
 
 use core::cat::logic::loader as cat_loader;
 use core::cat::{paths as cat_paths, patterns as cat_patterns};
@@ -74,7 +73,6 @@ impl BattleCatsApp {
 
             if path_str.contains("ui") || path_str.contains("gatyaitem") || path_str.contains("sheets") {
                 self.cat_list_state.gatya_item_textures.clear();
-                self.cat_list_state.sprite_sheet = GuiSpriteSheet::default();
                 self.cat_list_state.texture_cache_version += 1;
             }
 
