@@ -1,18 +1,15 @@
-use glow;
-pub use super::graphics::canvas::{GlowRenderer, CanvasError};
-
-use crate::animation::data::mamodel::Model;
-use crate::common::data::imgcut::SpriteSheet;
 use crate::animation::graphics::{timeline, transform};
 use crate::animation::utils::boundary::calculate_animation_bounds;
 use crate::animation::utils::periodicity::calculate_difference;
 
+pub use crate::animation::data::mamodel::Model;
+pub use crate::common::data::imgcut::SpriteSheet;
 pub use crate::animation::data::maanim::Animation as Anim;
 
 /// A parsed container holding a unit's skeletal model and texture atlas.
 pub struct Unit {
-    pub(crate) model: Model,
-    pub(crate) sheet: SpriteSheet,
+    pub model: Model,
+    pub sheet: SpriteSheet,
 }
 
 impl Unit {
@@ -125,38 +122,50 @@ impl Unit {
     }
 }
 
-/// Calculates and draws an animation frame.
+/// Represents the pre-calculated, hardware-agnostic geometric and visual state of a single
+/// model part for a specific animation frame.
+///
+/// This structure acts as the intermediary payload between the pure mathematical domain
+/// library and the hardware-accelerated orchestrator, providing flat, contiguous memory
+/// buffers suitable for direct GPU ingestion.
+#[derive(Clone, Debug, Default)]
+pub struct FrameData {
+    /// The index mapping to the specific sprite cut in the associated `SpriteSheet`.
+    pub sprite_index: usize,
+    /// The 3x3 affine transformation matrix representing the part's absolute world-space position, rotation, and scale.
+    pub final_matrix: [f32; 9],
+    /// The local spatial coordinates bounding the part, formatted as a flat array of 12 floats (two triangles, 6 vertices, x/y pairs).
+    pub vertices: [f32; 12],
+    /// The texture mapping coordinates corresponding to the `vertices`, formatted as a flat array of 12 floats.
+    pub uvs: [f32; 12],
+    /// The final calculated alpha transparency of the part, bounded between 0.0 and 1.0.
+    pub opacity: f32,
+    /// A boolean flag indicating whether the additive blending (glow) shader should be applied to this part.
+    pub is_glow: bool,
+}
+
+/// Computes the complete world-space geometry for a unit at a specific point in time.
+///
+/// This function acts as the primary front-facing API for the rendering pipeline. It fully isolates
+/// the mathematical computation of the skeletal timeline, hierarchical matrix resolution, and sprite
+/// bounding from any external graphics context or camera projection math.
 ///
 /// # Arguments
-/// * `renderer` - A mutable reference to the `GlowRenderer`.
-/// * `gl_context` - The active OpenGL context.
-/// * `unit` - The `Unit` to render.
-/// * `anim` - An optional reference to an `Anim`. If `None`, the unit is rendered in its rest pose.
-/// * `current_frame` - The time value for interpolation.
-/// * `viewport_width` - The width of the viewport.
-/// * `viewport_height` - The height of the viewport.
-/// * `pan_x` - The horizontal camera translation.
-/// * `pan_y` - The vertical camera translation.
-/// * `zoom` - The camera scaling factor.
+/// * `unit` - A reference to the parsed `Unit` containing the base skeletal model and texture atlas.
+/// * `anim` - An optional reference to an `Anim`. If `Some`, the timeline interpolates the model's parts to the specified frame. If `None`, the model remains evaluated in its default rest pose.
+/// * `frame` - The precise chronological time value to evaluate.
 ///
 /// # Returns
-/// A `Result` indicating whether the paint commands were successful.
-pub fn frame(
-    renderer: &mut GlowRenderer,
-    gl_context: &glow::Context,
+/// A dynamically allocated `Vec` containing the compiled `FrameData` for every visible part, sorted by drawing order layer.
+pub fn resolve_frame(
     unit: &Unit,
     anim: Option<&Anim>,
-    current_frame: f32,
-    viewport_width: f32,
-    viewport_height: f32,
-    pan_x: f32,
-    pan_y: f32,
-    zoom: f32,
-) -> Result<(), CanvasError> {
+    frame: f32,
+) -> Vec<FrameData> {
 
     let parts = if let Some(animation) = anim {
         let mut state_buffer = unit.model.parts.clone();
-        let _ = timeline::animate(&unit.model, animation, current_frame, &mut state_buffer);
+        let _ = timeline::animate(&unit.model, animation, frame, &mut state_buffer);
         state_buffer
     } else {
         unit.model.parts.clone()
@@ -164,14 +173,5 @@ pub fn frame(
 
     let world_parts = transform::solve_hierarchy(&parts, &unit.model);
 
-    renderer.paint(
-        gl_context,
-        viewport_width,
-        viewport_height,
-        &world_parts,
-        &unit.sheet,
-        pan_x,
-        pan_y,
-        zoom
-    )
+    crate::animation::graphics::construct::build_geometry(&world_parts, &unit.sheet)
 }

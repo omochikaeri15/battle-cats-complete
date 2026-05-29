@@ -5,11 +5,11 @@
 /// that the file should be loaded last.
 ///
 /// # Arguments
-/// * `filename` - The raw name of the file, with or without its extension (e.g., "Data_04_02_00.pack" or "Data_04_02_00"). The extension is safely stripped internally.
+/// * `filename` - The raw name of the file, with or without its extension.
 /// * `is_update_pack` - A boolean indicating if this file originates from a split install/update APK.
 ///
 /// # Returns
-/// A `u64` representing the sorting weight. Higher values take precedence.
+/// A `u64` representing the sorting weight. Higher values take precedence in memory overlays.
 pub fn calculate_weight(filename: &str, is_update_pack: bool) -> u64 {
     let stem = filename.rsplit_once('.').map_or(filename, |(name, _ext)| name);
 

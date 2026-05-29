@@ -1,8 +1,8 @@
 use eframe::egui;
 use std::sync::{Arc, Mutex};
 
-// STRICT BOUNDARY: Only import the public engine API
-use nyanko::animation::engine::{Unit, Anim, GlowRenderer, frame};
+use nyanko::animation::engine::{Unit, Anim, resolve_frame};
+use core::animation::logic::canvas::GlowRenderer;
 
 pub fn paint(
     ui: &mut egui::Ui,
@@ -36,13 +36,18 @@ pub fn paint(
             let viewport_width = info.viewport.width();
             let viewport_height = info.viewport.height();
 
-            // Delegate purely to the Nyanko engine's unified pipeline
-            let _ = frame(
-                renderer,
-                &**painter.gl(),
+            // 1. Get the pure world geometry from the library
+            let frame_geometry = resolve_frame(
                 &unit,
                 animation.as_deref(), // Converts Option<Arc<Anim>> to Option<&Anim>
-                current_frame,
+                current_frame
+            );
+
+            // 2. Delegate hardware rendering to the core's canvas
+            let _ = renderer.draw_frame(
+                &**painter.gl(),
+                &frame_geometry,
+                &unit.sheet,
                 viewport_width,
                 viewport_height,
                 pan.x,

@@ -2,10 +2,10 @@ use eframe::egui;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-// STRICT NAMESPACE RULES: We only import from the public engine portal.
-use nyanko::animation::engine::{Unit, Anim, GlowRenderer};
+use nyanko::animation::engine::{Unit, Anim};
+use core::animation::logic::canvas::GlowRenderer;
 
-use core::animation::constants::{IDX_NONE, IDX_MODEL, IDX_SPIRIT, IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
+use core::animation::logic::constants::{IDX_NONE, IDX_MODEL, IDX_SPIRIT, IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
 use core::animation::export::state::{ExporterState, ExportMode};
 use core::settings::logic::state::Settings;
 use crate::features::animation::{process, canvas, controls, export};
@@ -234,8 +234,7 @@ impl AnimViewer {
                 self.held_unit = Some(unit.clone());
             }
         }
-
-        // LOAD NEW UNIT FROM DISK
+        
         if (!is_stable || is_first_launch) && valid_index != IDX_NONE {
             let (resolved_png, resolved_cut, resolved_model, resolved_anim) = resolve_paths(valid_index, &primary_assets, &secondary_assets, available_anims);
 
@@ -274,8 +273,7 @@ impl AnimViewer {
                 self.update_export_state(settings);
             }
         }
-
-        // UI Layout
+        
         if self.is_expanded {
             egui::Area::new("expanded_anim_viewer_area".into())
                 .fixed_pos(egui::pos2(0.0, 0.0))

@@ -8,7 +8,7 @@ use nyanko::animation::engine::Unit;
 use crate::features::animation::viewer::AnimViewer;
 use core::settings::logic::state::Settings;
 use core::cat::paths::{self, AnimType};
-use core::animation::constants::{IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
+use core::animation::logic::constants::{IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
 use crate::global::shared::DragGuard;
 
 thread_local! {

@@ -14,34 +14,37 @@ struct PackEntry {
     size: usize,
 }
 
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::Keys {
-    let tuples = user_keys.as_tuples().into_iter().map(|(k, iv, r)| {
-        let nyanko_region = match r {
+fn map_keys_to_nyanko(user_keys: &UserKeys) -> Result<cryptology::Keys, String> {
+    let owned_tuples: Vec<(NyankoRegion, String, String)> = user_keys.as_tuples().into_iter().map(|(key_string, iv, region_enum)| {
+        let nyanko_region = match region_enum {
             crate::global::region::Region::En => NyankoRegion::En,
             crate::global::region::Region::Ja => NyankoRegion::Jp,
             crate::global::region::Region::Ko => NyankoRegion::Kr,
             crate::global::region::Region::Tw => NyankoRegion::Tw,
         };
-        (k.to_string(), iv.to_string(), nyanko_region)
+        (nyanko_region, key_string, iv)
     }).collect();
 
-    cryptology::Keys { tuples }
+    let ref_tuples: Vec<(NyankoRegion, &str, &str)> = owned_tuples.iter()
+        .map(|(region, key_string, iv)| (*region, key_string.as_str(), iv.as_str()))
+        .collect();
+
+    cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())
 }
 
-pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
-    // Restored to the game-accurate file names
+pub fn run(pack_dir: &Path, status_sender: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
     let list_path = pack_dir.join("DownloadLocal.list");
     let pack_path = pack_dir.join("DownloadLocal.pack");
 
     if !list_path.exists() || !pack_path.exists() {
         return Ok(());
     }
-    
-    let patch_dir = pack_dir.join("patch");
-    fs::create_dir_all(&patch_dir).map_err(|e| e.to_string())?;
 
-    let list_data = fs::read(&list_path).map_err(|e| e.to_string())?;
-    let content = cryptology::decrypt_list(&list_data)?;
+    let patch_dir = pack_dir.join("patch");
+    fs::create_dir_all(&patch_dir).map_err(|error| error.to_string())?;
+
+    let list_data = fs::read(&list_path).map_err(|error| error.to_string())?;
+    let content = cryptology::decrypt_list(&list_data).map_err(|error| error.to_string())?;
 
     let mut entries = Vec::new();
     for line in content.lines() {
@@ -55,11 +58,10 @@ pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<
         });
     }
 
-    let pack_data = fs::read(&pack_path).map_err(|e| e.to_string())?;
-    let nyanko_keys = map_keys_to_nyanko(user_keys);
+    let pack_data = fs::read(&pack_path).map_err(|error| error.to_string())?;
+    let nyanko_keys = map_keys_to_nyanko(user_keys)?;
 
     let extracted_count = AtomicUsize::new(0);
-    let failed_count = AtomicUsize::new(0);
 
     entries.into_par_iter().for_each(|entry| {
         let aligned_size = if entry.size % 16 == 0 { entry.size } else { ((entry.size / 16) + 1) * 16 };
@@ -67,27 +69,20 @@ pub fn run(pack_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<
         if entry.offset + aligned_size <= pack_data.len() {
             let chunk = &pack_data[entry.offset .. entry.offset + aligned_size];
 
-            match cryptology::decrypt_chunk(chunk, &entry.name, &nyanko_keys) {
-                Ok((decrypted_bytes, _)) => {
-                    let final_data = &decrypted_bytes[..std::cmp::min(entry.size, decrypted_bytes.len())];
+            let (decrypted_bytes, _) = cryptology::decrypt_chunk(chunk, &entry.name, &nyanko_keys);
 
-                    let out_file = patch_dir.join(&entry.name);
-                    if let Some(parent) = out_file.parent() { let _ = fs::create_dir_all(parent); }
-                    let _ = fs::write(out_file, final_data);
+            let final_data = &decrypted_bytes[..std::cmp::min(entry.size, decrypted_bytes.len())];
 
-                    extracted_count.fetch_add(1, Ordering::Relaxed);
-                },
-                Err(_) => {
-                    failed_count.fetch_add(1, Ordering::Relaxed);
-                }
-            }
+            let out_file = patch_dir.join(&entry.name);
+            if let Some(parent) = out_file.parent() { let _ = fs::create_dir_all(parent); }
+            let _ = fs::write(out_file, final_data);
+
+            extracted_count.fetch_add(1, Ordering::Relaxed);
         }
     });
 
-    let final_errors = failed_count.load(Ordering::Relaxed);
-    if final_errors > 0 {
-        let _ = tx.send(format!("Encountered {} errors decrypting pack chunks.", final_errors));
-    }
+    let total = extracted_count.load(Ordering::Relaxed);
+    let _ = status_sender.send(format!("Successfully extracted {} files.", total));
 
     Ok(())
 }

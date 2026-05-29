@@ -1,11 +1,43 @@
 use crate::common::utils::csv;
 
+/// Represents the baseline geometric and hierarchical state of a singular skeletal component.
+///
+/// Defines initial affine transformations, structural pivot points, and drawing order assignments
+/// for a model part before timeline-based animation modifications are calculated.
 #[derive(Clone, Debug)]
 pub struct ModelPart {
-    pub parent_id: i32, pub unit_id: i32, pub sprite_index: i32, pub drawing_layer: i32,
-    pub position_x: f32, pub position_y: f32, pub pivot_x: f32, pub pivot_y: f32,
-    pub scale_x: f32, pub scale_y: f32, pub rotation: f32, pub alpha: f32,
-    pub glow_mode: i32, pub flip_x: bool, pub flip_y: bool, #[allow(dead_code)] pub name: String,
+    /// The index of the structural parent governing this part's hierarchical inheritance.
+    pub parent_id: i32,
+    /// An internal identifier mapping this component to a generalized unit structure.
+    pub unit_id: i32,
+    /// The integer key mapping this part to a specific `SpriteCut` in the associated `SpriteSheet`.
+    pub sprite_index: i32,
+    /// The absolute Z-order dictating depth sorting during rendering (higher values draw in front).
+    pub drawing_layer: i32,
+    /// The resting spatial coordinate along the X-axis.
+    pub position_x: f32,
+    /// The resting spatial coordinate along the Y-axis.
+    pub position_y: f32,
+    /// The local rotational axis anchor along the X-axis.
+    pub pivot_x: f32,
+    /// The local rotational axis anchor along the Y-axis.
+    pub pivot_y: f32,
+    /// The initial scaling multiplier along the X-axis.
+    pub scale_x: f32,
+    /// The initial scaling multiplier along the Y-axis.
+    pub scale_y: f32,
+    /// The baseline rotational angle.
+    pub rotation: f32,
+    /// The baseline alpha transparency value.
+    pub alpha: f32,
+    /// An integer flag indicating if additive blending (glow) is enabled.
+    pub glow_mode: i32,
+    /// Indicates if the sprite geometry is horizontally inverted.
+    pub flip_x: bool,
+    /// Indicates if the sprite geometry is vertically inverted.
+    pub flip_y: bool,
+    /// The internal logical name of the part.
+    #[allow(dead_code)] pub name: String,
 }
 
 impl Default for ModelPart {
@@ -19,12 +51,22 @@ impl Default for ModelPart {
     }
 }
 
+/// The root hierarchical skeletal structure of a graphical entity.
+///
+/// This structure encapsulates the localized `ModelPart` components and defines the global
+/// arithmetic divisors required to decode spatial, rotational, and opacity transformations
+/// from their integer storage format into standard floating-point space.
 #[derive(Clone, Debug)]
 pub struct Model {
+    /// The ordered collection of individual skeletal components dictating the model's geometry.
     pub parts: Vec<ModelPart>,
+    /// The specification version of the parsed format.
     #[allow(dead_code)] pub version: u32,
+    /// The global denominator used to normalize raw scale values.
     pub scale_unit: f32,
+    /// The global denominator used to normalize raw rotational values into degrees.
     pub angle_unit: f32,
+    /// The global denominator used to normalize raw alpha values into a 0.0 - 1.0 range.
     pub alpha_unit: f32,
 }
 
@@ -35,6 +77,13 @@ impl Default for Model {
 }
 
 impl Model {
+    /// Parses a `.mamodel` byte stream into a structured `Model` hierarchy.
+    ///
+    /// # Arguments
+    /// * `bytes` - The raw byte data of the `.mamodel` file.
+    ///
+    /// # Returns
+    /// Returns `Some(Model)` if the structure is successfully parsed, or `None` if the input is malformed.
     #[inline(always)]
     pub fn parse(bytes: impl AsRef<[u8]>) -> Option<Self> {
         Self::parse_inner(bytes.as_ref())

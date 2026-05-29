@@ -519,10 +519,10 @@ fn render_content(
                         if state.export_mode == ExportMode::Showcase {
                             // Gather all 4 critical showcase animations
                             let target_indices = [
-                                core::animation::constants::IDX_WALK,
-                                core::animation::constants::IDX_IDLE,
-                                core::animation::constants::IDX_ATTACK,
-                                core::animation::constants::IDX_KB,
+                                core::animation::logic::constants::IDX_WALK,
+                                core::animation::logic::constants::IDX_IDLE,
+                                core::animation::logic::constants::IDX_ATTACK,
+                                core::animation::logic::constants::IDX_KB,
                             ];
 
                             for target_index in target_indices {

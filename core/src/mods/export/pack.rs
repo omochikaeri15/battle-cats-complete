@@ -93,7 +93,7 @@ pub fn stream_pack_and_list(
     if total_files == 0 {
         return Err("No files found in the patch directory.".to_string());
     }
-    
+
     let pack_name_lower = pack_name.to_lowercase();
     let pack_type = if pack_name_lower.contains("imagedatalocal") {
         cryptology::PackType::ImageData
@@ -105,7 +105,6 @@ pub fn stream_pack_and_list(
 
     log_callback(format!("Found {} files to patch.", total_files));
 
-    // Decode hex keys ONCE before the loop.
     let standard_keys = if pack_type == cryptology::PackType::Standard {
         let key_bytes = hex::decode(&region_key.key).map_err(|_| "Invalid Region Key Hex".to_string())?;
         let iv_bytes = hex::decode(&region_key.iv).map_err(|_| "Invalid Region IV Hex".to_string())?;
@@ -143,11 +142,12 @@ pub fn stream_pack_and_list(
         let mut file_data = fs::read(&file_path).map_err(|error| format!("Failed to read {}: {}", filename, error))?;
 
         let (cipher_key, cipher_iv) = match &standard_keys {
-            Some((k, i)) => (Some(k), Some(i)),
+            Some((key_array, iv_array)) => (Some(key_array), Some(iv_array)),
             None => (None, None),
         };
-        
-        file_data = cryptology::encrypt_chunk(&file_data, pack_type, cipher_key, cipher_iv)?;
+
+        file_data = cryptology::encrypt_chunk(&file_data, pack_type, cipher_key, cipher_iv)
+            .map_err(|error| format!("Encryption failed for {}: {}", filename, error))?;
 
         pack_writer.write_all(&file_data).map_err(|error| format!("Failed to write to pack buffer: {}", error))?;
 
@@ -158,7 +158,9 @@ pub fn stream_pack_and_list(
 
     pack_writer.flush().map_err(|error| format!("Failed to flush pack stream to disk: {}", error))?;
 
-    let list_bytes = cryptology::encrypt_list(&list_string)?;
+    let list_bytes = cryptology::encrypt_list(&list_string)
+        .map_err(|error| format!("Failed to encrypt list file: {}", error))?;
+
     fs::write(list_path, list_bytes).map_err(|error| format!("Failed to write list file: {}", error))?;
 
     Ok(())

@@ -2,8 +2,8 @@ use eframe::egui;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
 
-// STRICT BOUNDARY
-use nyanko::animation::engine::{Unit, Anim, GlowRenderer};
+use nyanko::animation::engine::{Unit, Anim};
+use core::animation::logic::canvas::GlowRenderer;
 
 use core::animation::export::state::ExporterState;
 use core::animation::export::process::calculate_export_time;
@@ -14,7 +14,7 @@ pub fn process_frame(
     rect: egui::Rect,
     state: &mut ExporterState,
     unit: Arc<Unit>,
-    animation: Option<Arc<Anim>>, // <--- Expects Option
+    animation: Option<Arc<Anim>>,
     renderer_reference: Arc<Mutex<Option<GlowRenderer>>>,
     current_time: f32,
 ) {
@@ -43,8 +43,11 @@ pub fn process_frame(
     let frame_time = calculate_export_time(state, animation.as_deref(), current_time);
     let frame_delay_milliseconds = 1000.0 / state.fps as f32;
 
-    let pan_x = -state.region_x - (state.region_w as f32 / (2.0 * state.zoom));
-    let pan_y = -state.region_y - (state.region_h as f32 / (2.0 * state.zoom));
+    let snap_x = (state.region_x * state.zoom).round() / state.zoom;
+    let snap_y = (state.region_y * state.zoom).round() / state.zoom;
+
+    let pan_x = -snap_x - (state.region_w as f32 / (2.0 * state.zoom));
+    let pan_y = -snap_y - (state.region_h as f32 / (2.0 * state.zoom));
     let background_color = if state.background { [80, 80, 80, 255] } else { [0, 0, 0, 0] };
 
     let renderer_arc = renderer_reference.clone();
@@ -71,7 +74,7 @@ pub fn process_frame(
                 width as u32,
                 height as u32,
                 &unit_arc,
-                animation_arc.as_deref(), // <--- Safely passes Option<&Anim>
+                animation_arc.as_deref(),
                 frame_time,
                 pan_x,
                 pan_y,

@@ -12,7 +12,6 @@ use crate::global::io::patterns;
 use crate::settings::logic::exceptions::RuleHandling;
 use crate::settings::logic::keys::UserKeys;
 
-// Import nyanko pure domains
 use nyanko::pack::{chronology, cryptology};
 use nyanko::pack::cryptology::Region as NyankoRegion;
 
@@ -52,18 +51,22 @@ fn cleanup_temporary_directories(directories: &[PathBuf]) {
     for directory in directories { let _ = fs::remove_dir_all(directory); }
 }
 
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> cryptology::Keys {
-    let tuples = user_keys.as_tuples().into_iter().map(|(k, iv, r)| {
-        let nyanko_region = match r {
+fn map_keys_to_nyanko(user_keys: &UserKeys) -> Result<cryptology::Keys, String> {
+    let owned_tuples: Vec<(NyankoRegion, String, String)> = user_keys.as_tuples().into_iter().map(|(key_string, iv, region_enum)| {
+        let nyanko_region = match region_enum {
             crate::global::region::Region::En => NyankoRegion::En,
             crate::global::region::Region::Ja => NyankoRegion::Jp,
             crate::global::region::Region::Ko => NyankoRegion::Kr,
             crate::global::region::Region::Tw => NyankoRegion::Tw,
         };
-        (k.to_string(), iv.to_string(), nyanko_region)
+        (nyanko_region, key_string, iv)
     }).collect();
 
-    cryptology::Keys { tuples }
+    let ref_tuples: Vec<(NyankoRegion, &str, &str)> = owned_tuples.iter()
+        .map(|(region, key_string, iv)| (*region, key_string.as_str(), iv.as_str()))
+        .collect();
+
+    cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())
 }
 
 pub fn run_universal_import(
@@ -76,7 +79,7 @@ pub fn run_universal_import(
 
     let user_keys = UserKeys::load();
     if user_keys.is_empty() { return Err("Missing Decryption Keys".into()); }
-    let nyanko_keys = map_keys_to_nyanko(&user_keys);
+    let nyanko_keys = map_keys_to_nyanko(&user_keys)?;
 
     let game_root_path = Path::new("game");
     let meta_directory_path = game_root_path.join("meta");
@@ -368,24 +371,19 @@ pub fn run_universal_import(
             if input_pack_file.seek(SeekFrom::Start(processing_task.byte_offset)).is_err() { continue; }
             if input_pack_file.read_exact(&mut encrypted_byte_buffer).is_err() { continue; }
 
-            match cryptology::decrypt_chunk(&encrypted_byte_buffer, &processing_task.original_name, &nyanko_keys) {
-                Ok((decrypted_byte_vector, _)) => {
-                    let strict_size_limit = std::cmp::min(processing_task.byte_size, decrypted_byte_vector.len());
-                    let exact_data_slice = &decrypted_byte_vector[..strict_size_limit];
+            let (decrypted_byte_vector, _) = cryptology::decrypt_chunk(&encrypted_byte_buffer, &processing_task.original_name, &nyanko_keys);
 
-                    let calculated_true_weight = audit::calculate_true_weight(exact_data_slice, &processing_task.final_name);
-                    let cleaned_data_vector = audit::strip_carriage_returns(exact_data_slice, &processing_task.final_name);
+            let strict_size_limit = std::cmp::min(processing_task.byte_size, decrypted_byte_vector.len());
+            let exact_data_slice = &decrypted_byte_vector[..strict_size_limit];
 
-                    decrypted_candidates.push(DecryptedCandidate {
-                        task: processing_task,
-                        clean_data: cleaned_data_vector,
-                        true_weight: calculated_true_weight,
-                    });
-                },
-                Err(_) => {
-                    failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                }
-            }
+            let calculated_true_weight = audit::calculate_true_weight(exact_data_slice, &processing_task.final_name);
+            let cleaned_data_vector = audit::strip_carriage_returns(exact_data_slice, &processing_task.final_name);
+
+            decrypted_candidates.push(DecryptedCandidate {
+                task: processing_task,
+                clean_data: cleaned_data_vector,
+                true_weight: calculated_true_weight,
+            });
         }
 
         if decrypted_candidates.is_empty() {

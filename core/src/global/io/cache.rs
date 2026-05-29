@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use rayon::prelude::*;
 use rustc_hash::FxHasher;
+use bincode::Options;
 
 
 pub fn get_cache_dir() -> Option<PathBuf> {
@@ -76,17 +77,18 @@ struct CachePayload<T> {
 
 pub fn load_with_hash<T: DeserializeOwned>(filename: &str) -> Option<(u64, T)> {
     let cache_path = get_cache_dir()?.join(filename);
-    
+
     let cache_file = match File::open(&cache_path) {
         Ok(f) => f,
         Err(_) => return None,
     };
+    
+    let options = bincode::DefaultOptions::new()
+        .with_limit(1024 * 1024 * 100);
 
-    match bincode::deserialize_from(cache_file) {
-        Ok(payload) => {
-            let payload: CachePayload<T> = payload;
-            Some((payload.hash, payload.data))
-        },
+    // Use the options to deserialize, replacing the old blind call
+    match options.deserialize_from::<_, CachePayload<T>>(cache_file) {
+        Ok(payload) => Some((payload.hash, payload.data)),
         Err(_) => {
             let _ = fs::remove_file(&cache_path);
             None

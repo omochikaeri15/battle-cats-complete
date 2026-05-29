@@ -8,24 +8,24 @@ use image::RgbaImage;
 use webp_animation::Encoder as WebpEncoder;
 use gif::{Encoder as GifEncoder, Frame as GifFrame, Repeat as GifRepeat, DisposalMethod};
 
-// STRICT BOUNDARY: Importing exclusively from the public engine API
-use nyanko::animation::engine::{Unit, Anim, GlowRenderer};
+use nyanko::animation::engine::{Unit, Anim, resolve_frame};
+use crate::animation::logic::canvas::GlowRenderer;
 
 // SHARED DATA STRUCTURES
 #[derive(Clone, Debug)]
 pub struct ExportConfig {
     pub width: u32,
     pub height: u32,
-    #[allow(dead_code)] pub camera_x: f32,
-    #[allow(dead_code)] pub camera_y: f32,
-    #[allow(dead_code)] pub camera_zoom: f32,
+    pub camera_x: f32,
+    pub camera_y: f32,
+    pub camera_zoom: f32,
     pub format: ExportFormat,
-    #[allow(dead_code)] pub quality_percent: u32,
+    pub quality_percent: u32,
     pub compression_percent: u32,
     pub fps: u32,
     pub start_frame: i32,
     pub end_frame: i32,
-    #[allow(dead_code)] pub interpolation: bool,
+    pub interpolation: bool,
     pub output_path: PathBuf,
     pub base_name: String,
     pub background: bool,
@@ -178,7 +178,7 @@ pub fn encode_native(
     is_success
 }
 
-// Strictly requiring an explicit Unit and Anim. No Option, no Interpolate.
+// Strictly requiring an explicit Unit and Anim
 pub fn render_frame(
     renderer: &mut GlowRenderer,
     gl_context: &glow::Context,
@@ -222,13 +222,12 @@ pub fn render_frame(
         gl_context.clear_color(red, green, blue, alpha);
         gl_context.clear(glow::COLOR_BUFFER_BIT);
 
-        // DELGATE RENDER COMPLETELY TO ENGINE
-        let _ = nyanko::animation::engine::frame(
-            renderer,
+        let geometry = resolve_frame(unit, animation, frame_time);
+        
+        let _ = renderer.draw_frame(
             gl_context,
-            unit,
-            animation,
-            frame_time,
+            &geometry,
+            &unit.sheet,
             width as f32,
             height as f32,
             pan_x,
