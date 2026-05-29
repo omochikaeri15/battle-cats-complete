@@ -8,6 +8,7 @@ use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
 use imageproc::rect::Rect;
 use arboard::{Clipboard, ImageData};
 use eframe::egui;
+use nyanko::common::img015;
 
 use core::global::utils::autocrop;
 use core::global::formats::imgcut::SpriteCut;
@@ -183,7 +184,7 @@ fn build_statblock_image(
         
         let mut container_width = 8.0 + 40.0 + 8.0 + max_line_width + 8.0; 
         
-        if item.icon_id == Some(core::global::game::img015::ICON_CONJURE) {
+        if item.icon_id == Some(img015::ICON_CONJURE) {
             if let Some(spirit) = &data.spirit_data {
                 container_width = container_width.max(8.0 + calc_spirit_width(spirit) + SPIRIT_PADDING_X); 
             }
@@ -461,7 +462,7 @@ fn build_statblock_image(
         draw_bottom_rounded_rect_mut(canvas_image, spirit_rect, 8 * scale, Rgba([8, 8, 8, 255]));
 
         let mut current_y_offset = card_inner_y + 8 * scale;
-        let area_item = AbilityItem { icon_id: Some(core::global::game::img015::ICON_AREA_ATTACK), border_id: None, custom_icon: CustomIcon::None, text: String::new() };
+        let area_item = AbilityItem { icon_id: Some(img015::ICON_AREA_ATTACK), border_id: None, custom_icon: CustomIcon::None, text: String::new() };
         let area_icon = get_icon_image(&area_item, &cuts_map, &img015_base, &custom_assets, export_icon_size as u32);
         image::imageops::overlay(canvas_image, &area_icon, start_x_absolute as i64, current_y_offset as i64);
 
@@ -514,7 +515,7 @@ fn build_statblock_image(
 
             current_y = (current_y + export_icon_size as i32).max(current_text_y);
 
-            if item.icon_id == Some(core::global::game::img015::ICON_CONJURE) {
+            if item.icon_id == Some(img015::ICON_CONJURE) {
                 if let Some(spirit) = &data.spirit_data {
                     current_y = draw_spirit_card(canvas_image, spirit, current_y);
                 }

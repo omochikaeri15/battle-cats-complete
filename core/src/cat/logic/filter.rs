@@ -1,10 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use crate::cat::registry::{AbilityIcon, CAT_ABILITY_REGISTRY, CAT_STATS_REGISTRY};
-//use crate::cat::logic::stats::Battle;
 use nyanko::cat::unit::Battle;
 use crate::cat::logic::scanner::CatEntry;
 use crate::cat::logic::talents::apply_talent_stats;
-use crate::global::game::img015;
+use nyanko::common::img015;
 use crate::global::game::abilities::CustomIcon;
 
 pub const ATTACK_TYPE_ICONS: &[AbilityIcon] = &[

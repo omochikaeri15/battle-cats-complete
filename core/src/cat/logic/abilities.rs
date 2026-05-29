@@ -1,7 +1,7 @@
-use crate::global::game::img015;
 use crate::cat::logic::context::CatRenderContext;
 use crate::cat::registry::{self, AbilityIcon, AttrUnit, DisplayGroup};
 use crate::global::game::abilities::{AbilityItem, CustomIcon};
+use nyanko::common::img015;
 
 pub fn collect_ability_data(
     ctx: &CatRenderContext

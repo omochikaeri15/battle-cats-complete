@@ -7,7 +7,7 @@ use crate::global::shared::{render_fallback_icon, text_with_superscript};
 use core::global::game::abilities::{ABILITY_X, ABILITY_Y, TRAIT_Y};
 use core::global::game::abilities::{AbilityItem, CustomIcon};
 use core::cat::registry::AbilityIcon;
-use core::global::game::img015;
+use nyanko::common::img015;
 use core::cat::logic::context::CatRenderContext;
 use crate::global::assets::CustomAssets;
 

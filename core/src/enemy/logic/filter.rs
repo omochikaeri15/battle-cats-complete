@@ -3,7 +3,7 @@ use crate::enemy::registry::{AbilityIcon, Magnification, ENEMY_ABILITY_REGISTRY,
 use crate::enemy::data::t_unit::EnemyRaw;
 use crate::enemy::logic::scanner::EnemyEntry;
 use crate::global::game::abilities::CustomIcon;
-use crate::global::game::img015;
+use nyanko::common::img015;
 
 pub const ATTACK_TYPE_ICONS: &[AbilityIcon] = &[
     AbilityIcon::Standard(img015::ICON_SINGLE_ATTACK),

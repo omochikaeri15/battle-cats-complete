@@ -1,8 +1,7 @@
-use crate::global::game::img015;
 use nyanko::cat::unit::Battle;
 use nyanko::cat::unit::TalentGroup;
 use crate::global::game::abilities::CustomIcon;
-use nyanko::common::Param;
+use nyanko::common::{Param, img015};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Clone, Copy)]

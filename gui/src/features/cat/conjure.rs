@@ -4,7 +4,7 @@ use core::cat::logic::abilities;
 use crate::global::sheet::GuiSpriteSheet;
 use core::settings::logic::Settings;
 use crate::global::shared::{render_fallback_icon, text_with_superscript};
-use core::global::game::img015;
+use nyanko::common::img015;
 use core::global::game::abilities::ABILITY_Y;
 use crate::features::statblock::builder::SpiritData;
 use core::cat::logic::context::CatRenderContext;
