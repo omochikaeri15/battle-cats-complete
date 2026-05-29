@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
-use crate::cat::registry::{AbilityIcon, CAT_ABILITY_REGISTRY, CAT_STATS_REGISTRY};
 use nyanko::cat::unit::Battle;
+use nyanko::cat::abilities::CAT_ABILITY_REGISTRY;
+use crate::cat::registry::{AbilityIcon, get_display_def, CAT_STATS_REGISTRY};
+use crate::global::game::abilities::CustomIcon;
 use crate::cat::logic::scanner::CatEntry;
 use crate::cat::logic::talents::apply_talent_stats;
 use nyanko::common::img015;
-use crate::global::game::abilities::CustomIcon;
 
 pub const ATTACK_TYPE_ICONS: &[AbilityIcon] = &[
     AbilityIcon::Standard(img015::ICON_SINGLE_ATTACK),
@@ -49,8 +50,8 @@ pub struct RangeInput {
 pub struct CatFilterState {
     pub is_open: bool,
     pub active_icons: HashSet<AbilityIcon>,
-    pub rarities: [bool; 6], 
-    pub forms: [bool; 4],    
+    pub rarities: [bool; 6],
+    pub forms: [bool; 4],
     pub match_mode: MatchMode,
     pub talent_mode: TalentFilterMode,
     pub ultra_talent_mode: TalentFilterMode,
@@ -78,291 +79,358 @@ impl Default for CatFilterState {
 
 impl CatFilterState {
     pub fn is_active(&self) -> bool {
-        !self.active_icons.is_empty()
-            || self.rarities.iter().any(|&r| r)
-            || self.forms.iter().any(|&f| f)
-            || self.talent_mode == TalentFilterMode::Only
-            || self.ultra_talent_mode == TalentFilterMode::Only
-            || self.stat_ranges.values().any(|r| !r.min.is_empty() || !r.max.is_empty())
+        let has_icons = !self.active_icons.is_empty();
+        let has_rarities = self.rarities.iter().any(|&is_selected| is_selected);
+        let has_forms = self.forms.iter().any(|&is_selected| is_selected);
+        let normal_talent_required = self.talent_mode == TalentFilterMode::Only;
+        let ultra_talent_required = self.ultra_talent_mode == TalentFilterMode::Only;
+        let has_stat_ranges = self.stat_ranges.values().any(|range_input| !range_input.min.is_empty() || !range_input.max.is_empty());
+
+        has_icons || has_rarities || has_forms || normal_talent_required || ultra_talent_required || has_stat_ranges
     }
 }
 
-pub fn get_stat_value(s: &Battle, stat: &str, anim_frames: i32) -> i32 {
-    let reg_name = match stat {
-        "Cooldown (f)" => "Cooldown", 
+pub fn get_stat_value(battle_stats: &Battle, stat_name: &str, animation_frames: i32) -> i32 {
+    let registry_name = match stat_name {
+        "Cooldown (f)" => "Cooldown",
         "Atk Cycle (f)" => "Atk Cycle",
-        _ => stat,
+        _ => stat_name,
     };
-    
-    if let Some(def) = CAT_STATS_REGISTRY.iter().find(|d| d.name == reg_name) {
-        return (def.get_value)(s, anim_frames);
+
+    let target_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.name == registry_name);
+
+    if let Some(definition) = target_definition {
+        return (definition.get_value)(battle_stats, animation_frames);
     }
-    0 
+
+    0
 }
 
 pub fn get_icon_name(icon: &AbilityIcon) -> String {
-    CAT_ABILITY_REGISTRY.iter().find(|d| &d.icon == icon).map(|d| d.name).unwrap_or("Unknown").to_string()
+    for pure_definition in CAT_ABILITY_REGISTRY {
+        let display_definition = get_display_def(pure_definition.identity);
+        if &display_definition.icon == icon {
+            return display_definition.name.to_string();
+        }
+    }
+    "Unknown".to_string()
 }
 
-pub fn has_trait_or_ability(s: &Battle, icon: &AbilityIcon) -> bool {
-    CAT_ABILITY_REGISTRY.iter().find(|d| &d.icon == icon).map_or(false, |def| {
-        !(def.get_attributes)(s).is_empty()
-    })
+pub fn has_trait_or_ability(battle_stats: &Battle, icon: &AbilityIcon) -> bool {
+    for pure_definition in CAT_ABILITY_REGISTRY {
+        let display_definition = get_display_def(pure_definition.identity);
+        if &display_definition.icon == icon {
+            return !(pure_definition.attributes)(battle_stats).is_empty();
+        }
+    }
+    false
 }
 
 pub fn entity_passes_filter(cat: &CatEntry, filter: &CatFilterState) -> bool {
-    let any_rarity_selected = filter.rarities.iter().any(|&r| r);
+    let any_rarity_selected = filter.rarities.iter().any(|&is_selected| is_selected);
+
     if any_rarity_selected {
-        let r_idx = cat.unitbuy.rarity as usize;
-        if r_idx >= filter.rarities.len() || !filter.rarities[r_idx] {
-            return false; 
+        let rarity_index = cat.unitbuy.rarity as usize;
+        if rarity_index >= filter.rarities.len() || !filter.rarities[rarity_index] {
+            return false;
         }
     }
 
-    let any_form_selected = filter.forms.iter().any(|&f| f);
+    let any_form_selected = filter.forms.iter().any(|&is_selected| is_selected);
     let mut forms_to_check = Vec::new();
-    
-    for i in 0..4 {
-        if cat.forms[i] {
-            if !any_form_selected || filter.forms[i] {
-                forms_to_check.push(i);
-            }
-        }
-    }
-    
-    if forms_to_check.is_empty() { return false; } 
 
-    let req_normal = filter.talent_mode == TalentFilterMode::Only;
-    let req_ultra = filter.ultra_talent_mode == TalentFilterMode::Only;
-    let filter_level = filter.level_input.parse::<i32>().unwrap_or(50);
-    let has_stat_filters = filter.stat_ranges.values().any(|r| !r.min.is_empty() || !r.max.is_empty());
-    let has_icon_filters = !filter.active_icons.is_empty();
-
-    if !has_stat_filters && !has_icon_filters && !req_normal && !req_ultra {
-        return true;
+    for form_index in 0..4 {
+        if !cat.forms[form_index] { continue; }
+        if any_form_selected && !filter.forms[form_index] { continue; }
+        forms_to_check.push(form_index);
     }
 
-    if !has_stat_filters && !has_icon_filters {
-        for &form_idx in &forms_to_check {
-            let mut has_any_normal = false;
-            let mut has_any_ultra = false;
-
-            if form_idx >= 2 {
-                if let Some(t_data) = cat.talent_data.as_ref() {
-                    for g in &t_data.groups {
-                        if g.limit == 1 { has_any_ultra = true; } 
-                        else { has_any_normal = true; }
-                    }
-                }
-            }
-
-            let passed = if req_normal && req_ultra {
-                has_any_normal || has_any_ultra
-            } else if req_normal {
-                has_any_normal
-            } else if req_ultra {
-                has_any_ultra
-            } else {
-                true
-            };
-
-            if passed { return true; }
-        }
+    if forms_to_check.is_empty() {
         return false;
     }
 
-    for &form_idx in &forms_to_check {
-        if let Some(Some(stats)) = cat.stats.get(form_idx) {
-            
-            let mut passes_talent_only = true;
-            if req_normal || req_ultra {
-                let mut has_any_normal = false;
-                let mut has_any_ultra = false;
+    let require_normal_talents = filter.talent_mode == TalentFilterMode::Only;
+    let require_ultra_talents = filter.ultra_talent_mode == TalentFilterMode::Only;
+    let has_stat_filters = filter.stat_ranges.values().any(|range_input| !range_input.min.is_empty() || !range_input.max.is_empty());
+    let has_icon_filters = !filter.active_icons.is_empty();
 
-                if form_idx >= 2 {
-                    if let Some(t_data) = cat.talent_data.as_ref() {
-                        for g in &t_data.groups {
-                            if g.limit == 1 { has_any_ultra = true; } 
-                            else { has_any_normal = true; }
-                        }
-                    }
-                }
+    if !has_stat_filters && !has_icon_filters && !require_normal_talents && !require_ultra_talents {
+        return true;
+    }
 
-                passes_talent_only = if req_normal && req_ultra {
-                    has_any_normal || has_any_ultra
-                } else if req_normal {
-                    has_any_normal
-                } else {
-                    has_any_ultra
-                };
+    for &form_index in &forms_to_check {
+        if evaluate_single_form(cat, form_index, filter, require_normal_talents, require_ultra_talents, has_stat_filters, has_icon_filters) {
+            return true;
+        }
+    }
+
+    false
+}
+
+// --- FLAT HELPER FUNCTIONS ---
+
+fn evaluate_single_form(
+    cat: &CatEntry,
+    form_index: usize,
+    filter: &CatFilterState,
+    require_normal: bool,
+    require_ultra: bool,
+    has_stat_filters: bool,
+    has_icon_filters: bool
+) -> bool {
+    let Some(Some(raw_stats)) = cat.stats.get(form_index) else {
+        return false;
+    };
+
+    if !has_stat_filters && !has_icon_filters {
+        return check_talent_presence_only(cat, form_index, require_normal, require_ultra);
+    }
+
+    if !check_talent_presence_only(cat, form_index, require_normal, require_ultra) {
+        return false;
+    }
+
+    let filter_level = filter.level_input.parse::<i32>().unwrap_or(50);
+    let base_leveled = crate::cat::logic::stats::apply_level(raw_stats, cat.curve.as_ref(), filter_level);
+
+    let mut state_normal = base_leveled.clone();
+    let mut state_ultra = base_leveled.clone();
+    let mut stats_min = base_leveled.clone();
+    let mut stats_max = base_leveled.clone();
+
+    let has_talent_data = form_index >= 2 && cat.talent_data.is_some();
+
+    if has_talent_data {
+        let talent_data = cat.talent_data.as_ref().unwrap();
+        let mut min_levels = HashMap::new();
+        let mut max_levels = HashMap::new();
+        let mut normal_map = HashMap::new();
+        let mut ultra_map = HashMap::new();
+
+        for (talent_index, talent_group) in talent_data.groups.iter().enumerate() {
+            let is_ultra_talent = talent_group.limit == 1;
+            let current_mode = if is_ultra_talent { filter.ultra_talent_mode } else { filter.talent_mode };
+            let talent_id_key = talent_index as u8;
+
+            if current_mode == TalentFilterMode::Only {
+                min_levels.insert(talent_id_key, talent_group.max_level);
+                max_levels.insert(talent_id_key, talent_group.max_level);
+            } else if current_mode == TalentFilterMode::Consider {
+                max_levels.insert(talent_id_key, talent_group.max_level);
             }
-            if !passes_talent_only { continue; }
 
-            let mut active_conditions = 0;
-            let mut passed_conditions = 0;
-            let mut failed_conditions = 0;
-
-            let base_leveled = crate::cat::logic::stats::apply_level(stats, cat.curve.as_ref(), filter_level);
-            
-            let mut state_normal = base_leveled.clone();
-            let mut state_ultra = base_leveled.clone();
-
-            let (stats_min, stats_max) = if form_idx >= 2 && cat.talent_data.is_some() {
-                let t_data = cat.talent_data.as_ref().unwrap();
-                let mut min_levels = HashMap::new();
-                let mut max_levels = HashMap::new();
-                let mut norm_map = HashMap::new();
-                let mut ultra_map = HashMap::new();
-
-                for (idx, g) in t_data.groups.iter().enumerate() {
-                    let is_ultra = g.limit == 1;
-                    let mode = if is_ultra { filter.ultra_talent_mode } else { filter.talent_mode };
-                    
-                    if mode == TalentFilterMode::Only {
-                        min_levels.insert(idx as u8, g.max_level);
-                        max_levels.insert(idx as u8, g.max_level);
-                    } else if mode == TalentFilterMode::Consider {
-                        max_levels.insert(idx as u8, g.max_level);
-                    }
-
-                    if is_ultra {
-                        ultra_map.insert(idx as u8, g.max_level);
-                    } else {
-                        norm_map.insert(idx as u8, g.max_level);
-                        ultra_map.insert(idx as u8, g.max_level);
-                    }
-                }
-                
-                state_normal = apply_talent_stats(&base_leveled, t_data, &norm_map);
-                state_ultra = apply_talent_stats(&base_leveled, t_data, &ultra_map);
-
-                let s_min = apply_talent_stats(&base_leveled, t_data, &min_levels);
-                let s_max = apply_talent_stats(&base_leveled, t_data, &max_levels);
-                (s_min, s_max)
+            if is_ultra_talent {
+                ultra_map.insert(talent_id_key, talent_group.max_level);
             } else {
-                (base_leveled.clone(), base_leveled.clone())
-            };
+                normal_map.insert(talent_id_key, talent_group.max_level);
+                ultra_map.insert(talent_id_key, talent_group.max_level);
+            }
+        }
 
-            if has_stat_filters {
-                for (stat_name, range) in &filter.stat_ranges {
-                    if range.min.is_empty() && range.max.is_empty() { continue; }
-                    active_conditions += 1;
-                    
-                    let val_a = get_stat_value(&stats_min, stat_name, cat.atk_anim_frames[form_idx]);
-                    let val_b = get_stat_value(&stats_max, stat_name, cat.atk_anim_frames[form_idx]);
-                    
-                    let s_min = val_a.min(val_b);
-                    let s_max = val_a.max(val_b);
+        state_normal = apply_talent_stats(&base_leveled, talent_data, &normal_map);
+        state_ultra = apply_talent_stats(&base_leveled, talent_data, &ultra_map);
+        stats_min = apply_talent_stats(&base_leveled, talent_data, &min_levels);
+        stats_max = apply_talent_stats(&base_leveled, talent_data, &max_levels);
+    }
 
-                    let r_min = range.min.parse::<i32>().unwrap_or(i32::MIN);
-                    let r_max = range.max.parse::<i32>().unwrap_or(i32::MAX);
+    let mut active_conditions = 0;
+    let mut passed_conditions = 0;
+    let mut failed_conditions = 0;
 
-                    if s_min <= r_max && s_max >= r_min {
-                        passed_conditions += 1;
-                    } else {
-                        failed_conditions += 1;
-                    }
+    if has_stat_filters {
+        evaluate_stat_ranges(cat, form_index, filter, &stats_min, &stats_max, &mut active_conditions, &mut passed_conditions, &mut failed_conditions);
+    }
+
+    if has_icon_filters {
+        evaluate_icon_requirements(cat, form_index, filter, &base_leveled, &state_normal, &state_ultra, &mut active_conditions, &mut passed_conditions, &mut failed_conditions);
+    }
+
+    if active_conditions == 0 {
+        return true;
+    }
+
+    if filter.match_mode == MatchMode::And {
+        return failed_conditions == 0;
+    }
+
+    passed_conditions > 0
+}
+
+fn check_talent_presence_only(cat: &CatEntry, form_index: usize, require_normal: bool, require_ultra: bool) -> bool {
+    if !require_normal && !require_ultra {
+        return true;
+    }
+
+    let mut has_any_normal = false;
+    let mut has_any_ultra = false;
+
+    if form_index >= 2 {
+        if let Some(talent_data) = cat.talent_data.as_ref() {
+            for talent_group in &talent_data.groups {
+                if talent_group.limit == 1 {
+                    has_any_ultra = true;
+                } else {
+                    has_any_normal = true;
                 }
-            }
-
-            if has_icon_filters {
-                for icon in &filter.active_icons {
-                    active_conditions += 1;
-
-                    let has_inherent = has_trait_or_ability(stats, icon);
-                    let ability_def = CAT_ABILITY_REGISTRY.iter().find(|d| &d.icon == icon);
-                    
-                    let mut has_normal = false;
-                    let mut has_ultra = false;
-
-                    if form_idx >= 2 {
-                        if let Some(t_data) = cat.talent_data.as_ref() {
-                            for g in &t_data.groups {
-                                let matches_icon = ability_def.map_or(false, |d| g.ability_id == d.talent_id || g.name_id as u8 == d.talent_id);
-                                if matches_icon {
-                                    if g.limit == 1 { has_ultra = true; } 
-                                    else { has_normal = true; }
-                                }
-                            }
-                        }
-                    }
-
-                    let valid_inherent = filter.talent_mode != TalentFilterMode::Only && filter.ultra_talent_mode != TalentFilterMode::Only && has_inherent;
-                    let valid_normal = filter.talent_mode != TalentFilterMode::Ignore && has_normal;
-                    let valid_ultra = filter.ultra_talent_mode != TalentFilterMode::Ignore && has_ultra;
-
-                    let mut icon_passed = false;
-
-                    if valid_inherent || valid_normal || valid_ultra {
-                        if let Some(adv_map) = filter.adv_ranges.get(icon) {
-                            
-                            let mut test_builds = Vec::new();
-                            if valid_inherent { test_builds.push(&base_leveled); }
-                            if valid_normal { test_builds.push(&state_normal); }
-                            if valid_ultra { test_builds.push(&state_ultra); }
-                            
-                            let mut any_build_passed = false;
-
-                            for build_stats in test_builds {
-                                let mut build_passed_all_attrs = true;
-                                
-                                let attrs = ability_def.map(|def| (def.get_attributes)(build_stats)).unwrap_or_default();
-                                
-                                for (attr, range) in adv_map {
-                                    let val = attrs.iter()
-                                        .find(|(k, _, _)| k == attr)
-                                        .map(|(_, v, _)| *v)
-                                        .unwrap_or(0);
-                                        
-                                    if let Some(min) = range.min.parse::<i32>().ok() {
-                                        if val < min {
-                                            build_passed_all_attrs = false;
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if let Some(max) = range.max.parse::<i32>().ok() {
-                                        if val > max {
-                                            build_passed_all_attrs = false;
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                if build_passed_all_attrs {
-                                    any_build_passed = true;
-                                    break;
-                                }
-                            }
-
-                            if any_build_passed {
-                                icon_passed = true;
-                            }
-                        } else {
-                            icon_passed = true;
-                        }
-                    }
-
-                    if icon_passed {
-                        passed_conditions += 1;
-                    } else {
-                        failed_conditions += 1;
-                    }
-                }
-            }
-
-            if active_conditions == 0 {
-                return true; 
-            }
-
-            if filter.match_mode == MatchMode::And {
-                if failed_conditions == 0 { return true; }
-            } 
-            else {
-                if passed_conditions > 0 { return true; }
             }
         }
     }
-    
+
+    if require_normal && require_ultra {
+        return has_any_normal || has_any_ultra;
+    }
+
+    if require_normal {
+        return has_any_normal;
+    }
+
+    has_any_ultra
+}
+
+fn evaluate_stat_ranges(
+    cat: &CatEntry,
+    form_index: usize,
+    filter: &CatFilterState,
+    stats_min: &Battle,
+    stats_max: &Battle,
+    active_conditions: &mut i32,
+    passed_conditions: &mut i32,
+    failed_conditions: &mut i32
+) {
+    let animation_frames = cat.atk_anim_frames[form_index];
+
+    for (stat_name, target_range) in &filter.stat_ranges {
+        if target_range.min.is_empty() && target_range.max.is_empty() { continue; }
+
+        *active_conditions += 1;
+
+        let value_a = get_stat_value(stats_min, stat_name, animation_frames);
+        let value_b = get_stat_value(stats_max, stat_name, animation_frames);
+
+        let actual_min = value_a.min(value_b);
+        let actual_max = value_a.max(value_b);
+
+        let required_min = target_range.min.parse::<i32>().unwrap_or(i32::MIN);
+        let required_max = target_range.max.parse::<i32>().unwrap_or(i32::MAX);
+
+        if actual_min <= required_max && actual_max >= required_min {
+            *passed_conditions += 1;
+        } else {
+            *failed_conditions += 1;
+        }
+    }
+}
+
+fn evaluate_icon_requirements(
+    cat: &CatEntry,
+    form_index: usize,
+    filter: &CatFilterState,
+    base_leveled: &Battle,
+    state_normal: &Battle,
+    state_ultra: &Battle,
+    active_conditions: &mut i32,
+    passed_conditions: &mut i32,
+    failed_conditions: &mut i32
+) {
+    for target_icon in &filter.active_icons {
+        *active_conditions += 1;
+
+        let has_inherent_ability = has_trait_or_ability(base_leveled, target_icon);
+        let pure_ability_definition = CAT_ABILITY_REGISTRY.iter().find(|pure_def| &get_display_def(pure_def.identity).icon == target_icon);
+
+        let mut has_normal_talent = false;
+        let mut has_ultra_talent = false;
+
+        if form_index >= 2 {
+            if let Some(talent_data) = cat.talent_data.as_ref() {
+                for talent_group in &talent_data.groups {
+                    let matches_target_icon = pure_ability_definition.map_or(false, |pure_def| {
+                        talent_group.ability_id == pure_def.talent_id || talent_group.name_id as u8 == pure_def.talent_id
+                    });
+
+                    if matches_target_icon {
+                        if talent_group.limit == 1 {
+                            has_ultra_talent = true;
+                        } else {
+                            has_normal_talent = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let is_inherent_valid = filter.talent_mode != TalentFilterMode::Only && filter.ultra_talent_mode != TalentFilterMode::Only && has_inherent_ability;
+        let is_normal_valid = filter.talent_mode != TalentFilterMode::Ignore && has_normal_talent;
+        let is_ultra_valid = filter.ultra_talent_mode != TalentFilterMode::Ignore && has_ultra_talent;
+
+        let mut icon_condition_passed = false;
+
+        if is_inherent_valid || is_normal_valid || is_ultra_valid {
+            icon_condition_passed = check_advanced_ranges(target_icon, filter, base_leveled, state_normal, state_ultra, pure_ability_definition, is_inherent_valid, is_normal_valid, is_ultra_valid);
+        }
+
+        if icon_condition_passed {
+            *passed_conditions += 1;
+        } else {
+            *failed_conditions += 1;
+        }
+    }
+}
+
+fn check_advanced_ranges(
+    target_icon: &AbilityIcon,
+    filter: &CatFilterState,
+    base_leveled: &Battle,
+    state_normal: &Battle,
+    state_ultra: &Battle,
+    pure_ability_definition: Option<&nyanko::cat::abilities::Ability>,
+    is_inherent_valid: bool,
+    is_normal_valid: bool,
+    is_ultra_valid: bool
+) -> bool {
+    let Some(advanced_ranges_map) = filter.adv_ranges.get(target_icon) else {
+        return true;
+    };
+
+    let mut test_build_states = Vec::new();
+    if is_inherent_valid { test_build_states.push(base_leveled); }
+    if is_normal_valid { test_build_states.push(state_normal); }
+    if is_ultra_valid { test_build_states.push(state_ultra); }
+
+    for build_stats in test_build_states {
+        if test_single_build_ranges(build_stats, pure_ability_definition, advanced_ranges_map) {
+            return true;
+        }
+    }
+
     false
+}
+
+fn test_single_build_ranges(
+    build_stats: &Battle,
+    pure_ability_definition: Option<&nyanko::cat::abilities::Ability>,
+    advanced_ranges_map: &HashMap<&'static str, RangeInput>
+) -> bool {
+    let active_attributes = pure_ability_definition.map(|pure_def| (pure_def.attributes)(build_stats)).unwrap_or_default();
+
+    for (attribute_key, target_range) in advanced_ranges_map {
+        let attribute_value = active_attributes.iter()
+            .find(|(key, _, _)| key == attribute_key)
+            .map(|(_, value, _)| *value)
+            .unwrap_or(0);
+
+        if let Ok(minimum_required) = target_range.min.parse::<i32>() {
+            if attribute_value < minimum_required {
+                return false;
+            }
+        }
+
+        if let Ok(maximum_required) = target_range.max.parse::<i32>() {
+            if attribute_value > maximum_required {
+                return false;
+            }
+        }
+    }
+
+    true
 }

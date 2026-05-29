@@ -1,12 +1,13 @@
 use crate::cat::logic::context::CatRenderContext;
-use crate::cat::registry::{self, AbilityIcon, AttrUnit, DisplayGroup};
+use crate::cat::registry::{self, AbilityIcon, DisplayGroup};
 use crate::global::game::abilities::{AbilityItem, CustomIcon};
+use nyanko::cat::abilities::{AbilityIdentity, AttrUnit, CAT_ABILITY_REGISTRY, get_talent};
 use nyanko::common::img015;
 
 pub fn collect_ability_data(
     ctx: &CatRenderContext
 ) -> (Vec<AbilityItem>, Vec<AbilityItem>, Vec<AbilityItem>, Vec<AbilityItem>, Vec<AbilityItem>, Vec<AbilityItem>) {
-    
+
     let mut group_trait = Vec::new();
     let mut group_headline_1 = Vec::new();
     let mut group_headline_2 = Vec::new();
@@ -48,34 +49,46 @@ pub fn collect_ability_data(
     let target_label = if ctx.is_conjure_unit { "Enemies" } else { "Target Traits" };
 
     // --- STANDARD ABILITIES LOOP ---
-    for def in registry::CAT_ABILITY_REGISTRY {
-        if def.group == DisplayGroup::Hidden { continue; }
-        
+    // We iterate over the pure math array and ask the registry how to render it.
+    for pure_def in CAT_ABILITY_REGISTRY {
+        let display_def = registry::get_display_def(pure_def.identity);
+
+        if display_def.group == DisplayGroup::Hidden { continue; }
+
         if ctx.is_conjure_unit {
-            if def.group == DisplayGroup::Trait || def.group == DisplayGroup::Headline1 { continue; } 
-            if def.name == "Dodge" || def.name == "Immune Boss Wave" || def.name == "Conjure / Spirit" || def.name == "Kamikaze" { continue; }
+            if display_def.group == DisplayGroup::Trait || display_def.group == DisplayGroup::Headline1 { continue; }
+
+            // Replaced fragile string checks with strictly typed enum matching!
+            if matches!(pure_def.identity, AbilityIdentity::Dodge | AbilityIdentity::ImmuneBossWave | AbilityIdentity::Conjure | AbilityIdentity::Kamikaze) {
+                continue;
+            }
         }
 
-        let attrs = (def.get_attributes)(ctx.final_stats);
-        
+        let attrs = (pure_def.attributes)(ctx.final_stats);
+
         if !attrs.is_empty() {
             let val = attrs.first().map(|(_, v, _)| *v).unwrap_or(0);
             let dur = attrs.iter().find(|(_, _, u)| *u == AttrUnit::Frames).map(|(_, v, _)| *v).unwrap_or(0);
-            
-            let text = (def.formatter)(val, ctx.final_stats, target_label, dur, ctx.global.param);
-            let border = get_talent_border(def.talent_id);
 
-            let (mut final_icon, final_custom) = match def.icon {
+            let text = (display_def.formatter)(val, ctx.final_stats, target_label, dur, ctx.global.param);
+            let border = get_talent_border(pure_def.talent_id);
+
+            let (mut final_icon, final_custom) = match display_def.icon {
                 AbilityIcon::Standard(id) => (Some(id), CustomIcon::None),
                 AbilityIcon::Custom(c) => (None, c),
+                AbilityIcon::None => (None, CustomIcon::None),
             };
 
-            if def.name == "Wave Attack" && ctx.final_stats.mini_wave_flag > 0 { final_icon = Some(img015::ICON_MINI_WAVE); }
-            else if def.name == "Surge Attack" && ctx.final_stats.mini_surge_flag > 0 { final_icon = Some(img015::ICON_MINI_SURGE); }
+            // Override icons based on pure mathematical flags
+            if pure_def.identity == AbilityIdentity::WaveAttack && ctx.final_stats.mini_wave_flag > 0 {
+                final_icon = Some(img015::ICON_MINI_WAVE);
+            } else if pure_def.identity == AbilityIdentity::SurgeAttack && ctx.final_stats.mini_surge_flag > 0 {
+                final_icon = Some(img015::ICON_MINI_SURGE);
+            }
 
             let item = AbilityItem { icon_id: final_icon, text, custom_icon: final_custom, border_id: border };
 
-            match def.group {
+            match display_def.group {
                 DisplayGroup::Trait => group_trait.push(item),
                 DisplayGroup::Headline1 => group_headline_1.push(item),
                 DisplayGroup::Headline2 => group_headline_2.push(item),
@@ -95,33 +108,35 @@ pub fn collect_ability_data(
             let lv = *levels.get(&(idx as u8)).unwrap_or(&0);
             if lv == 0 { continue; }
 
-            if let Some(def) = registry::get_by_talent_id(group.ability_id) {
-                
-                let (final_icon, final_custom) = match def.icon {
+            if let Some(pure_def) = get_talent(group.ability_id) {
+                let display_def = registry::get_display_def(pure_def.identity);
+
+                let (final_icon, final_custom) = match display_def.icon {
                     AbilityIcon::Standard(id) => (Some(id), CustomIcon::None),
                     AbilityIcon::Custom(c) => (None, c),
+                    AbilityIcon::None => (None, CustomIcon::None),
                 };
 
                 match group.ability_id {
                     // Stat Buffs: Leverage the dynamic Diff Engine
-                    25 | 26 | 27 | 31 | 32 | 61 | 82 => { 
+                    25 | 26 | 27 | 31 | 32 | 61 | 82 => {
                         if let Some(text) = crate::cat::logic::talents::calculate_talent_display(group, ctx.base_stats, lv, ctx.level_curve, ctx.current_level) {
-                            let item = AbilityItem { icon_id: final_icon, text, custom_icon: final_custom, border_id: get_talent_border(def.talent_id) };
+                            let item = AbilityItem { icon_id: final_icon, text, custom_icon: final_custom, border_id: get_talent_border(pure_def.talent_id) };
                             talent_headline.push(item);
                         }
                     },
                     // Resistances: Calculate the value and use the registry's base formatter
-                    18 | 19 | 20 | 21 | 22 | 24 | 30 | 52 | 54 => { 
+                    18 | 19 | 20 | 21 | 22 | 24 | 30 | 52 | 54 => {
                         let val = crate::cat::logic::talents::calculate_talent_value(group.min_1, group.max_1, lv, group.max_level);
-                        let text = (def.formatter)(val, ctx.final_stats, target_label, 0, ctx.global.param);
-                        let item = AbilityItem { icon_id: final_icon, text, custom_icon: final_custom, border_id: get_talent_border(def.talent_id) };
+                        let text = (display_def.formatter)(val, ctx.final_stats, target_label, 0, ctx.global.param);
+                        let item = AbilityItem { icon_id: final_icon, text, custom_icon: final_custom, border_id: get_talent_border(pure_def.talent_id) };
                         group_footer.push(item);
                     },
                     _ => {}
                 }
             }
         }
-        
+
         group_headline_2.append(&mut talent_headline);
     }
 

@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 use crate::global::sheet::GuiSpriteSheet;
 use core::global::utils::autocrop;
 use core::settings::logic::Settings;
-use nyanko::cat::unit::{Battle, LevelCurve};
+use nyanko::cat::unit::{Battle, LevelCurve, TalentCost,Talent, TalentGroup};
 use core::cat::logic::talents;
 use core::cat::paths;
-use nyanko::cat::unit::{TalentCost,Talent, TalentGroup};
+use nyanko::cat::abilities::get_talent;
 use crate::global::shared::render_fallback_icon;
 use crate::global::assets::CustomAssets;
 
@@ -23,40 +23,40 @@ pub fn render(
     img022_sheets: &[GuiSpriteSheet],
     name_cache: &mut HashMap<String, egui::TextureHandle>,
     descriptions: Option<&Vec<String>>,
-    settings: &Settings, 
+    settings: &Settings,
     current_stats: Option<&Battle>,
     curve: Option<&LevelCurve>,
     unit_level: i32,
-    talent_levels: &mut HashMap<u8, u8>, 
-    cat_id: u32,                         
+    talent_levels: &mut HashMap<u8, u8>,
+    cat_id: u32,
     talent_costs: &HashMap<u8, TalentCost>,
     assets: &CustomAssets,
 ) {
     ui.add_space(5.0);
-    
+
     let sidebar_pad = ui.ctx().data(|d| d.get_temp::<f32>(egui::Id::new("sidebar_visible_width"))).unwrap_or(0.0);
 
     egui::ScrollArea::vertical()
-        .auto_shrink([false, false]) 
+        .auto_shrink([false, false])
         .show(ui, |ui| {
             ui.vertical(|ui| {
-                ui.spacing_mut().item_spacing = egui::vec2(0.0, 8.0); 
+                ui.spacing_mut().item_spacing = egui::vec2(0.0, 8.0);
 
                 for (index, group) in talent_data.groups.iter().enumerate() {
                     render_talent_group(
-                        ui, 
-                        cat_id, 
-                        index, 
-                        group, 
+                        ui,
+                        cat_id,
+                        index,
+                        group,
                         sheets,
                         img022_sheets,
-                        name_cache, 
-                        descriptions, 
-                        settings, 
-                        current_stats, 
-                        curve, 
-                        unit_level, 
-                        talent_levels, 
+                        name_cache,
+                        descriptions,
+                        settings,
+                        current_stats,
+                        curve,
+                        unit_level,
+                        talent_levels,
                         sidebar_pad,
                         talent_costs,
                         assets
@@ -85,21 +85,21 @@ fn render_talent_group(
     assets: &CustomAssets,
 ) {
     let bg_color = if group.limit == 1 {
-        egui::Color32::from_rgb(120, 20, 20) 
+        egui::Color32::from_rgb(120, 20, 20)
     } else {
-        egui::Color32::from_rgb(180, 140, 20) 
+        egui::Color32::from_rgb(180, 140, 20)
     };
 
     let id = ui.make_persistent_id(format!("cat_{}_talent_group_{}", cat_id, index));
-    let mut expanded = ui.data(|d| d.get_temp(id).unwrap_or(false)); 
+    let mut expanded = ui.data(|d| d.get_temp(id).unwrap_or(false));
 
     egui::Frame::none()
         .fill(bg_color)
         .rounding(5.0)
         .inner_margin(6.0)
         .show(ui, |ui| {
-            let scrollbar_padding = 12.0; 
-            
+            let scrollbar_padding = 12.0;
+
             let target_width = ui.available_width() - sidebar_pad - scrollbar_padding;
             ui.set_width(target_width.max(10.0));
 
@@ -111,13 +111,13 @@ fn render_talent_group(
 
                 if expanded {
                     render_body(
-                        ui, 
-                        index, 
-                        group, 
-                        descriptions, 
-                        talent_levels, 
-                        current_stats, 
-                        curve, 
+                        ui,
+                        index,
+                        group,
+                        descriptions,
+                        talent_levels,
+                        current_stats,
+                        curve,
                         unit_level,
                         talent_costs,
                         img022_sheets,
@@ -144,24 +144,25 @@ fn render_header(
 
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
-            
-            let def_opt = core::cat::registry::get_by_talent_id(group.ability_id);
-            
+
+            let def_opt = get_talent(group.ability_id);
+
             if let Some(def) = &def_opt {
+                let display_def = core::cat::registry::get_display_def(def.identity);
                 let size = egui::vec2(40.0, 40.0);
-                
+
                 let mut drawn = false;
-                
-                match &def.icon {
+
+                match display_def.icon {
                     core::cat::registry::AbilityIcon::Custom(custom) => {
-                        if let Some(tex) = assets.get_icon_texture(*custom) {
+                        if let Some(tex) = assets.get_icon_texture(custom) {
                             ui.add(egui::Image::new(egui::load::SizedTexture::new(tex.id(), size)));
                             drawn = true;
                         }
                     },
                     core::cat::registry::AbilityIcon::Standard(icon_id) => {
                         for sheet in sheets {
-                            if let Some(cut) = sheet.core.cuts_map.get(icon_id) {
+                            if let Some(cut) = sheet.core.cuts_map.get(&icon_id) {
                                 if let Some(tex) = &sheet.texture_handle {
                                     ui.add(egui::Image::new(egui::load::SizedTexture::new(tex.id(), size)).uv(egui::Rect::from_min_max(egui::pos2(cut.uv_coordinates.min.x, cut.uv_coordinates.min.y), egui::pos2(cut.uv_coordinates.max.x, cut.uv_coordinates.max.y))));
                                     drawn = true;
@@ -169,11 +170,12 @@ fn render_header(
                                 }
                             }
                         }
-                    }
+                    },
+                    core::cat::registry::AbilityIcon::None => {}
                 }
 
                 if !drawn {
-                    render_fallback_icon(ui, def.fallback, egui::Color32::BLACK);
+                    render_fallback_icon(ui, display_def.fallback, egui::Color32::BLACK);
                 }
             } else {
                 ui.label(egui::RichText::new("?").weak().size(24.0));
@@ -183,7 +185,7 @@ fn render_header(
                 ui.image((texture.id(), texture.size_vec2()));
             } else {
                 let fallback_text = match &def_opt {
-                    Some(def) => format!("{}", def.name),
+                    Some(def) => format!("{}", core::cat::registry::get_display_def(def.identity).name),
                     None => format!("Unknown Skill (ID: {})", group.ability_id),
                 };
                 ui.label(
@@ -199,7 +201,7 @@ fn render_header(
             let arrow = if expanded { "▲" } else { "▼" };
             let btn = egui::Button::new(egui::RichText::new(arrow).size(20.0).strong())
                 .fill(egui::Color32::from_black_alpha(100));
-            
+
             if ui.add_sized([40.0, 40.0], btn).clicked() {
                 toggle_clicked = true;
             }
@@ -237,7 +239,7 @@ fn render_body(
     if !text_to_display.contains('\n') { text_to_display.push('\n'); }
 
     egui::Frame::none()
-        .fill(egui::Color32::from_black_alpha(100)) 
+        .fill(egui::Color32::from_black_alpha(100))
         .rounding(4.0)
         .inner_margin(4.0)
         .show(ui, |ui| {
@@ -245,7 +247,7 @@ fn render_body(
             ui.label(egui::RichText::new(text_to_display).color(egui::Color32::WHITE).size(13.0));
         });
 
-    ui.add_space(TALENT_SECTION_SPACING); 
+    ui.add_space(TALENT_SECTION_SPACING);
 
     let current_lvl_val = *talent_levels.get(&(index as u8)).unwrap_or(&0);
     let np_cost = core::cat::logic::talents::get_talent_np_cost(group.cost_id, current_lvl_val, talent_costs);
@@ -256,10 +258,10 @@ fn render_body(
         .inner_margin(4.0)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            
+
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 4.0;
-                
+
                 let mut drawn = false;
                 for sheet in img022_sheets {
                     if let Some(cut) = sheet.core.cuts_map.get(&core::global::game::img022::ICON_NP_COST) {
@@ -276,7 +278,7 @@ fn render_body(
                 if !drawn {
                     ui.label(egui::RichText::new("NP Cost").size(TALENT_NP_TEXT_SIZE).strong().color(egui::Color32::WHITE));
                 }
-                
+
                 ui.label(egui::RichText::new(format!("{}", np_cost)).size(TALENT_NP_TEXT_SIZE).strong().color(egui::Color32::WHITE));
             });
         });
@@ -289,7 +291,7 @@ fn render_body(
         .inner_margin(4.0)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            
+
             ui.vertical(|ui| {
                 let effective_max = if group.max_level == 0 { 1 } else { group.max_level };
                 let current_level_mut = talent_levels.entry(index as u8).or_insert(0);
@@ -297,16 +299,16 @@ fn render_body(
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 5.0;
                     ui.label(egui::RichText::new("Level:").strong());
-                    
+
                     ui.scope(|ui| {
                         let vis = ui.visuals_mut();
-                        vis.widgets.inactive.bg_fill = egui::Color32::from_gray(180); 
-                        vis.widgets.active.bg_fill = egui::Color32::WHITE;            
-                        vis.widgets.hovered.bg_fill = egui::Color32::from_gray(220);  
+                        vis.widgets.inactive.bg_fill = egui::Color32::from_gray(180);
+                        vis.widgets.active.bg_fill = egui::Color32::WHITE;
+                        vis.widgets.hovered.bg_fill = egui::Color32::from_gray(220);
                         vis.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, egui::Color32::from_gray(50));
                         vis.widgets.active.fg_stroke = egui::Stroke::new(1.0, egui::Color32::from_gray(50));
                         vis.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, egui::Color32::from_gray(50));
-                        
+
                         ui.add(egui::Slider::new(current_level_mut, 0..=effective_max)
                             .step_by(1.0)
                             .show_value(false)
@@ -325,8 +327,8 @@ fn render_body(
                         ui.label(
                             egui::RichText::new(display_text)
                                 .color(egui::Color32::WHITE)
-                                .size(15.0)   
-                                .strong()     
+                                .size(15.0)
+                                .strong()
                         );
                     }
                 }
@@ -350,11 +352,11 @@ fn get_or_load_skill_name(
         if let Ok(img) = image::open(&path) {
             let rgba = autocrop(img.to_rgba8());
             let texture = ui.ctx().load_texture(
-                &file_name, 
+                &file_name,
                 egui::ColorImage::from_rgba_unmultiplied(
-                    [rgba.width() as usize, rgba.height() as usize], 
+                    [rgba.width() as usize, rgba.height() as usize],
                     rgba.as_flat_samples().as_slice()
-                ), 
+                ),
                 egui::TextureOptions::LINEAR
             );
             name_cache.insert(file_name.clone(), texture);

@@ -1,276 +1,336 @@
 use nyanko::cat::unit::{Battle, LevelCurve, TalentCost, Talent, TalentGroup};
+use nyanko::cat::abilities::{AttrUnit, get_talent};
 use std::collections::HashMap;
-use crate::cat::registry::{self, AttrUnit};
+use crate::cat::registry::{get_display_def, CAT_STATS_REGISTRY};
 
 // --- CORE MATH ---
-pub fn calculate_talent_value(min: u16, max: u16, level: u8, max_level: u8) -> i32 {
+pub fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_level: u8) -> i32 {
     if level == 0 { return 0; }
-    if max_level <= 1 { return min as i32; }
-    if level == 1 { return min as i32; }
-    if level == max_level { return max as i32; }
+    if max_level <= 1 { return minimum as i32; }
+    if level == 1 { return minimum as i32; }
+    if level == max_level { return maximum as i32; }
 
-    let min_f = min as f32;
-    let max_f = max as f32;
-    let lvl_f = level as f32;
-    let max_lvl_f = max_level as f32;
+    let min_float = minimum as f32;
+    let max_float = maximum as f32;
+    let level_float = level as f32;
+    let max_level_float = max_level as f32;
 
-    let val = min_f + (max_f - min_f) * (lvl_f - 1.0) / (max_lvl_f - 1.0);
-    val.round() as i32
+    let calculated_value = min_float + (max_float - min_float) * (level_float - 1.0) / (max_level_float - 1.0);
+    calculated_value.round() as i32
 }
 
 // --- DYNAMIC UI TEXT ENGINE ---
 pub fn calculate_talent_display(
-    group: &TalentGroup,
+    talent_group: &TalentGroup,
     base_stats: &Battle,
-    talent_level: u8, 
-    curve: Option<&LevelCurve>,
+    talent_level: u8,
+    level_curve: Option<&LevelCurve>,
     unit_level: i32
 ) -> Option<String> {
-    let def = registry::get_by_talent_id(group.ability_id)?;
+    let pure_definition = get_talent(talent_group.ability_id)?;
+    let display_definition = get_display_def(pure_definition.identity);
 
-    let leveled_base = crate::cat::logic::stats::apply_level(base_stats, curve, unit_level);
-    let mut mutated = leveled_base.clone();
-    let mut dummy_min = leveled_base.clone();
-    let mut dummy_max = leveled_base.clone();
+    let leveled_base_stats = crate::cat::logic::stats::apply_level(base_stats, level_curve, unit_level);
+    let mut mutated_stats = leveled_base_stats.clone();
+    let mut dummy_min_stats = leveled_base_stats.clone();
+    let mut dummy_max_stats = leveled_base_stats.clone();
 
-    let val1 = calculate_talent_value(group.min_1, group.max_1, talent_level, group.max_level);
-    let val2 = calculate_talent_value(group.min_2, group.max_2, talent_level, group.max_level);
+    let value_one = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_level, talent_group.max_level);
+    let value_two = calculate_talent_value(talent_group.min_2, talent_group.max_2, talent_level, talent_group.max_level);
 
-    if let Some(apply) = def.apply_func {
+    if let Some(apply_talent_mutation) = pure_definition.apply_talent {
         if talent_level > 0 {
-            apply(&mut mutated, val1, val2, group);
+            apply_talent_mutation(&mut mutated_stats, value_one, value_two, talent_group);
         }
-        
-        let val1_min = calculate_talent_value(group.min_1, group.max_1, 1, group.max_level);
-        let val2_min = calculate_talent_value(group.min_2, group.max_2, 1, group.max_level);
-        apply(&mut dummy_min, val1_min, val2_min, group);
 
-        let val1_max = calculate_talent_value(group.min_1, group.max_1, group.max_level, group.max_level);
-        let val2_max = calculate_talent_value(group.min_2, group.max_2, group.max_level, group.max_level);
-        apply(&mut dummy_max, val1_max, val2_max, group);
+        let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
+        let value_two_minimum = calculate_talent_value(talent_group.min_2, talent_group.max_2, 1, talent_group.max_level);
+        apply_talent_mutation(&mut dummy_min_stats, value_one_minimum, value_two_minimum, talent_group);
+
+        let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
+        let value_two_maximum = calculate_talent_value(talent_group.min_2, talent_group.max_2, talent_group.max_level, talent_group.max_level);
+        apply_talent_mutation(&mut dummy_max_stats, value_one_maximum, value_two_maximum, talent_group);
     }
 
-    let max_attrs = (def.get_attributes)(&dummy_max);
+    let maximum_attributes = (pure_definition.attributes)(&dummy_max_stats);
 
-    // 1. GENERIC VECTOR ENGINE 
-    if !max_attrs.is_empty() {
-        let mut diffs_changed = Vec::new();
-        let mut diffs_unchanged = Vec::new();
-        let mut handled_keys = std::collections::HashSet::new();
-
-        let old_attrs = (def.get_attributes)(&leveled_base);
-        let new_attrs = (def.get_attributes)(&mutated);
-        let min_attrs = (def.get_attributes)(&dummy_min);
-
-        let get_val = |k: &str, attrs: &[(&'static str, i32, AttrUnit)]| -> i32 {
-            attrs.iter().find(|(key, _, _)| *key == k).map(|(_, v, _)| *v).unwrap_or(0)
-        };
-
-        if let Some(&("Active", _, _)) = max_attrs.iter().find(|(k, _, _)| *k == "Active") {
-            let old_v = get_val("Active", &old_attrs);
-            let new_v = get_val("Active", &new_attrs);
-            let s_old = if old_v > 0 { "Active" } else { "Inactive" };
-            let s_new = if new_v > 0 { "Active" } else { "Inactive" };
-            diffs_changed.push(format!("{} -> {}", s_old, s_new));
-            handled_keys.insert("Active");
-        }
-
-        for &(key, unit) in def.schema {
-            if handled_keys.contains(key) { continue; }
-
-            // Range Merger
-            if key.starts_with("Min ") {
-                let suffix = &key[4..];
-                let max_key_str = format!("Max {}", suffix);
-                
-                if let Some(&(max_key, _)) = def.schema.iter().find(|(k, _)| *k == max_key_str.as_str()) {
-                    handled_keys.insert(key);
-                    handled_keys.insert(max_key);
-                    
-                    let old_min = get_val(key, &old_attrs);
-                    let new_min = get_val(key, &new_attrs);
-                    let min_min = get_val(key, &min_attrs);
-                    let max_min = get_val(key, &max_attrs);
-                    
-                    let old_max = get_val(max_key, &old_attrs);
-                    let new_max = get_val(max_key, &new_attrs);
-                    let min_max = get_val(max_key, &min_attrs);
-                    let max_max = get_val(max_key, &max_attrs);
-                    
-                    let is_scalable = min_min != max_min || min_max != max_max;
-                    let fmt_r = |min, max| { if min == max { format!("{}", min) } else { format!("{}~{}", min, max) } };
-                    
-                    if is_scalable {
-                        let d_min = new_min - old_min;
-                        let d_max = new_max - old_max;
-                        
-                        let diff_str = if d_min == d_max {
-                            let sign = if d_min >= 0 { "+" } else { "" };
-                            format!("({}{})", sign, d_min)
-                        } else {
-                            let sign_min = if d_min >= 0 { "+" } else { "" };
-                            let sign_max = if d_max >= 0 { "+" } else { "" };
-                            format!("({}{}~{}{})", sign_min, d_min, sign_max, d_max)
-                        };
-
-                        diffs_changed.push(format!("{}: {} {} -> {}", suffix, fmt_r(old_min, old_max), diff_str, fmt_r(new_min, new_max)));
-                    } else {
-                        // Edge case fix: Display the Lv1 value even at Lv0 if it doesn't scale
-                        diffs_unchanged.push(format!("{}: {}", suffix, fmt_r(min_min, min_max)));
-                    }
-                    continue;
-                }
-            }
-
-            // Standard Single Stats
-            let old_v = get_val(key, &old_attrs);
-            let new_v = get_val(key, &new_attrs);
-            let min_v = get_val(key, &min_attrs);
-            let max_v = get_val(key, &max_attrs);
-
-            // Logic: Is scalable if Lv1 != MaxLv. 
-            // If it is NOT scalable, we force it into unchanged to hide arrows.
-            let is_scalable = min_v != max_v;
-            
-            let fmt_val = |v| match unit {
-                AttrUnit::Percent => format!("{}%", v),
-                AttrUnit::Frames => format!("{}f", v),
-                AttrUnit::Range | AttrUnit::None => format!("{}", v),
-            };
-
-            if is_scalable {
-                let diff = new_v - old_v;
-                let sign = if diff >= 0 { "+" } else { "" };
-                let diff_str = match unit {
-                    AttrUnit::Percent => format!("({}{}%)", sign, diff),
-                    AttrUnit::Frames => format!("({}{}f)", sign, diff),
-                    AttrUnit::Range | AttrUnit::None => format!("({}{})", sign, diff),
-                };
-
-                diffs_changed.push(format!("{}: {} {} -> {}", key, fmt_val(old_v), diff_str, fmt_val(new_v)));
-            } else {
-                // Edge case fix: display min_v (Lv1 value) to ensure it shows at Lv0
-                diffs_unchanged.push(format!("{}: {}", key, fmt_val(min_v))); 
-            }
-            handled_keys.insert(key);
-        }
-
-        let mut final_diffs = diffs_changed;
-        final_diffs.extend(diffs_unchanged);
-        
-        if !final_diffs.is_empty() {
-            return Some(final_diffs.join("\n"));
-        }
+    // 1. GENERIC VECTOR ENGINE
+    if !maximum_attributes.is_empty() {
+        return process_generic_attributes(pure_definition, &leveled_base_stats, &mutated_stats, &dummy_min_stats, &maximum_attributes);
     }
 
-    // 2. RESISTANCES 
-    if def.name.starts_with("Resist ") {
-        if val1 == 0 {
-            let val1_min = calculate_talent_value(group.min_1, group.max_1, 1, group.max_level);
-            let val1_max = calculate_talent_value(group.min_1, group.max_1, group.max_level, group.max_level);
-            if val1_min == val1_max {
-                return Some(format!("Resist: {}%", val1_min));
+    // 2. RESISTANCES
+    if display_definition.name.starts_with("Resist ") {
+        if value_one == 0 {
+            let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
+            let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
+
+            if value_one_minimum == value_one_maximum {
+                return Some(format!("Resist: {}%", value_one_minimum));
             }
-            return Some(format!("Resist: 0% (+{}%) -> 0%", val1));
-        } else {
-            return Some(format!("Resist: 0% (+{}%) -> {}%", val1, val1));
+            return Some(format!("Resist: 0% (+{}%) -> 0%", value_one));
         }
+        return Some(format!("Resist: 0% (+{}%) -> {}%", value_one, value_one));
     }
 
-    // 3. BASE STATS 
-    if let Some(stat_def) = registry::CAT_STATS_REGISTRY.iter().find(|s| s.linked_talent_id == Some(group.ability_id)) {
-        let old_val = (stat_def.get_value)(&leveled_base, 0); 
-        let new_val = (stat_def.get_value)(&mutated, 0);
-        
-        // Edge case: does it scale?
-        let val1_min = calculate_talent_value(group.min_1, group.max_1, 1, group.max_level);
-        let val1_max = calculate_talent_value(group.min_1, group.max_1, group.max_level, group.max_level);
-        
-        if val1_min == val1_max {
-            let lv1_stats = (stat_def.get_value)(&dummy_min, 0);
-            return Some(format!("{}: {}", stat_def.display_name, (stat_def.formatter)(lv1_stats)));
+    // 3. BASE STATS
+    let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talent_id == Some(talent_group.ability_id));
+
+    if let Some(stat_definition) = target_stat_definition {
+        let old_stat_value = (stat_definition.get_value)(&leveled_base_stats, 0);
+        let new_stat_value = (stat_definition.get_value)(&mutated_stats, 0);
+
+        let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
+        let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
+
+        if value_one_minimum == value_one_maximum {
+            let level_one_stats = (stat_definition.get_value)(&dummy_min_stats, 0);
+            return Some(format!("{}: {}", stat_definition.display_name, (stat_definition.formatter)(level_one_stats)));
         }
 
-        let old_str = (stat_def.formatter)(old_val);
-        let new_str = (stat_def.formatter)(new_val);
-        let mod_str = stat_def.talent_modifier_fmt.map(|f| f(val1, val2)).unwrap_or_default();
-        
-        return Some(format!("{}: {} {} -> {}", stat_def.display_name, old_str, mod_str, new_str));
+        let old_string_format = (stat_definition.formatter)(old_stat_value);
+        let new_string_format = (stat_definition.formatter)(new_stat_value);
+        let modifier_string = stat_definition.talent_modifier_fmt.map(|format_func| format_func(value_one, value_two)).unwrap_or_default();
+
+        return Some(format!("{}: {} {} -> {}", stat_definition.display_name, old_string_format, modifier_string, new_string_format));
     }
 
     None
 }
 
+// --- FLAT VECTOR PROCESSOR ---
+
+fn process_generic_attributes(
+    pure_definition: &nyanko::cat::abilities::Ability,
+    leveled_base_stats: &Battle,
+    mutated_stats: &Battle,
+    dummy_min_stats: &Battle,
+    maximum_attributes: &[(&'static str, i32, AttrUnit)]
+) -> Option<String> {
+    let mut strings_changed = Vec::new();
+    let mut strings_unchanged = Vec::new();
+    let mut handled_attribute_keys = std::collections::HashSet::new();
+
+    let old_attributes = (pure_definition.attributes)(leveled_base_stats);
+    let new_attributes = (pure_definition.attributes)(mutated_stats);
+    let min_attributes = (pure_definition.attributes)(dummy_min_stats);
+
+    let extract_value = |target_key: &str, attributes_list: &[(&'static str, i32, AttrUnit)]| -> i32 {
+        attributes_list.iter().find(|(key, _, _)| *key == target_key).map(|(_, value, _)| *value).unwrap_or(0)
+    };
+
+    if maximum_attributes.iter().any(|(key, _, _)| *key == "Active") {
+        let old_active_value = extract_value("Active", &old_attributes);
+        let new_active_value = extract_value("Active", &new_attributes);
+        let string_old = if old_active_value > 0 { "Active" } else { "Inactive" };
+        let string_new = if new_active_value > 0 { "Active" } else { "Inactive" };
+
+        strings_changed.push(format!("{} -> {}", string_old, string_new));
+        handled_attribute_keys.insert("Active");
+    }
+
+    for &(attribute_key, attribute_unit) in pure_definition.schema {
+        if handled_attribute_keys.contains(attribute_key) { continue; }
+
+        if attribute_key.starts_with("Min ") {
+            process_range_attribute(attribute_key, pure_definition, &old_attributes, &new_attributes, &min_attributes, maximum_attributes, &mut handled_attribute_keys, &mut strings_changed, &mut strings_unchanged);
+            continue;
+        }
+
+        process_single_attribute(attribute_key, attribute_unit, &old_attributes, &new_attributes, &min_attributes, maximum_attributes, &mut handled_attribute_keys, &mut strings_changed, &mut strings_unchanged);
+    }
+
+    let mut final_display_strings = strings_changed;
+    final_display_strings.extend(strings_unchanged);
+
+    if final_display_strings.is_empty() {
+        return None;
+    }
+
+    Some(final_display_strings.join("\n"))
+}
+
+fn process_range_attribute(
+    attribute_key: &'static str,
+    pure_definition: &nyanko::cat::abilities::Ability,
+    old_attributes: &[(&'static str, i32, AttrUnit)],
+    new_attributes: &[(&'static str, i32, AttrUnit)],
+    min_attributes: &[(&'static str, i32, AttrUnit)],
+    max_attributes: &[(&'static str, i32, AttrUnit)],
+    handled_attribute_keys: &mut std::collections::HashSet<&'static str>,
+    strings_changed: &mut Vec<String>,
+    strings_unchanged: &mut Vec<String>
+) {
+    let suffix = &attribute_key[4..];
+    let maximum_key_string = format!("Max {}", suffix);
+
+    let extract_value = |target_key: &str, attributes_list: &[(&'static str, i32, AttrUnit)]| -> i32 {
+        attributes_list.iter().find(|(key, _, _)| *key == target_key).map(|(_, value, _)| *value).unwrap_or(0)
+    };
+
+    let Some(&(maximum_key, _)) = pure_definition.schema.iter().find(|(schema_key, _)| *schema_key == maximum_key_string.as_str()) else {
+        return;
+    };
+
+    handled_attribute_keys.insert(attribute_key);
+    handled_attribute_keys.insert(maximum_key);
+
+    let old_minimum = extract_value(attribute_key, old_attributes);
+    let new_minimum = extract_value(attribute_key, new_attributes);
+    let absolute_min_minimum = extract_value(attribute_key, min_attributes);
+    let absolute_max_minimum = extract_value(attribute_key, max_attributes);
+
+    let old_maximum = extract_value(maximum_key, old_attributes);
+    let new_maximum = extract_value(maximum_key, new_attributes);
+    let absolute_min_maximum = extract_value(maximum_key, min_attributes);
+    let absolute_max_maximum = extract_value(maximum_key, max_attributes);
+
+    let is_scalable = absolute_min_minimum != absolute_max_minimum || absolute_min_maximum != absolute_max_maximum;
+
+    let format_range = |min_val, max_val| {
+        if min_val == max_val { format!("{}", min_val) } else { format!("{}~{}", min_val, max_val) }
+    };
+
+    if !is_scalable {
+        strings_unchanged.push(format!("{}: {}", suffix, format_range(absolute_min_minimum, absolute_min_maximum)));
+        return;
+    }
+
+    let delta_minimum = new_minimum - old_minimum;
+    let delta_maximum = new_maximum - old_maximum;
+
+    let difference_string = if delta_minimum == delta_maximum {
+        let sign = if delta_minimum >= 0 { "+" } else { "" };
+        format!("({}{})", sign, delta_minimum)
+    } else {
+        let sign_minimum = if delta_minimum >= 0 { "+" } else { "" };
+        let sign_maximum = if delta_maximum >= 0 { "+" } else { "" };
+        format!("({}{}~{}{})", sign_minimum, delta_minimum, sign_maximum, delta_maximum)
+    };
+
+    strings_changed.push(format!("{}: {} {} -> {}", suffix, format_range(old_minimum, old_maximum), difference_string, format_range(new_minimum, new_maximum)));
+}
+
+fn process_single_attribute(
+    attribute_key: &'static str,
+    attribute_unit: AttrUnit,
+    old_attributes: &[(&'static str, i32, AttrUnit)],
+    new_attributes: &[(&'static str, i32, AttrUnit)],
+    min_attributes: &[(&'static str, i32, AttrUnit)],
+    max_attributes: &[(&'static str, i32, AttrUnit)],
+    handled_attribute_keys: &mut std::collections::HashSet<&'static str>,
+    strings_changed: &mut Vec<String>,
+    strings_unchanged: &mut Vec<String>
+) {
+    let extract_value = |target_key: &str, attributes_list: &[(&'static str, i32, AttrUnit)]| -> i32 {
+        attributes_list.iter().find(|(key, _, _)| *key == target_key).map(|(_, value, _)| *value).unwrap_or(0)
+    };
+
+    let old_value = extract_value(attribute_key, old_attributes);
+    let new_value = extract_value(attribute_key, new_attributes);
+    let absolute_minimum_value = extract_value(attribute_key, min_attributes);
+    let absolute_maximum_value = extract_value(attribute_key, max_attributes);
+
+    let is_scalable = absolute_minimum_value != absolute_maximum_value;
+
+    let format_value = |value| match attribute_unit {
+        AttrUnit::Percent => format!("{}%", value),
+        AttrUnit::Frames => format!("{}f", value),
+        AttrUnit::Range | AttrUnit::None => format!("{}", value),
+    };
+
+    handled_attribute_keys.insert(attribute_key);
+
+    if !is_scalable {
+        strings_unchanged.push(format!("{}: {}", attribute_key, format_value(absolute_minimum_value)));
+        return;
+    }
+
+    let delta_value = new_value - old_value;
+    let prefix_sign = if delta_value >= 0 { "+" } else { "" };
+
+    let difference_string = match attribute_unit {
+        AttrUnit::Percent => format!("({}{}%)", prefix_sign, delta_value),
+        AttrUnit::Frames => format!("({}{}f)", prefix_sign, delta_value),
+        AttrUnit::Range | AttrUnit::None => format!("({}{})", prefix_sign, delta_value),
+    };
+
+    strings_changed.push(format!("{}: {} {} -> {}", attribute_key, format_value(old_value), difference_string, format_value(new_value)));
+}
+
 // --- STATE MUTATION ENGINE ---
-fn apply_target_traits(stats: &mut Battle, name_id: i16, type_id: u16) {
-    let mut apply_bit = |bit: u16| {
-        match bit {
-            0 => stats.target_red = 1,
-            1 => stats.target_floating = 1,
-            2 => stats.target_dark = 1,
-            3 => stats.target_metal = 1,
-            4 => stats.target_angel = 1,
-            5 => stats.target_alien = 1,
-            6 => stats.target_zombie = 1,
-            7 => stats.target_relic = 1,
-            8 => stats.target_traitless = 1,
-            9 => stats.target_witch = 1, 
-            10 => stats.target_eva = 1,  
-            11 => stats.target_aku = 1,
+fn apply_target_traits(battle_stats: &mut Battle, target_name_id: i16, bitmask_type_id: u16) {
+    let mut apply_trait_bit = |bit_index: u16| {
+        match bit_index {
+            0 => battle_stats.target_red = 1,
+            1 => battle_stats.target_floating = 1,
+            2 => battle_stats.target_dark = 1,
+            3 => battle_stats.target_metal = 1,
+            4 => battle_stats.target_angel = 1,
+            5 => battle_stats.target_alien = 1,
+            6 => battle_stats.target_zombie = 1,
+            7 => battle_stats.target_relic = 1,
+            8 => battle_stats.target_traitless = 1,
+            9 => battle_stats.target_witch = 1,
+            10 => battle_stats.target_eva = 1,
+            11 => battle_stats.target_aku = 1,
             _ => {}
         }
     };
 
-    if name_id >= 0 && name_id <= 11 {
-        apply_bit(name_id as u16);
+    if target_name_id >= 0 && target_name_id <= 11 {
+        apply_trait_bit(target_name_id as u16);
     }
 
-    if type_id > 0 {
-        for bit in 0..=11 {
-            if (type_id & (1 << bit)) != 0 {
-                apply_bit(bit);
+    if bitmask_type_id > 0 {
+        for bit_index in 0..=11 {
+            if (bitmask_type_id & (1 << bit_index)) != 0 {
+                apply_trait_bit(bit_index);
             }
         }
     }
 }
 
-pub fn apply_talent_stats(base_stats: &Battle, talent_data: &Talent, levels: &HashMap<u8, u8>) -> Battle {
-    let mut stats = base_stats.clone();
-    
-    for (index, group) in talent_data.groups.iter().enumerate() {
-        let current_level = *levels.get(&(index as u8)).unwrap_or(&0);
-        
-        if current_level > 0 && group.name_id != -1 {
-            apply_target_traits(&mut stats, group.name_id, talent_data.type_id);
+pub fn apply_talent_stats(base_stats: &Battle, talent_data: &Talent, talent_levels: &HashMap<u8, u8>) -> Battle {
+    let mut mutated_stats = base_stats.clone();
+
+    for (talent_index, talent_group) in talent_data.groups.iter().enumerate() {
+        let current_level = *talent_levels.get(&(talent_index as u8)).unwrap_or(&0);
+
+        if current_level > 0 && talent_group.name_id != -1 {
+            apply_target_traits(&mut mutated_stats, talent_group.name_id, talent_data.type_id);
         }
 
         if current_level == 0 { continue; }
-        
-        let val1 = calculate_talent_value(group.min_1, group.max_1, current_level, group.max_level);
-        let val2 = calculate_talent_value(group.min_2, group.max_2, current_level, group.max_level);
 
-        if let Some(def) = registry::get_by_talent_id(group.ability_id) {
-            if let Some(apply) = def.apply_func {
-                apply(&mut stats, val1, val2, group);
+        let value_one = calculate_talent_value(talent_group.min_1, talent_group.max_1, current_level, talent_group.max_level);
+        let value_two = calculate_talent_value(talent_group.min_2, talent_group.max_2, current_level, talent_group.max_level);
+
+        if let Some(pure_definition) = get_talent(talent_group.ability_id) {
+            if let Some(apply_talent_mutation) = pure_definition.apply_talent {
+                apply_talent_mutation(&mut mutated_stats, value_one, value_two, talent_group);
             }
         }
     }
-    stats
+    mutated_stats
 }
 
 // --- COST CALCULATIONS ---
-pub fn get_talent_np_cost(cost_id: u8, level: u8, costs_map: &HashMap<u8, TalentCost>) -> i32 {
-    if level == 0 { return 0; }
-    if let Some(cost_data) = costs_map.get(&cost_id) {
-        let limit = (level as usize).min(cost_data.costs.len());
-        let mut total = 0;
-        for i in 0..limit {
-            total += cost_data.costs[i] as i32;
-        }
-        total
-    } else {
-        0
+pub fn get_talent_np_cost(cost_id: u8, current_level: u8, costs_map: &HashMap<u8, TalentCost>) -> i32 {
+    if current_level == 0 { return 0; }
+
+    let Some(cost_data) = costs_map.get(&cost_id) else {
+        return 0;
+    };
+
+    let level_limit = (current_level as usize).min(cost_data.costs.len());
+    let mut total_cost = 0;
+
+    for level_index in 0..level_limit {
+        total_cost += cost_data.costs[level_index] as i32;
     }
+
+    total_cost
 }
 
 pub fn get_total_np_cost(
@@ -278,10 +338,12 @@ pub fn get_total_np_cost(
     talent_levels: &HashMap<u8, u8>,
     costs_map: &HashMap<u8, TalentCost>
 ) -> i32 {
-    let mut total = 0;
-    for (index, group) in talent_data.groups.iter().enumerate() {
-        let level = *talent_levels.get(&(index as u8)).unwrap_or(&0);
-        total += get_talent_np_cost(group.cost_id, level, costs_map);
+    let mut total_accumulated_cost = 0;
+
+    for (talent_index, talent_group) in talent_data.groups.iter().enumerate() {
+        let current_level = *talent_levels.get(&(talent_index as u8)).unwrap_or(&0);
+        total_accumulated_cost += get_talent_np_cost(talent_group.cost_id, current_level, costs_map);
     }
-    total
+
+    total_accumulated_cost
 }
