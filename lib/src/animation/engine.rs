@@ -141,7 +141,7 @@ pub struct FrameData {
     /// The final calculated alpha transparency of the part, bounded between 0.0 and 1.0.
     pub opacity: f32,
     /// A boolean flag indicating whether the additive blending (glow) shader should be applied to this part.
-    pub is_glow: bool,
+    pub glow: i32,
 }
 
 /// Computes the complete world-space geometry for a unit at a specific point in time.

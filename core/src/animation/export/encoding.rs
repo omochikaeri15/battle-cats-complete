@@ -222,8 +222,13 @@ pub fn render_frame(
         gl_context.clear_color(red, green, blue, alpha);
         gl_context.clear(glow::COLOR_BUFFER_BIT);
 
-        let geometry = resolve_frame(unit, animation, frame_time);
-        
+        let mut geometry = resolve_frame(unit, animation, frame_time);
+        for part in &mut geometry {
+            if part.glow > 1 {
+                part.glow = 1;
+            }
+        }
+
         let _ = renderer.draw_frame(
             gl_context,
             &geometry,

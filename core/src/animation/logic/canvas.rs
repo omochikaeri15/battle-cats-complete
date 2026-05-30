@@ -41,7 +41,7 @@ precision lowp float;
 #endif
 uniform sampler2D u_texture;
 uniform float u_opacity;
-uniform int u_is_glow;
+uniform int u_glow_mode;
 
 in vec2 v_texcoord;
 out vec4 f_color;
@@ -49,7 +49,8 @@ out vec4 f_color;
 void main() {
 vec4 tex_color = texture(u_texture, v_texcoord);
 
-if (u_is_glow == 1) {
+// Reapply the exporter-safe alpha hack ONLY for additive blending (Mode 1)
+if (u_glow_mode == 1) {
 float brightness = max(tex_color.r, max(tex_color.g, tex_color.b));
 f_color = vec4(tex_color.rgb, brightness) * u_opacity;
 } else {
@@ -141,7 +142,7 @@ impl GlowRenderer {
             Ok(())
         }
     }
-    
+
     pub fn draw_frame(
         &mut self,
         gl_context: &glow::Context,
@@ -185,19 +186,21 @@ impl GlowRenderer {
             let u_view_proj = gl_context.get_uniform_location(self.program, "u_view_proj");
             let u_opacity = gl_context.get_uniform_location(self.program, "u_opacity");
             let u_texture = gl_context.get_uniform_location(self.program, "u_texture");
-            let u_is_glow = gl_context.get_uniform_location(self.program, "u_is_glow");
+            let u_glow_mode = gl_context.get_uniform_location(self.program, "u_glow_mode"); // Grab the uniform
 
             gl_context.uniform_1_i32(u_texture.as_ref(), 0);
             gl_context.uniform_matrix_3_f32_slice(u_view_proj.as_ref(), false, &view_proj_matrix);
             gl_context.enable(glow::BLEND);
 
             for data in frame_data {
-                gl_context.uniform_1_i32(u_is_glow.as_ref(), if data.is_glow { 1 } else { 0 });
+                // Tell the shader which mode is currently active
+                gl_context.uniform_1_i32(u_glow_mode.as_ref(), data.glow);
 
-                if data.is_glow {
-                    gl_context.blend_func_separate(glow::ONE, glow::ONE, glow::ONE, glow::ONE);
-                } else {
-                    gl_context.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
+                match data.glow {
+                    1 => gl_context.blend_func(glow::ONE, glow::ONE),
+                    2 => gl_context.blend_func(glow::DST_COLOR, glow::ZERO),
+                    3 => gl_context.blend_func(glow::ONE, glow::ONE_MINUS_SRC_COLOR),
+                    _ => gl_context.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA),
                 }
 
                 gl_context.uniform_matrix_3_f32_slice(u_transform.as_ref(), false, &data.final_matrix);
@@ -212,6 +215,7 @@ impl GlowRenderer {
                 gl_context.draw_arrays(glow::TRIANGLES, 0, 6);
             }
 
+            // Reset standard premultiplied blending after batch completes
             gl_context.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
 
             Ok(())

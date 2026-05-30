@@ -44,7 +44,7 @@ pub fn build_geometry(
             vertices,
             uvs,
             opacity: part.opacity,
-            is_glow: part.glow > 0,
+            glow: part.glow,
         });
     }
 

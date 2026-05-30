@@ -42,7 +42,7 @@ pub struct SpriteCut {
 /// sprites are mathematically extracted from the atlas.
 #[derive(Clone, Default)]
 pub struct SpriteSheet {
-    /// The decoded, gamma-corrected, and alpha-premultiplied raw pixel data of the atlas.
+    /// The decoded and alpha-premultiplied raw pixel data of the atlas.
     pub image_data: Option<Arc<RgbaImage>>,
     /// A localized dictionary mapping absolute sprite ID integers to their respective UV coordinate bounds.
     pub cuts_map: HashMap<usize, SpriteCut>,
@@ -51,8 +51,6 @@ pub struct SpriteSheet {
 impl SpriteSheet {
     /// Parses raw image bytes and coordinate CSV bytes into a fully initialized `SpriteSheet`.
     ///
-    /// The image parsing phase automatically applies a 1.9 gamma correction and pre-multiplies
-    /// the RGB channels against the alpha channel to prevent dark-edge bleeding during bilinear filtering.
     ///
     /// # Arguments
     /// * `png` - The raw byte stream of the target image file.
@@ -70,33 +68,21 @@ impl SpriteSheet {
         let image_width = image.width() as f32;
         let image_height = image.height() as f32;
 
-        let gamma_value: f32 = 1.9;
-        let inverse_gamma = 1.0 / gamma_value;
-        let to_linear = |byte_value: u8| -> f32 { (byte_value as f32 / 255.0).powf(gamma_value) };
-        let to_monitor = |value: f32| -> u8 { (value.powf(inverse_gamma) * 255.0 + 0.5).clamp(0.0, 255.0) as u8 };
-
         for pixel in image.pixels_mut() {
-            let alpha_byte = pixel[3];
+            let alpha = pixel[3] as u32;
 
-            if alpha_byte == 0 {
+            if alpha == 0 {
                 pixel[0] = 0;
                 pixel[1] = 0;
                 pixel[2] = 0;
                 continue;
             }
 
-            let red_linear = to_linear(pixel[0]);
-            let green_linear = to_linear(pixel[1]);
-            let blue_linear = to_linear(pixel[2]);
-            let alpha_linear = alpha_byte as f32 / 255.0;
-
-            let red_monitor = to_monitor(red_linear) as f32;
-            let green_monitor = to_monitor(green_linear) as f32;
-            let blue_monitor = to_monitor(blue_linear) as f32;
-
-            pixel[0] = (red_monitor * alpha_linear) as u8;
-            pixel[1] = (green_monitor * alpha_linear) as u8;
-            pixel[2] = (blue_monitor * alpha_linear) as u8;
+            if alpha < 255 {
+                pixel[0] = ((pixel[0] as u32 * alpha) / 255) as u8;
+                pixel[1] = ((pixel[1] as u32 * alpha) / 255) as u8;
+                pixel[2] = ((pixel[2] as u32 * alpha) / 255) as u8;
+            }
         }
 
         let content = csv::scrub(imgcut);
