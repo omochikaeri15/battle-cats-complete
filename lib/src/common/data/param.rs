@@ -72,16 +72,16 @@ pub struct Param {
     pub unknown_52: i32, // catbase_banner1  3
     pub unknown_53: i32, // catbase_banner2  -2
     pub story_sequence_hold_speed: i32, // story_fast_forward_speed  3
-    pub unknown_55: i32, // battle_explosion_frame1  11
-    pub unknown_56: i32, // battle_explosion_frame2  15
-    pub unknown_57: i32, // battle_explosion_frame3  0
-    pub unknown_58: i32, // battle_explosion_frame4  10
-    pub unknown_59: i32, // battle_explosion_width1  600
-    pub unknown_60: i32, // battle_explosion_width2  400
-    pub unknown_61: i32, // battle_explosion_width3  400
-    pub unknown_62: i32, // battle_explosion_damage1  100
-    pub unknown_63: i32, // battle_explosion_damage2  70
-    pub unknown_64: i32, // battle_explosion_damage3  40
+    pub explosion_start_time: i32, // battle_explosion_frame1  11
+    pub explosion_hitbox_duration: i32, // battle_explosion_frame2  15
+    pub explosion_delay_before_deletion: i32, // battle_explosion_frame3  0
+    pub explosion_delay_until_spike: i32, // battle_explosion_frame4  10
+    pub explosion_big_width: f32, // battle_explosion_width1  600
+    pub explosion_medium_width: f32, // battle_explosion_width2  400
+    pub explosion_small_width: f32, // battle_explosion_width3  400
+    pub explosion_big_damage_multiplier: f32, // battle_explosion_damage1  100
+    pub explosion_medium_damage_multiplier: f32, // battle_explosion_damage2  70
+    pub explosion_small_damage_multiplier: f32, // battle_explosion_damage3  40
     pub unknown_65: i32, // battle_af_death_volcano_distance  800
     pub unknown_66: i32, // battle_af_death_volcano_width  1200
     pub unknown_67: i32, // battle_af_condition_production_0  2
@@ -194,16 +194,16 @@ fn parse_inner(bytes: &[u8]) -> Result<Param, ParamError> {
         unknown_52: get_val(51),
         unknown_53: get_val(52),
         story_sequence_hold_speed: get_val(53),
-        unknown_55: get_val(54),
-        unknown_56: get_val(55),
-        unknown_57: get_val(56),
-        unknown_58: get_val(57),
-        unknown_59: get_val(58),
-        unknown_60: get_val(59),
-        unknown_61: get_val(60),
-        unknown_62: get_val(61),
-        unknown_63: get_val(62),
-        unknown_64: get_val(63),
+        explosion_start_time: get_val(54),
+        explosion_hitbox_duration: get_val(55),
+        explosion_delay_before_deletion: get_val(56),
+        explosion_delay_until_spike: get_val(57),
+        explosion_big_width: get_val(58) as f32 / 4.0,
+        explosion_medium_width: get_val(59) as f32 / 4.0,
+        explosion_small_width: get_val(60) as f32 / 4.0,
+        explosion_big_damage_multiplier: get_val(61) as f32 / 100.0,
+        explosion_medium_damage_multiplier:  get_val(62) as f32 / 100.0,
+        explosion_small_damage_multiplier: get_val(63) as f32 / 100.0,
         unknown_65: get_val(64),
         unknown_66: get_val(65),
         unknown_67: get_val(66),
