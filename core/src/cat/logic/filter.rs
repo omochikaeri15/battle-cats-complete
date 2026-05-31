@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use nyanko::cat::unit::Battle;
-use nyanko::cat::abilities::CAT_ABILITY_REGISTRY;
+use nyanko::cat::abilities::REGISTRY;
 use crate::cat::registry::{AbilityIcon, get_display_def, CAT_STATS_REGISTRY};
 use crate::global::game::abilities::CustomIcon;
 use crate::cat::logic::scanner::CatEntry;
@@ -107,7 +107,7 @@ pub fn get_stat_value(battle_stats: &Battle, stat_name: &str, animation_frames: 
 }
 
 pub fn get_icon_name(icon: &AbilityIcon) -> String {
-    for pure_definition in CAT_ABILITY_REGISTRY {
+    for pure_definition in REGISTRY {
         let display_definition = get_display_def(pure_definition.identity);
         if &display_definition.icon == icon {
             return display_definition.name.to_string();
@@ -117,7 +117,7 @@ pub fn get_icon_name(icon: &AbilityIcon) -> String {
 }
 
 pub fn has_trait_or_ability(battle_stats: &Battle, icon: &AbilityIcon) -> bool {
-    for pure_definition in CAT_ABILITY_REGISTRY {
+    for pure_definition in REGISTRY {
         let display_definition = get_display_def(pure_definition.identity);
         if &display_definition.icon == icon {
             return !(pure_definition.attributes)(battle_stats).is_empty();
@@ -336,7 +336,7 @@ fn evaluate_icon_requirements(
         *active_conditions += 1;
 
         let has_inherent_ability = has_trait_or_ability(base_leveled, target_icon);
-        let pure_ability_definition = CAT_ABILITY_REGISTRY.iter().find(|pure_def| &get_display_def(pure_def.identity).icon == target_icon);
+        let pure_ability_definition = REGISTRY.iter().find(|pure_def| &get_display_def(pure_def.identity).icon == target_icon);
 
         let mut has_normal_talent = false;
         let mut has_ultra_talent = false;

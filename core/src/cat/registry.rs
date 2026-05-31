@@ -1,4 +1,4 @@
-use nyanko::cat::abilities::{AbilityIdentity, CAT_ABILITY_REGISTRY};
+use nyanko::cat::abilities::{Identity, REGISTRY};
 use nyanko::cat::unit::Battle;
 use nyanko::common::Param;
 use nyanko::common::img015;
@@ -180,17 +180,17 @@ fn fmt_sage(param: &Param) -> String {
 
 // --- EXHAUSTIVE PRESENTATION MATCH ---
 
-pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
+pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
     match identity {
         // --- HIDDEN ---
-        AbilityIdentity::SingleAttack => AbilityDisplayDef {
+        Identity::SingleAttack => AbilityDisplayDef {
             name: "Single Attack",
             fallback: "Sngl",
             icon: AbilityIcon::Standard(img015::ICON_SINGLE_ATTACK),
             group: DisplayGroup::Hidden,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::AreaAttack => AbilityDisplayDef {
+        Identity::AreaAttack => AbilityDisplayDef {
             name: "Area Attack",
             fallback: "Area",
             icon: AbilityIcon::Standard(img015::ICON_AREA_ATTACK),
@@ -199,84 +199,84 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- TRAITS ---
-        AbilityIdentity::TargetRed => AbilityDisplayDef {
+        Identity::TargetRed => AbilityDisplayDef {
             name: "Target Red",
             fallback: "Red",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_RED),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Red Enemies".into(),
         },
-        AbilityIdentity::TargetFloat => AbilityDisplayDef {
+        Identity::TargetFloat => AbilityDisplayDef {
             name: "Target Float",
             fallback: "Float",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_FLOATING),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Floating Enemies".into(),
         },
-        AbilityIdentity::TargetDark => AbilityDisplayDef {
+        Identity::TargetDark => AbilityDisplayDef {
             name: "Target Dark",
             fallback: "Dark",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_BLACK),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Dark Enemies".into(),
         },
-        AbilityIdentity::TargetMetal => AbilityDisplayDef {
+        Identity::TargetMetal => AbilityDisplayDef {
             name: "Target Metal",
             fallback: "Metal",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_METAL),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Metal Enemies".into(),
         },
-        AbilityIdentity::TargetAngel => AbilityDisplayDef {
+        Identity::TargetAngel => AbilityDisplayDef {
             name: "Target Angel",
             fallback: "Angel",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ANGEL),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Angel Enemies".into(),
         },
-        AbilityIdentity::TargetAlien => AbilityDisplayDef {
+        Identity::TargetAlien => AbilityDisplayDef {
             name: "Target Alien",
             fallback: "Alien",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ALIEN),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Alien Enemies".into(),
         },
-        AbilityIdentity::TargetZombie => AbilityDisplayDef {
+        Identity::TargetZombie => AbilityDisplayDef {
             name: "Target Zombie",
             fallback: "Zomb",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ZOMBIE),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Zombie Enemies".into(),
         },
-        AbilityIdentity::TargetRelic => AbilityDisplayDef {
+        Identity::TargetRelic => AbilityDisplayDef {
             name: "Target Relic",
             fallback: "Relic",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_RELIC),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Relic Enemies".into(),
         },
-        AbilityIdentity::TargetAku => AbilityDisplayDef {
+        Identity::TargetAku => AbilityDisplayDef {
             name: "Target Aku",
             fallback: "Aku",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_AKU),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Aku Enemies".into(),
         },
-        AbilityIdentity::TargetTraitless => AbilityDisplayDef {
+        Identity::TargetTraitless => AbilityDisplayDef {
             name: "Target Traitless",
             fallback: "NoTrt",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_TRAITLESS),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Traitless Enemies".into(),
         },
-        AbilityIdentity::TargetWitch => AbilityDisplayDef {
+        Identity::TargetWitch => AbilityDisplayDef {
             name: "Target Witch",
             fallback: "Witch",
             icon: AbilityIcon::Standard(img015::ICON_WITCH),
             group: DisplayGroup::Trait,
             formatter: |_,_,_,_,_| "Targets Witch Enemies".into(),
         },
-        AbilityIdentity::TargetEva => AbilityDisplayDef {
+        Identity::TargetEva => AbilityDisplayDef {
             name: "Target EVA",
             fallback: "EVA",
             icon: AbilityIcon::Standard(img015::ICON_EVA),
@@ -285,42 +285,42 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- HEADLINE 1 ---
-        AbilityIdentity::AttackOnly => AbilityDisplayDef {
+        Identity::AttackOnly => AbilityDisplayDef {
             name: "Attack Only",
             fallback: "AtkOnly",
             icon: AbilityIcon::Standard(img015::ICON_ATTACK_ONLY),
             group: DisplayGroup::Headline1,
             formatter: |_, _, target, _, _| format!("Only damages {}", target),
         },
-        AbilityIdentity::StrongAgainst => AbilityDisplayDef {
+        Identity::StrongAgainst => AbilityDisplayDef {
             name: "Strong Against",
             fallback: "Strng",
             icon: AbilityIcon::Standard(img015::ICON_STRONG_AGAINST),
             group: DisplayGroup::Headline1,
             formatter: |_, _, target, _, _| format!("Deals 1.5×~1.8× Damage to and takes 0.5×~0.4× Damage from {}", target),
         },
-        AbilityIdentity::MassiveDamage => AbilityDisplayDef {
+        Identity::MassiveDamage => AbilityDisplayDef {
             name: "Massive Damage",
             fallback: "Massv",
             icon: AbilityIcon::Standard(img015::ICON_MASSIVE_DAMAGE),
             group: DisplayGroup::Headline1,
             formatter: |_, _, target, _, _| format!("Deals 3×~4× Damage to {}", target),
         },
-        AbilityIdentity::InsaneDamage => AbilityDisplayDef {
+        Identity::InsaneDamage => AbilityDisplayDef {
             name: "Insane Damage",
             fallback: "InsDmg",
             icon: AbilityIcon::Standard(img015::ICON_INSANE_DAMAGE),
             group: DisplayGroup::Headline1,
             formatter: |_, _, target, _, _| format!("Deals 5×~6× Damage to {}", target),
         },
-        AbilityIdentity::Resist => AbilityDisplayDef {
+        Identity::Resist => AbilityDisplayDef {
             name: "Resist",
             fallback: "Resist",
             icon: AbilityIcon::Standard(img015::ICON_RESIST),
             group: DisplayGroup::Headline1,
             formatter: |_, _, target, _, _| format!("Takes 1/4×~1/5× Damage from {}", target),
         },
-        AbilityIdentity::InsanelyTough => AbilityDisplayDef {
+        Identity::InsanelyTough => AbilityDisplayDef {
             name: "Insanely Tough",
             fallback: "InsRes",
             icon: AbilityIcon::Standard(img015::ICON_INSANELY_TOUGH),
@@ -329,56 +329,56 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- HEADLINE 2 ---
-        AbilityIdentity::Metal => AbilityDisplayDef {
+        Identity::Metal => AbilityDisplayDef {
             name: "Metal",
             fallback: "Metal",
             icon: AbilityIcon::Standard(img015::ICON_METAL),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, _| "Damage taken is reduced to 1 for Non-Critical attacks".into(),
         },
-        AbilityIdentity::BaseDestroyer => AbilityDisplayDef {
+        Identity::BaseDestroyer => AbilityDisplayDef {
             name: "Base Destroyer",
             fallback: "Base",
             icon: AbilityIcon::Standard(img015::ICON_BASE_DESTROYER),
             group: DisplayGroup::Headline2,
             formatter: |_,_,_,_,_| "Deals 4× Damage to the Enemy Base".into(),
         },
-        AbilityIdentity::DoubleBounty => AbilityDisplayDef {
+        Identity::DoubleBounty => AbilityDisplayDef {
             name: "Double Bounty",
             fallback: "2×$",
             icon: AbilityIcon::Standard(img015::ICON_DOUBLE_BOUNTY),
             group: DisplayGroup::Headline2,
             formatter: |_,_,_,_,_| "Receives 2× Cash from Enemies".into(),
         },
-        AbilityIdentity::ZombieKiller => AbilityDisplayDef {
+        Identity::ZombieKiller => AbilityDisplayDef {
             name: "Zombie Killer",
             fallback: "Zkill",
             icon: AbilityIcon::Standard(img015::ICON_ZOMBIE_KILLER),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, _| "Prevents Zombies from reviving".into(),
         },
-        AbilityIdentity::Soulstrike => AbilityDisplayDef {
+        Identity::Soulstrike => AbilityDisplayDef {
             name: "Soulstrike",
             fallback: "SolStk",
             icon: AbilityIcon::Standard(img015::ICON_SOULSTRIKE),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, _| "Will attack Zombie corpses".into(),
         },
-        AbilityIdentity::ColossusSlayer => AbilityDisplayDef {
+        Identity::ColossusSlayer => AbilityDisplayDef {
             name: "Colossus Slayer",
             fallback: "Colos",
             icon: AbilityIcon::Standard(img015::ICON_COLOSSUS_SLAYER),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, _| "Deals 1.6× Damage to and takes 0.7× Damage from Colossus Enemies".into(),
         },
-        AbilityIdentity::SageSlayer => AbilityDisplayDef {
+        Identity::SageSlayer => AbilityDisplayDef {
             name: "Sage Slayer",
             fallback: "Sage",
             icon: AbilityIcon::Standard(img015::ICON_SAGE_SLAYER),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, param| fmt_sage(param),
         },
-        AbilityIdentity::BehemothSlayer => AbilityDisplayDef {
+        Identity::BehemothSlayer => AbilityDisplayDef {
             name: "Behemoth Slayer",
             fallback: "Behem",
             icon: AbilityIcon::Standard(img015::ICON_BEHEMOTH_SLAYER),
@@ -391,35 +391,35 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 formatted_text
             },
         },
-        AbilityIdentity::WitchKiller => AbilityDisplayDef {
+        Identity::WitchKiller => AbilityDisplayDef {
             name: "Witch Killer",
             fallback: "Witch",
             icon: AbilityIcon::Standard(img015::ICON_WITCH_KILLER),
             group: DisplayGroup::Headline2,
             formatter: |_,_,_,_,_| "Deals 5× Damage to and takes 0.1× Damage from Witches".into(),
         },
-        AbilityIdentity::EvaKiller => AbilityDisplayDef {
+        Identity::EvaKiller => AbilityDisplayDef {
             name: "Eva Killer",
             fallback: "Eva",
             icon: AbilityIcon::Standard(img015::ICON_EVA_KILLER),
             group: DisplayGroup::Headline2,
             formatter: |_,_,_,_,_| "Deals 5× Damage to and takes 0.2× Damage from Eva Angels".into(),
         },
-        AbilityIdentity::WaveBlock => AbilityDisplayDef {
+        Identity::WaveBlock => AbilityDisplayDef {
             name: "Wave Block",
             fallback: "W-Blk",
             icon: AbilityIcon::Standard(img015::ICON_WAVE_BLOCK),
             group: DisplayGroup::Headline2,
             formatter: |_, _, _, _, _| "When hit with a Wave Attack, nullifies its Damage and prevents its advancement".into(),
         },
-        AbilityIdentity::CounterSurge => AbilityDisplayDef {
+        Identity::CounterSurge => AbilityDisplayDef {
             name: "Counter Surge",
             fallback: "C-Srg",
             icon: AbilityIcon::Standard(img015::ICON_COUNTER_SURGE),
             group: DisplayGroup::Headline2,
             formatter: |_,_,_,_,_| "When hit with a Surge Attack, create a Surge of equal Type, Level, and Range".into(),
         },
-        AbilityIdentity::Kamikaze => AbilityDisplayDef {
+        Identity::Kamikaze => AbilityDisplayDef {
             name: "Kamikaze",
             fallback: "Kamik",
             icon: AbilityIcon::Custom(CustomIcon::Kamikaze),
@@ -432,7 +432,7 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 }
             },
         },
-        AbilityIdentity::Stop => AbilityDisplayDef {
+        Identity::Stop => AbilityDisplayDef {
             name: "Stop",
             fallback: "Stop",
             icon: AbilityIcon::Custom(CustomIcon::Stop),
@@ -447,42 +447,42 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- BODY 1 ---
-        AbilityIdentity::MultiHit => AbilityDisplayDef {
+        Identity::MultiHit => AbilityDisplayDef {
             name: "Multi-Hit",
             fallback: "Multi",
             icon: AbilityIcon::Custom(CustomIcon::Multihit),
             group: DisplayGroup::Body1,
             formatter: |_, stats, _, _, _| fmt_multihit(stats),
         },
-        AbilityIdentity::LongDistance => AbilityDisplayDef {
+        Identity::LongDistance => AbilityDisplayDef {
             name: "Long Distance",
             fallback: "LD",
             icon: AbilityIcon::Standard(img015::ICON_LONG_DISTANCE),
             group: DisplayGroup::Body1,
             formatter: |_, stats, _, _, _| fmt_effective_range(stats),
         },
-        AbilityIdentity::OmniStrike => AbilityDisplayDef {
+        Identity::OmniStrike => AbilityDisplayDef {
             name: "Omni Strike",
             fallback: "Omni",
             icon: AbilityIcon::Standard(img015::ICON_OMNI_STRIKE),
             group: DisplayGroup::Body1,
             formatter: |_, stats, _, _, _| fmt_effective_range(stats),
         },
-        AbilityIdentity::Conjure => AbilityDisplayDef {
+        Identity::Conjure => AbilityDisplayDef {
             name: "Conjure",
             fallback: "Spirit",
             icon: AbilityIcon::Standard(img015::ICON_CONJURE),
             group: DisplayGroup::Body1,
             formatter: |_,_,_,_,_| "Conjures a Spirit to the battlefield when tapped\nThis Cat may only be deployed one at a time".into(),
         },
-        AbilityIdentity::MetalKiller => AbilityDisplayDef {
+        Identity::MetalKiller => AbilityDisplayDef {
             name: "Metal Killer",
             fallback: "MetKil",
             icon: AbilityIcon::Standard(img015::ICON_METAL_KILLER),
             group: DisplayGroup::Body1,
             formatter: |percent,_,_,_,_| format!("Reduces Metal enemies current HP by {}% upon hit", percent),
         },
-        AbilityIdentity::WaveAttack => AbilityDisplayDef {
+        Identity::WaveAttack => AbilityDisplayDef {
             name: "Wave Attack",
             fallback: "Wave",
             icon: AbilityIcon::Standard(img015::ICON_WAVE),
@@ -492,7 +492,7 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 format!("{}% Chance to create a Level {} Wave\nWave reaches {} Range", chance, stats.wave_level, maximum_reach)
             },
         },
-        AbilityIdentity::MiniWave => AbilityDisplayDef {
+        Identity::MiniWave => AbilityDisplayDef {
             name: "Mini-Wave",
             fallback: "MiniW",
             icon: AbilityIcon::Standard(img015::ICON_MINI_WAVE),
@@ -502,7 +502,7 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 format!("{}% Chance to create a Level {} Mini-Wave\nMini-Wave reaches {} Range", chance, stats.wave_level, maximum_reach)
             },
         },
-        AbilityIdentity::SurgeAttack => AbilityDisplayDef {
+        Identity::SurgeAttack => AbilityDisplayDef {
             name: "Surge Attack",
             fallback: "Surge",
             icon: AbilityIcon::Standard(img015::ICON_SURGE),
@@ -514,7 +514,7 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 format!("{}% Chance to create a Level {} Surge\n{} Range", chance, stats.surge_level, fmt_range(min_r, max_r))
             },
         },
-        AbilityIdentity::MiniSurge => AbilityDisplayDef {
+        Identity::MiniSurge => AbilityDisplayDef {
             name: "Mini-Surge",
             fallback: "MiniS",
             icon: AbilityIcon::Standard(img015::ICON_MINI_SURGE),
@@ -526,7 +526,7 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 format!("{}% Chance to create a Level {} Mini-Surge\n{} Range", chance, stats.surge_level, fmt_range(min_r, max_r))
             },
         },
-        AbilityIdentity::Explosion => AbilityDisplayDef {
+        Identity::Explosion => AbilityDisplayDef {
             name: "Explosion",
             fallback: "Expl",
             icon: AbilityIcon::Standard(img015::ICON_EXPLOSION),
@@ -538,42 +538,42 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
                 format!("{}% Chance to create an Explosion {} Range", chance, fmt_range(min_r, max_r))
             },
         },
-        AbilityIdentity::SavageBlow => AbilityDisplayDef {
+        Identity::SavageBlow => AbilityDisplayDef {
             name: "Savage Blow",
             fallback: "Savge",
             icon: AbilityIcon::Standard(img015::ICON_SAVAGE_BLOW),
             group: DisplayGroup::Body1,
             formatter: |chance, stats, _, _, _| format!("{}% Chance to Savage Blow\ndealing +{}% Damage", chance, stats.savage_blow_boost),
         },
-        AbilityIdentity::CriticalHit => AbilityDisplayDef {
+        Identity::CriticalHit => AbilityDisplayDef {
             name: "Critical Hit",
             fallback: "Crit",
             icon: AbilityIcon::Standard(img015::ICON_CRITICAL_HIT),
             group: DisplayGroup::Body1,
             formatter: |chance, _, _, _, _| format!("{}% Chance to Critical Hit dealing +100% Damage\nCritcal Hits bypass Metal resistance", chance),
         },
-        AbilityIdentity::Strengthen => AbilityDisplayDef {
+        Identity::Strengthen => AbilityDisplayDef {
             name: "Strengthen",
             fallback: "Str+",
             icon: AbilityIcon::Standard(img015::ICON_STRENGTHEN),
             group: DisplayGroup::Body1,
             formatter: |_, stats, _, _, _| format!("When reduced to or below {}% HP\nDamage dealt increases by +{}%", stats.strengthen_threshold, stats.strengthen_boost),
         },
-        AbilityIdentity::Survive => AbilityDisplayDef {
+        Identity::Survive => AbilityDisplayDef {
             name: "Survive",
             fallback: "Surv",
             icon: AbilityIcon::Standard(img015::ICON_SURVIVE),
             group: DisplayGroup::Body1,
             formatter: |chance, _, _, _, _| format!("{}% Chance to Survive a lethal strike", chance),
         },
-        AbilityIdentity::BarrierBreaker => AbilityDisplayDef {
+        Identity::BarrierBreaker => AbilityDisplayDef {
             name: "Barrier Breaker",
             fallback: "Brkr",
             icon: AbilityIcon::Standard(img015::ICON_BARRIER_BREAKER),
             group: DisplayGroup::Body1,
             formatter: |chance, _, _, _, _| format!("{}% Chance to break enemy Barriers", chance),
         },
-        AbilityIdentity::ShieldPiercer => AbilityDisplayDef {
+        Identity::ShieldPiercer => AbilityDisplayDef {
             name: "Shield Piercer",
             fallback: "Spierc",
             icon: AbilityIcon::Standard(img015::ICON_SHIELD_PIERCER),
@@ -582,56 +582,56 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- BODY 2 ---
-        AbilityIdentity::Dodge => AbilityDisplayDef {
+        Identity::Dodge => AbilityDisplayDef {
             name: "Dodge",
             fallback: "Dodge",
             icon: AbilityIcon::Standard(img015::ICON_DODGE),
             group: DisplayGroup::Body2,
             formatter: |chance, _, target, duration_frames, _| format!("{}% Chance to Dodge {} for {}", chance, target, fmt_time(duration_frames)),
         },
-        AbilityIdentity::Weaken => AbilityDisplayDef {
+        Identity::Weaken => AbilityDisplayDef {
             name: "Weaken",
             fallback: "Weak",
             icon: AbilityIcon::Standard(img015::ICON_WEAKEN),
             group: DisplayGroup::Body2,
             formatter: |chance, stats, target, duration_frames, _| format!("{}% Chance to weaken {}\nto {}% Attack Power for {}", chance, target, stats.weaken_to, fmt_time(duration_frames)),
         },
-        AbilityIdentity::Freeze => AbilityDisplayDef {
+        Identity::Freeze => AbilityDisplayDef {
             name: "Freeze",
             fallback: "Freez",
             icon: AbilityIcon::Standard(img015::ICON_FREEZE),
             group: DisplayGroup::Body2,
             formatter: |chance, _, target, duration_frames, _| format!("{}% Chance to Freeze {} for {}", chance, target, fmt_time(duration_frames)),
         },
-        AbilityIdentity::Slow => AbilityDisplayDef {
+        Identity::Slow => AbilityDisplayDef {
             name: "Slow",
             fallback: "Slow",
             icon: AbilityIcon::Standard(img015::ICON_SLOW),
             group: DisplayGroup::Body2,
             formatter: |chance, _, target, duration_frames, _| format!("{}% Chance to Slow {} for {}", chance, target, fmt_time(duration_frames)),
         },
-        AbilityIdentity::Knockback => AbilityDisplayDef {
+        Identity::Knockback => AbilityDisplayDef {
             name: "Knockback",
             fallback: "KB",
             icon: AbilityIcon::Standard(img015::ICON_KNOCKBACK),
             group: DisplayGroup::Body2,
             formatter: |chance, _, target, _, _| format!("{}% Chance to Knockback {}", chance, target),
         },
-        AbilityIdentity::Curse => AbilityDisplayDef {
+        Identity::Curse => AbilityDisplayDef {
             name: "Curse",
             fallback: "Curse",
             icon: AbilityIcon::Standard(img015::ICON_CURSE),
             group: DisplayGroup::Body2,
             formatter: |chance, _, target, duration_frames, _| format!("{}% Chance to Curse {} for {}", chance, target, fmt_time(duration_frames)),
         },
-        AbilityIdentity::Warp => AbilityDisplayDef {
+        Identity::Warp => AbilityDisplayDef {
             name: "Warp",
             fallback: "Warp",
             icon: AbilityIcon::Standard(img015::ICON_WARP),
             group: DisplayGroup::Body2,
             formatter: |chance, stats, target, duration_frames, _| format!("{}% Chance to Warp {}\n{} Range for {}", chance, target, fmt_compress(stats.warp_distance_minimum, stats.warp_distance_maximum), fmt_time(duration_frames)),
         },
-        AbilityIdentity::Unknown => AbilityDisplayDef {
+        Identity::Unknown => AbilityDisplayDef {
             name: "Unknown",
             fallback: "Unkwn",
             icon: AbilityIcon::Custom(CustomIcon::Unknown),
@@ -640,77 +640,77 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- FOOTER (IMMUNITIES) ---
-        AbilityIdentity::ImmuneWave => AbilityDisplayDef {
+        Identity::ImmuneWave => AbilityDisplayDef {
             name: "Immune Wave",
             fallback: "NoWav",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WAVE),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Wave Attacks".into(),
         },
-        AbilityIdentity::ImmuneSurge => AbilityDisplayDef {
+        Identity::ImmuneSurge => AbilityDisplayDef {
             name: "Immune Surge",
             fallback: "NoSrg",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_SURGE),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Surge Attacks".into(),
         },
-        AbilityIdentity::ImmuneExplosion => AbilityDisplayDef {
+        Identity::ImmuneExplosion => AbilityDisplayDef {
             name: "Immune Explosion",
             fallback: "NoExp",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_EXPLOSION),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Explosions".into(),
         },
-        AbilityIdentity::ImmuneWeaken => AbilityDisplayDef {
+        Identity::ImmuneWeaken => AbilityDisplayDef {
             name: "Immune Weaken",
             fallback: "NoWk",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WEAKEN),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Weaken".into(),
         },
-        AbilityIdentity::ImmuneFreeze => AbilityDisplayDef {
+        Identity::ImmuneFreeze => AbilityDisplayDef {
             name: "Immune Freeze",
             fallback: "NoFrz",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_FREEZE),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Freeze".into(),
         },
-        AbilityIdentity::ImmuneSlow => AbilityDisplayDef {
+        Identity::ImmuneSlow => AbilityDisplayDef {
             name: "Immune Slow",
             fallback: "NoSlw",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_SLOW),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Slow".into(),
         },
-        AbilityIdentity::ImmuneKnockback => AbilityDisplayDef {
+        Identity::ImmuneKnockback => AbilityDisplayDef {
             name: "Immune Knockback",
             fallback: "NoKB",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_KNOCKBACK),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Knockback".into(),
         },
-        AbilityIdentity::ImmuneCurse => AbilityDisplayDef {
+        Identity::ImmuneCurse => AbilityDisplayDef {
             name: "Immune Curse",
             fallback: "NoCur",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_CURSE),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Curse".into(),
         },
-        AbilityIdentity::ImmuneToxic => AbilityDisplayDef {
+        Identity::ImmuneToxic => AbilityDisplayDef {
             name: "Immune Toxic",
             fallback: "NoTox",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_TOXIC),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Toxic".into(),
         },
-        AbilityIdentity::ImmuneWarp => AbilityDisplayDef {
+        Identity::ImmuneWarp => AbilityDisplayDef {
             name: "Immune Warp",
             fallback: "NoWrp",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WARP),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "Immune to Warp".into(),
         },
-        AbilityIdentity::ImmuneBossWave => AbilityDisplayDef {
+        Identity::ImmuneBossWave => AbilityDisplayDef {
             name: "Immune Boss Wave",
             fallback: "NoBos",
             icon: AbilityIcon::Custom(CustomIcon::BossWave),
@@ -719,63 +719,63 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- FOOTER (RESISTANCES) ---
-        AbilityIdentity::ResistWeaken => AbilityDisplayDef {
+        Identity::ResistWeaken => AbilityDisplayDef {
             name: "Resist Weaken",
             fallback: "ReWkn",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WEAKEN),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Weaken ({}%)", percent),
         },
-        AbilityIdentity::ResistFreeze => AbilityDisplayDef {
+        Identity::ResistFreeze => AbilityDisplayDef {
             name: "Resist Freeze",
             fallback: "ReFrz",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_FREEZE),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Freeze ({}%)", percent),
         },
-        AbilityIdentity::ResistSlow => AbilityDisplayDef {
+        Identity::ResistSlow => AbilityDisplayDef {
             name: "Resist Slow",
             fallback: "ReSlw",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_SLOW),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Slow ({}%)", percent),
         },
-        AbilityIdentity::ResistKnockback => AbilityDisplayDef {
+        Identity::ResistKnockback => AbilityDisplayDef {
             name: "Resist Knockback",
             fallback: "ReKB",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_KNOCKBACK),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Knockback ({}%)", percent),
         },
-        AbilityIdentity::ResistWave => AbilityDisplayDef {
+        Identity::ResistWave => AbilityDisplayDef {
             name: "Resist Wave",
             fallback: "ReWav",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WAVE),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Wave ({}%)", percent),
         },
-        AbilityIdentity::ResistWarp => AbilityDisplayDef {
+        Identity::ResistWarp => AbilityDisplayDef {
             name: "Resist Warp",
             fallback: "ReWrp",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WARP),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Warp ({}%)", percent),
         },
-        AbilityIdentity::ResistCurse => AbilityDisplayDef {
+        Identity::ResistCurse => AbilityDisplayDef {
             name: "Resist Curse",
             fallback: "ReCur",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_CURSE),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Curse ({}%)", percent),
         },
-        AbilityIdentity::ResistToxic => AbilityDisplayDef {
+        Identity::ResistToxic => AbilityDisplayDef {
             name: "Resist Toxic",
             fallback: "ReTox",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_TOXIC),
             group: DisplayGroup::Footer,
             formatter: |percent,_,_,_,_| format!("Resist Toxic ({}%)", percent),
         },
-        AbilityIdentity::ResistSurge => AbilityDisplayDef {
+        Identity::ResistSurge => AbilityDisplayDef {
             name: "Resist Surge",
             fallback: "ReSrg",
             icon: AbilityIcon::Standard(img015::ICON_SURGE_RESIST),
@@ -784,49 +784,49 @@ pub fn get_display_def(identity: AbilityIdentity) -> AbilityDisplayDef {
         },
 
         // --- STAT TALENTS ---
-        AbilityIdentity::CostDown => AbilityDisplayDef {
+        Identity::CostDown => AbilityDisplayDef {
             name: "Cost Down",
             fallback: "Cost-",
             icon: AbilityIcon::Standard(img015::ICON_COST_DOWN),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::RecoverSpeedUp => AbilityDisplayDef {
+        Identity::RecoverSpeedUp => AbilityDisplayDef {
             name: "Recover Speed Up",
             fallback: "Rec+",
             icon: AbilityIcon::Standard(img015::ICON_RECOVER_SPEED_UP),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::MoveSpeedUp => AbilityDisplayDef {
+        Identity::MoveSpeedUp => AbilityDisplayDef {
             name: "Move Speed Up",
             fallback: "Spd",
             icon: AbilityIcon::Standard(img015::ICON_MOVE_SPEED),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::AttackBuff => AbilityDisplayDef {
+        Identity::AttackBuff => AbilityDisplayDef {
             name: "Attack Buff",
             fallback: "Atk+",
             icon: AbilityIcon::Standard(img015::ICON_ATTACK_BUFF),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::HealthBuff => AbilityDisplayDef {
+        Identity::HealthBuff => AbilityDisplayDef {
             name: "Health Buff",
             fallback: "HP+",
             icon: AbilityIcon::Standard(img015::ICON_HEALTH_BUFF),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::TbaDown => AbilityDisplayDef {
+        Identity::TbaDown => AbilityDisplayDef {
             name: "TBA Down",
             fallback: "TBA-",
             icon: AbilityIcon::Standard(img015::ICON_TBA_DOWN),
             group: DisplayGroup::Footer,
             formatter: |_,_,_,_,_| "".into(),
         },
-        AbilityIdentity::ImproveKnockbacks => AbilityDisplayDef {
+        Identity::ImproveKnockbacks => AbilityDisplayDef {
             name: "Improve Knockbacks",
             fallback: "KB+",
             icon: AbilityIcon::Standard(img015::ICON_IMPROVE_KNOCKBACK_COUNT),
@@ -964,7 +964,7 @@ pub fn format_cat_stat(name: &str, stats: &Battle, animation_frames: i32) -> Str
 }
 
 pub fn get_fallback_by_icon(target_icon: AbilityIcon) -> &'static str {
-    for pure_definition in CAT_ABILITY_REGISTRY {
+    for pure_definition in REGISTRY {
         let display_definition = get_display_def(pure_definition.identity);
 
         if display_definition.icon == target_icon {

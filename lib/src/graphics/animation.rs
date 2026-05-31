@@ -1,8 +1,8 @@
 use crate::graphics::game::{timeline, transform};
 use crate::graphics::utils::boundary::calculate_animation_bounds;
 use crate::graphics::utils::periodicity::calculate_difference;
+use crate::graphics::data::imgcut::SpriteSheet;
 
-pub use crate::graphics::data::imgcut::SpriteSheet;
 pub use crate::graphics::data::mamodel::Model;
 pub use crate::graphics::data::maanim::Animation as Anim;
 

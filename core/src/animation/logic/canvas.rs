@@ -1,6 +1,6 @@
 use glow::HasContext;
 use std::sync::Arc;
-use nyanko::graphics::animation::{FrameData, SpriteSheet};
+use nyanko::graphics::{SpriteSheet, animation::FrameData};
 
 #[derive(Debug)]
 pub enum CanvasError {

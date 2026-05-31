@@ -1,7 +1,7 @@
 use crate::cat::logic::context::CatRenderContext;
 use crate::cat::registry::{self, AbilityIcon, DisplayGroup};
 use crate::global::game::abilities::{AbilityItem, CustomIcon};
-use nyanko::cat::abilities::{AbilityIdentity, AttrUnit, CAT_ABILITY_REGISTRY, get_talent};
+use nyanko::cat::abilities::{Identity, AttrUnit, REGISTRY, get_talent};
 use nyanko::common::img015;
 
 pub fn collect_ability_data(
@@ -50,7 +50,7 @@ pub fn collect_ability_data(
 
     // --- STANDARD ABILITIES LOOP ---
     // We iterate over the pure math array and ask the registry how to render it.
-    for pure_def in CAT_ABILITY_REGISTRY {
+    for pure_def in REGISTRY {
         let display_def = registry::get_display_def(pure_def.identity);
 
         if display_def.group == DisplayGroup::Hidden { continue; }
@@ -59,7 +59,7 @@ pub fn collect_ability_data(
             if display_def.group == DisplayGroup::Trait || display_def.group == DisplayGroup::Headline1 { continue; }
 
             // Replaced fragile string checks with strictly typed enum matching!
-            if matches!(pure_def.identity, AbilityIdentity::Dodge | AbilityIdentity::ImmuneBossWave | AbilityIdentity::Conjure | AbilityIdentity::Kamikaze) {
+            if matches!(pure_def.identity, Identity::Dodge | Identity::ImmuneBossWave | Identity::Conjure | Identity::Kamikaze) {
                 continue;
             }
         }
@@ -80,9 +80,9 @@ pub fn collect_ability_data(
             };
 
             // Override icons based on pure mathematical flags
-            if pure_def.identity == AbilityIdentity::WaveAttack && ctx.final_stats.mini_wave_flag > 0 {
+            if pure_def.identity == Identity::WaveAttack && ctx.final_stats.mini_wave_flag > 0 {
                 final_icon = Some(img015::ICON_MINI_WAVE);
-            } else if pure_def.identity == AbilityIdentity::SurgeAttack && ctx.final_stats.mini_surge_flag > 0 {
+            } else if pure_def.identity == Identity::SurgeAttack && ctx.final_stats.mini_surge_flag > 0 {
                 final_icon = Some(img015::ICON_MINI_SURGE);
             }
 

@@ -13,7 +13,7 @@ pub enum AttrUnit {
 /// Strict domain identifiers for Abilities.
 /// Exported so the `core` shell can exhaustively match UI logic without ID collisions.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum AbilityIdentity {
+pub enum Identity {
     SingleAttack, AreaAttack, TargetRed, TargetFloat, TargetDark, TargetMetal, TargetAngel,
     TargetAlien, TargetZombie, TargetRelic, TargetAku, TargetTraitless, TargetWitch, TargetEva,
     AttackOnly, StrongAgainst, MassiveDamage, InsaneDamage, Resist, InsanelyTough, Metal,
@@ -31,7 +31,7 @@ pub enum AbilityIdentity {
 
 /// The pure domain definition of a Cat Ability.
 pub struct Ability {
-    pub identity: AbilityIdentity,
+    pub identity: Identity,
     pub talent_id: u8,
     pub icon_id: Option<usize>,
     pub name: &'static str,
@@ -41,22 +41,17 @@ pub struct Ability {
     pub apply_talent: Option<fn(&mut Battle, val1: i32, val2: i32, group: &TalentGroup)>,
 }
 
-// --- DOMAIN HELPER FUNCTIONS ---
-
 fn get_dur_val(v1: i32, v2: i32) -> i32 {
     if v1 != 0 { v1 } else { v2 }
 }
 
 pub fn get_talent(id: u8) -> Option<&'static Ability> {
-    CAT_ABILITY_REGISTRY.iter().find(|ability| ability.talent_id == id)
+    REGISTRY.iter().find(|ability| ability.talent_id == id)
 }
 
-// --- ENGINE ABILITY REGISTRY ---
-
-pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
-    // --- SPECIAL HIDDEN ---
+pub static REGISTRY: &[Ability] = &[
     Ability {
-        identity: AbilityIdentity::SingleAttack,
+        identity: Identity::SingleAttack,
         talent_id: 0,
         icon_id: Some(img015::ICON_SINGLE_ATTACK),
         name: "",
@@ -68,7 +63,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::AreaAttack,
+        identity: Identity::AreaAttack,
         talent_id: 0,
         icon_id: Some(img015::ICON_AREA_ATTACK),
         name: "",
@@ -82,7 +77,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- TRAITS ---
     Ability {
-        identity: AbilityIdentity::TargetRed,
+        identity: Identity::TargetRed,
         talent_id: 33,
         icon_id: Some(img015::ICON_TRAIT_RED),
         name: "",
@@ -94,7 +89,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_red = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetFloat,
+        identity: Identity::TargetFloat,
         talent_id: 34,
         icon_id: Some(img015::ICON_TRAIT_FLOATING),
         name: "",
@@ -106,7 +101,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_floating = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetDark,
+        identity: Identity::TargetDark,
         talent_id: 35,
         icon_id: Some(img015::ICON_TRAIT_BLACK),
         name: "",
@@ -118,7 +113,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_dark = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetMetal,
+        identity: Identity::TargetMetal,
         talent_id: 36,
         icon_id: Some(img015::ICON_TRAIT_METAL),
         name: "",
@@ -130,7 +125,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_metal = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetAngel,
+        identity: Identity::TargetAngel,
         talent_id: 37,
         icon_id: Some(img015::ICON_TRAIT_ANGEL),
         name: "",
@@ -142,7 +137,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_angel = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetAlien,
+        identity: Identity::TargetAlien,
         talent_id: 38,
         icon_id: Some(img015::ICON_TRAIT_ALIEN),
         name: "",
@@ -154,7 +149,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_alien = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetZombie,
+        identity: Identity::TargetZombie,
         talent_id: 39,
         icon_id: Some(img015::ICON_TRAIT_ZOMBIE),
         name: "",
@@ -166,7 +161,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_zombie = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetRelic,
+        identity: Identity::TargetRelic,
         talent_id: 40,
         icon_id: Some(img015::ICON_TRAIT_RELIC),
         name: "",
@@ -178,7 +173,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_relic = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetAku,
+        identity: Identity::TargetAku,
         talent_id: 57,
         icon_id: Some(img015::ICON_TRAIT_AKU),
         name: "",
@@ -190,7 +185,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_aku = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetTraitless,
+        identity: Identity::TargetTraitless,
         talent_id: 41,
         icon_id: Some(img015::ICON_TRAIT_TRAITLESS),
         name: "",
@@ -202,7 +197,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_traitless = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetWitch,
+        identity: Identity::TargetWitch,
         talent_id: 0,
         icon_id: Some(img015::ICON_WITCH),
         name: "",
@@ -214,7 +209,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.target_witch = 1),
     },
     Ability {
-        identity: AbilityIdentity::TargetEva,
+        identity: Identity::TargetEva,
         talent_id: 0,
         icon_id: Some(img015::ICON_EVA),
         name: "",
@@ -228,7 +223,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- DAMAGE / DEFENSE MODIFIERS ---
     Ability {
-        identity: AbilityIdentity::AttackOnly,
+        identity: Identity::AttackOnly,
         talent_id: 4,
         icon_id: Some(img015::ICON_ATTACK_ONLY),
         name: "",
@@ -240,7 +235,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.attack_only = 1),
     },
     Ability {
-        identity: AbilityIdentity::StrongAgainst,
+        identity: Identity::StrongAgainst,
         talent_id: 5,
         icon_id: Some(img015::ICON_STRONG_AGAINST),
         name: "",
@@ -252,7 +247,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.strong_against = 1),
     },
     Ability {
-        identity: AbilityIdentity::MassiveDamage,
+        identity: Identity::MassiveDamage,
         talent_id: 7,
         icon_id: Some(img015::ICON_MASSIVE_DAMAGE),
         name: "",
@@ -264,7 +259,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.massive_damage = 1),
     },
     Ability {
-        identity: AbilityIdentity::InsaneDamage,
+        identity: Identity::InsaneDamage,
         talent_id: 7,
         icon_id: Some(img015::ICON_INSANE_DAMAGE),
         name: "",
@@ -276,7 +271,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::Resist,
+        identity: Identity::Resist,
         talent_id: 6,
         icon_id: Some(img015::ICON_RESIST),
         name: "",
@@ -288,7 +283,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.resist = 1),
     },
     Ability {
-        identity: AbilityIdentity::InsanelyTough,
+        identity: Identity::InsanelyTough,
         talent_id: 6,
         icon_id: Some(img015::ICON_INSANELY_TOUGH),
         name: "",
@@ -300,7 +295,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::Metal,
+        identity: Identity::Metal,
         talent_id: 43,
         icon_id: Some(img015::ICON_METAL),
         name: "",
@@ -312,7 +307,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.metal = 1),
     },
     Ability {
-        identity: AbilityIdentity::BaseDestroyer,
+        identity: Identity::BaseDestroyer,
         talent_id: 12,
         icon_id: Some(img015::ICON_BASE_DESTROYER),
         name: "",
@@ -324,7 +319,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.base_destroyer = 1),
     },
     Ability {
-        identity: AbilityIdentity::DoubleBounty,
+        identity: Identity::DoubleBounty,
         talent_id: 16,
         icon_id: Some(img015::ICON_DOUBLE_BOUNTY),
         name: "",
@@ -336,7 +331,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.double_bounty = 1),
     },
     Ability {
-        identity: AbilityIdentity::ZombieKiller,
+        identity: Identity::ZombieKiller,
         talent_id: 14,
         icon_id: Some(img015::ICON_ZOMBIE_KILLER),
         name: "",
@@ -348,7 +343,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.zombie_killer = 1),
     },
     Ability {
-        identity: AbilityIdentity::Soulstrike,
+        identity: Identity::Soulstrike,
         talent_id: 59,
         icon_id: Some(img015::ICON_SOULSTRIKE),
         name: "",
@@ -360,7 +355,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.soulstrike = 2),
     },
     Ability {
-        identity: AbilityIdentity::ColossusSlayer,
+        identity: Identity::ColossusSlayer,
         talent_id: 63,
         icon_id: Some(img015::ICON_COLOSSUS_SLAYER),
         name: "",
@@ -372,7 +367,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.colossus_slayer = 1),
     },
     Ability {
-        identity: AbilityIdentity::SageSlayer,
+        identity: Identity::SageSlayer,
         talent_id: 66,
         icon_id: Some(img015::ICON_SAGE_SLAYER),
         name: "",
@@ -384,7 +379,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.sage_slayer = 1),
     },
     Ability {
-        identity: AbilityIdentity::BehemothSlayer,
+        identity: Identity::BehemothSlayer,
         talent_id: 64,
         icon_id: Some(img015::ICON_BEHEMOTH_SLAYER),
         name: "",
@@ -415,7 +410,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::WitchKiller,
+        identity: Identity::WitchKiller,
         talent_id: 0,
         icon_id: Some(img015::ICON_WITCH_KILLER),
         name: "",
@@ -427,7 +422,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.witch_killer = 1),
     },
     Ability {
-        identity: AbilityIdentity::EvaKiller,
+        identity: Identity::EvaKiller,
         talent_id: 0,
         icon_id: Some(img015::ICON_EVA_KILLER),
         name: "",
@@ -439,7 +434,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.eva_killer = 1),
     },
     Ability {
-        identity: AbilityIdentity::WaveBlock,
+        identity: Identity::WaveBlock,
         talent_id: 0,
         icon_id: Some(img015::ICON_WAVE_BLOCK),
         name: "",
@@ -451,7 +446,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, _, _, _| stats.wave_block = 1),
     },
     Ability {
-        identity: AbilityIdentity::CounterSurge,
+        identity: Identity::CounterSurge,
         talent_id: 68,
         icon_id: Some(img015::ICON_COUNTER_SURGE),
         name: "",
@@ -463,7 +458,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.counter_surge = 1),
     },
     Ability {
-        identity: AbilityIdentity::Kamikaze,
+        identity: Identity::Kamikaze,
         talent_id: 0,
         icon_id: None,
         name: "",
@@ -477,7 +472,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::Stop,
+        identity: Identity::Stop,
         talent_id: 0,
         icon_id: None,
         name: "",
@@ -493,7 +488,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- ATTACK MECHANICS ---
     Ability {
-        identity: AbilityIdentity::MultiHit,
+        identity: Identity::MultiHit,
         talent_id: 0,
         icon_id: None,
         name: "",
@@ -505,7 +500,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::LongDistance,
+        identity: Identity::LongDistance,
         talent_id: 0,
         icon_id: Some(img015::ICON_LONG_DISTANCE),
         name: "",
@@ -525,7 +520,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::OmniStrike,
+        identity: Identity::OmniStrike,
         talent_id: 0,
         icon_id: Some(img015::ICON_OMNI_STRIKE),
         name: "",
@@ -541,7 +536,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::Conjure,
+        identity: Identity::Conjure,
         talent_id: 0,
         icon_id: Some(img015::ICON_CONJURE),
         name: "",
@@ -553,7 +548,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::MetalKiller,
+        identity: Identity::MetalKiller,
         talent_id: 0,
         icon_id: Some(img015::ICON_METAL_KILLER),
         name: "",
@@ -565,7 +560,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, percent, _, _| stats.metal_killer_percent = percent),
     },
     Ability {
-        identity: AbilityIdentity::WaveAttack,
+        identity: Identity::WaveAttack,
         talent_id: 17,
         icon_id: Some(img015::ICON_WAVE),
         name: "",
@@ -587,7 +582,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, level, _| { stats.wave_chance += chance; stats.wave_level = level; }),
     },
     Ability {
-        identity: AbilityIdentity::MiniWave,
+        identity: Identity::MiniWave,
         talent_id: 62,
         icon_id: Some(img015::ICON_MINI_WAVE),
         name: "",
@@ -609,7 +604,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, level, _| { stats.mini_wave_flag = 1; stats.wave_chance += chance; stats.wave_level = level; }),
     },
     Ability {
-        identity: AbilityIdentity::SurgeAttack,
+        identity: Identity::SurgeAttack,
         talent_id: 56,
         icon_id: Some(img015::ICON_SURGE),
         name: "",
@@ -638,7 +633,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::MiniSurge,
+        identity: Identity::MiniSurge,
         talent_id: 65,
         icon_id: Some(img015::ICON_MINI_SURGE),
         name: "",
@@ -667,7 +662,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Explosion,
+        identity: Identity::Explosion,
         talent_id: 67,
         icon_id: Some(img015::ICON_EXPLOSION),
         name: "",
@@ -694,7 +689,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::SavageBlow,
+        identity: Identity::SavageBlow,
         talent_id: 50,
         icon_id: Some(img015::ICON_SAVAGE_BLOW),
         name: "",
@@ -706,7 +701,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, boost, _| { stats.savage_blow_chance += chance; if boost > 0 { stats.savage_blow_boost = boost; } }),
     },
     Ability {
-        identity: AbilityIdentity::CriticalHit,
+        identity: Identity::CriticalHit,
         talent_id: 13,
         icon_id: Some(img015::ICON_CRITICAL_HIT),
         name: "",
@@ -720,7 +715,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- STATE MODIFIERS ---
     Ability {
-        identity: AbilityIdentity::Strengthen,
+        identity: Identity::Strengthen,
         talent_id: 10,
         icon_id: Some(img015::ICON_STRENGTHEN),
         name: "",
@@ -739,7 +734,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Survive,
+        identity: Identity::Survive,
         talent_id: 11,
         icon_id: Some(img015::ICON_SURVIVE),
         name: "",
@@ -751,7 +746,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, _, _| stats.survive += chance),
     },
     Ability {
-        identity: AbilityIdentity::BarrierBreaker,
+        identity: Identity::BarrierBreaker,
         talent_id: 15,
         icon_id: Some(img015::ICON_BARRIER_BREAKER),
         name: "",
@@ -763,7 +758,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, _, _| stats.barrier_breaker_chance += chance),
     },
     Ability {
-        identity: AbilityIdentity::ShieldPiercer,
+        identity: Identity::ShieldPiercer,
         talent_id: 58,
         icon_id: Some(img015::ICON_SHIELD_PIERCER),
         name: "",
@@ -775,7 +770,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, _, _| stats.shield_pierce_chance += chance),
     },
     Ability {
-        identity: AbilityIdentity::Dodge,
+        identity: Identity::Dodge,
         talent_id: 51,
         icon_id: Some(img015::ICON_DODGE),
         name: "",
@@ -787,7 +782,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, duration, _| { stats.dodge_chance += chance; stats.dodge_duration += duration; }),
     },
     Ability {
-        identity: AbilityIdentity::Weaken,
+        identity: Identity::Weaken,
         talent_id: 1,
         icon_id: Some(img015::ICON_WEAKEN),
         name: "",
@@ -804,7 +799,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Freeze,
+        identity: Identity::Freeze,
         talent_id: 2,
         icon_id: Some(img015::ICON_FREEZE),
         name: "",
@@ -820,7 +815,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Slow,
+        identity: Identity::Slow,
         talent_id: 3,
         icon_id: Some(img015::ICON_SLOW),
         name: "",
@@ -836,7 +831,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Knockback,
+        identity: Identity::Knockback,
         talent_id: 8,
         icon_id: Some(img015::ICON_KNOCKBACK),
         name: "",
@@ -848,7 +843,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, chance, _, _| stats.knockback_chance += chance),
     },
     Ability {
-        identity: AbilityIdentity::Curse,
+        identity: Identity::Curse,
         talent_id: 60,
         icon_id: Some(img015::ICON_CURSE),
         name: "",
@@ -864,7 +859,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::Warp,
+        identity: Identity::Warp,
         talent_id: 9,
         icon_id: Some(img015::ICON_WARP),
         name: "",
@@ -878,7 +873,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: None,
     },
     Ability {
-        identity: AbilityIdentity::Unknown,
+        identity: Identity::Unknown,
         talent_id: 0,
         icon_id: None,
         name: "",
@@ -892,7 +887,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- IMMUNITIES ---
     Ability {
-        identity: AbilityIdentity::ImmuneWave,
+        identity: Identity::ImmuneWave,
         talent_id: 48,
         icon_id: Some(img015::ICON_IMMUNE_WAVE),
         name: "",
@@ -904,7 +899,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.wave_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneSurge,
+        identity: Identity::ImmuneSurge,
         talent_id: 55,
         icon_id: Some(img015::ICON_IMMUNE_SURGE),
         name: "",
@@ -916,7 +911,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.surge_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneExplosion,
+        identity: Identity::ImmuneExplosion,
         talent_id: 69,
         icon_id: Some(img015::ICON_IMMUNE_EXPLOSION),
         name: "",
@@ -928,7 +923,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.explosion_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneWeaken,
+        identity: Identity::ImmuneWeaken,
         talent_id: 44,
         icon_id: Some(img015::ICON_IMMUNE_WEAKEN),
         name: "",
@@ -940,7 +935,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.weaken_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneFreeze,
+        identity: Identity::ImmuneFreeze,
         talent_id: 45,
         icon_id: Some(img015::ICON_IMMUNE_FREEZE),
         name: "",
@@ -952,7 +947,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.freeze_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneSlow,
+        identity: Identity::ImmuneSlow,
         talent_id: 46,
         icon_id: Some(img015::ICON_IMMUNE_SLOW),
         name: "",
@@ -964,7 +959,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.slow_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneKnockback,
+        identity: Identity::ImmuneKnockback,
         talent_id: 47,
         icon_id: Some(img015::ICON_IMMUNE_KNOCKBACK),
         name: "",
@@ -976,7 +971,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.knockback_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneCurse,
+        identity: Identity::ImmuneCurse,
         talent_id: 29,
         icon_id: Some(img015::ICON_IMMUNE_CURSE),
         name: "",
@@ -988,7 +983,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.curse_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneToxic,
+        identity: Identity::ImmuneToxic,
         talent_id: 53,
         icon_id: Some(img015::ICON_IMMUNE_TOXIC),
         name: "",
@@ -1000,7 +995,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.toxic_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneWarp,
+        identity: Identity::ImmuneWarp,
         talent_id: 49,
         icon_id: Some(img015::ICON_IMMUNE_WARP),
         name: "",
@@ -1012,7 +1007,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats,_,_,_| stats.warp_immune = 1),
     },
     Ability {
-        identity: AbilityIdentity::ImmuneBossWave,
+        identity: Identity::ImmuneBossWave,
         talent_id: 0,
         icon_id: None,
         name: "",
@@ -1026,7 +1021,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- RESISTANCES ---
     Ability {
-        identity: AbilityIdentity::ResistWeaken,
+        identity: Identity::ResistWeaken,
         talent_id: 18,
         icon_id: Some(img015::ICON_RESIST_WEAKEN),
         name: "",
@@ -1036,7 +1031,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistFreeze,
+        identity: Identity::ResistFreeze,
         talent_id: 19,
         icon_id: Some(img015::ICON_RESIST_FREEZE),
         name: "",
@@ -1046,7 +1041,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistSlow,
+        identity: Identity::ResistSlow,
         talent_id: 20,
         icon_id: Some(img015::ICON_RESIST_SLOW),
         name: "",
@@ -1056,7 +1051,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistKnockback,
+        identity: Identity::ResistKnockback,
         talent_id: 21,
         icon_id: Some(img015::ICON_RESIST_KNOCKBACK),
         name: "",
@@ -1066,7 +1061,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistWave,
+        identity: Identity::ResistWave,
         talent_id: 22,
         icon_id: Some(img015::ICON_RESIST_WAVE),
         name: "",
@@ -1076,7 +1071,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistWarp,
+        identity: Identity::ResistWarp,
         talent_id: 24,
         icon_id: Some(img015::ICON_RESIST_WARP),
         name: "",
@@ -1086,7 +1081,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistCurse,
+        identity: Identity::ResistCurse,
         talent_id: 30,
         icon_id: Some(img015::ICON_RESIST_CURSE),
         name: "",
@@ -1096,7 +1091,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistToxic,
+        identity: Identity::ResistToxic,
         talent_id: 52,
         icon_id: Some(img015::ICON_RESIST_TOXIC),
         name: "",
@@ -1106,7 +1101,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|_,_,_,_| {}),
     },
     Ability {
-        identity: AbilityIdentity::ResistSurge,
+        identity: Identity::ResistSurge,
         talent_id: 54,
         icon_id: Some(img015::ICON_SURGE_RESIST),
         name: "",
@@ -1118,7 +1113,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
 
     // --- STAT TALENTS ---
     Ability {
-        identity: AbilityIdentity::CostDown,
+        identity: Identity::CostDown,
         talent_id: 25,
         icon_id: Some(img015::ICON_COST_DOWN),
         name: "",
@@ -1128,7 +1123,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, reduction, _, _| stats.eoc1_cost = stats.eoc1_cost.saturating_sub(reduction)),
     },
     Ability {
-        identity: AbilityIdentity::RecoverSpeedUp,
+        identity: Identity::RecoverSpeedUp,
         talent_id: 26,
         icon_id: Some(img015::ICON_RECOVER_SPEED_UP),
         name: "",
@@ -1138,7 +1133,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, frames, _, _| stats.cooldown = stats.cooldown.saturating_sub(frames)),
     },
     Ability {
-        identity: AbilityIdentity::MoveSpeedUp,
+        identity: Identity::MoveSpeedUp,
         talent_id: 27,
         icon_id: Some(img015::ICON_MOVE_SPEED),
         name: "",
@@ -1148,7 +1143,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         apply_talent: Some(|stats, speed, _, _| stats.speed += speed),
     },
     Ability {
-        identity: AbilityIdentity::AttackBuff,
+        identity: Identity::AttackBuff,
         talent_id: 31,
         icon_id: Some(img015::ICON_ATTACK_BUFF),
         name: "",
@@ -1163,7 +1158,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::HealthBuff,
+        identity: Identity::HealthBuff,
         talent_id: 32,
         icon_id: Some(img015::ICON_HEALTH_BUFF),
         name: "",
@@ -1176,7 +1171,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::TbaDown,
+        identity: Identity::TbaDown,
         talent_id: 61,
         icon_id: Some(img015::ICON_TBA_DOWN),
         name: "",
@@ -1189,7 +1184,7 @@ pub static CAT_ABILITY_REGISTRY: &[Ability] = &[
         }),
     },
     Ability {
-        identity: AbilityIdentity::ImproveKnockbacks,
+        identity: Identity::ImproveKnockbacks,
         talent_id: 28,
         icon_id: Some(img015::ICON_IMPROVE_KNOCKBACK_COUNT),
         name: "",

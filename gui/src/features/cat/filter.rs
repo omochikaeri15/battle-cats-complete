@@ -7,7 +7,7 @@ use crate::global::shared::DragGuard;
 use core::cat::registry::{DisplayGroup, AbilityIcon};
 use core::settings::logic::Settings;
 
-use nyanko::cat::abilities::CAT_ABILITY_REGISTRY;
+use nyanko::cat::abilities::REGISTRY;
 
 pub use core::cat::logic::filter::{CatFilterState, MatchMode, TalentFilterMode};
 use core::cat::logic::filter::ATTACK_TYPE_ICONS;
@@ -203,7 +203,7 @@ pub fn show_popup(
                 ui.add_space(5.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
-                    for def in CAT_ABILITY_REGISTRY.iter() {
+                    for def in REGISTRY.iter() {
                         let display_def = core::cat::registry::get_display_def(def.identity);
                         if display_def.group == DisplayGroup::Trait {
                             render_filter_icon(ui, &display_def.icon, &mut state.active_icons, sheets, assets);
@@ -236,7 +236,7 @@ pub fn show_popup(
                 let check_talents = state.talent_mode != TalentFilterMode::Ignore || state.ultra_talent_mode != TalentFilterMode::Ignore;
                 if check_talents {
                     let mut talent_icons = Vec::new();
-                    for def in CAT_ABILITY_REGISTRY.iter() {
+                    for def in REGISTRY.iter() {
                         let display_def = core::cat::registry::get_display_def(def.identity);
                         if display_def.group == DisplayGroup::Trait { continue; }
                         if rendered_icons.contains(&display_def.icon) { continue; }
@@ -298,7 +298,7 @@ fn render_display_group(
 ) {
     let mut icons_in_group = Vec::new();
 
-    for def in CAT_ABILITY_REGISTRY.iter() {
+    for def in REGISTRY.iter() {
         let display_def = core::cat::registry::get_display_def(def.identity);
         if display_def.group != target_group { continue; }
         if display_def.group == DisplayGroup::Trait { continue; }
@@ -361,7 +361,7 @@ fn render_filter_icon_row(
     let is_active = state.active_icons.contains(icon);
     let name = core::cat::logic::filter::get_icon_name(icon);
 
-    let ability_def = CAT_ABILITY_REGISTRY.iter().find(|d| core::cat::registry::get_display_def(d.identity).icon == *icon);
+    let ability_def = REGISTRY.iter().find(|d| core::cat::registry::get_display_def(d.identity).icon == *icon);
     let schema = ability_def.map(|d| d.schema).unwrap_or(&[]);
     let has_adv = !schema.is_empty();
 
