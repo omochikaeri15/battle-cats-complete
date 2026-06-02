@@ -1263,12 +1263,14 @@ dependencies = [
  "rayon",
  "regex",
  "reqwest",
+ "resand",
  "rsa",
  "rustc-hash 1.1.0",
  "serde",
  "serde_json",
  "sha2",
  "tar",
+ "thiserror 1.0.69",
  "webp-animation",
  "zip",
  "zstd",
@@ -5174,6 +5176,12 @@ dependencies = [
  "web-sys",
  "webpki-roots",
 ]
+
+[[package]]
+name = "resand"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "150c23bed01a0bea903b79ecbecf412a38331525f925124d13f9750f55ad7f1d"
 
 [[package]]
 name = "rfd"

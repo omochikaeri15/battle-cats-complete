@@ -1,11 +1,10 @@
 use eframe::egui;
-use core::mods::logic::state::{ExportType, PatchMode};
+use core::mods::logic::state::ExportType;
 use crate::features::mods::state::ModListState;
 use core::global::region::Region;
 use core::settings::logic::Settings;
 use core::mods::logic::metadata;
-use core::addons::toolpaths::{self, Presence};
-use core::mods::export::{patch, create, update, pack};
+use core::mods::export::{patch, apk, pack};
 
 pub fn show(context: &egui::Context, state: &mut ModListState, settings: &Settings) {
     let mut is_open = state.data.export.is_open;
@@ -19,10 +18,7 @@ pub fn show(context: &egui::Context, state: &mut ModListState, settings: &Settin
     if (!was_open && is_open) || (is_open && last_viewed != current_mod) {
         context.data_mut(|data_map| data_map.insert_temp(tracking_mod_id, current_mod.clone()));
 
-        if state.data.export.patch_mode != PatchMode::Create {
-            state.data.export.app_title.clear();
-            state.data.export.package_suffix.clear();
-        } else if let Some(mod_folder) = &state.data.selected_mod {
+        if let Some(mod_folder) = &state.data.selected_mod {
             let metadata = metadata::ModMetadata::load(&std::path::Path::new("mods").join(mod_folder));
             state.data.export.app_title = metadata.title;
             state.data.export.package_suffix = metadata.package;
@@ -119,111 +115,20 @@ pub fn show(context: &egui::Context, state: &mut ModListState, settings: &Settin
 }
 
 fn show_apk_view(ui_container: &mut egui::Ui, state: &mut ModListState, settings: &Settings) {
-    let apktool_present = toolpaths::apktool_status() == Presence::Installed;
-
-    if !apktool_present && state.data.export.patch_mode == PatchMode::Create {
-        state.data.export.patch_mode = PatchMode::Update;
-
-        let is_xapk = state.data.export.selected_apk.as_ref()
-            .and_then(|path| path.extension())
-            .and_then(|extension| extension.to_str()) == Some("xapk");
-
-        if is_xapk {
-            state.data.export.selected_apk = None;
-        }
-    }
-
-    if state.data.export.patch_mode == PatchMode::Create && !apktool_present {
-        ui_container.label(egui::RichText::new("Apktool Add-On Missing: Download through Settings > Add-Ons > Apktool")
-            .color(egui::Color32::from_rgb(255, 165, 0)));
-    } else {
-        ui_container.label("Update or create modded APK");
-    }
-
+    ui_container.label("Patch and export modded APK");
     ui_container.add_space(5.0);
 
     ui_container.add_enabled_ui(!state.data.export.is_busy, |enabled_ui| {
         enabled_ui.horizontal(|ui_row| {
-            ui_row.label("Patch:");
-            let previous_mode = state.data.export.patch_mode.clone();
-
-            egui::ComboBox::from_id_salt("patch_mode_combo")
-                .selected_text(match state.data.export.patch_mode {
-                    PatchMode::Update => "Update",
-                    PatchMode::Create => "Create",
-                })
-                .show_ui(ui_row, |combo_ui| {
-                    combo_ui.selectable_value(&mut state.data.export.patch_mode, PatchMode::Update, "Update");
-                    combo_ui.add_enabled_ui(apktool_present, |apktool_ui| {
-                        let result = apktool_ui.selectable_value(&mut state.data.export.patch_mode, PatchMode::Create, "Create");
-                        if !apktool_present {
-                            result.on_disabled_hover_text("Requires Apktool Add-On\nDownload through Settings > Add-Ons > Apktool");
-                        }
-                    });
-                });
-
-            if previous_mode != state.data.export.patch_mode {
-                match state.data.export.patch_mode {
-                    PatchMode::Update => {
-                        let is_xapk = state.data.export.selected_apk.as_ref()
-                            .and_then(|path| path.extension())
-                            .and_then(|extension| extension.to_str()) == Some("xapk");
-
-                        if is_xapk {
-                            state.data.export.selected_apk = None;
-                        }
-
-                        state.data.export.app_title.clear();
-                        state.data.export.package_suffix.clear();
-                    }
-                    PatchMode::Create => {
-                        if let Some(mod_folder) = &state.data.selected_mod {
-                            let metadata = metadata::ModMetadata::load(&std::path::Path::new("mods").join(mod_folder));
-                            state.data.export.app_title = metadata.title;
-                            state.data.export.package_suffix = metadata.package;
-                        }
-                    }
-                }
-            }
-        });
-
-        enabled_ui.add_space(4.0);
-
-        let is_create_mode = state.data.export.patch_mode == PatchMode::Create;
-        let deep_patch_allowed = is_create_mode && apktool_present;
-
-        enabled_ui.horizontal(|ui_row| {
-            let label = if deep_patch_allowed { egui::RichText::new("Title:") } else { egui::RichText::new("Title:").weak() };
-            ui_row.label(label);
-
-            let title_field = ui_row.add_enabled(
-                deep_patch_allowed,
-                egui::TextEdit::singleline(&mut state.data.export.app_title).desired_width(120.0)
-            );
-
-            if !is_create_mode {
-                title_field.on_disabled_hover_text("Only available with Patch option \"Create\"");
-            } else if !apktool_present {
-                title_field.on_disabled_hover_text("Requires Apktool Add-On\nDownload through Settings > Add-Ons > Apktool");
-            }
+            ui_row.label("Title:");
+            ui_row.add(egui::TextEdit::singleline(&mut state.data.export.app_title).desired_width(120.0));
         });
 
         enabled_ui.add_space(4.0);
 
         enabled_ui.horizontal(|ui_row| {
-            let label = if deep_patch_allowed { egui::RichText::new("Package:") } else { egui::RichText::new("Package:").weak() };
-            ui_row.label(label);
-
-            let package_field = ui_row.add_enabled(
-                deep_patch_allowed,
-                egui::TextEdit::singleline(&mut state.data.export.package_suffix).desired_width(40.0)
-            );
-
-            if !is_create_mode {
-                package_field.on_disabled_hover_text("Only available with Patch option \"Create\"");
-            } else if !apktool_present {
-                package_field.on_disabled_hover_text("Requires Apktool Add-On\nDownload through Settings > Add-Ons > Apktool");
-            }
+            ui_row.label("Package:");
+            ui_row.add(egui::TextEdit::singleline(&mut state.data.export.package_suffix).desired_width(40.0));
         });
 
         enabled_ui.add_space(4.0);
@@ -243,14 +148,9 @@ fn show_apk_view(ui_container: &mut egui::Ui, state: &mut ModListState, settings
         enabled_ui.add_space(8.0);
 
         enabled_ui.horizontal(|ui_row| {
-            let button_text = if is_create_mode { "Select (X)APK" } else { "Select APK" };
-            if ui_row.button(button_text).clicked() {
+            if ui_row.button("Select (X)APK").clicked() {
                 let mut file_dialog = rfd::FileDialog::new();
-                if is_create_mode {
-                    file_dialog = file_dialog.add_filter("Android App", &["apk", "xapk"]);
-                } else {
-                    file_dialog = file_dialog.add_filter("APK", &["apk"]);
-                }
+                file_dialog = file_dialog.add_filter("Android App", &["apk", "xapk", "apkm", "apks"]);
 
                 if let Some(selected_path) = file_dialog.pick_file() {
                     state.data.export.selected_apk = Some(selected_path);
@@ -268,14 +168,9 @@ fn show_apk_view(ui_container: &mut egui::Ui, state: &mut ModListState, settings
     ui_container.add_space(8.0);
 
     let is_ready = state.data.export.selected_apk.is_some() && state.data.selected_mod.is_some();
-    let can_apply = !state.data.export.is_busy && is_ready && !(state.data.export.patch_mode == PatchMode::Create && !apktool_present);
 
-    if ui_container.add_enabled(can_apply, egui::Button::new("Apply Mod")).clicked() {
-        if state.data.export.patch_mode == PatchMode::Create {
-            create::start_apk_export(&mut state.data);
-        } else {
-            update::start_fast_track_export(&mut state.data, settings);
-        }
+    if ui_container.add_enabled(!state.data.export.is_busy && is_ready, egui::Button::new("Apply Mod")).clicked() {
+        apk::start_export(&mut state.data, settings);
     }
 }
 
