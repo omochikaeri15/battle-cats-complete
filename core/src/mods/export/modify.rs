@@ -72,7 +72,30 @@ impl ApkEditor {
         parts.push(&new_tail);
         let new_package_name = parts.join(".");
 
+        // Change the core package ID
         package_attr.write_string(new_package_name.as_str().into(), &mut self.manifest.string_pool);
+
+        // Safely find-and-replace the package name in Providers and Permissions to prevent Android install conflicts!
+        let elements_to_check = vec![
+            (vec!["manifest", "permission"], "name"),
+            (vec!["manifest", "uses-permission"], "name"),
+            (vec!["manifest", "application", "provider"], "authorities"),
+        ];
+
+        for (path, attr_name) in elements_to_check {
+            let elements = self.manifest.root.get_elements_mut(&path, &self.manifest.string_pool);
+            for elem in elements {
+                if let Some(attr) = elem.get_attribute_mut(attr_name, &self.manifest.string_pool) {
+                    if let ResValueType::String(ref s) = attr.typed_value.data {
+                        let val = s.resolve(&mut self.manifest.string_pool).unwrap_or_default().to_string();
+                        if val.contains(&original_package) {
+                            let new_val = val.replace(&original_package, &new_package_name);
+                            attr.write_string(new_val.into(), &mut self.manifest.string_pool);
+                        }
+                    }
+                }
+            }
+        }
 
         if let Some(app_elem) = self.manifest.root.get_element_mut(&["manifest", "application"], &self.manifest.string_pool) {
             app_elem.insert_attribute(
@@ -253,7 +276,7 @@ pub fn inject_and_build_apk(
 
                 for (folder, size) in target_resolutions {
                     let res_folder = format!("res/{}", folder);
-
+                    
                     if !existing_res_folders.contains(&res_folder) {
                         continue;
                     }

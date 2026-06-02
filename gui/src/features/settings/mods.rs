@@ -24,7 +24,7 @@ pub fn show(ui_container: &mut egui::Ui, settings: &mut ModsSettings, drag_guard
             scroll_ui.add_space(10.0);
 
             scroll_ui.horizontal(|ui| {
-                let label_response = ui.label("Replace on Update Patch");
+                let label_response = ui.label("Replace APK on Update");
                 let tooltip_text = "Replace the original input file instead of creating an updated copy in the exports folder";
                 label_response.on_hover_text(tooltip_text);
 

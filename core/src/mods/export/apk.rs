@@ -130,10 +130,12 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
 
         // Apply Patches (If Necessary)
         let final_id = if is_update {
-            log_callback("Look-ahead match: Package identity matches target. Fast-tracking update!".to_string());
+            log_callback("Package identity matches target APK.".to_string());
+            log_callback("Updating target APK...".to_string());
             target_package
         } else {
-            log_callback("Applying native identity patches...".to_string());
+            log_callback("New package identity found.".to_string());
+            log_callback("Creating new APK...".to_string());
             match editor.apply_patches(&suffix, &app_title) {
                 Ok(id) => {
                     if let Err(e) = editor.save_to_paths(&manifest_path, if extracted_arsc { Some(arsc_path.as_path()) } else { None }) {
@@ -160,7 +162,7 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             let _ = transmitter.send(ExportEvent::Error(error)); return;
         }
 
-        log_callback("Rebuilding APK via Zip Stream...".to_string());
+        log_callback("Rebuilding APK with patch...".to_string());
         let unsigned_apk_path = app_dir.join("unsigned_final.apk");
 
         match modify::inject_and_build_apk(
@@ -172,7 +174,7 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             if is_update { None } else { Some(manifest_path.as_path()) },
             if is_update || !extracted_arsc { None } else { Some(arsc_path.as_path()) }
         ) {
-            Ok(count) => log_callback(format!("Injected {} external assets/binaries.", count)),
+            Ok(count) => log_callback(format!("Injected {} files.", count)),
             Err(e) => { let _ = transmitter.send(ExportEvent::Error(format!("Build Error: {}", e))); return; }
         }
 
@@ -183,7 +185,7 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             let _ = transmitter.send(ExportEvent::Error(format!("Normalization Error: {}", error))); return;
         }
 
-        log_callback("Signing APK natively...".to_string());
+        log_callback("Signing APK...".to_string());
         if let Err(error) = sign::sign(&normalized_apk_path, None) {
             let _ = transmitter.send(ExportEvent::Error(format!("Native Signing Error: {}", error))); return;
         }
