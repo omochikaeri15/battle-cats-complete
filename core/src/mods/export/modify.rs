@@ -6,8 +6,9 @@ use zip::{ZipArchive, ZipWriter};
 
 use resand::{
     res_value::{ResValue, ResValueType},
-    table::ResTable,
-    xmltree::XMLTree,
+    string_pool::StringPoolHandler,
+    xmltree::{XMLTree, XMLTreeNode},
+    table::{ResTable, ResTableEntryValue},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -56,6 +57,27 @@ impl ApkEditor {
         let root = self.manifest.root.get_element_mut(&["manifest"], &self.manifest.string_pool)
             .ok_or(ResError::MissingElement("manifest root"))?;
 
+        // Eradicate ghost <split> tags
+        root.children.retain(|child| {
+            child.element.name.resolve(&self.manifest.string_pool).unwrap_or_default() != "split"
+        });
+
+        // Scrub existing attributes to prevent XML duplicates
+        root.element.attributes.retain(|attr| {
+            if let Some(name) = attr.name.resolve(&self.manifest.string_pool) {
+                name != "split" && name != "isFeatureSplit"
+            } else { true }
+        });
+
+        // Inject the clean, false split flag
+        root.insert_attribute(
+            "isFeatureSplit".into(),
+            ResValue::new_bool(false),
+            &mut self.manifest.string_pool,
+            self.manifest.resource_map.as_mut(),
+            Some(0x0101055b.into()),
+        );
+
         let package_attr = root.get_attribute_mut("package", &self.manifest.string_pool)
             .ok_or(ResError::MissingElement("package attribute"))?;
 
@@ -75,35 +97,49 @@ impl ApkEditor {
         // Change the core package ID
         package_attr.write_string(new_package_name.as_str().into(), &mut self.manifest.string_pool);
 
-        // Safely find-and-replace the package name in Providers and Permissions to prevent Android install conflicts!
-        let elements_to_check = vec![
-            (vec!["manifest", "permission"], "name"),
-            (vec!["manifest", "uses-permission"], "name"),
-            (vec!["manifest", "application", "provider"], "authorities"),
-        ];
+        // The Nuclear Option: Recursively scrub the old package name from ALL deep elements, resolving references!
+        let res_table_ref = self.res_table.as_ref();
+        replace_package_refs(&mut self.manifest.root, &mut self.manifest.string_pool, res_table_ref, &original_package, &new_package_name);
 
-        for (path, attr_name) in elements_to_check {
-            let elements = self.manifest.root.get_elements_mut(&path, &self.manifest.string_pool);
-            for elem in elements {
-                if let Some(attr) = elem.get_attribute_mut(attr_name, &self.manifest.string_pool) {
-                    if let ResValueType::String(ref s) = attr.typed_value.data {
-                        let val = s.resolve(&mut self.manifest.string_pool).unwrap_or_default().to_string();
-                        if val.contains(&original_package) {
-                            let new_val = val.replace(&original_package, &new_package_name);
-                            attr.write_string(new_val.into(), &mut self.manifest.string_pool);
+        if let Some(app_elem) = self.manifest.root.get_element_mut(&["manifest", "application"], &self.manifest.string_pool) {
+
+            // Scrub Application attributes to prevent XML duplicates
+            app_elem.element.attributes.retain(|attr| {
+                if let Some(name) = attr.name.resolve(&self.manifest.string_pool) {
+                    name != "extractNativeLibs" && name != "isSplitRequired"
+                } else { true }
+            });
+
+            // Strip Google Play Vending splits metadata
+            app_elem.children.retain(|child| {
+                if child.element.name.resolve(&self.manifest.string_pool) == Some("meta-data") {
+                    if let Some(name_attr) = child.get_attribute("name", &self.manifest.string_pool) {
+                        if let ResValueType::String(ref s) = name_attr.typed_value.data {
+                            if let Some(val) = s.resolve(&self.manifest.string_pool) {
+                                if val.contains("vending.splits") || val.contains("vending.derived.apk.id") {
+                                    return false;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
+                true
+            });
 
-        if let Some(app_elem) = self.manifest.root.get_element_mut(&["manifest", "application"], &self.manifest.string_pool) {
             app_elem.insert_attribute(
                 "extractNativeLibs".into(),
                 ResValue::new_bool(true),
                 &mut self.manifest.string_pool,
                 self.manifest.resource_map.as_mut(),
                 Some(0x010104ea.into()),
+            );
+
+            app_elem.insert_attribute(
+                "isSplitRequired".into(),
+                ResValue::new_bool(false),
+                &mut self.manifest.string_pool,
+                self.manifest.resource_map.as_mut(),
+                Some(0x01010591.into()),
             );
 
             if !app_title.trim().is_empty() {
@@ -131,6 +167,58 @@ impl ApkEditor {
     }
 }
 
+// Recursive Tree-Walker: Resolves References and Eradicates all deep references to the old package identity
+fn replace_package_refs(
+    elem: &mut XMLTreeNode,
+    pool: &mut StringPoolHandler,
+    res_table: Option<&ResTable>,
+    old_pkg: &str,
+    new_pkg: &str,
+) {
+    let attrs_to_check = ["name", "authorities", "taskAffinity", "sharedUserId", "value", "scheme", "host"];
+
+    for attr_name in attrs_to_check {
+        if let Some(attr) = elem.get_attribute_mut(attr_name, pool) {
+            let mut resolved_str: Option<String> = None;
+
+            match attr.typed_value.data {
+                ResValueType::String(ref s) => {
+                    if let Some(val) = s.resolve(pool) {
+                        resolved_str = Some(val.to_string());
+                    }
+                },
+                ResValueType::Reference(ref table_ref) => {
+                    if let Some(table) = res_table {
+                        if let Some(package) = table.packages.first() {
+                            if let Some(res_val) = package.resolve_ref(*table_ref) {
+                                if let ResTableEntryValue::ResValue(ref val) = res_val.data {
+                                    if let ResValueType::String(ref string_ref) = val.data.data {
+                                        if let Some(val_str) = string_ref.resolve(&table.string_pool) {
+                                            resolved_str = Some(val_str.to_string());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                _ => {}
+            }
+
+            if let Some(val_str) = resolved_str {
+                if val_str.contains(old_pkg) {
+                    let new_val = val_str.replace(old_pkg, new_pkg);
+                    attr.write_string(new_val.into(), pool);
+                }
+            }
+        }
+    }
+
+    for child in &mut elem.children {
+        replace_package_refs(child, pool, res_table, old_pkg, new_pkg);
+    }
+}
+
 pub fn inject_and_build_apk(
     source_apk: &Path,
     output_apk: &Path,
@@ -148,14 +236,9 @@ pub fn inject_and_build_apk(
 
     let mut injected_count = 0;
 
-    // Pre-calculate all files we plan to inject
     let mut files_to_inject = HashSet::new();
-    if patched_manifest.is_some() {
-        files_to_inject.insert("AndroidManifest.xml".to_string());
-    }
-    if patched_arsc.is_some() {
-        files_to_inject.insert("resources.arsc".to_string());
-    }
+    if patched_manifest.is_some() { files_to_inject.insert("AndroidManifest.xml".to_string()); }
+    if patched_arsc.is_some() { files_to_inject.insert("resources.arsc".to_string()); }
 
     if assets_dir.exists() {
         for entry in fs::read_dir(assets_dir).unwrap().flatten() {
@@ -177,19 +260,17 @@ pub fn inject_and_build_apk(
     let has_custom_foreground = icons_dir.join("icon_foreground.png").exists();
     let has_custom_push = icons_dir.join("push_icon.png").exists();
 
-    // Track which resource folders actually exist in the original APK
     let mut existing_res_folders = HashSet::new();
 
-    // First Pass: Copy all original files EXCEPT the ones we are replacing
     for index in 0..archive.len() {
         let archive_file = archive.by_index(index).unwrap();
         let file_name = archive_file.name().to_string();
 
-        if file_name.starts_with("META-INF/") {
+        let upper_name = file_name.to_ascii_uppercase();
+        if upper_name.starts_with("META-INF/") || upper_name.starts_with("META-INF\\") || upper_name.contains("STAMP-CERT") {
             continue;
         }
 
-        // Map existing resource directories so we don't inject unmapped folders later
         if file_name.starts_with("res/") {
             if let Some(parent) = Path::new(&file_name).parent() {
                 existing_res_folders.insert(parent.to_string_lossy().replace("\\", "/"));
@@ -223,15 +304,9 @@ pub fn inject_and_build_apk(
         Ok(())
     };
 
-    // Inject Patched Binaries
-    if let Some(manifest) = patched_manifest {
-        inject_file(manifest, "AndroidManifest.xml", false)?;
-    }
-    if let Some(arsc) = patched_arsc {
-        inject_file(arsc, "resources.arsc", true)?;
-    }
+    if let Some(manifest) = patched_manifest { inject_file(manifest, "AndroidManifest.xml", false)?; }
+    if let Some(arsc) = patched_arsc { inject_file(arsc, "resources.arsc", true)?; }
 
-    // Inject Assets & Packs
     if assets_dir.exists() {
         for entry in fs::read_dir(assets_dir).unwrap().flatten() {
             if entry.path().is_file() {
@@ -242,7 +317,6 @@ pub fn inject_and_build_apk(
         }
     }
 
-    // Inject Loose Files
     if loose_dir.exists() {
         for entry in fs::read_dir(loose_dir).unwrap().flatten() {
             if entry.path().is_file() {
@@ -252,7 +326,6 @@ pub fn inject_and_build_apk(
         }
     }
 
-    // Safe In-Memory Icon Injection
     if icons_dir.exists() {
         let icon_blueprints = vec![
             ("icon.png", 192, 144, 96, has_custom_icon),
@@ -269,17 +342,21 @@ pub fn inject_and_build_apk(
                     ("drawable-xxxhdpi", xxxhdpi),
                     ("drawable-xxhdpi", xxhdpi),
                     ("drawable-xhdpi", xhdpi),
+                    ("drawable-xxxhdpi-v4", xxxhdpi),
+                    ("drawable-xxhdpi-v4", xxhdpi),
+                    ("drawable-xhdpi-v4", xhdpi),
                     ("mipmap-xxxhdpi", xxxhdpi),
                     ("mipmap-xxhdpi", xxhdpi),
                     ("mipmap-xhdpi", xhdpi),
+                    ("mipmap-xxxhdpi-v4", xxxhdpi),
+                    ("mipmap-xxhdpi-v4", xxhdpi),
+                    ("mipmap-xhdpi-v4", xhdpi),
                 ];
 
                 for (folder, size) in target_resolutions {
                     let res_folder = format!("res/{}", folder);
-                    
-                    if !existing_res_folders.contains(&res_folder) {
-                        continue;
-                    }
+
+                    if !existing_res_folders.contains(&res_folder) { continue; }
 
                     let zip_path = format!("{}/{}", res_folder, file_name);
                     let scaled_image = source_image.resize_exact(size, size, image::imageops::FilterType::Lanczos3);
