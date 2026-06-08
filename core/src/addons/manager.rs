@@ -8,7 +8,7 @@ use zip::ZipArchive;
 use crate::addons::toolpaths::{get_tools_dir, AddonStatus};
 
 const RELEASE_TAG: &str = "tools";
-const REPO_OWNER: &str = "Battle-Cats-Complete";
+const REPO_OWNER: &str = "omochikaeri15";
 const REPO_NAME: &str = "Battle-Cats-Complete";
 
 #[allow(dead_code)]

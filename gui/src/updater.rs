@@ -8,7 +8,7 @@ use std::process::Command;
 use core::settings::logic::{Settings, upd::UpdateMode};
 use crate::global::shared::DragGuard;
 
-const REPO_OWNER: &str = "Battle-Cats-Complete";
+const REPO_OWNER: &str = "omochikaeri15";
 const REPO_NAME: &str = "Battle-Cats-Complete";
 const BIN_NAME: &str = "Battle Cats Complete";
 
