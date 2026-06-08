@@ -28,7 +28,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct Unit {
     /// The base mathematical identifier for the unit, corresponding to its directory and file prefixes.
-    pub id: u32,
+    pub id: u16,
     /// A fixed array containing the unit's display names across all 4 potential evolutionary forms.
     /// Evaluates to `None` if the form does not exist or lacks a unique name.
     pub names: [Option<String>; 4],
@@ -39,10 +39,10 @@ pub struct Unit {
     /// Missing forms evaluate to `None`.
     pub battle: [Option<Battle>; 4],
     /// The absolute duration of the primary attack animation, parsed chronologically from the `maanim` sequence data.
-    pub attack_frames: [i32; 4],
-    /// The numeric IDs mapping this unit to its base and evolved unhatched egg counterparts.
+    pub attack_frames: [Option<i32>; 4],
+    /// The numeric IDs mapping this unit to its base and evolved egg counterparts.
     /// Evaluates to `None` if this unit is not linked to the egg system.
-    pub egg_ids: Option<(i32, i32)>,
+    pub egg_ids: Option<(u16, u16)>,
     /// The mathematical progression curve dictating the required XP to reach subsequent levels.
     pub level_curve: Option<LevelCurve>,
     /// The collection of unlockable NP upgrades and abilities for the unit's True/Ultra forms.
@@ -50,7 +50,7 @@ pub struct Unit {
     /// The financial and progression prerequisites, including deployment cost, cooldown frames, and unlock conditions.
     pub unitbuy: UnitBuy,
     /// Localized instructional text detailing the specific items and XP required to evolve the unit.
-    pub evolve_text: [Vec<String>; 4],
+    pub evolve_text: [Option<Vec<String>>; 4],
     /// A deterministically sorted dictionary associating specific, raw talent integer IDs with their escalating NP upgrade costs.
     pub talent_costs: BTreeMap<u8, TalentCost>,
     /// Localized, human-readable descriptions explaining the mechanical function of the unit's assigned skills.
