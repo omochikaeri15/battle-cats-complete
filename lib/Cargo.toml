@@ -5,7 +5,7 @@ edition.workspace = true
 license-file.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Pure stateless library for handling game data, animations, and mods from The Battle Cats"
+description = "Pure stateless library for handling game quirks, animations, and data from The Battle Cats"
 
 [dependencies]
 # pack/

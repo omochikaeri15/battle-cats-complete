@@ -1,2 +1,2 @@
 # Nyanko
-Pure stateless library for handling game quirks, animations, and files from *The Battle Cats*.
+Pure stateless library for handling game quirks, animations, and data from *The Battle Cats*.
