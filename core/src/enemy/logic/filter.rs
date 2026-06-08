@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use crate::enemy::registry::{AbilityIcon, Magnification, ENEMY_ABILITY_REGISTRY, ENEMY_STATS_REGISTRY};
-use crate::enemy::data::t_unit::EnemyRaw;
+use nyanko::enemy::unit::Battle;
 use crate::enemy::logic::scanner::EnemyEntry;
 use crate::global::game::abilities::CustomIcon;
 use nyanko::common::img015;
@@ -56,7 +56,7 @@ impl EnemyFilterState {
     }
 }
 
-pub fn get_stat_value(s: &EnemyRaw, stat: &str, anim_frames: i32, mag: i32) -> i32 {
+pub fn get_stat_value(s: &Battle, stat: &str, anim_frames: i32, mag: i32) -> i32 {
     let reg_name = match stat {
         "Atk Cycle (f)" => "Atk Cycle",
         _ => stat,
@@ -73,7 +73,7 @@ pub fn get_icon_name(icon: AbilityIcon) -> String {
     ENEMY_ABILITY_REGISTRY.iter().find(|d| d.icon == icon).map(|d| d.name).unwrap_or("Unknown").to_string()
 }
 
-pub fn has_trait_or_ability(s: &EnemyRaw, icon: AbilityIcon) -> bool {
+pub fn has_trait_or_ability(s: &Battle, icon: AbilityIcon) -> bool {
     ENEMY_ABILITY_REGISTRY.iter().find(|d| d.icon == icon).is_some_and(|def| {
         !(def.get_attributes)(s).is_empty()
     })

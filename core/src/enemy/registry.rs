@@ -1,4 +1,4 @@
-use crate::enemy::data::t_unit::EnemyRaw;
+use nyanko::enemy::unit::Battle;
 use crate::global::game::abilities::CustomIcon;
 use nyanko::common::{Param, img015};
 use serde::{Deserialize, Serialize};
@@ -47,8 +47,8 @@ pub struct EnemyAbilityDef {
     pub icon: AbilityIcon,
     pub group: DisplayGroup,
     pub schema: &'static [(&'static str, AttrUnit)],
-    pub get_attributes: fn(&EnemyRaw) -> Vec<(&'static str, i32, AttrUnit)>,
-    pub formatter: fn(primary_value: i32, stats: &EnemyRaw, duration_frames: i32, magnification: Magnification, param: &Param) -> String,
+    pub get_attributes: fn(&Battle) -> Vec<(&'static str, i32, AttrUnit)>,
+    pub formatter: fn(primary_value: i32, stats: &Battle, duration_frames: i32, magnification: Magnification, param: &Param) -> String,
     pub minus_one_is_inf: bool,
 }
 
@@ -73,7 +73,7 @@ fn fmt_count(count: i32) -> String {
     }
 }
 
-fn fmt_effective_range(stats: &EnemyRaw) -> String {
+fn fmt_effective_range(stats: &Battle) -> String {
     // Standing distance is ALWAYS dictated by Hit 1
     let primary_anchor = if stats.long_distance_anchor_1 != 0 { 
         stats.long_distance_anchor_1 
@@ -129,7 +129,7 @@ fn fmt_effective_range(stats: &EnemyRaw) -> String {
     format!("{} {}\nStands at {} Range relative to Cat Base", label_prefix, range_strings.join(" / "), primary_anchor)
 }
 
-fn fmt_multihit(stats: &EnemyRaw, magnification: Magnification) -> String {
+fn fmt_multihit(stats: &Battle, magnification: Magnification) -> String {
     let magnification_factor = magnification.attack as f32 / 100.0;
 
     let damage_hit_1 = (stats.attack_1 as f32 * magnification_factor).round() as i32;
@@ -1241,7 +1241,7 @@ pub static ENEMY_ABILITY_REGISTRY: &[EnemyAbilityDef] = &[
 pub struct EnemyStatsDef {
     pub name: &'static str,
     pub display_name: &'static str,
-    pub get_value: fn(&EnemyRaw, i32, Magnification) -> i32, 
+    pub get_value: fn(&Battle, i32, Magnification) -> i32,
     pub formatter: fn(i32) -> String,       
 }
 
@@ -1348,7 +1348,7 @@ pub fn get_enemy_stat(name: &str) -> &'static EnemyStatsDef {
     ENEMY_STATS_REGISTRY.iter().find(|s| s.name == name).expect("Stat not found in registry")
 }
 
-pub fn format_enemy_stat(name: &str, stats: &EnemyRaw, animation_frames: i32, magnification: Magnification) -> String {
+pub fn format_enemy_stat(name: &str, stats: &Battle, animation_frames: i32, magnification: Magnification) -> String {
     let def = get_enemy_stat(name);
     (def.formatter)((def.get_value)(stats, animation_frames, magnification))
 }

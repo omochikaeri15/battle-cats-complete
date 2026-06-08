@@ -5,9 +5,10 @@ use std::io::Read;
 use std::sync::mpsc::{self, Receiver};
 use serde::{Serialize, Deserialize};
 use std::sync::Mutex;
+use nyanko::enemy::unit::Battle;
 
 use crate::enemy::paths;
-use crate::enemy::data::{t_unit::{self, EnemyRaw}, enemyname, enemypicturebook};
+use crate::enemy::data::{t_unit, enemyname, enemypicturebook};
 use crate::settings::logic::state::ScannerConfig;
 use crate::global::formats::maanim::Animation;
 
@@ -16,7 +17,7 @@ pub struct EnemyEntry {
     pub id: u32,
     pub name: String,
     pub description: Vec<String>,
-    pub stats: EnemyRaw,
+    pub stats: Battle,
     pub icon_path: Option<PathBuf>,
     pub atk_anim_frames: i32,
 }

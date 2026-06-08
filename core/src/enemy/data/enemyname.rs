@@ -1,29 +1,44 @@
 use std::fs;
 use std::path::Path;
-use crate::global::utils;
+use nyanko::enemy::unit::EnemyName;
 
 pub fn load(lang_dir: &Path, priority: &[String]) -> Vec<String> {
-    let mut names: Vec<String> = Vec::new();
+    let mut final_names: Vec<String> = Vec::new();
     let base_dir = lang_dir.join("Enemyname");
 
-    for file_path in crate::global::get(&base_dir, ["Enemyname.tsv"], priority) {
-        let Ok(content) = fs::read_to_string(&file_path) else { continue };
-        let sep = if content.contains('\t') { '\t' } else { utils::detect_csv_separator(&content) };
+    for file_path in crate::global::resolver::get(&base_dir, ["Enemyname.tsv"], priority) {
+        let Ok(bytes) = fs::read(&file_path) else { continue; };
+        let Ok(parsed_names) = EnemyName::parse_all(bytes) else { continue; };
 
-        for (i, line) in content.lines().enumerate() {
-            let name = line.split(sep).next().unwrap_or("").trim().to_string();
-            let is_invalid = name.is_empty() || name == "ダミー";
-
-            if i >= names.len() {
-                names.push(if is_invalid { String::new() } else { name });
+        for (index, enemy) in parsed_names.into_iter().enumerate() {
+            if index >= final_names.len() {
+                final_names.push(enemy.name.unwrap_or_default());
                 continue;
-            } 
-            
-            if names[i].is_empty() && !is_invalid {
-                names[i] = name;
+            }
+
+            if final_names[index].is_empty() {
+                if let Some(valid_name) = enemy.name {
+                    final_names[index] = valid_name;
+                }
             }
         }
     }
-    
-    names
+
+    final_names
+}
+
+pub fn load_single(lang_dir: &Path, priority: &[String], id: usize) -> Option<String> {
+    let base_dir = lang_dir.join("Enemyname");
+
+    for file_path in crate::global::resolver::get(&base_dir, ["Enemyname.tsv"], priority) {
+        let Ok(bytes) = fs::read(&file_path) else { continue; };
+
+        if let Ok(Some(enemy)) = EnemyName::parse(bytes, id) {
+            if let Some(valid_name) = enemy.name {
+                return Some(valid_name);
+            }
+        }
+    }
+
+    None
 }

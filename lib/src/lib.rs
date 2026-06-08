@@ -5,7 +5,7 @@
 // TODO: #[cfg(feature = "bcu")] pub mod bcu; [decrypt bcuzip & bcuzips, convert bcu formats to game formats]
 #[cfg(feature = "graphics")] pub mod graphics;
 pub mod cat;
-// TODO: pub mod enemy; [enemy struct, enemy data, enemy abilities]
+pub mod enemy;
 // TODO: pub mod stage; [stage struct, stage data, CPU Skip/Treasure/Restrictions/Etc.]
 pub mod common;
 
