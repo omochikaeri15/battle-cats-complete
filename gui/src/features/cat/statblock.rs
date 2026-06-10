@@ -3,7 +3,7 @@ use core::cat::registry::{get_cat_stat, format_cat_stat};
 use core::cat::logic::abilities::collect_ability_data;
 use core::cat::logic::context::CatRenderContext;
 use core::settings::logic::Settings;
-use crate::features::statblock::builder::StatblockData;
+use crate::features::statblock::builder::{StatblockData, StatCell};
 use super::conjure::build_spirit_data;
 
 pub fn build_cat_statblock(
@@ -23,8 +23,42 @@ pub fn build_cat_statblock(
     };
 
     let anim_frames = cat_entry.atk_anim_frames[current_form];
-    let cycle = (get_cat_stat("Atk Cycle").get_value)(ctx.final_stats, anim_frames);
-    let atk_type = if ctx.final_stats.area_attack == 0 { "Single" } else { "Area" };
+    let unitbuy_opt = Some(&cat_entry.unitbuy);
+    let cycle = (get_cat_stat("Atk Cycle").get_value)(ctx.final_stats, anim_frames, unitbuy_opt);
+
+    let headers_1 = vec![
+        get_cat_stat("Attack").display_name.to_string(),
+        get_cat_stat("Dps").display_name.to_string(),
+        get_cat_stat("Range").display_name.to_string(),
+        get_cat_stat("Atk Cycle").display_name.to_string(),
+        get_cat_stat("Rarity").display_name.to_string(),
+    ];
+
+    let data_1 = vec![
+        StatCell::Text(format_cat_stat("Attack", ctx.final_stats, anim_frames, unitbuy_opt)),
+        StatCell::Text(format_cat_stat("Dps", ctx.final_stats, anim_frames, unitbuy_opt)),
+        StatCell::Text(ctx.final_stats.standing_range.to_string()),
+        StatCell::Frames(cycle),
+        StatCell::Text(format_cat_stat("Rarity", ctx.final_stats, anim_frames, unitbuy_opt)),
+    ];
+
+    let headers_2 = vec![
+        get_cat_stat("Hitpoints").display_name.to_string(),
+        get_cat_stat("Knockbacks").display_name.to_string(),
+        get_cat_stat("Speed").display_name.to_string(),
+        get_cat_stat("Cooldown").display_name.to_string(),
+        get_cat_stat("Cost").display_name.to_string(),
+    ];
+
+    let cd_frames = (get_cat_stat("Cooldown").get_value)(ctx.final_stats, anim_frames, unitbuy_opt);
+
+    let data_2 = vec![
+        StatCell::Text(ctx.final_stats.hitpoints.to_string()),
+        StatCell::Text(ctx.final_stats.knockbacks.to_string()),
+        StatCell::Text(ctx.final_stats.speed.to_string()),
+        StatCell::Frames(cd_frames),
+        StatCell::Text(format_cat_stat("Cost", ctx.final_stats, anim_frames, unitbuy_opt)),
+    ];
 
     StatblockData {
         is_cat: true,
@@ -33,20 +67,10 @@ pub fn build_cat_statblock(
         icon_path: cat_entry.deploy_icon_paths[current_form].clone(),
         top_label: "Level:".to_string(),
         top_value: level_input,
-        hp: ctx.final_stats.hitpoints.to_string(),
-        kb: ctx.final_stats.knockbacks.to_string(),
-        speed: ctx.final_stats.speed.to_string(),
-        cd_label: get_cat_stat("Cooldown").display_name.to_string(),
-        cd_value: format_cat_stat("Cooldown", ctx.final_stats, anim_frames),
-        is_cd_time: true,
-        cd_frames: (get_cat_stat("Cooldown").get_value)(ctx.final_stats, anim_frames),
-        cost_label: get_cat_stat("Cost").display_name.to_string(),
-        cost_value: format_cat_stat("Cost", ctx.final_stats, anim_frames),
-        atk: format_cat_stat("Attack", ctx.final_stats, anim_frames),
-        dps: format_cat_stat("Dps", ctx.final_stats, anim_frames),
-        range: ctx.final_stats.standing_range.to_string(),
-        atk_cycle: cycle,
-        atk_type: atk_type.to_string(),
+        headers_1,
+        data_1,
+        headers_2,
+        data_2,
         traits, h1, h2, b1, b2, footer, spirit_data,
     }
 }

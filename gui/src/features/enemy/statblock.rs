@@ -2,7 +2,7 @@ use core::enemy::logic::scanner::EnemyEntry;
 use core::enemy::registry::{get_enemy_stat, format_enemy_stat};
 use core::enemy::logic::abilities::collect_ability_data;
 use core::enemy::logic::context::EnemyRenderContext;
-use crate::features::statblock::builder::StatblockData;
+use crate::features::statblock::builder::{StatblockData, StatCell};
 
 pub fn build_enemy_statblock(
     ctx: &EnemyRenderContext,
@@ -19,6 +19,38 @@ pub fn build_enemy_statblock(
         format!("{}%/{}%", ctx.magnification.hitpoints, ctx.magnification.attack)
     };
 
+    let headers_1 = vec![
+        get_enemy_stat("Attack").display_name.to_string(),
+        get_enemy_stat("Dps").display_name.to_string(),
+        get_enemy_stat("Range").display_name.to_string(),
+        get_enemy_stat("Atk Cycle").display_name.to_string(),
+        get_enemy_stat("Atk Type").display_name.to_string(),
+    ];
+
+    let data_1 = vec![
+        StatCell::Text(format_enemy_stat("Attack", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Dps", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Range", ctx.stats, frames, ctx.magnification)),
+        StatCell::Frames(cycle),
+        StatCell::Text(format_enemy_stat("Atk Type", ctx.stats, frames, ctx.magnification)),
+    ];
+
+    let headers_2 = vec![
+        get_enemy_stat("Hitpoints").display_name.to_string(),
+        get_enemy_stat("Knockbacks").display_name.to_string(),
+        get_enemy_stat("Speed").display_name.to_string(),
+        get_enemy_stat("Endure").display_name.to_string(),
+        get_enemy_stat("Cash Drop").display_name.to_string(),
+    ];
+
+    let data_2 = vec![
+        StatCell::Text(format_enemy_stat("Hitpoints", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Knockbacks", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Speed", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Endure", ctx.stats, frames, ctx.magnification)),
+        StatCell::Text(format_enemy_stat("Cash Drop", ctx.stats, frames, ctx.magnification)),
+    ];
+
     StatblockData {
         is_cat: false,
         id_str: enemy_entry.id_str(),
@@ -26,25 +58,10 @@ pub fn build_enemy_statblock(
         icon_path: enemy_entry.icon_path.clone(),
         top_label: "Magnification:".to_string(),
         top_value: top_val_str,
-        
-        hp: format_enemy_stat("Hitpoints", ctx.stats, frames, ctx.magnification),
-        kb: format_enemy_stat("Knockbacks", ctx.stats, frames, ctx.magnification),
-        speed: format_enemy_stat("Speed", ctx.stats, frames, ctx.magnification),
-        
-        cd_label: get_enemy_stat("Endure").display_name.to_string(),
-        cd_value: format_enemy_stat("Endure", ctx.stats, frames, ctx.magnification),
-        is_cd_time: false, 
-        cd_frames: 0,
-        
-        cost_label: get_enemy_stat("Cash Drop").display_name.to_string(),
-        cost_value: format_enemy_stat("Cash Drop", ctx.stats, frames, ctx.magnification),
-        
-        atk: format_enemy_stat("Attack", ctx.stats, frames, ctx.magnification),
-        dps: format_enemy_stat("Dps", ctx.stats, frames, ctx.magnification),
-        range: format_enemy_stat("Range", ctx.stats, frames, ctx.magnification),
-        atk_cycle: cycle,
-        atk_type: format_enemy_stat("Atk Type", ctx.stats, frames, ctx.magnification),
-        
+        headers_1,
+        data_1,
+        headers_2,
+        data_2,
         traits, h1, h2, b1, b2, footer, spirit_data: None,
     }
 }

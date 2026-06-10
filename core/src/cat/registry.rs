@@ -1,5 +1,5 @@
 use nyanko::cat::abilities::{Identity, REGISTRY};
-use nyanko::cat::unit::Battle;
+use nyanko::cat::unit::{Battle, UnitBuy};
 use nyanko::common::Param;
 use nyanko::common::img015;
 use crate::global::game::abilities::CustomIcon;
@@ -857,7 +857,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
 pub struct CatStatsDef {
     pub name: &'static str,
     pub display_name: &'static str,
-    pub get_value: fn(&Battle, i32) -> i32,
+    pub get_value: fn(&Battle, i32, Option<&UnitBuy>) -> i32,
     pub formatter: fn(i32) -> String,
     pub linked_talent_id: Option<u8>,
     pub talent_modifier_fmt: Option<fn(i32, i32) -> String>,
@@ -867,7 +867,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Hitpoints",
         display_name: "Hitpoints",
-        get_value: |stats, _| stats.hitpoints,
+        get_value: |stats, _, _| stats.hitpoints,
         formatter: |hp| format!("{}", hp),
         linked_talent_id: Some(32),
         talent_modifier_fmt: Some(|percent, _| format!("(+{}%)", percent)),
@@ -875,7 +875,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Knockbacks",
         display_name: "Knockback",
-        get_value: |stats, _| stats.knockbacks,
+        get_value: |stats, _, _| stats.knockbacks,
         formatter: |kbs| format!("{}", kbs),
         linked_talent_id: Some(28),
         talent_modifier_fmt: Some(|count, _| format!("(+{})", count)),
@@ -883,7 +883,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Speed",
         display_name: "Speed",
-        get_value: |stats, _| stats.speed,
+        get_value: |stats, _, _| stats.speed,
         formatter: |spd| format!("{}", spd),
         linked_talent_id: Some(27),
         talent_modifier_fmt: Some(|spd, _| format!("(+{})", spd)),
@@ -891,7 +891,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Range",
         display_name: "Range",
-        get_value: |stats, _| stats.standing_range,
+        get_value: |stats, _, _| stats.standing_range,
         formatter: |rng| format!("{}", rng),
         linked_talent_id: None,
         talent_modifier_fmt: None,
@@ -899,7 +899,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Attack",
         display_name: "Attack",
-        get_value: |stats, _| stats.attack_1 + stats.attack_2 + stats.attack_3,
+        get_value: |stats, _, _| stats.attack_1 + stats.attack_2 + stats.attack_3,
         formatter: |atk| format!("{}", atk),
         linked_talent_id: Some(31),
         talent_modifier_fmt: Some(|percent, _| format!("(+{}%)", percent)),
@@ -907,7 +907,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Dps",
         display_name: "DPS",
-        get_value: |stats, animation_frames| {
+        get_value: |stats, animation_frames, _| {
             let total_attack_damage = stats.attack_1 + stats.attack_2 + stats.attack_3;
             let mut effective_foreswing = stats.time_until_attack_1;
             if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 { effective_foreswing = stats.time_until_attack_3; }
@@ -923,7 +923,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Atk Cycle",
         display_name: "Atk Cycle",
-        get_value: |stats, animation_frames| {
+        get_value: |stats, animation_frames, _| {
             let mut effective_foreswing = stats.time_until_attack_1;
             if stats.attack_3 > 0 && stats.time_until_attack_3 > 0 { effective_foreswing = stats.time_until_attack_3; }
             else if stats.attack_2 > 0 && stats.time_until_attack_2 > 0 { effective_foreswing = stats.time_until_attack_2; }
@@ -935,17 +935,31 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
         talent_modifier_fmt: None,
     },
     CatStatsDef {
-        name: "Atk Type",
-        display_name: "Atk Type",
-        get_value: |stats, _| stats.area_attack,
-        formatter: |type_val| if type_val == 0 { "Single".to_string() } else { "Area".to_string() },
+        name: "Rarity",
+        display_name: "Rarity",
+        get_value: |_, _, unitbuy| {
+            if let Some(unitbuy) = unitbuy {
+                unitbuy.rarity as i32
+            } else {
+                -1
+            }
+        },
+        formatter: |rarity_val| match rarity_val {
+            0 => "N".to_string(),
+            1 => "EX".to_string(),
+            2 => "RR".to_string(),
+            3 => "SR".to_string(),
+            4 => "UR".to_string(),
+            5 => "LR".to_string(),
+            _ => "??".to_string(),
+        },
         linked_talent_id: None,
         talent_modifier_fmt: None,
     },
     CatStatsDef {
         name: "Cost",
         display_name: "Cost",
-        get_value: |stats, _| (stats.eoc1_cost as f32 * 1.5).round() as i32,
+        get_value: |stats, _, _| (stats.eoc1_cost as f32 * 1.5).round() as i32,
         formatter: |cost| format!("{}¢", cost),
         linked_talent_id: Some(25),
         talent_modifier_fmt: Some(|reduction, _| format!("(-{}¢)", (reduction as f32 * 1.5).round() as i32)),
@@ -953,7 +967,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "Cooldown",
         display_name: "Cooldown",
-        get_value: |stats, _| (stats.cooldown - 264).max(60),
+        get_value: |stats, _, _| (stats.cooldown - 264).max(60),
         formatter: |cd| format!("{:.2}s^{}f", cd as f32 / 30.0, cd),
         linked_talent_id: Some(26),
         talent_modifier_fmt: Some(|frames, _| format!("(-{}f)", frames)),
@@ -961,7 +975,7 @@ pub const CAT_STATS_REGISTRY: &[CatStatsDef] = &[
     CatStatsDef {
         name: "TBA",
         display_name: "TBA",
-        get_value: |stats, _| stats.time_between_attacks,
+        get_value: |stats, _, _| stats.time_between_attacks,
         formatter: |tba| format!("{}f", tba),
         linked_talent_id: Some(61),
         talent_modifier_fmt: Some(|percent, _| format!("(-{}%)", percent)),
@@ -974,9 +988,9 @@ pub fn get_cat_stat(name: &str) -> &'static CatStatsDef {
     CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.name == name).expect("CRITICAL: Hardcoded stat name was not found in CAT_STATS_REGISTRY")
 }
 
-pub fn format_cat_stat(name: &str, stats: &Battle, animation_frames: i32) -> String {
+pub fn format_cat_stat(name: &str, stats: &Battle, animation_frames: i32, unitbuy: Option<&UnitBuy>) -> String {
     let stat_definition = get_cat_stat(name);
-    (stat_definition.formatter)((stat_definition.get_value)(stats, animation_frames))
+    (stat_definition.formatter)((stat_definition.get_value)(stats, animation_frames, unitbuy))
 }
 
 pub fn get_fallback_by_icon(target_icon: AbilityIcon) -> &'static str {

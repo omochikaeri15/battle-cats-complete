@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use nyanko::cat::unit::Battle;
+use nyanko::cat::unit::{Battle, UnitBuy};
 use nyanko::cat::abilities::REGISTRY;
 use crate::cat::registry::{AbilityIcon, get_display_def, CAT_STATS_REGISTRY};
 use crate::global::game::abilities::CustomIcon;
@@ -90,7 +90,7 @@ impl CatFilterState {
     }
 }
 
-pub fn get_stat_value(battle_stats: &Battle, stat_name: &str, animation_frames: i32) -> i32 {
+pub fn get_stat_value(battle_stats: &Battle, stat_name: &str, animation_frames: i32, unitbuy: Option<&UnitBuy>) -> i32 {
     let registry_name = match stat_name {
         "Cooldown (f)" => "Cooldown",
         "Atk Cycle (f)" => "Atk Cycle",
@@ -100,7 +100,7 @@ pub fn get_stat_value(battle_stats: &Battle, stat_name: &str, animation_frames: 
     let target_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.name == registry_name);
 
     if let Some(definition) = target_definition {
-        return (definition.get_value)(battle_stats, animation_frames);
+        return (definition.get_value)(battle_stats, animation_frames, unitbuy);
     }
 
     0
@@ -297,14 +297,15 @@ fn evaluate_stat_ranges(
     failed_conditions: &mut i32
 ) {
     let animation_frames = cat.atk_anim_frames[form_index];
+    let unitbuy_ref = Some(&cat.unitbuy);
 
     for (stat_name, target_range) in &filter.stat_ranges {
         if target_range.min.is_empty() && target_range.max.is_empty() { continue; }
 
         *active_conditions += 1;
 
-        let value_a = get_stat_value(stats_min, stat_name, animation_frames);
-        let value_b = get_stat_value(stats_max, stat_name, animation_frames);
+        let value_a = get_stat_value(stats_min, stat_name, animation_frames, unitbuy_ref);
+        let value_b = get_stat_value(stats_max, stat_name, animation_frames, unitbuy_ref);
 
         let actual_min = value_a.min(value_b);
         let actual_max = value_a.max(value_b);

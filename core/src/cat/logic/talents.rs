@@ -20,6 +20,7 @@ pub fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_level: 
 }
 
 // --- DYNAMIC UI TEXT ENGINE ---
+// --- DYNAMIC UI TEXT ENGINE ---
 pub fn calculate_talent_display(
     talent_group: &TalentGroup,
     base_stats: &Battle,
@@ -77,14 +78,14 @@ pub fn calculate_talent_display(
     let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talent_id == Some(talent_group.ability_id));
 
     if let Some(stat_definition) = target_stat_definition {
-        let old_stat_value = (stat_definition.get_value)(&leveled_base_stats, 0);
-        let new_stat_value = (stat_definition.get_value)(&mutated_stats, 0);
+        let old_stat_value = (stat_definition.get_value)(&leveled_base_stats, 0, None);
+        let new_stat_value = (stat_definition.get_value)(&mutated_stats, 0, None);
 
         let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
         let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
 
         if value_one_minimum == value_one_maximum {
-            let level_one_stats = (stat_definition.get_value)(&dummy_min_stats, 0);
+            let level_one_stats = (stat_definition.get_value)(&dummy_min_stats, 0, None);
             return Some(format!("{}: {}", stat_definition.display_name, (stat_definition.formatter)(level_one_stats)));
         }
 

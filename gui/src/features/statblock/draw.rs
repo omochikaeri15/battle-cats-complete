@@ -13,7 +13,7 @@ pub const SUPERSCRIPT_MARGIN_X: i32 = 2;
 
 pub fn draw_rounded_rect_mut(img: &mut RgbaImage, rect: Rect, r: i32, color: Rgba<u8>) {
     if r <= 0 { draw_filled_rect_mut(img, rect, color); return; }
-    
+
     let (w, h) = (rect.width() as i32, rect.height() as i32);
     let (x, y) = (rect.left(), rect.top());
     let r = r.min(w / 2).min(h / 2);
@@ -32,7 +32,7 @@ pub fn draw_rounded_rect_mut(img: &mut RgbaImage, rect: Rect, r: i32, color: Rgb
 
 pub fn draw_bottom_rounded_rect_mut(img: &mut RgbaImage, rect: Rect, r: i32, color: Rgba<u8>) {
     if r <= 0 { draw_filled_rect_mut(img, rect, color); return; }
-    
+
     let (w, h) = (rect.width() as i32, rect.height() as i32);
     let (x, y) = (rect.left(), rect.top());
     let r = r.min(w / 2).min(h);
@@ -59,7 +59,7 @@ pub fn get_icon_image(
             let py = (cut.uv_coordinates.min.y * img015_base.height() as f32).round() as u32;
             let pw = cut.original_size.x.round() as u32;
             let ph = cut.original_size.y.round() as u32;
-            
+
             if px + pw <= img015_base.width() && py + ph <= img015_base.height() {
                 image::imageops::crop_imm(img015_base, px, py, pw, ph).to_image()
             } else {
@@ -78,26 +78,26 @@ pub fn get_icon_image(
 
     if let Some(border_id) = item.border_id
         && let Some(cut) = cuts_map.get(&border_id) {
-            let px = (cut.uv_coordinates.min.x * img015_base.width() as f32).round() as u32;
-            let py = (cut.uv_coordinates.min.y * img015_base.height() as f32).round() as u32;
-            let pw = cut.original_size.x.round() as u32;
-            let ph = cut.original_size.y.round() as u32;
-            
-            if px + pw <= img015_base.width() && py + ph <= img015_base.height() {
-                let mut border = image::imageops::crop_imm(img015_base, px, py, pw, ph).to_image();
-                if border.width() != export_size || border.height() != export_size {
-                    border = image::imageops::resize(&border, export_size, export_size, image::imageops::FilterType::Lanczos3);
-                }
-                image::imageops::overlay(&mut icon, &border, 0, 0);
+        let px = (cut.uv_coordinates.min.x * img015_base.width() as f32).round() as u32;
+        let py = (cut.uv_coordinates.min.y * img015_base.height() as f32).round() as u32;
+        let pw = cut.original_size.x.round() as u32;
+        let ph = cut.original_size.y.round() as u32;
+
+        if px + pw <= img015_base.width() && py + ph <= img015_base.height() {
+            let mut border = image::imageops::crop_imm(img015_base, px, py, pw, ph).to_image();
+            if border.width() != export_size || border.height() != export_size {
+                border = image::imageops::resize(&border, export_size, export_size, image::imageops::FilterType::Lanczos3);
             }
+            image::imageops::overlay(&mut icon, &border, 0, 0);
         }
+    }
     icon
 }
 
 pub fn measure_text_with_superscript(scale: PxScale, font: &impl ab_glyph::Font, text: &str) -> u32 {
     let mut total_w = 0;
     let mut parts = text.split('^');
-    
+
     if let Some(first) = parts.next()
         && !first.is_empty() { total_w += text_size(scale, font, first).0; }
 
@@ -123,9 +123,9 @@ pub fn draw_text_with_superscript(
     let mut parts = text.split('^');
     if let Some(first) = parts.next()
         && !first.is_empty() {
-            draw_text_mut(img, color, x, y, base_scale, font, first);
-            x += text_size(base_scale, font, first).0 as i32;
-        }
+        draw_text_mut(img, color, x, y, base_scale, font, first);
+        x += text_size(base_scale, font, first).0 as i32;
+    }
 
     let s_scale = PxScale::from(base_scale.y * SUPERSCRIPT_SCALE);
     let s_y = y - (base_scale.y * SUPERSCRIPT_OFFSET_Y) as i32;
@@ -162,10 +162,10 @@ pub fn wrap_text(text: &str, font: &impl ab_glyph::Font, scale: PxScale, max_wid
 fn process_paragraph(paragraph: &str, font: &impl ab_glyph::Font, scale: PxScale, max_w: f32, lines: &mut Vec<String>) {
     let mut cur_line = String::new();
     let mut cur_word = String::new();
-    
+
     for c in paragraph.chars() {
         let is_cjk = ('\u{4E00}'..='\u{9FFF}').contains(&c) || ('\u{3040}'..='\u{30FF}').contains(&c) || ('\u{AC00}'..='\u{D7AF}').contains(&c);
-        
+
         if c.is_whitespace() || is_cjk {
             if !cur_word.is_empty() {
                 cur_line = flush_word(cur_line, &cur_word, font, scale, max_w, lines);
@@ -184,7 +184,7 @@ fn process_paragraph(paragraph: &str, font: &impl ab_glyph::Font, scale: PxScale
             cur_word.push(c);
         }
     }
-    
+
     if !cur_word.is_empty() { cur_line = flush_word(cur_line, &cur_word, font, scale, max_w, lines); }
     if !cur_line.is_empty() { lines.push(cur_line); }
 }
@@ -213,26 +213,26 @@ pub fn draw_centered_text(img: &mut RgbaImage, color: Rgba<u8>, rect: Rect, scal
 }
 
 pub fn draw_time_cell(
-    img: &mut RgbaImage, bg: Rgba<u8>, rect: Rect, frames: i32, font: &impl ab_glyph::Font, 
+    img: &mut RgbaImage, bg: Rgba<u8>, rect: Rect, frames: i32, font: &impl ab_glyph::Font,
     scale_f: f32, scale_i: i32, radius: i32, text_scale: f32
 ) {
     draw_rounded_rect_mut(img, rect, radius, bg);
-    
+
     let sec_str = format!("{:.2}s", frames as f32 / 30.0);
-    let f_str = format!(" {}f", frames); 
-    
+    let f_str = format!(" {}f", frames);
+
     let scale_sec = PxScale::from(15.0 * text_scale * scale_f);
-    let scale_f_text = PxScale::from(15.0 * 0.65 * text_scale * scale_f); 
-    
+    let scale_f_text = PxScale::from(15.0 * 0.65 * text_scale * scale_f);
+
     let sec_w = text_size(scale_sec, font, &sec_str).0;
     let gap = scale_i as u32;
     let total_w = sec_w + text_size(scale_f_text, font, &f_str).0 + gap;
 
     let start_x = rect.left() + (rect.width() as i32 - total_w as i32) / 2;
     let start_y = rect.top() + (rect.height() as i32 - scale_sec.y as i32) / 2;
-    
+
     draw_text_mut(img, Rgba([255, 255, 255, 255]), start_x, start_y, scale_sec, font, &sec_str);
-    
+
     let f_y_offset = (scale_sec.y - scale_f_text.y) * 0.75;
     draw_text_mut(img, Rgba([200, 200, 200, 255]), start_x + sec_w as i32 + gap as i32, start_y + f_y_offset as i32, scale_f_text, font, &f_str);
 }
