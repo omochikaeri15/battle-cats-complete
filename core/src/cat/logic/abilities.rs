@@ -37,8 +37,8 @@ pub fn collect_ability_data(
                     let lv = *levels.get(&(idx as u8)).unwrap_or(&0);
                     if lv > 0
                         && enables_trait(group.name_id, data.type_id, ability_id) {
-                            return Some(img015::BORDER_GOLD);
-                        }
+                        return Some(img015::BORDER_GOLD);
+                    }
                 }
             }
         }
@@ -48,7 +48,6 @@ pub fn collect_ability_data(
     let target_label = if ctx.is_conjure_unit { "Enemies" } else { "Target Traits" };
 
     // --- STANDARD ABILITIES LOOP ---
-    // We iterate over the pure math array and ask the registry how to render it.
     for pure_def in REGISTRY {
         let display_def = registry::get_display_def(pure_def.identity);
 
@@ -56,9 +55,7 @@ pub fn collect_ability_data(
 
         if ctx.is_conjure_unit {
             if display_def.group == DisplayGroup::Trait || display_def.group == DisplayGroup::Headline1 { continue; }
-
-            // Replaced fragile string checks with strictly typed enum matching!
-            if matches!(pure_def.identity, Identity::Dodge | Identity::ImmuneBossWave | Identity::Conjure | Identity::Kamikaze) {
+            if matches!(pure_def.identity, Identity::Dodge | Identity::ImmuneBossWave | Identity::Conjure | Identity::Kamikaze | Identity::SingleAttack | Identity::AreaAttack) {
                 continue;
             }
         }
