@@ -18,8 +18,6 @@ enum DesktopActionState {
     Failed,
 }
 
-#[cfg(target_os = "linux")]
-
 pub fn show(ui_container: &mut egui::Ui, settings: &mut GeneralSettings, runtime: &mut RuntimeState) -> bool {
     let mut refresh_needed = false;
     let context = ui_container.ctx().clone();
