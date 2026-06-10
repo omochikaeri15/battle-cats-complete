@@ -18,7 +18,11 @@ pub fn ensure_loaded(ctx: &egui::Context, sheets: &mut Vec<GuiSpriteSheet>, sett
         sheets[i].update(ctx);
 
         if sheets[i].texture_handle.is_none() && !sheets[i].core.is_loading_active {
-            let key = png_path.file_stem().unwrap().to_string_lossy().into_owned();
+            let key = png_path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "unknown_sheet".to_string());
+
             sheets[i].load(&png_path, &imgcut_path, key);
         }
     }

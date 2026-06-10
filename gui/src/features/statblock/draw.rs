@@ -73,7 +73,7 @@ pub fn get_icon_image(
     };
 
     if icon.width() != export_size || icon.height() != export_size {
-        icon = image::imageops::resize(&icon, export_size, export_size, image::imageops::FilterType::Lanczos3);
+        icon = safe_resize(icon, export_size, export_size);
     }
 
     if let Some(border_id) = item.border_id
@@ -86,7 +86,7 @@ pub fn get_icon_image(
         if px + pw <= img015_base.width() && py + ph <= img015_base.height() {
             let mut border = image::imageops::crop_imm(img015_base, px, py, pw, ph).to_image();
             if border.width() != export_size || border.height() != export_size {
-                border = image::imageops::resize(&border, export_size, export_size, image::imageops::FilterType::Lanczos3);
+                border = safe_resize(border, export_size, export_size);
             }
             image::imageops::overlay(&mut icon, &border, 0, 0);
         }
@@ -235,4 +235,28 @@ pub fn draw_time_cell(
 
     let f_y_offset = (scale_sec.y - scale_f_text.y) * 0.75;
     draw_text_mut(img, Rgba([200, 200, 200, 255]), start_x + sec_w as i32 + gap as i32, start_y + f_y_offset as i32, scale_f_text, font, &f_str);
+}
+
+fn safe_resize(mut img: RgbaImage, width: u32, height: u32) -> RgbaImage {
+    for p in img.pixels_mut() {
+        let a = p[3] as u32;
+        if a > 0 && a < 255 {
+            p[0] = ((p[0] as u32 * a) / 255) as u8;
+            p[1] = ((p[1] as u32 * a) / 255) as u8;
+            p[2] = ((p[2] as u32 * a) / 255) as u8;
+        } else if a == 0 {
+            p[0] = 0; p[1] = 0; p[2] = 0;
+        }
+    }
+
+    let mut resized = image::imageops::resize(&img, width, height, image::imageops::FilterType::Lanczos3);
+    for p in resized.pixels_mut() {
+        let a = p[3] as u32;
+        if a > 0 && a < 255 {
+            p[0] = ((p[0] as u32 * 255) / a).min(255) as u8;
+            p[1] = ((p[1] as u32 * 255) / a).min(255) as u8;
+            p[2] = ((p[2] as u32 * 255) / a).min(255) as u8;
+        }
+    }
+    resized
 }
