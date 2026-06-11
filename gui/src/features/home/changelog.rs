@@ -8,7 +8,7 @@ use crate::global::utils::process_markdown;
 
 const HEADER_TEXT_SIZE: f32 = 22.0;
 const DROPDOWN_ITEM_SIZE: f32 = 15.0;
-const HEADER_SPACING_X: f32 = 6.0;
+const HEADER_SPACING_X: f32 = 0.0;
 const HEADER_SPACING_Y: f32 = 6.0;
 const LABEL_OFFSET_Y: f32 = 7.0;
 
@@ -141,8 +141,8 @@ pub fn window(ctx: &egui::Context, drag_guard: &mut DragGuard) {
                                 ui.spacing_mut().item_spacing.x = HEADER_SPACING_X;
                                 
                                 ui.vertical(|ui| {
-                                    ui.add_space(LABEL_OFFSET_Y);
-                                    ui.label(egui::RichText::new("Battle Cats Complete").size(HEADER_TEXT_SIZE).strong());
+                                ui.add_space(LABEL_OFFSET_Y);
+                                //    ui.label(egui::RichText::new("Battle Cats Complete").size(HEADER_TEXT_SIZE).strong());
                                 });
 
                                 let mut selected = locked.selected_version.clone();

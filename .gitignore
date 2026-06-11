@@ -8,6 +8,9 @@ Battle Cats Complete.exe
 Battle_Cats_Complete.exe
 /stuff/
 /references/
+trace*
+debug*
+crash*
 
 # Quality of Life
 .cargo/
