@@ -10,6 +10,8 @@ use crate::features::stage::state::StageListState;
 use crate::features::mods::state::ModListState;
 use core::settings::logic::state::Settings;
 use crate::global::watcher::GuiWatcher;
+use std::hash::{Hash, Hasher};
+use rustc_hash::FxHasher;
 
 pub mod startup;
 pub mod frame;
@@ -29,6 +31,7 @@ pub struct BattleCatsApp {
     #[serde(skip)] pub param: Param,
 
     #[serde(skip)] pub hash_rx: Option<std::sync::mpsc::Receiver<bool>>,
+    #[serde(skip)] pub last_saved_hash: u64,
 
     pub(crate) cat_list_state: CatListState,
     pub(crate) enemy_list_state: EnemyListState,
@@ -52,6 +55,7 @@ impl Default for BattleCatsApp {
             drag_guard: DragGuard::default(),
             global_watcher: None,
             hash_rx: None,
+            last_saved_hash: 0,
             param: Param::default(),
         }
     }
@@ -59,8 +63,16 @@ impl Default for BattleCatsApp {
 
 impl eframe::App for BattleCatsApp {
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {
-        ::tracing::debug!("Saving settings to settings.json");
-        json::save("settings.json", self);
+        if let Ok(json_string) = serde_json::to_string(self) {
+            let mut hasher = FxHasher::default();
+            json_string.hash(&mut hasher);
+            let current_hash = hasher.finish();
+            if self.last_saved_hash != current_hash {
+                ::tracing::debug!("Settings changed. Saving to settings.json");
+                json::save("settings.json", self);
+                self.last_saved_hash = current_hash;
+            }
+        }
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
