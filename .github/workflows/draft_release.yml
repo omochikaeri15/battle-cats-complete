@@ -164,9 +164,8 @@ jobs:
         run: |
           gh release create "v${{ needs.check-version.outputs.app_version }}" \
             --repo "${{ github.repository }}" \
-            --title "Battle Cats Complete v${{ needs.check-version.outputs.app_version }}" \
+            --title "v${{ needs.check-version.outputs.app_version }}" \
             --draft \
-            --prerelease \
             windows-build/bcc_windows.zip \
             linux-build/bcc_linux.zip \
             mac-build/bcc_mac.zip
