@@ -68,7 +68,7 @@ impl eframe::App for BattleCatsApp {
             json_string.hash(&mut hasher);
             let current_hash = hasher.finish();
             if self.last_saved_hash != current_hash {
-                ::tracing::debug!("Settings changed. Saving to settings.json");
+                ::tracing::trace!("Settings changed. Saving to settings.json");
                 json::save("settings.json", self);
                 self.last_saved_hash = current_hash;
             }
