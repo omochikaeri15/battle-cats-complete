@@ -7,6 +7,9 @@ authors.workspace = true
 repository.workspace = true
 publish = false
 
+[features]
+nightly = []
+
 [dependencies]
 nyanko = { path = "../lib", features = ["pack", "graphics"] }
 image = { version = "0.25", features = ["png", "ico"] }
