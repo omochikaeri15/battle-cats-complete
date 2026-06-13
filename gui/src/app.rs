@@ -9,6 +9,7 @@ use crate::features::enemy::state::EnemyListState;
 use crate::features::stage::state::StageListState;
 use crate::features::mods::state::ModListState;
 use core::settings::logic::state::Settings;
+use core::global::game::localizable::Localizable;
 use crate::global::watcher::GuiWatcher;
 use std::hash::{Hash, Hasher};
 use rustc_hash::FxHasher;
@@ -29,6 +30,7 @@ pub struct BattleCatsApp {
     #[serde(skip)] pub(crate) drag_guard: DragGuard,
     #[serde(skip)] pub(crate) global_watcher: Option<GuiWatcher>,
     #[serde(skip)] pub param: Param,
+    #[serde(skip)] pub localizable: Localizable,
 
     #[serde(skip)] pub hash_rx: Option<std::sync::mpsc::Receiver<bool>>,
     #[serde(skip)] pub last_saved_hash: u64,
@@ -57,6 +59,7 @@ impl Default for BattleCatsApp {
             hash_rx: None,
             last_saved_hash: 0,
             param: Param::default(),
+            localizable: Localizable::default(),
         }
     }
 }

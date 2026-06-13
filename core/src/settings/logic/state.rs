@@ -147,7 +147,6 @@ pub struct RuntimeState {
     pub manual_check_requested: bool,
     pub active_tab: String,
     pub show_ip_field: bool,
-    pub dummy_has_nightly: bool,
 }
 
 impl Default for RuntimeState {
@@ -156,7 +155,6 @@ impl Default for RuntimeState {
             manual_check_requested: false,
             active_tab: "General".to_string(),
             show_ip_field: false,
-            dummy_has_nightly: false,
         }
     }
 }

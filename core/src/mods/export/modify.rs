@@ -3,6 +3,7 @@ use std::path::Path;
 use std::collections::HashSet;
 use std::io::{Read, Write, Cursor};
 use zip::{ZipArchive, ZipWriter};
+use tracing::{debug, error, info, trace, warn};
 
 use resand::{
     res_value::{ResValue, ResValueType},
@@ -28,13 +29,25 @@ pub struct ApkEditor {
 
 impl ApkEditor {
     pub fn from_paths(manifest_path: &Path, table_path: Option<&Path>) -> Result<Self, ResError> {
+        debug!("Parsing Manifest from {:?}", manifest_path);
         let manifest = XMLTree::read(&mut fs::File::open(manifest_path)?)
-            .map_err(|error| ResError::Manifest(error.to_string()))?;
+            .map_err(|error| {
+                error!("Failed to parse Manifest: {}", error);
+                ResError::Manifest(error.to_string())
+            })?;
 
         let res_table = match table_path {
             Some(path) if path.exists() => {
+                debug!("Parsing resources.arsc from {:?}", path);
                 Some(ResTable::read_all(&mut fs::File::open(path)?)
-                    .map_err(|error| ResError::Manifest(error.to_string()))?)
+                    .map_err(|error| {
+                        error!("Failed to parse resources.arsc: {}", error);
+                        ResError::Manifest(error.to_string())
+                    })?)
+            }
+            Some(path) => {
+                warn!("resources.arsc path provided but file does not exist: {:?}", path);
+                None
             }
             _ => None,
         };
@@ -43,32 +56,47 @@ impl ApkEditor {
     }
 
     pub fn save_to_paths(self, manifest_path: &Path, table_path: Option<&Path>) -> Result<(), ResError> {
+        debug!("Saving patched Manifest to {:?}", manifest_path);
         self.manifest.write(&mut fs::File::create(manifest_path)?)
-            .map_err(|error| ResError::Manifest(error.to_string()))?;
+            .map_err(|error| {
+                error!("Failed to write Manifest: {}", error);
+                ResError::Manifest(error.to_string())
+            })?;
 
         if let (Some(path), Some(table)) = (table_path, self.res_table) {
+            debug!("Saving patched resources.arsc to {:?}", path);
             table.write_all(&mut fs::File::create(path)?)
-                .map_err(|error| ResError::Manifest(error.to_string()))?;
+                .map_err(|error| {
+                    error!("Failed to write resources.arsc: {}", error);
+                    ResError::Manifest(error.to_string())
+                })?;
         }
         Ok(())
     }
 
     pub fn apply_patches(&mut self, suffix: &str, app_title: &str) -> Result<String, ResError> {
-        let root = self.manifest.root.get_element_mut(&["manifest"], &self.manifest.string_pool)
-            .ok_or(ResError::MissingElement("manifest root"))?;
+        info!("Applying Manifest patches. Suffix: '{}', Title: '{}'", suffix, app_title);
 
-        // Eradicate ghost <split> tags
+        let root = self.manifest.root.get_element_mut(&["manifest"], &self.manifest.string_pool)
+            .ok_or_else(|| {
+                error!("Could not find root <manifest> element.");
+                ResError::MissingElement("manifest root")
+            })?;
+
+        let initial_children = root.children.len();
         root.children.retain(|child| {
             child.element.name.resolve(&self.manifest.string_pool).unwrap_or_default() != "split"
         });
+        if root.children.len() < initial_children {
+            trace!("Removed ghost <split> tags from root");
+        }
 
-        // Scrub existing attributes to prevent XML duplicates
         root.element.attributes.retain(|attr| {
             let Some(name) = attr.name.resolve(&self.manifest.string_pool) else { return true; };
             name != "split" && name != "isFeatureSplit"
         });
 
-        // Inject the clean, false split flag
+        trace!("Injecting isFeatureSplit=false into manifest root");
         root.insert_attribute(
             "isFeatureSplit".into(),
             ResValue::new_bool(false),
@@ -78,11 +106,17 @@ impl ApkEditor {
         );
 
         let package_attr = root.get_attribute_mut("package", &self.manifest.string_pool)
-            .ok_or(ResError::MissingElement("package attribute"))?;
+            .ok_or_else(|| {
+                error!("Missing 'package' attribute on root manifest.");
+                ResError::MissingElement("package attribute")
+            })?;
 
         let original_package = match package_attr.typed_value.data {
             ResValueType::String(ref string_value) => string_value.resolve(&self.manifest.string_pool).unwrap_or_default().to_string(),
-            _ => return Err(ResError::MissingElement("Invalid package string format")),
+            _ => {
+                error!("Invalid package string format found in manifest.");
+                return Err(ResError::MissingElement("Invalid package string format"));
+            }
         };
 
         let mut parts: Vec<&str> = original_package.split('.').collect();
@@ -93,22 +127,22 @@ impl ApkEditor {
         parts.push(&new_tail);
         let new_package_name = parts.join(".");
 
-        // Change the core package ID
+        debug!("Changing package name from {} to {}", original_package, new_package_name);
+
         package_attr.write_string(new_package_name.as_str().into(), &mut self.manifest.string_pool);
 
-        // The Nuclear Option: Recursively scrub the old package name from ALL deep elements, resolving references!
+        trace!("Initiating deep recursive package reference scrubbing...");
         let res_table_ref = self.res_table.as_ref();
         replace_package_refs(&mut self.manifest.root, &mut self.manifest.string_pool, res_table_ref, &original_package, &new_package_name);
 
         if let Some(app_elem) = self.manifest.root.get_element_mut(&["manifest", "application"], &self.manifest.string_pool) {
 
-            // Scrub Application attributes to prevent XML duplicates
             app_elem.element.attributes.retain(|attr| {
                 let Some(name) = attr.name.resolve(&self.manifest.string_pool) else { return true; };
                 name != "extractNativeLibs" && name != "isSplitRequired"
             });
 
-            // Strip Google Play Vending splits metadata
+            let pre_vending_count = app_elem.children.len();
             app_elem.children.retain(|child| {
                 let is_metadata = child.element.name.resolve(&self.manifest.string_pool) == Some("meta-data");
                 if !is_metadata { return true; }
@@ -119,6 +153,9 @@ impl ApkEditor {
 
                 !(resolved_val.contains("vending.splits") || resolved_val.contains("vending.derived.apk.id"))
             });
+            if app_elem.children.len() < pre_vending_count {
+                trace!("Stripped vending split metadata tags");
+            }
 
             app_elem.insert_attribute(
                 "extractNativeLibs".into(),
@@ -138,8 +175,10 @@ impl ApkEditor {
 
             if !app_title.trim().is_empty() {
                 if let Some(label_attr) = app_elem.get_attribute_mut("label", &self.manifest.string_pool) {
+                    debug!("Overwriting app label with '{}'", app_title.trim());
                     label_attr.write_string(app_title.trim().into(), &mut self.manifest.string_pool);
                 } else {
+                    debug!("Inserting new app label '{}'", app_title.trim());
                     app_elem.insert_attribute(
                         "label".into(),
                         ResValue::new_str(app_title.trim().into(), &mut self.manifest.string_pool),
@@ -149,18 +188,21 @@ impl ApkEditor {
                     );
                 }
             }
+        } else {
+            warn!("Could not find <application> element in Manifest!");
         }
 
         if let Some(ref mut table) = self.res_table
             && let Some(package) = table.packages.first_mut() {
-                package.name = new_package_name.clone();
-            }
+            debug!("Updating resources.arsc package name to {}", new_package_name);
+            package.name = new_package_name.clone();
+        }
 
+        info!("Patching complete. New identity: {}", new_package_name);
         Ok(new_package_name)
     }
 }
 
-// Recursive Tree-Walker: Resolves References and Eradicates all deep references to the old package identity
 fn replace_package_refs(
     elem: &mut XMLTreeNode,
     pool: &mut StringPoolHandler,
@@ -197,9 +239,10 @@ fn replace_package_refs(
 
         if let Some(resolved_string) = resolved_str
             && resolved_string.contains(old_pkg) {
-                let new_val = resolved_string.replace(old_pkg, new_pkg);
-                attr.write_string(new_val.into(), pool);
-            }
+            trace!("Replaced deep reference in attribute '{}': {} -> {}", attr_name, old_pkg, new_pkg);
+            let new_val = resolved_string.replace(old_pkg, new_pkg);
+            attr.write_string(new_val.into(), pool);
+        }
     }
 
     for child in &mut elem.children {
@@ -216,10 +259,21 @@ pub fn inject_and_build_apk(
     patched_manifest: Option<&Path>,
     patched_arsc: Option<&Path>,
 ) -> Result<usize, String> {
-    let source_file = fs::File::open(source_apk).map_err(|error| error.to_string())?;
-    let mut archive = ZipArchive::new(source_file).map_err(|error| error.to_string())?;
+    info!("Starting APK build & injection from {:?} to {:?}", source_apk, output_apk);
 
-    let destination_file = fs::File::create(output_apk).map_err(|error| error.to_string())?;
+    let source_file = fs::File::open(source_apk).map_err(|error| {
+        error!("Failed to open source APK: {}", error);
+        error.to_string()
+    })?;
+    let mut archive = ZipArchive::new(source_file).map_err(|error| {
+        error!("Failed to read source APK archive: {}", error);
+        error.to_string()
+    })?;
+
+    let destination_file = fs::File::create(output_apk).map_err(|error| {
+        error!("Failed to create output APK: {}", error);
+        error.to_string()
+    })?;
     let mut zip_writer = ZipWriter::new(destination_file);
 
     let mut injected_count = 0;
@@ -246,9 +300,13 @@ pub fn inject_and_build_apk(
         }
     }
 
+    debug!("Identified {} files to inject or replace.", files_to_inject.len());
+
     let has_custom_icon = icons_dir.join("icon.png").exists();
     let has_custom_foreground = icons_dir.join("icon_foreground.png").exists();
     let has_custom_push = icons_dir.join("push_icon.png").exists();
+
+    let fallback_foreground = has_custom_icon && !has_custom_foreground;
 
     let mut existing_res_folders = HashSet::new();
 
@@ -258,13 +316,14 @@ pub fn inject_and_build_apk(
 
         let upper_name = file_name.to_ascii_uppercase();
         if upper_name.starts_with("META-INF/") || upper_name.starts_with("META-INF\\") || upper_name.contains("STAMP-CERT") {
+            trace!("Skipping original signature file: {}", file_name);
             continue;
         }
 
         if file_name.starts_with("res/")
             && let Some(parent) = Path::new(&file_name).parent() {
-                existing_res_folders.insert(parent.to_string_lossy().replace("\\", "/"));
-            }
+            existing_res_folders.insert(parent.to_string_lossy().replace("\\", "/"));
+        }
 
         if files_to_inject.contains(&file_name) {
             continue;
@@ -272,16 +331,29 @@ pub fn inject_and_build_apk(
 
         let short_name = Path::new(&file_name).file_name().unwrap_or_default().to_string_lossy();
         if file_name.starts_with("res/") {
-            if short_name == "icon.png" && has_custom_icon { continue; }
-            if short_name == "icon_foreground.png" && has_custom_foreground { continue; }
-            if short_name == "push_icon.png" && has_custom_push { continue; }
+            if short_name == "icon.png" && has_custom_icon {
+                trace!("Intercepted original icon.png");
+                continue;
+            }
+            if short_name == "icon_foreground.png" && (has_custom_foreground || fallback_foreground) {
+                trace!("Intercepted and dropped original icon_foreground.png");
+                continue;
+            }
+            if short_name == "push_icon.png" && has_custom_push {
+                trace!("Intercepted original push_icon.png");
+                continue;
+            }
         }
 
-        zip_writer.raw_copy_file(archive_file).map_err(|error| error.to_string())?;
+        zip_writer.raw_copy_file(archive_file).map_err(|error| {
+            error!("Failed to copy file {:?} to new archive: {}", file_name, error);
+            error.to_string()
+        })?;
     }
 
     let mut inject_file = |local_path: &Path, zip_path: &str, store: bool| -> Result<(), String> {
         if !local_path.exists() { return Ok(()); }
+        debug!("Injecting file: {} (Store mode: {})", zip_path, store);
 
         let file_data = fs::read(local_path).map_err(|error| error.to_string())?;
         let compression = if store { zip::CompressionMethod::Stored } else { zip::CompressionMethod::Deflated };
@@ -318,19 +390,26 @@ pub fn inject_and_build_apk(
     }
 
     if icons_dir.exists() {
+        info!("Scaling and injecting custom icons...");
+
+        let foreground_source = if fallback_foreground { "icon.png" } else { "icon_foreground.png" };
+
         let icon_blueprints = vec![
-            ("icon.png", 192, 144, 96, has_custom_icon),
-            ("icon_foreground.png", 432, 324, 216, has_custom_foreground),
-            ("push_icon.png", 96, 72, 48, has_custom_push),
+            ("icon.png", "icon.png", 192, 144, 96, has_custom_icon, false),
+            ("icon_foreground.png", foreground_source, 432, 324, 216, has_custom_foreground || fallback_foreground, fallback_foreground),
+            ("push_icon.png", "push_icon.png", 96, 72, 48, has_custom_push, false),
         ];
 
-        for (file_name, xxxhdpi, xxhdpi, xhdpi, exists) in icon_blueprints {
+        for (dest_name, source_name, xxxhdpi, xxhdpi, xhdpi, exists, is_fallback) in icon_blueprints {
             if !exists { continue; }
 
-            let source_path = icons_dir.join(file_name);
-            let Ok(source_image) = image::open(&source_path) else { continue; };
+            let source_path = icons_dir.join(source_name);
+            let Ok(source_image) = image::open(&source_path) else {
+                warn!("Failed to open or decode custom icon: {}", source_name);
+                continue;
+            };
 
-            let target_resolutions = vec![
+            let target_resolutions = [
                 ("drawable-xxxhdpi", xxxhdpi),
                 ("drawable-xxhdpi", xxhdpi),
                 ("drawable-xhdpi", xhdpi),
@@ -345,35 +424,63 @@ pub fn inject_and_build_apk(
                 ("mipmap-xhdpi-v4", xhdpi),
             ];
 
-            for (folder, size) in target_resolutions {
+            for (folder, canvas_size) in target_resolutions {
                 let res_folder = format!("res/{}", folder);
 
                 if !existing_res_folders.contains(&res_folder) { continue; }
 
-                let zip_path = format!("{}/{}", res_folder, file_name);
-                let scaled_image = source_image.resize_exact(size, size, image::imageops::FilterType::Lanczos3);
+                let zip_path = format!("{}/{}", res_folder, dest_name);
+
+                let inner_scale_size = if is_fallback {
+                    (canvas_size as f32 * 0.67) as u32
+                } else {
+                    canvas_size
+                };
+
+                let scaled_image = source_image.resize_exact(inner_scale_size, inner_scale_size, image::imageops::FilterType::Lanczos3);
+
+                let final_image = if is_fallback {
+                    let mut canvas = image::RgbaImage::new(canvas_size, canvas_size);
+                    let offset = ((canvas_size.saturating_sub(inner_scale_size)) / 2) as i64;
+                    image::imageops::overlay(&mut canvas, &scaled_image.to_rgba8(), offset, offset);
+                    image::DynamicImage::ImageRgba8(canvas)
+                } else {
+                    scaled_image
+                };
 
                 let mut cursor = Cursor::new(Vec::new());
-                if scaled_image.write_to(&mut cursor, image::ImageFormat::Png).is_err() { continue; };
+                if final_image.write_to(&mut cursor, image::ImageFormat::Png).is_err() { continue; };
 
                 let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
                 if zip_writer.start_file(&zip_path, options).is_err() { continue; };
 
                 let _ = zip_writer.write_all(&cursor.into_inner());
+                trace!("Injected scaled icon at: {} (Canvas: {}, Image: {})", zip_path, canvas_size, inner_scale_size);
                 injected_count += 1;
             }
         }
     }
 
-    zip_writer.finish().map_err(|error| error.to_string())?;
+    zip_writer.finish().map_err(|error| {
+        error!("Failed to finalize APK ZipWriter: {}", error);
+        error.to_string()
+    })?;
+    info!("Successfully built APK. Total injected files: {}", injected_count);
     Ok(injected_count)
 }
 
 pub fn normalize_apk(input_apk: &Path, output_apk: &Path, original_apk: &Path) -> Result<(), String> {
+    info!("Normalizing APK binaries for signature verification...");
     let mut stored_files_map = HashSet::new();
 
-    let original_file = fs::File::open(original_apk).map_err(|error| format!("Failed to open original APK: {}", error))?;
-    let mut original_archive = ZipArchive::new(original_file).map_err(|error| format!("Failed to read original APK: {}", error))?;
+    let original_file = fs::File::open(original_apk).map_err(|error| {
+        error!("Failed to open original APK for normalization: {}", error);
+        format!("Failed to open original APK: {}", error)
+    })?;
+    let mut original_archive = ZipArchive::new(original_file).map_err(|error| {
+        error!("Failed to read original APK for normalization: {}", error);
+        format!("Failed to read original APK: {}", error)
+    })?;
 
     for index in 0..original_archive.len() {
         let archive_file = original_archive.by_index(index).map_err(|error| error.to_string())?;
@@ -381,6 +488,7 @@ pub fn normalize_apk(input_apk: &Path, output_apk: &Path, original_apk: &Path) -
             stored_files_map.insert(archive_file.name().to_string());
         }
     }
+    debug!("Identified {} stored files from original APK.", stored_files_map.len());
 
     let source_file = fs::File::open(input_apk).map_err(|error| format!("Failed to open APK: {}", error))?;
     let mut archive = ZipArchive::new(source_file).map_err(|error| format!("Failed to read APK archive: {}", error))?;
@@ -404,9 +512,13 @@ pub fn normalize_apk(input_apk: &Path, output_apk: &Path, original_apk: &Path) -
         }
 
         let mut file_data = Vec::new();
-        archive_file.read_to_end(&mut file_data).map_err(|error| format!("Failed reading {}: {}", file_name, error))?;
+        archive_file.read_to_end(&mut file_data).map_err(|error| {
+            error!("Failed reading file for normalization: {}", file_name);
+            format!("Failed reading {}: {}", file_name, error)
+        })?;
 
         let byte_alignment = if file_extension == "so" { 4096 } else { 4 };
+        trace!("Re-aligning {} to {} bytes (Stored).", file_name, byte_alignment);
 
         let write_options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored)
@@ -416,6 +528,10 @@ pub fn normalize_apk(input_apk: &Path, output_apk: &Path, original_apk: &Path) -
         zip_writer.write_all(&file_data).map_err(|error| error.to_string())?;
     }
 
-    zip_writer.finish().map_err(|error| error.to_string())?;
+    zip_writer.finish().map_err(|error| {
+        error!("Failed to finish normalized APK ZipWriter: {}", error);
+        error.to_string()
+    })?;
+    info!("APK normalization complete.");
     Ok(())
 }

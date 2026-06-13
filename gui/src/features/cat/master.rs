@@ -13,7 +13,6 @@ use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
 use super::{header, stats, abilities, talents, details, viewer};
 use super::header::ExportAction;
 use crate::features::cat::statblock::build_cat_statblock;
-use nyanko::common::Param;
 use core::global::context::GlobalContext;
 use core::cat::logic::context::CatRenderContext;
 use crate::global::shared::DragGuard;
@@ -39,7 +38,7 @@ pub fn show(
     talent_levels: &mut HashMap<u8, u8>,
     talent_costs: &HashMap<u8, TalentCost>,
     cache_version: u64,
-    param: &Param,
+    global_ctx: GlobalContext,
     assets: &CustomAssets,
     drag_guard: &mut DragGuard,
 ) {
@@ -61,8 +60,6 @@ pub fn show(
         if form_allows_talents { cat_entry.talent_data.as_ref() } else { None },
         if form_allows_talents { Some(&*talent_levels) } else { None }
     ));
-
-    let global_ctx = GlobalContext { param };
 
     match export_action {
         ExportAction::Copy | ExportAction::Save => {

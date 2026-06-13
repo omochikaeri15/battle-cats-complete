@@ -1,13 +1,14 @@
 use eframe::egui;
 use crate::features::stage::state::StageListState;
 use core::settings::logic::Settings;
+use core::global::context::GlobalContext;
 use super::{list, view};
 
-const ANIM_SPEED: f32 = 0.15; // Open/close speed multiplier (duration in seconds)
-const TOGGLE_BTN_GAP: f32 = 5.0; // Left padding for the toggle button (and distance from list)
+const ANIM_SPEED: f32 = 0.15;
+const TOGGLE_BTN_GAP: f32 = 5.0;
 const LIST_BG_COLOR: egui::Color32 = egui::Color32::from_rgb(20, 20, 20);
 
-pub fn show(ctx: &egui::Context, state: &mut StageListState, _settings: &mut Settings) {
+pub fn show(ctx: &egui::Context, state: &mut StageListState, _settings: &mut Settings, global_ctx: GlobalContext) {
     let screen_rect = ctx.screen_rect();
 
     let mut inner_target_width = 180.0; 
@@ -36,7 +37,7 @@ pub fn show(ctx: &egui::Context, state: &mut StageListState, _settings: &mut Set
             });
             return;
         }
-        view::draw(ctx, ui, state);
+        view::draw(ctx, ui, state, global_ctx);
     });
 
     let hidden_x = -total_target_width - 30.0; 

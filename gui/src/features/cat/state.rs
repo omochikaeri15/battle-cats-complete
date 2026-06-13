@@ -2,16 +2,12 @@ use eframe::egui;
 use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-
 pub use core::cat::logic::state::DetailTab;
-
 use core::cat::logic::state::CatDataState;
 use crate::global::sheet::GuiSpriteSheet;
 use crate::global::assets::CustomAssets;
+use core::global::context::GlobalContext;
 use core::settings::logic::Settings;
-use nyanko::common::Param;
-
-// We now import Rig instead of Model
 use nyanko::graphics::animation::Unit;
 
 use crate::features::cat::list::CatList;
@@ -42,12 +38,10 @@ pub struct CatListState {
     #[serde(skip)] pub talent_name_textures: HashMap<String, egui::TextureHandle>,
     #[serde(skip)] pub gatya_item_textures: HashMap<i32, Option<egui::TextureHandle>>,
     #[serde(skip)] pub texture_cache_version: u64,
-
-    // NEW: Replaces old Model and SpriteSheet with the unified pure Rig
     #[serde(skip)] pub rig: Option<Arc<Unit>>,
 }
 
-pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settings, param: &Param, drag_guard: &mut DragGuard) {
+pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settings, global_ctx: GlobalContext, drag_guard: &mut DragGuard) {
     if state.custom_assets.is_none() {
         state.custom_assets = Some(CustomAssets::new(ctx));
     }
@@ -209,26 +203,26 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
             &mut state.data.level_input, &mut state.data.current_level,
             &mut state.detail_texture, &mut state.data.detail_key,
             &mut state.img015_sheets, &mut state.img022_sheets,
-            &mut state.rig, // Pass rig instead of model and sheet
+            &mut state.rig,
             &mut state.anim_viewer, &mut state.talent_name_textures,
             &mut state.gatya_item_textures, Some(cat_entry.skill_descriptions.as_ref()),
             settings, talent_map, cat_entry.talent_costs.as_ref(),
-            state.texture_cache_version, param, &assets, drag_guard
+            state.texture_cache_version, global_ctx, &assets, drag_guard
         );
 
         let mut current_ultra_state = state.data.selected_form == 3;
         if state.data.selected_form >= 2
             && let Some(levels) = state.data.talent_levels.get(&selected_id) {
-                if let Some(t_data) = &cat_entry.talent_data {
-                    for (idx, group) in t_data.groups.iter().enumerate() {
-                        if group.limit == 1
-                            && let Some(&lvl) = levels.get(&(idx as u8))
-                                && lvl > 0 { current_ultra_state = true; break; }
-                    }
-                } else if levels.iter().any(|(&idx, &lvl)| idx >= 5 && lvl > 0) {
-                    current_ultra_state = true;
+            if let Some(t_data) = &cat_entry.talent_data {
+                for (idx, group) in t_data.groups.iter().enumerate() {
+                    if group.limit == 1
+                        && let Some(&lvl) = levels.get(&(idx as u8))
+                        && lvl > 0 { current_ultra_state = true; break; }
                 }
+            } else if levels.iter().any(|(&idx, &lvl)| idx >= 5 && lvl > 0) {
+                current_ultra_state = true;
             }
+        }
 
         if settings.cat_data.bump_ultra_60 {
             if !state.data.is_in_ultra_state && current_ultra_state {
@@ -239,12 +233,12 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
                 }
             } else if state.data.is_in_ultra_state && !current_ultra_state
                 && let Some((saved_lvl, saved_str)) = state.data.saved_pre_ultra_level.take() {
-                    let expected_ultra_level = if saved_lvl < 60 { 60 } else { saved_lvl };
-                    if state.data.current_level == expected_ultra_level {
-                        state.data.current_level = saved_lvl;
-                        state.data.level_input = saved_str;
-                    }
+                let expected_ultra_level = if saved_lvl < 60 { 60 } else { saved_lvl };
+                if state.data.current_level == expected_ultra_level {
+                    state.data.current_level = saved_lvl;
+                    state.data.level_input = saved_str;
                 }
+            }
             state.data.is_in_ultra_state = current_ultra_state;
         } else {
             state.data.is_in_ultra_state = current_ultra_state;
@@ -252,7 +246,6 @@ pub fn show(ctx: &egui::Context, state: &mut CatListState, settings: &mut Settin
         }
 
         if state.data.selected_form != prev_form {
-            // FIX: Clear rig on form swap
             state.rig = None;
         }
     });

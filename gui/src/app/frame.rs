@@ -1,4 +1,5 @@
 use eframe::egui;
+use core::global::context::GlobalContext;
 use crate::app::BattleCatsApp;
 
 use crate::features::home;
@@ -92,11 +93,16 @@ pub fn draw(app: &mut BattleCatsApp, ctx: &egui::Context) {
     style.visuals.override_text_color = Some(egui::Color32::WHITE);
     ctx.set_style(style);
 
+    let global_ctx = GlobalContext {
+        param: &app.param,
+        localizable: &app.localizable,
+    };
+
     match app.current_page {
         Page::Home => home::show(ctx, &mut app.drag_guard),
-        Page::Cats => show_cats(ctx, &mut app.cat_list_state, &mut app.settings, &app.param, &mut app.drag_guard),
-        Page::Enemies => show_enemies(ctx, &mut app.enemy_list_state, &mut app.settings, &app.param, &mut app.drag_guard),
-        Page::Stages => show_stages(ctx, &mut app.stage_list_state, &mut app.settings),
+        Page::Cats => show_cats(ctx, &mut app.cat_list_state, &mut app.settings, global_ctx, &mut app.drag_guard),
+        Page::Enemies => show_enemies(ctx, &mut app.enemy_list_state, &mut app.settings, global_ctx, &mut app.drag_guard),
+        Page::Stages => show_stages(ctx, &mut app.stage_list_state, &mut app.settings, global_ctx),
         Page::Mods => show_mods(ctx, &mut app.mod_state, &mut app.settings),
         Page::Data => {
             egui::CentralPanel::default().show(ctx, |ui| {

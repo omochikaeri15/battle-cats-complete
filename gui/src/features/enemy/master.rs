@@ -8,7 +8,6 @@ use nyanko::graphics::animation::Unit;
 use std::sync::Arc;
 use crate::features::animation::viewer::AnimViewer;
 use crate::global::assets::CustomAssets;
-use nyanko::common::Param;
 use core::global::context::GlobalContext;
 use core::enemy::logic::context::EnemyRenderContext;
 use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
@@ -25,12 +24,12 @@ pub fn show(
     mag_input: &mut String,
     magnification: &mut Magnification,
     img015_sheets: &mut Vec<GuiSpriteSheet>,
-    unit_sync: &mut Option<Arc<Unit>>, // Swapped Model/Sheet for Rig
+    unit_sync: &mut Option<Arc<Unit>>,
     anim_viewer: &mut AnimViewer,
     settings: &mut Settings,
     detail_texture: &mut Option<egui::TextureHandle>,
     detail_key: &mut String,
-    param: &Param,
+    global_ctx: GlobalContext,
     assets: &CustomAssets,
     drag_guard: &mut DragGuard,
 ) {
@@ -42,8 +41,6 @@ pub fn show(
 
     let dynamic_entry = scanner::scan_single(enemy_entry.id, &settings.scanner_config());
     let stats = dynamic_entry.as_ref().map(|e| &e.stats).unwrap_or(&enemy_entry.stats);
-
-    let global_ctx = GlobalContext { param };
 
     let enemy_ctx = EnemyRenderContext {
         global: global_ctx,

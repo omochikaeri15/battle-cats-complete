@@ -122,14 +122,14 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
 
 #[allow(clippy::too_many_arguments)]
 fn load_map(
-    registry: &mut StageRegistry, 
-    cat_prefix: &str, 
-    map_id: u32, 
-    map_path: &Path, 
-    map_display_name: &str, 
-    cat_display_name: &str, 
-    stage_names: &HashMap<u32, Vec<String>>, 
-    ctx: &ScanContext, 
+    registry: &mut StageRegistry,
+    cat_prefix: &str,
+    map_id: u32,
+    map_path: &Path,
+    map_display_name: &str,
+    cat_display_name: &str,
+    stage_names: &HashMap<u32, Vec<String>>,
+    ctx: &ScanContext,
     global_map_id: Option<u32>
 ) {
     let global_id_val = global_map_id.unwrap_or(0);
@@ -163,57 +163,57 @@ fn load_map(
         for file_entry in files_dir.flatten() {
             let filename = file_entry.file_name().to_string_lossy().to_string();
             let is_valid_stage_data = filename.starts_with("MapStageData") && filename.ends_with(".csv");
-            
+
             if !is_valid_stage_data {
                 continue;
             }
-            
+
             stage_data_entries = data::mapstagedata::load(map_path, &filename, ctx.lang_priority);
-            
-            if !stage_data_entries.is_empty() { 
-                break; 
+
+            if !stage_data_entries.is_empty() {
+                break;
             }
         }
     }
-    
+
     if stage_data_entries.is_empty() {
         stage_data_entries = data::mapstagedata::load(map_path, "stage.csv", ctx.lang_priority);
     }
 
-    let Ok(stages_dir) = fs::read_dir(map_path) else { 
-        return; 
+    let Ok(stages_dir) = fs::read_dir(map_path) else {
+        return;
     };
-    
+
     for stage_entry in stages_dir.flatten() {
         let stage_path = stage_entry.path();
-        if !stage_path.is_dir() { 
-            continue; 
+        if !stage_path.is_dir() {
+            continue;
         }
 
         let stage_folder = stage_path.file_name().unwrap_or_default().to_string_lossy();
-        let Ok(stage_id) = stage_folder.parse::<u32>() else { 
-            continue; 
+        let Ok(stage_id) = stage_folder.parse::<u32>() else {
+            continue;
         };
 
         let mut stage_raw = None;
         if let Ok(files_dir) = fs::read_dir(&stage_path) {
             for file_entry in files_dir.flatten() {
                 let filename = file_entry.file_name().to_string_lossy().to_string();
-                
+
                 if !filename.ends_with(".csv") {
                     continue;
                 }
-                
+
                 stage_raw = data::stage::load(&stage_path, &filename, ctx.lang_priority);
-                
-                if stage_raw.is_some() { 
-                    break; 
+
+                if stage_raw.is_some() {
+                    break;
                 }
             }
         }
 
-        let Some(raw_layout) = stage_raw else { 
-            continue; 
+        let Some(raw_layout) = stage_raw else {
+            continue;
         };
 
         let stage_display_name = stage_names.get(&map_id)
@@ -221,14 +221,22 @@ fn load_map(
             .filter(|name| !name.is_empty())
             .cloned()
             .unwrap_or_else(|| format!("{:02}", stage_id));
+        
+        let mut final_opt = data::stage_option::StageOption::default();
+        final_opt.target_crowns = -1;
 
-        let current_stage_opt = stage_opts.iter()
-            .find(|opt| opt.target_stage == -1 || opt.target_stage == stage_id as i32)
-            .cloned()
-            .unwrap_or_default();
+        for opt in stage_opts.iter().filter(|o| o.target_stage == -1 || o.target_stage == stage_id as i32) {
+            if opt.target_crowns != -1 { final_opt.target_crowns = opt.target_crowns; }
+            if opt.rarity_mask != 0 { final_opt.rarity_mask = opt.rarity_mask; }
+            if opt.deploy_limit != 0 { final_opt.deploy_limit = opt.deploy_limit; }
+            if opt.allowed_rows != 0 { final_opt.allowed_rows = opt.allowed_rows; }
+            if opt.min_cost != 0 { final_opt.min_cost = opt.min_cost; }
+            if opt.max_cost != 0 { final_opt.max_cost = opt.max_cost; }
+            if opt.charagroup_id != 0 { final_opt.charagroup_id = opt.charagroup_id; }
+        }
 
         let stage_diff = ctx.difficulties.get(&global_id_val).and_then(|diff_list| diff_list.get(stage_id as usize)).copied().unwrap_or(0);
-        let current_charagroup = ctx.charagroups.get(&current_stage_opt.charagroup_id).cloned();
+        let current_charagroup = ctx.charagroups.get(&final_opt.charagroup_id).cloned();
 
         let stage_key = format!("{}_{}_{}", cat_prefix, map_id, stage_id);
         let mut stage_struct = Stage {
@@ -253,12 +261,12 @@ fn load_map(
             enemies: raw_layout.enemies,
             difficulty: stage_diff,
             max_crowns: map_opt.max_crowns,
-            target_crowns: current_stage_opt.target_crowns,
-            rarity_mask: current_stage_opt.rarity_mask,
-            deploy_limit: current_stage_opt.deploy_limit,
-            allowed_rows: current_stage_opt.allowed_rows,
-            min_cost: current_stage_opt.min_cost,
-            max_cost: current_stage_opt.max_cost,
+            target_crowns: final_opt.target_crowns,
+            rarity_mask: final_opt.rarity_mask,
+            deploy_limit: final_opt.deploy_limit,
+            allowed_rows: final_opt.allowed_rows,
+            min_cost: final_opt.min_cost,
+            max_cost: final_opt.max_cost,
             charagroup: current_charagroup,
             ..Default::default()
         };

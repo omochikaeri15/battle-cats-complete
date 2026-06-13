@@ -1,11 +1,13 @@
 use std::path::Path;
 use std::collections::HashMap;
 use eframe::egui;
+use tracing::{debug, warn, instrument};
 
 use core::stage::data::stage::{BossType, EnemyAmount};
 use core::global::utils::autocrop;
 use core::stage::registry::Stage;
 use core::enemy::logic::scanner::EnemyEntry;
+use core::global::context::GlobalContext;
 
 use super::treasure::center_header;
 
@@ -72,14 +74,21 @@ fn format_base_hp_percentage(base_hp_percentage: u32, is_dojo_mechanic: bool) ->
     format!("{}%", base_hp_percentage)
 }
 
+#[instrument(skip(icon_file_path), fields(path = %icon_file_path.display()))]
 fn process_enemy_icon_texture(icon_file_path: &Path) -> Option<egui::ColorImage> {
-    let Ok(loaded_raw_image_data) = image::open(icon_file_path) else {
-        return None;
+    debug!("Loading raw image file for icon processing");
+    let loaded_raw_image_data = match image::open(icon_file_path) {
+        Ok(data) => data,
+        Err(err) => {
+            warn!(error = %err, "Failed to open enemy icon texture file");
+            return None;
+        }
     };
 
     let autocropped_rgba_image = autocrop(loaded_raw_image_data.to_rgba8());
     let image_dimensions = [autocropped_rgba_image.width() as usize, autocropped_rgba_image.height() as usize];
 
+    debug!(width = image_dimensions[0], height = image_dimensions[1], "Icon image autocropped successfully");
     Some(egui::ColorImage::from_rgba_unmultiplied(image_dimensions, autocropped_rgba_image.as_flat_samples().as_slice()))
 }
 
@@ -91,16 +100,37 @@ fn center_enemy_text(ui: &mut egui::Ui, display_text: impl Into<String>) {
 
 // --- MAIN UI DRAW LOOP ---
 
+#[instrument(skip_all, fields(stage_id = %stage_data.stage_id))]
 pub fn draw(
     egui_context: &egui::Context,
     ui: &mut egui::Ui,
     stage_data: &Stage,
     enemy_registry: &HashMap<u32, EnemyEntry>,
     enemy_name_registry: &[String],
-    texture_cache: &mut HashMap<u32, egui::TextureHandle>
+    texture_cache: &mut HashMap<u32, egui::TextureHandle>,
+    global_ctx: GlobalContext
 ) {
     ui.strong("Battleground");
     ui.separator();
+
+    // --- STAGE RESTRICTIONS SECTION ---
+    // Pass `0` since the UI is currently only rendering the 1-Crown perspective
+    let restrictions = core::stage::logic::restrictions::parse_restrictions(stage_data, 0, global_ctx);
+
+    if !restrictions.is_empty() {
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new("Stage Restrictions").strong());
+
+        ui.indent("stage_restrictions_indent", |ui| {
+            for restriction in &restrictions {
+                ui.label(format!("• {}", restriction));
+            }
+        });
+
+        ui.add_space(8.0);
+    } else {
+        debug!("No stage restrictions found for current crown to display");
+    }
 
     if stage_data.enemies.is_empty() {
         ui.label("No enemies defined for this stage.");
@@ -139,16 +169,29 @@ pub fn draw(
 
                 grid.with_layout(egui::Layout::bottom_up(egui::Align::Center), |icon_layout| {
                     let has_rendered_icon = 'icon: {
-                        let Some(located_enemy_entry) = enemy_registry.get(&enemy_data.id) else { break 'icon false; };
-                        let Some(enemy_icon_path) = &located_enemy_entry.icon_path else { break 'icon false; };
+                        let Some(located_enemy_entry) = enemy_registry.get(&enemy_data.id) else {
+                            break 'icon false;
+                        };
+                        let Some(enemy_icon_path) = &located_enemy_entry.icon_path else {
+                            break 'icon false;
+                        };
 
                         if let std::collections::hash_map::Entry::Vacant(e) = texture_cache.entry(enemy_data.id) {
-                            let Some(processed_color_image) = process_enemy_icon_texture(enemy_icon_path) else { break 'icon false; };
-                            let generated_texture_handle = egui_context.load_texture(format!("stage_enemy_icon_{}", enemy_data.id), processed_color_image, egui::TextureOptions::LINEAR);
+                            debug!(enemy_id = enemy_data.id, "Texture cache miss, attempting processing");
+                            let Some(processed_color_image) = process_enemy_icon_texture(enemy_icon_path) else {
+                                break 'icon false;
+                            };
+                            let generated_texture_handle = egui_context.load_texture(
+                                format!("stage_enemy_icon_{}", enemy_data.id),
+                                processed_color_image,
+                                egui::TextureOptions::LINEAR
+                            );
                             e.insert(generated_texture_handle);
                         }
 
-                        let Some(cached_texture_handle) = texture_cache.get(&enemy_data.id) else { break 'icon false; };
+                        let Some(cached_texture_handle) = texture_cache.get(&enemy_data.id) else {
+                            break 'icon false;
+                        };
                         let image_response = icon_layout.add(egui::Image::new(cached_texture_handle).max_size(egui::vec2(32.0, 32.0)));
                         image_response.on_hover_text(resolved_enemy_name.clone());
                         true

@@ -4,8 +4,7 @@ use std::sync::Arc;
 
 use core::enemy::logic::state::EnemyDataState;
 use core::settings::logic::Settings;
-use crate::global::assets::CustomAssets;
-use nyanko::common::Param;
+use core::global::context::GlobalContext;
 
 pub use core::enemy::logic::state::EnemyDetailTab;
 
@@ -15,6 +14,7 @@ use crate::features::animation::viewer::AnimViewer;
 use crate::global::shared::DragGuard;
 use crate::features::enemy::filter::EnemyFilterState;
 use crate::global::sheet::GuiSpriteSheet;
+use crate::global::assets::CustomAssets;
 
 // We now import Rig instead of Model
 use nyanko::graphics::animation::Unit;
@@ -44,7 +44,7 @@ pub struct EnemyListState {
     #[serde(skip)] pub rig: Option<Arc<Unit>>,
 }
 
-pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Settings, param: &Param, drag_guard: &mut DragGuard) {
+pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Settings, global_ctx: GlobalContext, drag_guard: &mut DragGuard) {
     if state.custom_assets.is_none() {
         state.custom_assets = Some(CustomAssets::new(ctx));
     }
@@ -151,9 +151,9 @@ pub fn show(ctx: &egui::Context, state: &mut EnemyListState, settings: &mut Sett
             ctx, ui, enemy_entry,
             &mut state.data.selected_tab, &mut state.data.mag_input, &mut state.data.magnification,
             &mut state.img015_sheets,
-            &mut state.rig, // Pass rig down to master
+            &mut state.rig,
             &mut state.anim_viewer, settings,
-            &mut state.detail_texture, &mut state.data.detail_key, param, &assets, drag_guard
+            &mut state.detail_texture, &mut state.data.detail_key, global_ctx, &assets, drag_guard
         );
     });
 
