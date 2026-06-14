@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use rayon::prelude::*;
+use tracing::{debug, info, trace};
 use crate::settings::logic::pem::get_active_pem;
 
 const APK_SIGNING_BLOCK_MAGIC: &[u8] = b"APK Sig Block 42";
@@ -24,6 +25,7 @@ pub struct ZipInfo {
 
 impl ZipInfo {
     pub fn new<R: Read + Seek>(reader: &mut R) -> Result<Self> {
+        trace!("Scanning for ZIP End of Central Directory (EOCD)...");
         let mut eocd_magic = [0u8; 4];
         let file_length = reader.seek(SeekFrom::End(0))?;
 
@@ -41,9 +43,11 @@ impl ZipInfo {
         }
 
         anyhow::ensure!(magic_found, "End of Central Directory (EOCD) not found. Is this a valid ZIP?");
+        debug!("EOCD located at offset: {}", search_position);
 
         reader.seek(SeekFrom::Start(search_position + 16))?;
         let central_directory_start = reader.read_u32::<LittleEndian>()? as u64;
+        debug!("Central Directory start offset parsed as: {}", central_directory_start);
 
         Ok(ZipInfo {
             central_directory_start,
@@ -60,6 +64,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn new(pem_string: &str) -> Result<Self> {
+        debug!("Parsing PEM string for Signer initialization.");
         let cert_start_tag = "-----BEGIN CERTIFICATE-----";
         let cert_end_tag = "-----END CERTIFICATE-----";
 
@@ -68,6 +73,7 @@ impl Signer {
 
         let private_key_string = &pem_string[..cert_start_index].trim();
 
+        trace!("Decoding RSA Private Key...");
         let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_string)
             .or_else(|_| RsaPrivateKey::from_pkcs1_pem(private_key_string))
             .context("Failed to parse RSA Private Key from PEM.")?;
@@ -77,10 +83,12 @@ impl Signer {
         let base64_certificate = &pem_string[cert_start_index + cert_start_tag.len()..cert_end_index]
             .replace(['\n', '\r'], "");
 
+        trace!("Decoding Base64 Certificate and Parsing ASN.1 DER...");
         let raw_der_bytes = BASE64_STANDARD.decode(base64_certificate).context("Failed to base64 decode certificate")?;
         let certificate_der = rasn::der::decode::<Certificate>(&raw_der_bytes)
             .map_err(|error| anyhow::anyhow!("Failed to parse ASN.1 Certificate: {}", error))?;
 
+        debug!("Signer successfully initialized with public key and certificate.");
         Ok(Self {
             private_key,
             public_key,
@@ -97,6 +105,7 @@ impl Signer {
     }
 
     pub fn sign(&self, data: &[u8]) -> Vec<u8> {
+        trace!("Signing payload of length: {}", data.len());
         let digest = Sha256::digest(data);
         let padding = Pkcs1v15Sign::new::<Sha256>();
         self.private_key.sign(padding, &digest).expect("RSA signing failed")
@@ -104,14 +113,20 @@ impl Signer {
 }
 
 pub fn sign(apk_path: &Path, custom_signer: Option<Signer>) -> Result<()> {
+    info!("Starting APK signature process for: {:?}", apk_path);
     let identity = custom_signer.map(Ok).unwrap_or_else(|| {
+        trace!("No custom signer provided, retrieving active PEM.");
         let (active_pem, _) = get_active_pem();
         Signer::new(&active_pem)
     })?;
 
+    debug!("Reading target APK bytes into memory...");
     let apk_bytes = std::fs::read(apk_path)?;
     let mut reader = Cursor::new(&apk_bytes);
+
     let block_info = parse_apk_signing_block(&mut reader)?;
+    trace!("Signing Block Info: start={}, cd_start={}, eocd_start={}",
+           block_info.signing_block_start, block_info.central_directory_start, block_info.eocd_start);
 
     let zip_hash = compute_digest_parallel(
         &apk_bytes,
@@ -120,10 +135,13 @@ pub fn sign(apk_path: &Path, custom_signer: Option<Signer>) -> Result<()> {
         block_info.eocd_start
     )?;
 
+    debug!("Computed master parallel zip hash.");
+
     let mut new_signature_block = vec![];
     let mut writer = Cursor::new(&mut new_signature_block);
     write_apk_signing_block(&mut writer, zip_hash, &identity)?;
 
+    trace!("Re-assembling signed APK stream...");
     let mut output_file = File::create(apk_path)?;
 
     output_file.write_all(&apk_bytes[..(block_info.signing_block_start as usize)])?;
@@ -135,9 +153,11 @@ pub fn sign(apk_path: &Path, custom_signer: Option<Signer>) -> Result<()> {
 
     output_file.write_all(&apk_bytes[(block_info.eocd_start as usize)..])?;
 
+    debug!("Patching new EOCD Central Directory offset.");
     output_file.seek(SeekFrom::Start(new_eocd_offset + 16))?;
     output_file.write_u32::<LittleEndian>(new_cd_start_offset as u32)?;
 
+    info!("APK signature applied successfully.");
     Ok(())
 }
 
@@ -147,6 +167,7 @@ fn compute_digest_parallel(
     central_directory_start: u64,
     eocd_start: u64,
 ) -> Result<[u8; 32]> {
+    trace!("Preparing chunks for parallel hashing...");
     let mut final_hasher = Sha256::new();
 
     let contents_bytes = &apk_bytes[..signing_block_start as usize];
@@ -162,6 +183,8 @@ fn compute_digest_parallel(
     all_chunks.extend(cd_bytes.chunks(MAX_CHUNK_SIZE));
     all_chunks.extend(eocd_buffer.chunks(MAX_CHUNK_SIZE));
 
+    debug!("Dispatching {} chunks to parallel iterators for hashing.", all_chunks.len());
+
     let hash_chunks: Vec<[u8; 32]> = all_chunks
         .into_par_iter()
         .map(|chunk| {
@@ -173,6 +196,7 @@ fn compute_digest_parallel(
         })
         .collect();
 
+    trace!("Combining chunk hashes into final master hash...");
     final_hasher.update([0x5a]);
     final_hasher.update((hash_chunks.len() as u32).to_le_bytes());
 
@@ -268,6 +292,7 @@ struct ApkSignature {
 
 impl ApkSignatureBlockV2 {
     fn new(hash: [u8; 32], signer: &Signer) -> Result<Self> {
+        trace!("Constructing APK Signature Block V2 from payload and signer.");
         let mut signed_data = vec![];
         SignedData::new(hash, signer)?.write(&mut signed_data)?;
         let signature = signer.sign(&signed_data);
@@ -325,6 +350,7 @@ fn write_apk_signing_block<W: Write + Seek>(
     hash: [u8; 32],
     signer: &Signer,
 ) -> Result<()> {
+    trace!("Writing custom v2 signature block to output buffer.");
     let mut buffer = vec![];
     ApkSignatureBlockV2::new(hash, signer)?.write(&mut buffer)?;
 
@@ -340,6 +366,7 @@ fn write_apk_signing_block<W: Write + Seek>(
 }
 
 fn parse_apk_signing_block<R: Read + Seek>(reader: &mut R) -> Result<ApkSignatureBlock> {
+    trace!("Scanning for existing APK Signature Block...");
     let zip_info = ZipInfo::new(reader)?;
     let mut block = ApkSignatureBlock {
         eocd_start: zip_info.eocd_start,
@@ -353,10 +380,12 @@ fn parse_apk_signing_block<R: Read + Seek>(reader: &mut R) -> Result<ApkSignatur
     reader.read_exact(&mut magic_buffer)?;
 
     if magic_buffer != APK_SIGNING_BLOCK_MAGIC {
+        debug!("No pre-existing APK Signature Block found. Injecting brand new block.");
         block.signing_block_start = block.central_directory_start;
         return Ok(block);
     }
 
+    debug!("Pre-existing APK Signature Block discovered. Readying to strip.");
     let current_position = reader.seek(SeekFrom::Current(-(remaining_size as i64)))?;
     block.signing_block_start = current_position - 8;
 

@@ -1,5 +1,6 @@
 use std::sync::{mpsc::{self, Receiver, Sender}, Mutex};
 use std::thread;
+use tracing::{error, info, trace};
 
 use crate::mods::logic::state::ModDataState;
 
@@ -15,6 +16,7 @@ pub fn spawn_log_adapter(event_transmitter: Sender<ExportEvent>) -> Sender<Strin
     let (string_transmitter, string_receiver) = mpsc::channel();
 
     thread::spawn(move || {
+        trace!("Spawned log adapter thread.");
         for message in string_receiver {
             let _ = event_transmitter.send(ExportEvent::Log(message));
         }
@@ -32,15 +34,18 @@ pub fn process_events(state: &mut ModDataState) -> bool {
     while let Ok(event) = receiver.try_recv() {
         match event {
             ExportEvent::Log(message) => {
+                trace!("Export Log: {}", message);
                 state.export.log_content.push_str(&format!("{}\n", message));
             },
             ExportEvent::Success(message) => {
+                info!("Export Success: {}", message);
                 state.export.log_content.push_str(&format!("{}\n", message));
                 state.export.status_message = "Complete!".to_string();
                 state.export.is_busy = false;
                 is_busy = false;
             },
             ExportEvent::Error(error_message) => {
+                error!("Export Error: {}", error_message);
                 state.export.log_content.push_str(&format!("!! ERROR: {}\n", error_message));
                 state.export.status_message = "Failed".to_string();
                 state.export.is_busy = false;

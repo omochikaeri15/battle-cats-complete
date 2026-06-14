@@ -3,6 +3,7 @@ use std::io::{Write, BufWriter};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
+use tracing::{debug, error, info, trace, warn};
 
 use nyanko::pack::cryptology;
 
@@ -14,10 +15,17 @@ use crate::settings::logic::keys::RegionKey;
 use crate::mods::export::patch::{EVENT_RECEIVER, ExportEvent, spawn_log_adapter};
 
 pub fn start_pack_export(state: &mut ModDataState) {
-    if state.export.is_busy { return; }
+    if state.export.is_busy {
+        warn!("Pack export requested, but an export is already busy. Ignoring.");
+        return;
+    }
 
-    let Some(mod_folder) = state.selected_mod.clone() else { return; };
+    let Some(mod_folder) = state.selected_mod.clone() else {
+        error!("No mod selected for pack export.");
+        return;
+    };
 
+    info!("Initializing Pack Export for mod: {}", mod_folder);
     state.export.log_content.clear();
     state.export.is_busy = true;
     state.export.status_message = "Initializing Pack Export...".to_string();
@@ -36,11 +44,17 @@ pub fn start_pack_export(state: &mut ModDataState) {
         let string_transmitter = spawn_log_adapter(transmitter.clone());
         let log_callback = |message: String| { let _ = transmitter.send(ExportEvent::Log(message)); };
 
+        trace!("Loading settings for pack export...");
         let settings: Settings = crate::global::io::json::load("settings.json").unwrap_or_default();
 
+        debug!("Verifying keys...");
         let user_keys = match keys::verify(settings.game_data.enforce_key_validation, &string_transmitter) {
-            Ok(keys) => keys,
+            Ok(keys) => {
+                trace!("Keys successfully verified.");
+                keys
+            },
             Err(error) => {
+                error!("Key verification failed: {}", error);
                 let _ = transmitter.send(ExportEvent::Error(error));
                 return;
             }
@@ -60,10 +74,13 @@ pub fn start_pack_export(state: &mut ModDataState) {
             Region::Tw => &user_keys.tw,
         };
 
+        debug!("Starting stream pack and list build targeting region: {:?}", target_region);
         if let Err(error) = stream_pack_and_list(&patch_dir, &export_dir, &pack_name, region_key, &log_callback) {
+            error!("Pack and list streaming failed: {}", error);
             let _ = transmitter.send(ExportEvent::Error(error)); return;
         }
 
+        info!("Pack Export successfully finished: {}.pack", pack_name);
         let _ = transmitter.send(ExportEvent::Success(format!("Successfully Built {}.pack!", pack_name)));
     });
 }
@@ -76,6 +93,7 @@ pub fn stream_pack_and_list(
     log_callback: &impl Fn(String)
 ) -> Result<(), String> {
 
+    debug!("Scanning source directory for pack: {:?}", source_dir);
     let mut files_with_size = Vec::new();
 
     if let Ok(entries) = fs::read_dir(source_dir) {
@@ -83,13 +101,14 @@ pub fn stream_pack_and_list(
             let path = entry.path();
             if path.is_file()
                 && let Ok(metadata) = fs::metadata(&path) {
-                    files_with_size.push((path, metadata.len() as usize));
-                }
+                files_with_size.push((path, metadata.len() as usize));
+            }
         }
     }
 
     let total_files = files_with_size.len();
     if total_files == 0 {
+        warn!("No files found in the patch directory.");
         return Err("No files found in the patch directory.".to_string());
     }
 
@@ -102,13 +121,17 @@ pub fn stream_pack_and_list(
         cryptology::PackType::Standard
     };
 
+    trace!("Determined pack type: {:?}", pack_type);
+    info!("Found {} files to patch.", total_files);
     log_callback(format!("Found {} files to patch.", total_files));
 
     let standard_keys = if pack_type == cryptology::PackType::Standard {
+        trace!("Decoding hex standard keys...");
         let key_bytes = hex::decode(&region_key.key).map_err(|_| "Invalid Region Key Hex".to_string())?;
         let iv_bytes = hex::decode(&region_key.iv).map_err(|_| "Invalid Region IV Hex".to_string())?;
 
         if key_bytes.len() != 16 || iv_bytes.len() != 16 {
+            error!("Region Key/IV length is incorrect: key {}, iv {}", key_bytes.len(), iv_bytes.len());
             return Err("Region Key/IV length is incorrect. Check settings.".to_string());
         }
 
@@ -131,10 +154,12 @@ pub fn stream_pack_and_list(
     let mut list_string = format!("{}\n", total_files);
     let mut current_address = 0;
 
+    debug!("Beginning stream write sequence...");
     for (index, (file_path, _file_size)) in files_with_size.iter().enumerate() {
         let filename = file_path.file_name().unwrap_or_default().to_string_lossy().to_string();
 
         if index > 0 && index % log_interval == 0 {
+            trace!("Streamed {} files so far.", index);
             log_callback(format!("Packed {} files | Streaming: {}", index, filename));
         }
 
@@ -155,12 +180,15 @@ pub fn stream_pack_and_list(
         current_address += new_size;
     }
 
+    debug!("Flushing pack writer to disk.");
     pack_writer.flush().map_err(|error| format!("Failed to flush pack stream to disk: {}", error))?;
 
+    trace!("Encrypting and saving list metadata.");
     let list_bytes = cryptology::encrypt_list(&list_string)
         .map_err(|error| format!("Failed to encrypt list file: {}", error))?;
 
     fs::write(list_path, list_bytes).map_err(|error| format!("Failed to write list file: {}", error))?;
 
+    info!("Pack stream and list generation complete.");
     Ok(())
 }

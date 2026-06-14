@@ -1,7 +1,7 @@
 use eframe::egui;
+use tracing::{debug, trace};
 use crate::global::shared::DragGuard;
-use core::settings::logic::state::ModsSettings;
-use super::tabs::toggle_ui;
+use core::settings::logic::state::{ModsSettings, ExportBehavior};
 
 pub fn show(ui_container: &mut egui::Ui, settings: &mut ModsSettings, drag_guard: &mut DragGuard) -> bool {
     let context = ui_container.ctx().clone();
@@ -18,18 +18,37 @@ pub fn show(ui_container: &mut egui::Ui, settings: &mut ModsSettings, drag_guard
                 .fill(egui::Color32::from_rgb(40, 90, 160));
 
             if scroll_ui.add_sized([180.0, 30.0], manage_pem_button).clicked() {
+                trace!("Manage PEM button clicked");
                 crate::features::settings::pem::open(&context);
             }
 
             scroll_ui.add_space(10.0);
 
             scroll_ui.horizontal(|ui| {
-                let label_response = ui.label("Replace APK on Update");
-                let tooltip_text = "Replace the original input file instead of creating an updated copy in the exports folder";
+                let label_response = ui.label("Export Behavior");
+                let tooltip_text = "Determines whether to scan and automatically choose, always create a new APK, or always overwrite the input APK.";
                 label_response.on_hover_text(tooltip_text);
 
-                let toggle_response = toggle_ui(ui, &mut settings.replace_on_update).on_hover_text(tooltip_text);
-                if toggle_response.changed() { refresh_needed = true; }
+                egui::ComboBox::from_id_salt("export_behavior_combo")
+                    .selected_text(match settings.export_behavior {
+                        ExportBehavior::Automatic => "Automatic",
+                        ExportBehavior::Create => "Create",
+                        ExportBehavior::Update => "Update",
+                    })
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_value(&mut settings.export_behavior, ExportBehavior::Automatic, "Automatic").changed() {
+                            debug!("Export behavior set to Automatic");
+                            refresh_needed = true;
+                        }
+                        if ui.selectable_value(&mut settings.export_behavior, ExportBehavior::Create, "Create").changed() {
+                            debug!("Export behavior set to Create");
+                            refresh_needed = true;
+                        }
+                        if ui.selectable_value(&mut settings.export_behavior, ExportBehavior::Update, "Update").changed() {
+                            debug!("Export behavior set to Update");
+                            refresh_needed = true;
+                        }
+                    });
             });
 
             scroll_ui.add_space(20.0);

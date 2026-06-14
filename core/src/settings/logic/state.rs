@@ -2,6 +2,14 @@ use serde::{Deserialize, Serialize};
 use super::lang;
 use super::upd::UpdateMode;
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug)]
+pub enum ExportBehavior {
+    #[default]
+    Automatic,
+    Create,
+    Update,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Settings {
@@ -16,11 +24,10 @@ pub struct Settings {
     pub runtime: RuntimeState,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
-#[derive(Default)]
 pub struct ModsSettings {
-    pub replace_on_update: bool,
+    pub export_behavior: ExportBehavior,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -70,9 +77,8 @@ impl Default for CatDataSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
-#[derive(Default)]
 pub struct EnemyDataSettings {
     pub show_invalid_enemies: bool,
 }
