@@ -144,9 +144,9 @@ fn fmt_multihit(stats: &Battle, magnification: Magnification) -> String {
     };
 
     let timing_string = if stats.attack_3 > 0 {
-        format!("{} / {} / {}", format_time(stats.time_between_attacks), format_time(stats.time_until_attack_2), format_time(stats.time_until_attack_3))
+        format!("{} / {} / {}", format_time(stats.time_until_attack_1), format_time(stats.time_until_attack_2), format_time(stats.time_until_attack_3))
     } else {
-        format!("{} / {}", format_time(stats.time_between_attacks), format_time(stats.time_until_attack_2))
+        format!("{} / {}", format_time(stats.time_until_attack_1), format_time(stats.time_until_attack_2))
     };
 
     format!("Damage split {}\nTiming split {}\nAbility split {} / {}{}", damage_string, timing_string, ability_flag_1, ability_flag_2, ability_flag_3)
