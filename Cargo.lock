@@ -1035,7 +1035,7 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "core"
-version = "0.16.2"
+version = "0.16.3"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2145,7 +2145,7 @@ dependencies = [
 
 [[package]]
 name = "gui"
-version = "0.16.2"
+version = "0.16.3"
 dependencies = [
  "ab_glyph",
  "arboard",
@@ -3433,7 +3433,7 @@ checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 [[package]]
 name = "nyanko"
 version = "0.4.0"
-source = "git+https://github.com/omochikaeri15/nyanko#9caaa05c0fab01cad6371775623bfd06349e6d9b"
+source = "git+https://github.com/omochikaeri15/nyanko#8849484144aedea7c2ec24af2362a56f070b5b69"
 dependencies = [
  "aes 0.9.1",
  "block-padding",
