@@ -263,8 +263,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
 
         let final_filename = final_apk_path.file_name().unwrap_or_default().to_string_lossy();
         let success_message = match export_behavior {
-            ExportBehavior::Update => format!("Successfully Forced Update on {}!", final_filename),
-            ExportBehavior::Create => format!("Successfully Forced Create for {}!", final_filename),
+            ExportBehavior::Update => format!("Successfully Updated {}!", final_filename),
+            ExportBehavior::Create => format!("Successfully Built {}!", final_filename),
             ExportBehavior::Automatic => {
                 if is_update_patch {
                     format!("Successfully Updated {}!", final_filename)
