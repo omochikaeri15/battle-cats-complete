@@ -187,6 +187,9 @@ impl ApkEditor {
                         Some(0x01010001.into()),
                     );
                 }
+
+                trace!("Scrubbing original labels from all activities to force application label inheritance...");
+                strip_activity_labels(app_elem, &mut self.manifest.string_pool);
             }
         } else {
             warn!("Could not find <application> element in Manifest!");
@@ -200,6 +203,24 @@ impl ApkEditor {
 
         info!("Patching complete. New identity: {}", new_package_name);
         Ok(new_package_name)
+    }
+}
+
+fn strip_activity_labels(node: &mut XMLTreeNode, pool: &mut StringPoolHandler) {
+    if let Some(node_name) = node.element.name.resolve(pool) {
+        if node_name == "activity" || node_name == "activity-alias" {
+            node.element.attributes.retain(|attr| {
+                if let Some(attr_name) = attr.name.resolve(pool) {
+                    attr_name != "label"
+                } else {
+                    true
+                }
+            });
+        }
+    }
+
+    for child in &mut node.children {
+        strip_activity_labels(child, pool);
     }
 }
 
