@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
 use zip::ZipArchive;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, info_span, warn};
 use resand::res_value::ResValueType;
 
 use crate::mods::logic::state::ModDataState;
@@ -49,6 +49,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
     }
 
     thread::spawn(move || {
+        let _thread_span = info_span!("export_worker", apk = %input_apk_path.display()).entered();
+
         let string_transmitter = spawn_log_adapter(transmitter.clone());
         let log_callback = |message: String| {
             info!("Export UI Log: {}", message);
@@ -197,7 +199,7 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
         };
 
         log_callback("Packing modded game data...".to_string());
-        if let Err(error) = pack::stream_pack_and_list(&mod_dir.join("patch"), &assets_dir, "patch", region_key, &log_callback) {
+        if let Err(error) = pack::stream_pack_and_list(&mod_dir.join("patch"), &assets_dir, "DownloadLocal", region_key, &log_callback) {
             error!("Data packing failed: {}", error);
             let _ = transmitter.send(ExportEvent::Error(error));
             return;

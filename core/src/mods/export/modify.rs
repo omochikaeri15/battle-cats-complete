@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 use zip::{ZipArchive, ZipWriter};
 
 use resand::{
@@ -28,8 +28,9 @@ pub struct ApkEditor {
 }
 
 impl ApkEditor {
+    #[instrument(skip_all, fields(manifest = %manifest_path.display()))]
     pub fn from_paths(manifest_path: &Path, table_path: Option<&Path>) -> Result<Self, ResError> {
-        debug!("Parsing Manifest from {:?}", manifest_path);
+        debug!("Parsing Manifest from paths");
 
         let mut manifest_file = fs::File::open(manifest_path)?;
         let manifest = XMLTree::read(&mut manifest_file).map_err(|error| {
@@ -56,15 +57,17 @@ impl ApkEditor {
         Ok(Self { manifest, res_table })
     }
 
+    #[instrument(skip_all)]
     pub fn get_version_info(&self) -> Option<(u32, String)> {
+        trace!("Extracting version information from XML tree");
         let root_element = self.manifest.root.get_element(&["manifest"], &self.manifest.string_pool)?;
 
         let version_code_attribute = root_element.get_attribute("versionCode", &self.manifest.string_pool)?;
         let version_name_attribute = root_element.get_attribute("versionName", &self.manifest.string_pool)?;
 
         let extracted_version_code = match &version_code_attribute.typed_value.data {
-            ResValueType::IntDec(value) => *value,
-            ResValueType::IntHex(value) => *value,
+            ResValueType::IntDec(decimal_value) => *decimal_value,
+            ResValueType::IntHex(hex_value) => *hex_value,
             ResValueType::String(string_reference) => {
                 string_reference.resolve(&self.manifest.string_pool)?.parse::<u32>().ok()?
             }
@@ -84,6 +87,7 @@ impl ApkEditor {
         Some((extracted_version_code, extracted_version_name))
     }
 
+    #[instrument(skip_all)]
     pub fn save_to_paths(self, manifest_path: &Path, table_path: Option<&Path>) -> Result<(), ResError> {
         debug!("Saving patched Manifest to {:?}", manifest_path);
         let mut manifest_out = fs::File::create(manifest_path)?;
@@ -106,8 +110,9 @@ impl ApkEditor {
         Ok(())
     }
 
+    #[instrument(skip_all, fields(suffix = %suffix, title = %app_title))]
     pub fn apply_patches(&mut self, suffix: &str, app_title: &str) -> Result<String, ResError> {
-        info!("Applying Manifest patches. Suffix: '{}', Title: '{}'", suffix, app_title);
+        info!("Applying Manifest patches");
 
         let root = self.manifest.root.get_element_mut(&["manifest"], &self.manifest.string_pool)
             .ok_or_else(|| {
@@ -321,6 +326,7 @@ fn collect_directory_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
+#[instrument(skip_all)]
 pub fn inject_and_build_apk(
     source_apk: &Path,
     output_apk: &Path,
@@ -541,6 +547,7 @@ fn inject_scaled_icons<W: Write + std::io::Seek>(
     Ok(injected)
 }
 
+#[instrument(skip_all)]
 pub fn normalize_apk(input_apk: &Path, output_apk: &Path, original_apk: &Path) -> Result<(), String> {
     info!("Normalizing APK binaries for signature verification...");
     let mut stored_files_map = HashSet::new();

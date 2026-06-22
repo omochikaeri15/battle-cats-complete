@@ -2,7 +2,6 @@ use std::sync::mpsc::Receiver;
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 
-// Note: Ensure ImportSubTab is moved to bcc-core when we process the Data state next!
 use crate::data::state::ImportSubTab;
 use crate::addons::adb::mods::ModAdbEvent;
 use crate::mods::logic::metadata::ModMetadata;

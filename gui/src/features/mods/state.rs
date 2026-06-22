@@ -7,9 +7,7 @@ use crate::features::mods::list::ModList;
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ModListState {
-    pub data: ModDataState, // The core logic wrapper
-
-    // UI Elements
+    pub data: ModDataState,
     #[serde(skip)] pub drag_guard: DragGuard,
     #[serde(skip)] pub list: Option<ModList>,
 }
