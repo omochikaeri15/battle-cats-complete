@@ -31,16 +31,22 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
 
     let Some(mod_folder) = state.selected_mod.clone() else {
         error!("Export aborted: No mod selected.");
-        state.export.is_busy = false; return;
+        state.export.is_busy = false;
+        return;
     };
+
     let Some(input_apk_path) = state.export.selected_apk.clone() else {
         error!("Export aborted: No APK selected.");
-        state.export.is_busy = false; return;
+        state.export.is_busy = false;
+        return;
     };
+
     let detected_region = state.export.target_region;
 
     let (transmitter, receiver) = mpsc::channel();
-    if let Ok(mut guard) = EVENT_RECEIVER.lock() { *guard = Some(receiver); }
+    if let Ok(mut guard) = EVENT_RECEIVER.lock() {
+        *guard = Some(receiver);
+    }
 
     thread::spawn(move || {
         let string_transmitter = spawn_log_adapter(transmitter.clone());
@@ -54,7 +60,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             Ok(keys) => keys,
             Err(error) => {
                 error!("Key verification failed: {}", error);
-                let _ = transmitter.send(ExportEvent::Error(error)); return;
+                let _ = transmitter.send(ExportEvent::Error(error));
+                return;
             }
         };
 
@@ -65,7 +72,6 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
         let temp_bin_dir = app_dir.join("binaries");
         let assets_dir = app_dir.join("assets");
         let xapk_dir = app_dir.join("xapk");
-
         let icons_dir = mod_dir.join("icons");
 
         debug!("Preparing file structure in {}", app_dir.display());
@@ -84,7 +90,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
 
             if let Err(error) = xapk::merge_xapk(&working_apk, &merged_temp_path, &log_callback) {
                 error!("XAPK Merge failed: {}", error);
-                let _ = transmitter.send(ExportEvent::Error(error.to_string())); return;
+                let _ = transmitter.send(ExportEvent::Error(error.to_string()));
+                return;
             }
             working_apk = merged_temp_path;
         }
@@ -98,7 +105,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             Ok(file) => file,
             Err(error) => {
                 error!("Failed to open APK {:?}: {}", working_apk, error);
-                let _ = transmitter.send(ExportEvent::Error(format!("Failed to open APK: {}", error))); return;
+                let _ = transmitter.send(ExportEvent::Error(format!("Failed to open APK: {}", error)));
+                return;
             }
         };
 
@@ -106,7 +114,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             Ok(archive_instance) => archive_instance,
             Err(error) => {
                 error!("Failed to read APK archive: {}", error);
-                let _ = transmitter.send(ExportEvent::Error(format!("Failed to read APK archive: {}", error))); return;
+                let _ = transmitter.send(ExportEvent::Error(format!("Failed to read APK archive: {}", error)));
+                return;
             }
         };
 
@@ -119,10 +128,11 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
                 if let Ok(mut output_file) = fs::File::create(&manifest_path) {
                     let _ = std::io::copy(&mut archive_file, &mut output_file);
                 }
-            } else if file_name == "resources.arsc"
-                && let Ok(mut output_file) = fs::File::create(&arsc_path) {
-                let _ = std::io::copy(&mut archive_file, &mut output_file);
-                extracted_arsc = true;
+            } else if file_name == "resources.arsc" {
+                if let Ok(mut output_file) = fs::File::create(&arsc_path) {
+                    let _ = std::io::copy(&mut archive_file, &mut output_file);
+                    extracted_arsc = true;
+                }
             }
         }
         drop(archive);
@@ -131,17 +141,23 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             Ok(editor) => editor,
             Err(error) => {
                 error!("APK Editor initialization failed: {}", error);
-                let _ = transmitter.send(ExportEvent::Error(format!("Failed to parse APK binaries: {}", error))); return;
+                let _ = transmitter.send(ExportEvent::Error(format!("Failed to parse APK binaries: {}", error)));
+                return;
             }
         };
+
+        let apk_version_info = apk_editor.get_version_info();
 
         let target_package = format!("jp.co.ponos.battlecats{}", suffix.trim());
         let root_elem = apk_editor.manifest.root.get_element(&["manifest"], &apk_editor.manifest.string_pool);
         let pkg_attr = root_elem.and_then(|root| root.get_attribute("package", &apk_editor.manifest.string_pool));
 
-        let current_pkg = if let Some(attr) = pkg_attr
-            && let ResValueType::String(ref string_value) = attr.typed_value.data {
-            string_value.resolve(&apk_editor.manifest.string_pool).unwrap_or_default().to_string()
+        let current_pkg = if let Some(attr) = pkg_attr {
+            if let ResValueType::String(ref string_value) = attr.typed_value.data {
+                string_value.resolve(&apk_editor.manifest.string_pool).unwrap_or_default().to_string()
+            } else {
+                String::new()
+            }
         } else {
             String::new()
         };
@@ -160,13 +176,15 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
                 Ok(new_package_id) => {
                     if let Err(error) = apk_editor.save_to_paths(&manifest_path, if extracted_arsc { Some(arsc_path.as_path()) } else { None }) {
                         error!("Failed saving patched binaries: {}", error);
-                        let _ = transmitter.send(ExportEvent::Error(format!("Failed to save binaries: {}", error))); return;
+                        let _ = transmitter.send(ExportEvent::Error(format!("Failed to save binaries: {}", error)));
+                        return;
                     }
                     new_package_id
                 },
                 Err(error) => {
                     error!("ApkEditor failed to apply patches: {}", error);
-                    let _ = transmitter.send(ExportEvent::Error(format!("Patch Error: {}", error))); return;
+                    let _ = transmitter.send(ExportEvent::Error(format!("Patch Error: {}", error)));
+                    return;
                 }
             }
         };
@@ -179,9 +197,10 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
         };
 
         log_callback("Packing modded game data...".to_string());
-        if let Err(error) = pack::stream_pack_and_list(&mod_dir.join("patch"), &assets_dir, "DownloadLocal", region_key, &log_callback) {
+        if let Err(error) = pack::stream_pack_and_list(&mod_dir.join("patch"), &assets_dir, "patch", region_key, &log_callback) {
             error!("Data packing failed: {}", error);
-            let _ = transmitter.send(ExportEvent::Error(error)); return;
+            let _ = transmitter.send(ExportEvent::Error(error));
+            return;
         }
 
         log_callback("Rebuilding APK with patch...".to_string());
@@ -202,7 +221,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
             },
             Err(error) => {
                 error!("Injection build failed: {}", error);
-                let _ = transmitter.send(ExportEvent::Error(format!("Build Error: {}", error))); return;
+                let _ = transmitter.send(ExportEvent::Error(format!("Build Error: {}", error)));
+                return;
             }
         }
 
@@ -210,13 +230,15 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
         let normalized_apk_path = app_dir.join("normalized_final.apk");
         if let Err(error) = modify::normalize_apk(&unsigned_apk_path, &normalized_apk_path, &working_apk) {
             error!("Normalization failed: {}", error);
-            let _ = transmitter.send(ExportEvent::Error(format!("Normalization Error: {}", error))); return;
+            let _ = transmitter.send(ExportEvent::Error(format!("Normalization Error: {}", error)));
+            return;
         }
 
         log_callback("Signing APK...".to_string());
         if let Err(error) = sign::sign(&normalized_apk_path, None) {
             error!("APK Signing failed: {}", error);
-            let _ = transmitter.send(ExportEvent::Error(format!("Native Signing Error: {}", error))); return;
+            let _ = transmitter.send(ExportEvent::Error(format!("Native Signing Error: {}", error)));
+            return;
         }
 
         let output_name = if app_title.trim().is_empty() { final_id } else { app_title.trim().to_string() };
@@ -256,7 +278,8 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
         debug!("Moving final APK to {:?}", final_apk_path);
         if let Err(error) = fs::copy(&normalized_apk_path, &final_apk_path) {
             error!("Failed copying final APK to destination: {}", error);
-            let _ = transmitter.send(ExportEvent::Error(format!("Filesystem Error: {}", error))); return;
+            let _ = transmitter.send(ExportEvent::Error(format!("Filesystem Error: {}", error)));
+            return;
         }
 
         let _ = fs::remove_dir_all(&app_dir);
@@ -276,5 +299,14 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
 
         info!("Export completed successfully: {}", success_message);
         let _ = transmitter.send(ExportEvent::Success(success_message));
+
+        if let Some((version_code, version_name)) = apk_version_info {
+            if version_code <= 1401010 {
+                log_callback(String::new());
+                log_callback(format!("Legacy game version {} detected", version_name));
+                log_callback("Legacy versions are known to crash on load".to_string());
+                log_callback("Please update to a more stable app version".to_string());
+            }
+        }
     });
 }

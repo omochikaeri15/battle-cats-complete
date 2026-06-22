@@ -56,6 +56,34 @@ impl ApkEditor {
         Ok(Self { manifest, res_table })
     }
 
+    pub fn get_version_info(&self) -> Option<(u32, String)> {
+        let root_element = self.manifest.root.get_element(&["manifest"], &self.manifest.string_pool)?;
+
+        let version_code_attribute = root_element.get_attribute("versionCode", &self.manifest.string_pool)?;
+        let version_name_attribute = root_element.get_attribute("versionName", &self.manifest.string_pool)?;
+
+        let extracted_version_code = match &version_code_attribute.typed_value.data {
+            ResValueType::IntDec(value) => *value as u32,
+            ResValueType::IntHex(value) => *value as u32,
+            ResValueType::String(string_reference) => {
+                string_reference.resolve(&self.manifest.string_pool)?.parse::<u32>().ok()?
+            }
+            fallback_data => {
+                let data_string = format!("{:?}", fallback_data);
+                data_string.chars().filter(|character| character.is_ascii_digit()).collect::<String>().parse::<u32>().ok()?
+            }
+        };
+
+        let extracted_version_name = match &version_name_attribute.typed_value.data {
+            ResValueType::String(string_reference) => {
+                string_reference.resolve(&self.manifest.string_pool)?.to_string()
+            }
+            _ => return None,
+        };
+
+        Some((extracted_version_code, extracted_version_name))
+    }
+
     pub fn save_to_paths(self, manifest_path: &Path, table_path: Option<&Path>) -> Result<(), ResError> {
         debug!("Saving patched Manifest to {:?}", manifest_path);
         let mut manifest_out = fs::File::create(manifest_path)?;
@@ -96,8 +124,8 @@ impl ApkEditor {
             trace!("Removed ghost <split> tags from root");
         }
 
-        root.element.attributes.retain(|attr| {
-            let Some(name) = attr.name.resolve(&self.manifest.string_pool) else { return true; };
+        root.element.attributes.retain(|attribute| {
+            let Some(name) = attribute.name.resolve(&self.manifest.string_pool) else { return true; };
             name != "split" && name != "isFeatureSplit"
         });
 
@@ -110,13 +138,13 @@ impl ApkEditor {
             Some(0x0101055b.into()),
         );
 
-        let package_attr = root.get_attribute_mut("package", &self.manifest.string_pool)
+        let package_attribute = root.get_attribute_mut("package", &self.manifest.string_pool)
             .ok_or_else(|| {
                 error!("Missing 'package' attribute on root manifest.");
                 ResError::MissingElement("package attribute")
             })?;
 
-        let original_package = match &package_attr.typed_value.data {
+        let original_package = match &package_attribute.typed_value.data {
             ResValueType::String(string_value) => string_value
                 .resolve(&self.manifest.string_pool)
                 .unwrap_or_default()
@@ -135,7 +163,7 @@ impl ApkEditor {
         let new_package_name = format!("{}.battlecats{}", parts.join("."), suffix.trim());
         debug!("Changing package name from {} to {}", original_package, new_package_name);
 
-        package_attr.write_string(new_package_name.as_str().into(), &mut self.manifest.string_pool);
+        package_attribute.write_string(new_package_name.as_str().into(), &mut self.manifest.string_pool);
 
         trace!("Initiating deep recursive package reference scrubbing...");
         replace_package_refs(&mut self.manifest.root, &mut self.manifest.string_pool, self.res_table.as_ref(), &original_package, &new_package_name);
@@ -165,8 +193,8 @@ impl ApkEditor {
             return;
         };
 
-        app_elem.element.attributes.retain(|attr| {
-            let Some(name) = attr.name.resolve(&self.manifest.string_pool) else { return true; };
+        app_elem.element.attributes.retain(|attribute| {
+            let Some(name) = attribute.name.resolve(&self.manifest.string_pool) else { return true; };
             name != "extractNativeLibs" && name != "isSplitRequired"
         });
 
@@ -175,8 +203,8 @@ impl ApkEditor {
             let is_metadata = child.element.name.resolve(&self.manifest.string_pool) == Some("meta-data");
             if !is_metadata { return true; }
 
-            let Some(name_attr) = child.get_attribute("name", &self.manifest.string_pool) else { return true; };
-            let ResValueType::String(ref string_value) = name_attr.typed_value.data else { return true; };
+            let Some(name_attribute) = child.get_attribute("name", &self.manifest.string_pool) else { return true; };
+            let ResValueType::String(ref string_value) = name_attribute.typed_value.data else { return true; };
             let Some(resolved_val) = string_value.resolve(&self.manifest.string_pool) else { return true; };
 
             !(resolved_val.contains("vending.splits") || resolved_val.contains("vending.derived.apk.id"))
@@ -204,9 +232,9 @@ impl ApkEditor {
 
         if app_title.trim().is_empty() { return; }
 
-        if let Some(label_attr) = app_elem.get_attribute_mut("label", &self.manifest.string_pool) {
+        if let Some(label_attribute) = app_elem.get_attribute_mut("label", &self.manifest.string_pool) {
             debug!("Overwriting app label with '{}'", app_title.trim());
-            label_attr.write_string(app_title.trim().into(), &mut self.manifest.string_pool);
+            label_attribute.write_string(app_title.trim().into(), &mut self.manifest.string_pool);
         } else {
             debug!("Inserting new app label '{}'", app_title.trim());
             app_elem.insert_attribute(
@@ -227,8 +255,8 @@ fn strip_activity_labels(node: &mut XMLTreeNode, pool: &mut StringPoolHandler) {
     let is_activity = node.element.name.resolve(pool).is_some_and(|name| name == "activity" || name == "activity-alias");
 
     if is_activity {
-        node.element.attributes.retain(|attr| {
-            attr.name.resolve(pool).is_none_or(|attr_name| attr_name != "label")
+        node.element.attributes.retain(|attribute| {
+            attribute.name.resolve(pool).is_none_or(|attr_name| attr_name != "label")
         });
     }
 
@@ -247,9 +275,9 @@ fn replace_package_refs(
     const ATTRS_TO_CHECK: &[&str] = &["name", "authorities", "taskAffinity", "sharedUserId", "value", "scheme", "host"];
 
     for attr_name in ATTRS_TO_CHECK {
-        let Some(attr) = elem.get_attribute_mut(attr_name, pool) else { continue; };
+        let Some(attribute) = elem.get_attribute_mut(attr_name, pool) else { continue; };
 
-        let resolved_str = match &attr.typed_value.data {
+        let resolved_string_value = match &attribute.typed_value.data {
             ResValueType::String(string_value) => string_value.resolve(pool).map(|s| s.to_string()),
             ResValueType::Reference(table_reference) => {
                 (|| -> Option<String> {
@@ -265,12 +293,12 @@ fn replace_package_refs(
             _ => None,
         };
 
-        let Some(resolved_string) = resolved_str else { continue; };
+        let Some(resolved_string) = resolved_string_value else { continue; };
         if !resolved_string.contains(old_pkg) { continue; }
 
         trace!("Replaced deep reference in attribute '{}': {} -> {}", attr_name, old_pkg, new_pkg);
         let new_val = resolved_string.replace(old_pkg, new_pkg);
-        attr.write_string(new_val.into(), pool);
+        attribute.write_string(new_val.into(), pool);
     }
 
     for child in &mut elem.children {
