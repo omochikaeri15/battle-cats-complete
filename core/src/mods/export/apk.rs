@@ -307,7 +307,7 @@ pub fn start_export(state: &mut ModDataState, settings: &Settings) {
                 log_callback(String::new());
                 log_callback(format!("Legacy game version {} detected", version_name));
                 log_callback("Legacy versions are known to crash on load".to_string());
-                log_callback("Please update to a more stable app version".to_string());
+                log_callback("Please update to a more stable game version".to_string());
             }
         }
     });
