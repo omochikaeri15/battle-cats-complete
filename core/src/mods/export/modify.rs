@@ -63,8 +63,8 @@ impl ApkEditor {
         let version_name_attribute = root_element.get_attribute("versionName", &self.manifest.string_pool)?;
 
         let extracted_version_code = match &version_code_attribute.typed_value.data {
-            ResValueType::IntDec(value) => *value as u32,
-            ResValueType::IntHex(value) => *value as u32,
+            ResValueType::IntDec(value) => *value,
+            ResValueType::IntHex(value) => *value,
             ResValueType::String(string_reference) => {
                 string_reference.resolve(&self.manifest.string_pool)?.parse::<u32>().ok()?
             }
