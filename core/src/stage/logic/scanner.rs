@@ -3,7 +3,7 @@ use std::path::Path;
 use std::fs;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
-use tracing::warn;
+use tracing::{warn, error, trace, debug};
 
 use crate::settings::logic::state::ScannerConfig;
 use crate::stage::{paths, data};
@@ -101,7 +101,26 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
             continue;
         };
 
-        let global_map_id = data::map_name::get_global_map_id(&cat_prefix, map_id);
+        let mut global_map_id = data::map_name::get_global_map_id(&cat_prefix, map_id);
+
+        if global_map_id.is_none() || global_map_id == Some(map_id) {
+            let routed_id = match (cat_prefix.as_str(), map_id) {
+                ("EC", 0) => Some(3000),
+                ("EC", 1) => Some(3001),
+                ("EC", 2) => Some(3002),
+                ("W", 4) => Some(3003),
+                ("W", 5) => Some(3004),
+                ("W", 6) => Some(3005),
+                ("Space", 7) => Some(3006),
+                ("Space", 8) => Some(3007),
+                ("Space", 9) => Some(3008),
+
+                _ => global_map_id,
+            };
+            if routed_id.is_some() && routed_id != global_map_id {
+                global_map_id = routed_id;
+            }
+        }
 
         let map_display_name = global_map_id
             .and_then(|id| ctx.map_names.get(&id))
@@ -162,6 +181,7 @@ fn load_map(
     let stage_opts = ctx.stage_options.get(&global_id_val).cloned().unwrap_or_default();
 
     let mut stage_data_entries = Vec::new();
+
     if let Ok(files_dir) = std::fs::read_dir(map_path) {
         for file_entry in files_dir.flatten() {
             let filename = file_entry.file_name().to_string_lossy().to_string();
@@ -181,7 +201,24 @@ fn load_map(
     }
 
     if stage_data_entries.is_empty() {
-        stage_data_entries = data::mapstagedata::load(map_path, "stage.csv", ctx.lang_priority);
+        let story_file = match global_id_val {
+            3000 => "stageNormal0.csv",
+            3001 => "stageNormal0.csv",
+            3002 => "stageNormal0.csv",
+            3003 => "stageNormal1_0.csv",
+            3004 => "stageNormal1_1.csv",
+            3005 => "stageNormal1_2.csv",
+            3006 => "stageNormal2_0.csv",
+            3007 => "stageNormal2_1.csv",
+            3008 => "stageNormal2_2.csv",
+            _ => "stage.csv",
+        };
+
+        stage_data_entries = data::mapstagedata::load(map_path, story_file, ctx.lang_priority);
+
+        if stage_data_entries.is_empty() {
+            stage_data_entries = data::mapstagedata::load(map_path, "stage.csv", ctx.lang_priority);
+        }
     }
 
     let Ok(stages_dir) = std::fs::read_dir(map_path) else {
@@ -243,7 +280,6 @@ fn load_map(
             if opt.max_cost != 0 { final_opt.max_cost = opt.max_cost; }
             if opt.charagroup_id != 0 { final_opt.charagroup_id = opt.charagroup_id; }
         }
-
 
         let stage_diff = ctx.difficulties.get(&global_id_val).and_then(|diff_list| diff_list.get(stage_id as usize)).copied().unwrap_or(0);
         let current_charagroup = ctx.charagroups.get(&final_opt.charagroup_id).cloned();

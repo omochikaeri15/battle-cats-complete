@@ -21,7 +21,6 @@ pub struct StageOption {
 
 fn redirect_map_id(id: u32) -> u32 {
     match id {
-
         20000 => 3008, // EoC 1 Zombie
         20001 => 3009, // EoC 2 Zombie
         20002 => 3010, // EoC 3 Zombie
