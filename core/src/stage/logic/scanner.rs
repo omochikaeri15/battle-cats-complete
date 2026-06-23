@@ -3,6 +3,8 @@ use std::path::Path;
 use std::fs;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
+use tracing::warn;
+
 use crate::settings::logic::state::ScannerConfig;
 use crate::stage::{paths, data};
 use crate::stage::registry::{StageRegistry, Map, Stage};
@@ -17,7 +19,7 @@ pub struct ScanContext<'a> {
     pub score_bonuses: HashMap<u32, data::scorebonusmap::ScoreBonus>,
     pub special_rules: HashMap<u32, data::specialrulesmap::SpecialRule>,
     pub ex_options: HashMap<u32, u32>,
-    pub difficulties: HashMap<u32, Vec<u16>>, 
+    pub difficulties: HashMap<u32, Vec<u16>>,
 }
 
 pub fn start_scan(config: &ScannerConfig) -> Receiver<StageRegistry> {
@@ -35,7 +37,7 @@ pub fn start_scan(config: &ScannerConfig) -> Receiver<StageRegistry> {
 fn scan_all(lang_priority: &[String]) -> StageRegistry {
     let mut registry = StageRegistry::default();
     let root_path = Path::new(paths::DIR_STAGES);
-    
+
     let ctx = ScanContext {
         lang_priority,
         map_names: data::map_name::load(&root_path.join("Map_Name"), "Map_Name.csv", lang_priority),
@@ -49,26 +51,27 @@ fn scan_all(lang_priority: &[String]) -> StageRegistry {
         difficulties: data::difficulty_level::load(root_path, "difficulty_level.tsv", lang_priority),
     };
 
-    let Ok(categories_dir) = fs::read_dir(root_path) else { 
-        return registry; 
+    let Ok(categories_dir) = fs::read_dir(root_path) else {
+        warn!("Failed to read root stages directory");
+        return registry;
     };
 
     for category_entry in categories_dir.flatten() {
         let cat_path = category_entry.path();
         let cat_name = cat_path.file_name().unwrap_or_default().to_string_lossy();
-        
+
         let is_ignored_dir = matches!(
-            cat_name.as_ref(), 
-            "backgrounds" | "castles" | "fixedlineup" | "MapStageLimitMessage" | 
+            cat_name.as_ref(),
+            "backgrounds" | "castles" | "fixedlineup" | "MapStageLimitMessage" |
             "Map_Name" | "Map_option.csv" | "MapConditions.json" | "Stage_option.csv" |
             "DropItem.csv" | "Charagroup.csv" | "EX_option.csv" | "R" | "SR" | "V" | "L" | "G" | "EX" | "difficulty_level.tsv"
         );
-        
+
         if is_ignored_dir || !cat_path.is_dir() {
             continue;
         }
 
-        scan_category(&mut registry, &cat_path, &ctx); 
+        scan_category(&mut registry, &cat_path, &ctx);
     }
 
     registry
@@ -83,23 +86,23 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
         stage_names = data::stagename::load(cat_path, &format!("StageName_R{}.csv", cat_prefix), ctx.lang_priority);
     }
 
-    let Ok(maps_dir) = fs::read_dir(cat_path) else { 
-        return; 
+    let Ok(maps_dir) = fs::read_dir(cat_path) else {
+        return;
     };
-    
+
     for map_entry in maps_dir.flatten() {
         let map_path = map_entry.path();
-        if !map_path.is_dir() { 
-            continue; 
+        if !map_path.is_dir() {
+            continue;
         }
 
         let map_folder_name = map_path.file_name().unwrap_or_default().to_string_lossy();
-        let Ok(map_id) = map_folder_name.parse::<u32>() else { 
-            continue; 
+        let Ok(map_id) = map_folder_name.parse::<u32>() else {
+            continue;
         };
 
         let global_map_id = data::map_name::get_global_map_id(&cat_prefix, map_id);
-        
+
         let map_display_name = global_map_id
             .and_then(|id| ctx.map_names.get(&id))
             .filter(|name| !name.is_empty())
@@ -107,14 +110,14 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
             .unwrap_or_else(|| format!("{:03}", map_id));
 
         load_map(
-            registry, 
-            &cat_prefix, 
-            map_id, 
-            &map_path, 
-            &map_display_name, 
-            &cat_display_name, 
-            &stage_names, 
-            ctx, 
+            registry,
+            &cat_prefix,
+            map_id,
+            &map_path,
+            &map_display_name,
+            &cat_display_name,
+            &stage_names,
+            ctx,
             global_map_id
         );
     }
@@ -159,10 +162,11 @@ fn load_map(
     let stage_opts = ctx.stage_options.get(&global_id_val).cloned().unwrap_or_default();
 
     let mut stage_data_entries = Vec::new();
-    if let Ok(files_dir) = fs::read_dir(map_path) {
+    if let Ok(files_dir) = std::fs::read_dir(map_path) {
         for file_entry in files_dir.flatten() {
             let filename = file_entry.file_name().to_string_lossy().to_string();
-            let is_valid_stage_data = filename.starts_with("MapStageData") && filename.ends_with(".csv");
+            let is_valid_stage_data = (filename.starts_with("MapStageData") || filename.starts_with("stageNormal"))
+                && filename.ends_with(".csv");
 
             if !is_valid_stage_data {
                 continue;
@@ -180,7 +184,7 @@ fn load_map(
         stage_data_entries = data::mapstagedata::load(map_path, "stage.csv", ctx.lang_priority);
     }
 
-    let Ok(stages_dir) = fs::read_dir(map_path) else {
+    let Ok(stages_dir) = std::fs::read_dir(map_path) else {
         return;
     };
 
@@ -196,7 +200,7 @@ fn load_map(
         };
 
         let mut stage_raw = None;
-        if let Ok(files_dir) = fs::read_dir(&stage_path) {
+        if let Ok(files_dir) = std::fs::read_dir(&stage_path) {
             for file_entry in files_dir.flatten() {
                 let filename = file_entry.file_name().to_string_lossy().to_string();
 
@@ -221,11 +225,16 @@ fn load_map(
             .filter(|name| !name.is_empty())
             .cloned()
             .unwrap_or_else(|| format!("{:02}", stage_id));
-        
+
         let mut final_opt = data::stage_option::StageOption::default();
         final_opt.target_crowns = -1;
 
-        for opt in stage_opts.iter().filter(|o| o.target_stage == -1 || o.target_stage == stage_id as i32) {
+        let valid_options = stage_opts.iter().filter(|o|
+            (o.target_stage == -1 || o.target_stage == stage_id as i32) &&
+                (o.target_crowns == -1 || o.target_crowns == 0)
+        );
+
+        for opt in valid_options {
             if opt.target_crowns != -1 { final_opt.target_crowns = opt.target_crowns; }
             if opt.rarity_mask != 0 { final_opt.rarity_mask = opt.rarity_mask; }
             if opt.deploy_limit != 0 { final_opt.deploy_limit = opt.deploy_limit; }
@@ -234,6 +243,7 @@ fn load_map(
             if opt.max_cost != 0 { final_opt.max_cost = opt.max_cost; }
             if opt.charagroup_id != 0 { final_opt.charagroup_id = opt.charagroup_id; }
         }
+
 
         let stage_diff = ctx.difficulties.get(&global_id_val).and_then(|diff_list| diff_list.get(stage_id as usize)).copied().unwrap_or(0);
         let current_charagroup = ctx.charagroups.get(&final_opt.charagroup_id).cloned();

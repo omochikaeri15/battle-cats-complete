@@ -117,7 +117,7 @@ fn render_internal_ui(
 
     let display_max_string = match loop_lcm_result {
         Some(value) if value > 999_999 => "???".to_string(),
-        Some(value) => ((value as f32 * display_multiplier).round() as i32).to_string(),
+        Some(value) => ((value as f32 * display_multiplier).trunc() as i32).to_string(),
         None => "???".to_string()
     };
 
@@ -127,12 +127,12 @@ fn render_internal_ui(
     let is_playing = anim_viewer.is_playing;
     let is_model_mode = anim_viewer.loaded_anim_index == IDX_MODEL;
 
-    let current_display_value = (current_frame_value * display_multiplier).round() as i32;
+    let current_display_value = (current_frame_value * display_multiplier).trunc() as i32;
 
     let effective_display_max = if is_model_mode {
         "0".to_string()
     } else if let Some(override_end) = loop_range_end {
-        ((override_end as f32 * display_multiplier).round() as i32).to_string()
+        ((override_end as f32 * display_multiplier).trunc() as i32).to_string()
     } else {
         display_max_string.clone()
     };
@@ -229,7 +229,7 @@ fn render_internal_ui(
                                     ui.style_mut().visuals.widgets.inactive.bg_fill = egui::Color32::TRANSPARENT;
                                     if let Some(range_start) = loop_range_start
                                         && anim_viewer.range_str_cache.0.is_empty() {
-                                            let display_value = (range_start as f32 * display_multiplier).round() as i32;
+                                            let display_value = (range_start as f32 * display_multiplier).trunc() as i32;
                                             anim_viewer.range_str_cache.0 = display_value.to_string();
                                         }
                                     let text_response = ui.add_enabled(is_enabled, egui::TextEdit::singleline(&mut anim_viewer.range_str_cache.0)
@@ -237,7 +237,7 @@ fn render_internal_ui(
                                     if text_response.changed() {
                                         if anim_viewer.range_str_cache.0.is_empty() { anim_viewer.loop_range.0 = None; }
                                         else if let Ok(parsed_value) = anim_viewer.range_str_cache.0.parse::<i32>() {
-                                            anim_viewer.loop_range.0 = Some((parsed_value as f32 / display_multiplier).round() as i32);
+                                            anim_viewer.loop_range.0 = Some((parsed_value as f32 / display_multiplier).trunc() as i32);
                                         }
                                     }
                                     if text_response.secondary_clicked() { anim_viewer.loop_range.0 = None; anim_viewer.range_str_cache.0.clear(); }
@@ -250,7 +250,7 @@ fn render_internal_ui(
                                     ui.style_mut().visuals.widgets.inactive.bg_fill = egui::Color32::TRANSPARENT;
                                     if let Some(range_end) = loop_range_end
                                         && anim_viewer.range_str_cache.1.is_empty() {
-                                            let display_value = (range_end as f32 * display_multiplier).round() as i32;
+                                            let display_value = (range_end as f32 * display_multiplier).trunc() as i32;
                                             anim_viewer.range_str_cache.1 = display_value.to_string();
                                         }
                                     let text_response = ui.add_enabled(is_enabled, egui::TextEdit::singleline(&mut anim_viewer.range_str_cache.1)
@@ -258,7 +258,7 @@ fn render_internal_ui(
                                     if text_response.changed() {
                                         if anim_viewer.range_str_cache.1.is_empty() { anim_viewer.loop_range.1 = None; }
                                         else if let Ok(parsed_value) = anim_viewer.range_str_cache.1.parse::<i32>() {
-                                            anim_viewer.loop_range.1 = Some((parsed_value as f32 / display_multiplier).round() as i32);
+                                            anim_viewer.loop_range.1 = Some((parsed_value as f32 / display_multiplier).trunc() as i32);
                                         }
                                     }
                                     if text_response.secondary_clicked() { anim_viewer.loop_range.1 = None; anim_viewer.range_str_cache.1.clear(); }

@@ -133,7 +133,7 @@ pub fn show_popup(
     window.show(&context, |ui| {
         egui::Resize::default()
             .id(egui::Id::new("export_resize_area"))
-            .default_size([400.0, 560.0])
+            .default_size([275.0, 400.0])
             .min_size([250.0, 300.0])
             .with_stroke(false)
             .show(ui, |ui| {
@@ -374,7 +374,6 @@ fn render_content(
                             let abort_signal = Arc::new(AtomicBool::new(false));
                             state.loop_abort = Some(abort_signal.clone());
 
-                            // Passing the mathematical difference threshold directly to the Orchestrator
                             findloop::start_search(
                                 unit_arc,
                                 animation_arc,
@@ -405,7 +404,6 @@ fn render_content(
             },
             ExportMode::Showcase => {
                 ui.add_enabled_ui(!is_ui_locked, |ui| {
-                    // Use dynamic hints from the state
                     let hint_walk = egui::RichText::new(state.detected_walk_len.to_string()).color(egui::Color32::GRAY);
                     let hint_idle = egui::RichText::new(state.detected_idle_len.to_string()).color(egui::Color32::GRAY);
                     let hint_kb = egui::RichText::new(settings.animation.default_showcase_kb.to_string()).color(egui::Color32::GRAY);
@@ -503,14 +501,12 @@ fn render_content(
 
                     if let Some(unit_data) = &unit {
 
-                        // Pass the pure math tolerance scale directly to the library
                         let tolerance_level = if settings.animation.use_tight_bounds { 1.0 } else { 0.0 };
 
                         let mut showcase_anims = Vec::new();
                         let mut animation_references = Vec::new();
 
                         if state.export_mode == ExportMode::Showcase {
-                            // Gather all 4 critical showcase animations
                             let target_indices = [
                                 core::animation::logic::constants::IDX_WALK,
                                 core::animation::logic::constants::IDX_IDLE,
@@ -526,16 +522,13 @@ fn render_content(
                                         }
                             }
 
-                            // Map them to references for the engine API
                             for anim in &showcase_anims {
                                 animation_references.push(anim);
                             }
                         } else if let Some(active_animation) = &animation {
-                            // Standard mode: just use the currently loaded animation
                             animation_references.push(active_animation.as_ref());
                         }
 
-                        // The library computes the union of ALL provided animations
                         if !animation_references.is_empty()
                             && let Some((x, y, width, height)) = unit_data.calculate_bounds(&animation_references, tolerance_level) {
                                 state.region_x = x;
@@ -558,7 +551,6 @@ fn render_content(
             });
             ui.add_space(5.0);
 
-            // Camera Grid
             egui::Grid::new("camera_grid")
                 .num_columns(4)
                 .spacing([10.0, 4.0])
@@ -580,7 +572,6 @@ fn render_content(
 
         ui.add_enabled_ui(!is_ui_locked, |ui| {
             egui::Grid::new("out_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
-                // NAME
                 ui.label("Name");
                 let (display_start, display_end) = if state.export_mode == ExportMode::Showcase {
                     let total_frames = state.showcase_walk_len + state.showcase_idle_len + state.showcase_attack_len + state.showcase_kb_len;
@@ -599,7 +590,6 @@ fn render_content(
                 ui.add(egui::TextEdit::singleline(&mut state.file_name).hint_text(egui::RichText::new(&hint_string).color(egui::Color32::GRAY)).desired_width(120.0));
                 ui.end_row();
 
-                // FORMAT
                 ui.label("Format");
                 let mut selected_format = state.format.clone();
 
@@ -615,23 +605,19 @@ fn render_content(
                         ExportFormat::Webm => "WebM",
                         ExportFormat::Zip => "ZIP",
                     }).show_ui(ui, |ui| {
-                    // GIF
                     ui.selectable_value(&mut selected_format, ExportFormat::Gif, "GIF");
-                    // WebP
                     ui.selectable_value(&mut selected_format, ExportFormat::WebP, "WebP");
-                    // AVIF
+
                     let is_avif_installed = toolpaths::avifenc_status() == Presence::Installed;
                     let avif_button = ui.add_enabled(is_avif_installed, egui::SelectableLabel::new(selected_format == ExportFormat::Avif, "AVIF"));
                     if avif_button.clicked() { selected_format = ExportFormat::Avif; }
                     if !is_avif_installed { avif_button.on_disabled_hover_text("Requires AVIFENC Add-On"); }
 
-                    // PNG
                     let is_ffmpeg_installed = toolpaths::ffmpeg_status() == Presence::Installed;
                     let png_button = ui.add_enabled(is_ffmpeg_installed, egui::SelectableLabel::new(selected_format == ExportFormat::Png, "PNG"));
                     if png_button.clicked() { selected_format = ExportFormat::Png; }
                     if !is_ffmpeg_installed { png_button.on_disabled_hover_text("Requires FFMPEG Add-On"); }
 
-                    // VIDEO
                     let mp4_button = ui.add_enabled(is_ffmpeg_installed, egui::SelectableLabel::new(selected_format == ExportFormat::Mp4, "MP4"));
                     if mp4_button.clicked() { selected_format = ExportFormat::Mp4; }
                     if !is_ffmpeg_installed { mp4_button.on_disabled_hover_text("Requires FFMPEG Add-On"); }
@@ -644,13 +630,11 @@ fn render_content(
                     if webm_button.clicked() { selected_format = ExportFormat::Webm; }
                     if !is_ffmpeg_installed { webm_button.on_disabled_hover_text("Requires FFMPEG Add-On"); }
 
-                    // ZIP
                     ui.selectable_value(&mut selected_format, ExportFormat::Zip, "ZIP");
                 });
 
                 if selected_format != state.format {
                     state.format = selected_format.clone();
-                    // SAVE PREFERENCE
                     settings.animation.last_export_format = match selected_format {
                         ExportFormat::Gif => 0,
                         ExportFormat::WebP => 1,
@@ -664,11 +648,9 @@ fn render_content(
                 }
                 ui.end_row();
 
-                // CHECK INSTALLED TOOLS
                 let is_ffmpeg_installed = toolpaths::ffmpeg_status() == Presence::Installed;
                 let is_avif_installed = toolpaths::avifenc_status() == Presence::Installed;
 
-                // QUALITY
                 let quality_tooltip = "Quality percentage dictates image quality, with lower quality correlating with lower file size";
                 let (is_quality_enabled, quality_reason) = match state.format {
                     ExportFormat::WebP | ExportFormat::Gif | ExportFormat::Mp4 | ExportFormat::Mkv | ExportFormat::Webm =>
@@ -771,7 +753,7 @@ fn render_content(
         ui.add_space(20.0);
         ui.heading("Add-Ons");
         ui.add_space(5.0);
-        ui.label("Tools that enhance the Exporters functionality");
+        ui.label("Tools that enhance the Exporters functionality\nManage through the Settings > Add-Ons page");
         ui.add_space(8.0);
 
         // FFMPEG Status

@@ -38,7 +38,7 @@ pub struct CategoryMeta {
 
 pub fn get_meta(prefix: &str) -> CategoryMeta {
     let (name, base_id, sort_order) = match prefix.to_uppercase().as_str() {
-        "N"        => (Some("Stories of Legend"),         Some(0),   0),
+        "N"        => (Some("Stories of Legend"),        Some(0),   0),
         "RS" | "S" => (Some("Regular Event Stages"),     Some(1),   1),
         "C"        => (Some("Collab Stages"),            Some(2),   2),
         "EC"       => (Some("Empire of Cats"),           None,      3),

@@ -26,7 +26,7 @@ pub fn parse_restrictions(stage: &Stage, current_crown: i8, ctx: GlobalContext) 
         viewing_crown = current_crown,
         "parsing stage restrictions"
     );
-    
+
     if stage.target_crowns != -1 && stage.target_crowns != current_crown {
         debug!(
             target = stage.target_crowns,
@@ -36,10 +36,11 @@ pub fn parse_restrictions(stage: &Stage, current_crown: i8, ctx: GlobalContext) 
         return Vec::new();
     }
     
-    if stage.target_crowns >= stage.max_crowns as i8 {
+    let effective_max_crowns = if stage.max_crowns == 0 { 1 } else { stage.max_crowns as i8 };
+    if stage.target_crowns >= effective_max_crowns {
         debug!(
             target = stage.target_crowns,
-            max = stage.max_crowns,
+            max = effective_max_crowns,
             "Restriction targets an unreachable crown. Ignoring junk data."
         );
         return Vec::new();
