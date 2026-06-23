@@ -1,12 +1,14 @@
+// TODO: split into "load story" function and "load legend" function
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
-use tracing::{warn, error, trace, debug};
+use tracing::warn;
 
 use crate::settings::logic::state::ScannerConfig;
 use crate::stage::{paths, data};
+use crate::stage::logic::xp::get_hardcoded_xp;
 use crate::stage::registry::{StageRegistry, Map, Stage};
 
 pub struct ScanContext<'a> {
@@ -180,41 +182,57 @@ fn load_map(
 
     let stage_opts = ctx.stage_options.get(&global_id_val).cloned().unwrap_or_default();
 
+    let mut story_data = HashMap::new();
     let mut stage_data_entries = Vec::new();
 
-    if let Ok(files_dir) = std::fs::read_dir(map_path) {
-        for file_entry in files_dir.flatten() {
-            let filename = file_entry.file_name().to_string_lossy().to_string();
-            let is_valid_stage_data = (filename.starts_with("MapStageData") || filename.starts_with("stageNormal"))
-                && filename.ends_with(".csv");
-
-            if !is_valid_stage_data {
-                continue;
-            }
-
-            stage_data_entries = data::mapstagedata::load(map_path, &filename, ctx.lang_priority);
-
-            if !stage_data_entries.is_empty() {
-                break;
-            }
-        }
-    }
-
-    if stage_data_entries.is_empty() {
+    if (3000..=3008).contains(&global_id_val) {
         let story_file = match global_id_val {
-            3000 => "stageNormal0.csv",
-            3001 => "stageNormal0.csv",
-            3002 => "stageNormal0.csv",
+            3000 | 3001 | 3002 => "stageNormal0.csv",
             3003 => "stageNormal1_0.csv",
             3004 => "stageNormal1_1.csv",
             3005 => "stageNormal1_2.csv",
             3006 => "stageNormal2_0.csv",
             3007 => "stageNormal2_1.csv",
             3008 => "stageNormal2_2.csv",
-            _ => "stage.csv",
+            _ => "",
         };
 
-        stage_data_entries = data::mapstagedata::load(map_path, story_file, ctx.lang_priority);
+        if !story_file.is_empty() {
+            let story_path = map_path.join(story_file);
+            if let Ok(content) = fs::read_to_string(&story_path) {
+                let sep = crate::global::utils::detect_csv_separator(&content);
+                for (idx, line) in content.lines().skip(2).enumerate() {
+                    let clean = line.split("//").next().unwrap_or("").trim();
+                    if clean.is_empty() { continue; }
+
+                    let parts: Vec<&str> = clean.split(sep).collect();
+                    if parts.len() >= 6 {
+                        let energy = parts[0].trim().parse().unwrap_or(0);
+                        let init_track: i16 = parts[2].trim().parse().unwrap_or(0);
+                        let boss_track: i16 = parts[5].trim().parse().unwrap_or(-1);
+
+                        story_data.insert(idx as u32, (energy, init_track, boss_track));
+                    }
+                }
+            }
+        }
+    } else {
+        if let Ok(files_dir) = std::fs::read_dir(map_path) {
+            for file_entry in files_dir.flatten() {
+                let filename = file_entry.file_name().to_string_lossy().to_string();
+                let is_valid_stage_data = filename.starts_with("MapStageData") && filename.ends_with(".csv");
+
+                if !is_valid_stage_data {
+                    continue;
+                }
+
+                stage_data_entries = data::mapstagedata::load(map_path, &filename, ctx.lang_priority);
+
+                if !stage_data_entries.is_empty() {
+                    break;
+                }
+            }
+        }
 
         if stage_data_entries.is_empty() {
             stage_data_entries = data::mapstagedata::load(map_path, "stage.csv", ctx.lang_priority);
@@ -317,7 +335,16 @@ fn load_map(
             ..Default::default()
         };
 
-        if let Some(entry) = stage_data_entries.get(stage_id as usize) {
+        if (3000..=3008).contains(&global_id_val) {
+            stage_struct.base_id = stage_id as i32;
+
+            if let Some((energy, init_track, boss_track)) = story_data.get(&stage_id) {
+                stage_struct.energy = *energy;
+                stage_struct.xp = get_hardcoded_xp(global_id_val, stage_id as usize);
+                stage_struct.init_track = *init_track as u32;
+                stage_struct.boss_track = *boss_track as u32;
+            }
+        } else if let Some(entry) = stage_data_entries.get(stage_id as usize) {
             stage_struct.energy = entry.energy;
             stage_struct.xp = entry.xp;
             stage_struct.init_track = entry.init_track;

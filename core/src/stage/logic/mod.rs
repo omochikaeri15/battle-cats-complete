@@ -4,3 +4,4 @@ pub mod scanner;
 pub mod treasure;
 pub mod state;
 pub mod restrictions;
+pub mod xp;
