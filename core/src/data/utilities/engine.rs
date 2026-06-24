@@ -109,8 +109,8 @@ pub fn run_universal_import(
         let mut folder_region_name = source_directory.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
         if folder_region_name == "files"
             && let Some(parent_directory) = source_directory.parent() {
-                folder_region_name = parent_directory.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
-            }
+            folder_region_name = parent_directory.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+        }
 
         let current_region_code = match folder_region_name.as_str() {
             s if s.ends_with("tw") => "tw",
@@ -137,15 +137,10 @@ pub fn run_universal_import(
         global_temporary_directories.append(&mut new_temp_dirs);
         discovered_loose_files.append(&mut new_loose_paths);
 
-        let is_update_pack = global_temporary_directories.iter().any(|dir| source_directory.starts_with(dir));
-        let folder_name_stem = source_directory.file_name().unwrap_or_default().to_string_lossy();
-
-        let calculated_chrono_score = chronology::calculate_weight(&folder_name_stem, is_update_pack);
-
         for loose_path in discovered_loose_files {
             let filename = loose_path.file_name().unwrap_or_default().to_string_lossy().into_owned();
             let byte_size = fs::metadata(&loose_path).map(|m| m.len() as usize).unwrap_or(0);
-
+            let file_chrono_score = chronology::calculate_weight(&loose_path, &global_temporary_directories);
             let matched_user_rule = compiled_regex_set.matches(&filename).into_iter().next().map(|index| &compiled_exception_rules[index]);
             if let Some(rule) = matched_user_rule && rule.handling == RuleHandling::Ignore { continue; }
 
@@ -153,28 +148,28 @@ pub fn run_universal_import(
 
             if let Some(rule) = matched_user_rule
                 && rule.languages.values().any(|&is_active| is_active) {
-                    let asset_path_object = Path::new(&filename);
-                    let asset_stem_string = asset_path_object.file_stem().unwrap().to_string_lossy();
-                    let asset_extension_string = asset_path_object.extension().unwrap_or_default().to_string_lossy();
+                let asset_path_object = Path::new(&filename);
+                let asset_stem_string = asset_path_object.file_stem().unwrap().to_string_lossy();
+                let asset_extension_string = asset_path_object.extension().unwrap_or_default().to_string_lossy();
 
-                    let mut cleaned_stem = asset_stem_string.to_string();
-                    for &(code, _) in patterns::APP_LANGUAGES {
-                        let suffix = format!("_{}", code);
-                        if cleaned_stem.ends_with(&suffix) { cleaned_stem = cleaned_stem.trim_end_matches(&suffix).to_string(); break; }
-                    }
+                let mut cleaned_stem = asset_stem_string.to_string();
+                for &(code, _) in patterns::APP_LANGUAGES {
+                    let suffix = format!("_{}", code);
+                    if cleaned_stem.ends_with(&suffix) { cleaned_stem = cleaned_stem.trim_end_matches(&suffix).to_string(); break; }
+                }
 
-                    let is_region_enabled = rule.languages.get(current_region_code).copied().unwrap_or(false);
-                    if rule.handling == RuleHandling::Only && !is_region_enabled { continue; }
-                    let is_single = rule.handling == RuleHandling::Only && rule.languages.values().filter(|&&is_active| is_active).count() == 1;
+                let is_region_enabled = rule.languages.get(current_region_code).copied().unwrap_or(false);
+                if rule.handling == RuleHandling::Only && !is_region_enabled { continue; }
+                let is_single = rule.handling == RuleHandling::Only && rule.languages.values().filter(|&&is_active| is_active).count() == 1;
 
-                    if is_region_enabled {
-                        if is_single {
-                            final_resolved_filename = if asset_extension_string.is_empty() { cleaned_stem } else { format!("{}.{}", cleaned_stem, asset_extension_string) };
-                        } else if !current_region_code.is_empty() {
-                            final_resolved_filename = if asset_extension_string.is_empty() { format!("{}_{}", cleaned_stem, current_region_code) } else { format!("{}_{}.{}", cleaned_stem, current_region_code, asset_extension_string) };
-                        }
+                if is_region_enabled {
+                    if is_single {
+                        final_resolved_filename = if asset_extension_string.is_empty() { cleaned_stem } else { format!("{}.{}", cleaned_stem, asset_extension_string) };
+                    } else if !current_region_code.is_empty() {
+                        final_resolved_filename = if asset_extension_string.is_empty() { format!("{}_{}", cleaned_stem, current_region_code) } else { format!("{}_{}.{}", cleaned_stem, current_region_code, asset_extension_string) };
                     }
                 }
+            }
 
             let extraction_task = UniversalTask {
                 pack_path: loose_path,
@@ -183,7 +178,7 @@ pub fn run_universal_import(
                 byte_offset: 0,
                 byte_size,
                 region_code: current_region_code.to_string(),
-                chrono_score: calculated_chrono_score,
+                chrono_score: file_chrono_score,
                 is_loose: true,
             };
             universal_task_map.entry(final_resolved_filename).or_default().push(extraction_task);
@@ -195,13 +190,13 @@ pub fn run_universal_import(
 
             let pack_filename = corresponding_pack_path.file_name().unwrap_or_default().to_string_lossy().into_owned();
             let final_region_code = determine_region_code(&pack_filename, current_region_code);
-
+            let file_chrono_score = chronology::calculate_weight(&corresponding_pack_path, &global_temporary_directories);
             let region_pack_map = current_pack_hashes.entry(final_region_code.clone()).or_default();
 
             if !region_pack_map.contains_key(&pack_filename)
                 && let Ok(pack_hash_value) = manifest::hash_file(&corresponding_pack_path) {
-                    region_pack_map.insert(pack_filename.clone(), manifest::PackRecord { checksum: pack_hash_value });
-                }
+                region_pack_map.insert(pack_filename.clone(), manifest::PackRecord { checksum: pack_hash_value });
+            }
 
             let Ok(list_file_data) = fs::read(&item_path) else { continue; };
 
@@ -222,28 +217,28 @@ pub fn run_universal_import(
 
                 if let Some(rule) = matched_user_rule
                     && rule.languages.values().any(|&is_active| is_active) {
-                        let asset_path_object = Path::new(raw_asset_name);
-                        let asset_stem_string = asset_path_object.file_stem().unwrap().to_string_lossy();
-                        let asset_extension_string = asset_path_object.extension().unwrap_or_default().to_string_lossy();
+                    let asset_path_object = Path::new(raw_asset_name);
+                    let asset_stem_string = asset_path_object.file_stem().unwrap().to_string_lossy();
+                    let asset_extension_string = asset_path_object.extension().unwrap_or_default().to_string_lossy();
 
-                        let mut cleaned_stem = asset_stem_string.to_string();
-                        for &(code, _) in patterns::APP_LANGUAGES {
-                            let suffix = format!("_{}", code);
-                            if cleaned_stem.ends_with(&suffix) { cleaned_stem = cleaned_stem.trim_end_matches(&suffix).to_string(); break; }
-                        }
+                    let mut cleaned_stem = asset_stem_string.to_string();
+                    for &(code, _) in patterns::APP_LANGUAGES {
+                        let suffix = format!("_{}", code);
+                        if cleaned_stem.ends_with(&suffix) { cleaned_stem = cleaned_stem.trim_end_matches(&suffix).to_string(); break; }
+                    }
 
-                        let is_region_enabled = rule.languages.get(final_region_code.as_str()).copied().unwrap_or(false);
-                        if rule.handling == RuleHandling::Only && !is_region_enabled { continue; }
-                        let is_single = rule.handling == RuleHandling::Only && rule.languages.values().filter(|&&is_active| is_active).count() == 1;
+                    let is_region_enabled = rule.languages.get(final_region_code.as_str()).copied().unwrap_or(false);
+                    if rule.handling == RuleHandling::Only && !is_region_enabled { continue; }
+                    let is_single = rule.handling == RuleHandling::Only && rule.languages.values().filter(|&&is_active| is_active).count() == 1;
 
-                        if is_region_enabled {
-                            if is_single {
-                                final_resolved_filename = if asset_extension_string.is_empty() { cleaned_stem } else { format!("{}.{}", cleaned_stem, asset_extension_string) };
-                            } else if !final_region_code.is_empty() {
-                                final_resolved_filename = if asset_extension_string.is_empty() { format!("{}_{}", cleaned_stem, final_region_code) } else { format!("{}_{}.{}", cleaned_stem, final_region_code, asset_extension_string) };
-                            }
+                    if is_region_enabled {
+                        if is_single {
+                            final_resolved_filename = if asset_extension_string.is_empty() { cleaned_stem } else { format!("{}.{}", cleaned_stem, asset_extension_string) };
+                        } else if !final_region_code.is_empty() {
+                            final_resolved_filename = if asset_extension_string.is_empty() { format!("{}_{}", cleaned_stem, final_region_code) } else { format!("{}_{}.{}", cleaned_stem, final_region_code, asset_extension_string) };
                         }
                     }
+                }
 
                 let extraction_task = UniversalTask {
                     pack_path: corresponding_pack_path.clone(),
@@ -252,8 +247,8 @@ pub fn run_universal_import(
                     byte_offset: byte_offset_value,
                     byte_size: byte_size_value,
                     region_code: final_region_code.clone(),
-                    chrono_score: calculated_chrono_score,
-                    is_loose: false,
+                    chrono_score: file_chrono_score,
+                    is_loose: false,/
                 };
 
                 universal_task_map.entry(final_resolved_filename).or_default().push(extraction_task);
@@ -390,10 +385,10 @@ pub fn run_universal_import(
         decrypted_candidates.sort_by(|candidate_a, candidate_b| {
             let weight_cmp = candidate_a.true_weight.cmp(&candidate_b.true_weight);
             if weight_cmp == std::cmp::Ordering::Equal {
-                let chrono_cmp = candidate_a.task.chrono_score.cmp(&candidate_b.task.chrono_score);
-                if chrono_cmp == std::cmp::Ordering::Equal { get_region_priority(&candidate_a.task.region_code).cmp(&get_region_priority(&candidate_b.task.region_code)) }
-                else { chrono_cmp }
-            } else { weight_cmp }
+                get_region_priority(&candidate_a.task.region_code).cmp(&get_region_priority(&candidate_b.task.region_code))
+            } else {
+                weight_cmp
+            }
         });
 
         let winning_candidate = decrypted_candidates.pop().unwrap();

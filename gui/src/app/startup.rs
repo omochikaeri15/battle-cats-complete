@@ -9,9 +9,6 @@ use crate::app::BattleCatsApp;
 use core::cat::paths as cat_paths;
 use core::cat::data::{skilllevel, skilldescriptions};
 
-#[cfg(not(debug_assertions))]
-use crate::app::frame::Page;
-
 impl BattleCatsApp {
     pub fn new(creation_context: &eframe::CreationContext<'_>) -> Self {
         let mut app: Self = json::load("settings.json").unwrap_or_default();
