@@ -39,6 +39,7 @@ fn main() {
 
     println!("> Pulling latest nyanko commits...");
     run_cargo(&["update", "-p", "nyanko"]);
+    run_cargo(&["clean", "-p", "nyanko"]);
 
     println!("> Verifying build state with cargo check...");
     run_cargo(&["check"]);
