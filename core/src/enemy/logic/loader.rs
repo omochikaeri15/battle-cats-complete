@@ -11,6 +11,8 @@ pub fn restart_scan(state: &mut EnemyDataState, config: ScannerConfig) {
     state.active_scan_ids.clear();
     state.detail_key.clear();
 
+    state.enemies.clear();
+
     state.scan_receiver = Some(scanner::start_scan(config));
 }
 

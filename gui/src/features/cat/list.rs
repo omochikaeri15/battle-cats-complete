@@ -82,16 +82,6 @@ impl Default for CatList {
 }
 
 impl CatList {
-    pub fn clear_cache(&mut self) {
-        self.texture_cache.clear();
-        self.pending_requests.clear();
-        self.invalidated_ids.clear();
-        self.missing_ids.clear();
-        self.hovered_id = None;
-        self.hover_lost_time = None;
-        self.last_unit_count = 0;
-    }
-
     pub fn flush_icon(&mut self, id: u32) {
         self.invalidated_ids.insert(id);
         self.missing_ids.remove(&id);

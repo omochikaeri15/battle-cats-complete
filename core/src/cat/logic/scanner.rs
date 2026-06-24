@@ -49,9 +49,9 @@ impl CatEntry {
 }
 
 fn is_valid_png(path: &Path) -> bool {
-    let mut file = match fs::File::open(path) { Ok(f) => f, Err(_) => return false, };
+    let mut file_handle = match fs::File::open(path) { Ok(handle) => handle, Err(_) => return false, };
     let mut buffer = [0u8; 25];
-    if file.read_exact(&mut buffer).is_err() { return false; }
+    if file_handle.read_exact(&mut buffer).is_err() { return false; }
     const PNG_SIG: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     if buffer[0..8] != PNG_SIG { return false; }
     buffer[24] >= 8
@@ -101,9 +101,9 @@ pub fn start_scan(config: ScannerConfig) -> Receiver<CatEntry> {
                 &config
             );
 
-            if let Some(c) = &cat
+            if let Some(cat_item) = &cat
                 && let Ok(sender) = stream_sender.lock() {
-                let _ = sender.send(c.clone());
+                let _ = sender.send(cat_item.clone());
             }
 
             cat
@@ -160,9 +160,9 @@ pub fn process_cat_entry(
     let stats_path = paths::stats(cats_root_dir, cat_id);
 
     let Some(stats_parent) = stats_path.parent() else { return None; };
-    let Some(stats_name) = stats_path.file_name().and_then(|n| n.to_str()) else { return None; };
+    let Some(stats_file_name) = stats_path.file_name().and_then(|name_str| name_str.to_str()) else { return None; };
 
-    let resolved_stats = crate::global::resolver::get(stats_parent, [stats_name], priority).into_iter().next();
+    let resolved_stats = crate::global::resolver::get(stats_parent, [stats_file_name], priority).into_iter().next();
 
     if !config.show_invalid_cats && resolved_stats.is_none() {
         return None;
@@ -199,13 +199,19 @@ pub fn process_cat_entry(
         }
 
         let mut form_valid = false;
-
-        if let Some(b_path) = &resolved_banner {
-            if config.show_invalid_cats || is_valid_png(b_path) {
-                form_valid = true;
+        match form_idx {
+            0 | 1 => {
+                if let Some(banner_file) = &resolved_banner {
+                    if config.show_invalid_cats || is_valid_png(banner_file) {
+                        form_valid = true;
+                    }
+                } else if config.show_invalid_cats {
+                    form_valid = dir.exists();
+                }
             }
-        } else if config.show_invalid_cats {
-            form_valid = dir.exists();
+            2 => form_valid = ub_row.true_form_id > 0,
+            3 => form_valid = ub_row.ultra_form_id > 0,
+            _ => unreachable!(),
         }
 
         forms_existence[form_idx] = form_valid;
@@ -215,7 +221,7 @@ pub fn process_cat_entry(
         }
     }
 
-    if !config.show_invalid_cats && forms_existence.iter().all(|&e| !e) {
+    if !config.show_invalid_cats && forms_existence.iter().all(|&is_valid| !is_valid) {
         return None;
     }
 
@@ -224,25 +230,28 @@ pub fn process_cat_entry(
             let dir = paths::folder(cats_root_dir, cat_id, form_idx, egg_ids);
             let banner_stem = paths::image_stem(paths::AssetType::Banner, cat_id, form_idx, egg_ids);
             let banner_name = format!("{}.png", banner_stem);
-            let mut b = crate::global::resolver::get(&dir, [banner_name.as_str()], priority).into_iter().next();
+            let mut resolved_fallback = crate::global::resolver::get(&dir, [banner_name.as_str()], priority).into_iter().next();
 
-            if b.is_none() && form_idx == 1 && egg_ids.1 != -1 {
+            if resolved_fallback.is_none() && form_idx == 1 && egg_ids.1 != -1 {
                 let fallback_stem = format!("udi{:03}_m00", egg_ids.1);
                 let fallback_name = format!("{}.png", fallback_stem);
-                b = crate::global::resolver::get(&dir, [fallback_name.as_str()], priority).into_iter().next();
+                resolved_fallback = crate::global::resolver::get(&dir, [fallback_name.as_str()], priority).into_iter().next();
             }
-            final_image_path_opt = b;
-            break;
+
+            if resolved_fallback.is_some() {
+                final_image_path_opt = resolved_fallback;
+                break;
+            }
         }
     }
 
     let mut attack_anim_frames = [0; 4];
     for i in 0..4 {
         if !forms_existence[i] { continue; }
-        let p = paths::maanim(cats_root_dir, cat_id, i, egg_ids, 2);
+        let anim_path = paths::maanim(cats_root_dir, cat_id, i, egg_ids, 2);
 
-        if let (Some(parent), Some(name)) = (p.parent(), p.file_name().and_then(|n| n.to_str()))
-            && let Some(resolved) = crate::global::resolver::get(parent, [name], priority).into_iter().next()
+        if let (Some(parent_dir), Some(anim_file_name)) = (anim_path.parent(), anim_path.file_name().and_then(|name_str| name_str.to_str()))
+            && let Some(resolved) = crate::global::resolver::get(parent_dir, [anim_file_name], priority).into_iter().next()
             && let Ok(bytes) = fs::read(&resolved) {
             let content = String::from_utf8_lossy(&bytes);
             let duration = Animation::scan_duration(&content);
@@ -254,7 +263,6 @@ pub fn process_cat_entry(
     if let Some(resolved) = resolved_stats
         && let Ok(bytes) = fs::read(&resolved) {
 
-        // THE WAITER HAND-OFF: Pass raw bytes to the pure nyanko engine
         if let Ok(parsed_profiles) = Battle::parse(&bytes) {
             for (line_index, profile) in parsed_profiles.into_iter().enumerate().take(4) {
                 cat_stats[line_index] = Some(profile);

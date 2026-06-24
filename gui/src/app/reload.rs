@@ -35,11 +35,12 @@ impl BattleCatsApp {
 
         let config = self.settings.scanner_config();
 
-        tracing::debug!("Clearing caches and restarting data scans");
-        self.cat_list_state.cat_list.clear_cache();
+        tracing::debug!("Dropping old UI caches and restarting data scans");
+        
+        self.cat_list_state.cat_list = Default::default();
         self.cat_list_state.data.restart_scan(config.clone());
 
-        self.enemy_list_state.enemy_list.clear_cache();
+        self.enemy_list_state.enemy_list = Default::default();
         self.enemy_list_state.data.restart_scan(config.clone());
 
         self.stage_list_state.data.registry.clear_cache();

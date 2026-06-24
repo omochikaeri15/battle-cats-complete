@@ -88,6 +88,8 @@ pub fn restart_scan(state: &mut CatDataState, config: ScannerConfig) {
     state.incoming_cats.clear();
     state.active_scan_ids.clear();
 
+    state.cats.clear();
+
     state.selected_cat = current_selection_id;
     state.selected_form = current_form;
     state.selected_detail_tab = current_tab;

@@ -77,13 +77,6 @@ impl EnemyList {
         self.last_unit_count = usize::MAX;
     }
 
-    pub fn clear_cache(&mut self) {
-        self.texture_cache.clear();
-        self.pending_requests.clear();
-        self.missing_ids.clear();
-        self.last_unit_count = 0;
-    }
-
     pub fn flush_icon(&mut self, id: u32) {
         self.missing_ids.remove(&id);
         self.pending_requests.remove(&id);
