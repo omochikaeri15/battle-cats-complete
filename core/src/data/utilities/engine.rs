@@ -248,7 +248,7 @@ pub fn run_universal_import(
                     byte_size: byte_size_value,
                     region_code: final_region_code.clone(),
                     chrono_score: file_chrono_score,
-                    is_loose: false,/
+                    is_loose: false,
                 };
 
                 universal_task_map.entry(final_resolved_filename).or_default().push(extraction_task);
