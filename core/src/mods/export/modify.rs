@@ -279,6 +279,9 @@ fn replace_package_refs(
 ) {
     const ATTRS_TO_CHECK: &[&str] = &["name", "authorities", "taskAffinity", "sharedUserId", "value", "scheme", "host"];
 
+    let tag_name = elem.element.name.resolve(pool).unwrap_or_default().to_string();
+    let is_component = matches!(tag_name.as_str(), "application" | "activity" | "activity-alias" | "service" | "receiver" | "provider");
+
     for attr_name in ATTRS_TO_CHECK {
         let Some(attribute) = elem.get_attribute_mut(attr_name, pool) else { continue; };
 
@@ -299,9 +302,20 @@ fn replace_package_refs(
         };
 
         let Some(resolved_string) = resolved_string_value else { continue; };
+
+        if *attr_name == "name" && is_component {
+            if resolved_string.starts_with('.') {
+                let new_val = format!("{}{}", old_pkg, resolved_string);
+                attribute.write_string(new_val.into(), pool);
+            } else if !resolved_string.contains('.') {
+                let new_val = format!("{}.{}", old_pkg, resolved_string);
+                attribute.write_string(new_val.into(), pool);
+            }
+            continue;
+        }
+
         if !resolved_string.contains(old_pkg) { continue; }
 
-        trace!("Replaced deep reference in attribute '{}': {} -> {}", attr_name, old_pkg, new_pkg);
         let new_val = resolved_string.replace(old_pkg, new_pkg);
         attribute.write_string(new_val.into(), pool);
     }
@@ -386,9 +400,17 @@ pub fn inject_and_build_apk(
         let file_name = archive_file.name().to_string();
         let upper_name = file_name.to_ascii_uppercase();
 
-        if upper_name.starts_with("META-INF/") || upper_name.starts_with("META-INF\\") || upper_name.contains("STAMP-CERT") {
-            trace!("Skipping original signature file: {}", file_name);
-            continue;
+        if upper_name.starts_with("META-INF/") || upper_name.starts_with("META-INF\\") {
+            if upper_name.ends_with(".SF")
+                || upper_name.ends_with(".RSA")
+                || upper_name.ends_with(".DSA")
+                || upper_name.ends_with(".EC")
+                || upper_name.ends_with("MANIFEST.MF")
+                || upper_name.contains("STAMP-CERT")
+            {
+                trace!("Skipping original signature file: {}", file_name);
+                continue;
+            }
         }
 
         if file_name.starts_with("res/") {
