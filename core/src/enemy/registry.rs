@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
+use nyanko::common::{img015, Param};
 use nyanko::enemy::abilities::{Identity, REGISTRY};
 use nyanko::enemy::unit::Battle;
-use crate::global::game::abilities::CustomIcon;
-use nyanko::common::{Param, img015};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::global::game::abilities::CustomIcon;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Magnification {

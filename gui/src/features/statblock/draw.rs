@@ -4,8 +4,8 @@ use ab_glyph::PxScale;
 use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
 use imageproc::rect::Rect;
+use nyanko::graphics::actor::SpriteCut;
 
-use core::global::formats::imgcut::SpriteCut;
 use core::global::game::abilities::{AbilityItem, CustomIcon};
 
 pub const SUPERSCRIPT_SCALE: f32 = 0.75;

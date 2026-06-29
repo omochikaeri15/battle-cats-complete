@@ -1,16 +1,17 @@
-use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-// STRICT BOUNDARY: Only importing the public aggregate roots
-use nyanko::graphics::animation::{Unit, Anim};
-use crate::animation::export::state::LoopStatus;
+use nyanko::graphics::actor::{Animation, Unit};
+
+use super::state::LoopStatus;
 
 const TIMEOUT_SECONDS: u64 = 180;
 
 pub fn start_search(
     unit: Arc<Unit>,
-    animation: Arc<Anim>,
+    animation: Arc<Animation>,
     tolerance: f32,
     minimum_loop_length: i32,
     maximum_loop_length: Option<i32>,
@@ -19,15 +20,12 @@ pub fn start_search(
 ) {
     thread::spawn(move || {
         let start_time = Instant::now();
-
-        // Delegate the heavy lifting to the library, passing a callback for orchestrator logic
         let cycle_result = unit.calculate_cycle(
             &animation,
             tolerance,
             Some(minimum_loop_length),
             maximum_loop_length,
             |current_frame| {
-                // Return false to instruct the nyanko engine to abort the search
                 if abort_signal.load(Ordering::Relaxed) {
                     return false;
                 }
@@ -37,17 +35,15 @@ pub fn start_search(
                     return false;
                 }
 
-                // GUI updates
                 if current_frame % 5 == 0 {
                     let _ = status_sender.send(LoopStatus::Searching(current_frame));
                 }
 
-                // Yield thread execution briefly to prevent locking the GUI host
                 if current_frame % 100 == 0 {
                     thread::sleep(Duration::from_millis(1));
                 }
 
-                true // Continue searching
+                true
             }
         );
 

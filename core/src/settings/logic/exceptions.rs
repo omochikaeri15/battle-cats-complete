@@ -1,7 +1,8 @@
-use serde::{Deserialize, Serialize};
-use indexmap::IndexMap;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
+
+use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum RuleHandling {

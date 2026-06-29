@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
+
 use regex::Regex;
+
 use crate::cat::patterns;
 
 pub struct CatMatcher {

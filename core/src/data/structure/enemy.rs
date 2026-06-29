@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
+
 use regex::Regex;
+
 use crate::enemy::patterns;
 
 pub struct EnemyMatcher {

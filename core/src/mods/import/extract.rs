@@ -1,9 +1,12 @@
 use std::fs;
 use std::path::Path;
 use std::sync::mpsc::Sender;
+
 use zip::ZipArchive;
-use crate::mods::import::decrypt;
+
 use crate::settings::logic::keys::UserKeys;
+
+use super::decrypt;
 
 pub fn run_archive(archive_path: &Path, _target_dir: &Path, tx: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
     let _ = tx.send("Opening archive...".to_string());

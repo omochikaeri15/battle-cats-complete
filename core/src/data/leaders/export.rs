@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
-use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 

@@ -1,12 +1,12 @@
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 
-use crate::data::utilities::{engine, keys};
-use crate::data::state::{AdbImportType, AdbTarget};
 use crate::addons::adb::bridge;
+use crate::data::state::{AdbImportType, AdbTarget};
+use crate::data::utilities::{engine, keys};
 use crate::settings::logic::state::EmulatorConfig;
 
 pub fn run(

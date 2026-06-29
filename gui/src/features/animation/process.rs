@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use eframe::egui;
-use nyanko::graphics::animation::{Anim, Unit};
+use nyanko::graphics::actor::{Animation, Unit};
 
 use core::animation::export::encoding::{self, EncoderMessage};
 use core::animation::export::process::calculate_export_time;
@@ -14,7 +14,7 @@ pub fn process_frame(
     rect: egui::Rect,
     state: &mut ExporterState,
     unit: Arc<Unit>,
-    animation: Option<Arc<Anim>>,
+    animation: Option<Arc<Animation>>,
     renderer_reference: Arc<Mutex<Option<GlowRenderer>>>,
     current_time: f32,
 ) {

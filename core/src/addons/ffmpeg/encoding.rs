@@ -1,9 +1,15 @@
-use std::process::{Command, Stdio};
-use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
-use std::path::PathBuf;
-use std::thread;
 use std::io::Write;
-use crate::animation::export::encoding::{ExportConfig, ExportFormat, EncoderMessage, EncoderStatus, prepare_image};
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
+use std::thread;
+
+use crate::animation::export::encoding::{
+    prepare_image, EncoderMessage, EncoderStatus,
+    ExportConfig, ExportFormat,
+};
+
 use super::download;
 
 pub fn encode(

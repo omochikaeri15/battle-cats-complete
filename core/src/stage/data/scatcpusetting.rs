@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
+use nyanko::common::csv::detect_separator;
 
 #[derive(Default, Debug, Clone)]
 pub struct ScatCpuSetting {
@@ -16,7 +16,7 @@ pub fn load(dir_path: &Path, filename: &str, lang_priority: &[String]) -> ScatCp
     let Some(first_path) = file_paths.first() else { return setting; };
     let Ok(file_content) = fs::read_to_string(first_path) else { return setting; };
     
-    let csv_separator = detect_csv_separator(&file_content);
+    let csv_separator = detect_separator(&file_content);
     
     for line in file_content.lines() {
         let clean_line = line.split("//").next().unwrap_or("").trim();

@@ -1,8 +1,10 @@
-use std::time::Instant;
 use std::sync::mpsc::TryRecvError;
-use crate::enemy::logic::state::EnemyDataState;
-use super::scanner;
+use std::time::Instant;
+
 use crate::settings::logic::state::ScannerConfig;
+
+use super::scanner;
+use super::state::EnemyDataState;
 
 pub fn restart_scan(state: &mut EnemyDataState, config: ScannerConfig) {
     state.is_cold_scan = true;

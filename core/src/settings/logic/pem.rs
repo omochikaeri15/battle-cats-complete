@@ -1,11 +1,12 @@
 use std::fs;
 use std::path::PathBuf;
+
 use anyhow::{Context, Result};
-use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
-use rsa::{RsaPrivateKey, Pkcs1v15Sign};
-use sha2::{Digest, Sha256};
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use rasn_pkix::{Certificate, SubjectPublicKeyInfo};
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+use rsa::pkcs8::{EncodePrivateKey, EncodePublicKey, LineEnding};
+use rsa::{Pkcs1v15Sign, RsaPrivateKey};
+use sha2::{Digest, Sha256};
 
 pub const DEFAULT_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCmBNx3G6wn5h63

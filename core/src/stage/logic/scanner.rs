@@ -1,15 +1,19 @@
 // TODO: split into "load story" function and "load legend" function
 use std::collections::HashMap;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
-use tracing::{warn, instrument};
+
+use nyanko::common::csv;
+use tracing::{instrument, warn};
 
 use crate::settings::logic::state::ScannerConfig;
-use crate::stage::{paths, data};
-use crate::stage::logic::xp::get_hardcoded_xp;
-use crate::stage::registry::{StageRegistry, Map, Stage};
+use crate::stage::data;
+use crate::stage::paths;
+use crate::stage::registry::{Map, Stage, StageRegistry};
+
+use super::xp::get_hardcoded_xp;
 
 pub struct ScanContext<'a> {
     pub lang_priority: &'a [String],
@@ -235,7 +239,7 @@ fn load_map(
         if !story_file.is_empty() {
             let story_path = map_path.join(story_file);
             if let Ok(content) = fs::read_to_string(&story_path) {
-                let sep = crate::global::utils::detect_csv_separator(&content);
+                let sep = csv::detect_separator(&content);
                 for (idx, line) in content.lines().skip(2).enumerate() {
                     let clean = line.split("//").next().unwrap_or("").trim();
                     if clean.is_empty() { continue; }

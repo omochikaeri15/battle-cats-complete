@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use serde::{Serialize, Deserialize};
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
+use nyanko::common::csv::detect_separator;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DropReward {
@@ -50,7 +50,7 @@ pub fn load(dir: &Path, filename: &str, priority: &[String]) -> Vec<MapStageEntr
 }
 
 fn parse(content: &str) -> Vec<MapStageEntry> {
-    let sep = detect_csv_separator(content);
+    let sep = detect_separator(content);
     let lines = content.lines()
         .map(|l| l.split("//").next().unwrap_or("").trim())
         .filter(|l| !l.is_empty())

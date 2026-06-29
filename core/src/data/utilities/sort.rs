@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::settings::logic::exceptions::RuleHandling;
 use crate::global::io::patterns;
-use crate::data::utilities::rules;
+use crate::settings::logic::exceptions::RuleHandling;
+
+use super::rules;
 
 pub struct SortedRawFile {
     pub original_path: PathBuf,
@@ -11,7 +12,6 @@ pub struct SortedRawFile {
     pub region_code: String,
 }
 
-// Processes a list of raw files by applying regex exception rules
 pub fn process_raw_files(
     files: Vec<PathBuf>,
     source_directory: &str,
@@ -19,8 +19,6 @@ pub fn process_raw_files(
 ) -> Vec<SortedRawFile> {
     let (compiled_regex_set, compiled_exception_rules) = rules::compile();
     let mut file_groups: HashMap<String, Vec<SortedRawFile>> = HashMap::new();
-
-    // Infer default region from the source directory name
     let source_path = Path::new(source_directory);
     let mut folder_region_name = source_path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
     if folder_region_name == "files"

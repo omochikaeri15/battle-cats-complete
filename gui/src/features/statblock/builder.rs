@@ -10,9 +10,9 @@ use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
 use imageproc::rect::Rect;
 use nyanko::common::img015;
+use nyanko::graphics::actor::SpriteCut;
 
 use core::global::assets;
-use core::global::formats::imgcut::SpriteCut;
 use core::global::game::abilities::{AbilityItem, CustomIcon, ABILITY_X, ABILITY_Y, TRAIT_Y};
 use core::global::utils::autocrop;
 

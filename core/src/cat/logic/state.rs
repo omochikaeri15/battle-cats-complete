@@ -1,12 +1,14 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
+
 use serde::{Deserialize, Serialize};
 
-use crate::cat::logic::scanner::CatEntry;
-use crate::settings::logic::ScannerConfig;
-use crate::cat::logic::loader;
 use crate::global::formats::mamodel::Model;
+use crate::settings::logic::ScannerConfig;
+
+use super::loader;
+use super::scanner::CatEntry;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone, Copy)]
 #[derive(Default)]

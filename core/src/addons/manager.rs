@@ -1,11 +1,12 @@
 use std::fs;
-use std::sync::mpsc::{self, Sender, Receiver};
-use std::thread;
 use std::io::Cursor;
 use std::path::Path;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread;
+
 use zip::ZipArchive;
 
-use crate::addons::toolpaths::{get_tools_dir, AddonStatus};
+use super::toolpaths::{get_tools_dir, AddonStatus};
 
 const RELEASE_TAG: &str = "tools";
 const REPO_OWNER: &str = "omochikaeri15";

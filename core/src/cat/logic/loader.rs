@@ -1,9 +1,10 @@
-use std::time::Instant;
 use std::sync::mpsc::TryRecvError;
+use std::time::Instant;
 
-use crate::cat::logic::state::CatDataState;
-use super::scanner;
 use crate::settings::logic::state::ScannerConfig;
+
+use super::scanner;
+use super::state::CatDataState;
 
 pub fn refresh_cat(state: &mut CatDataState, id: u32, config: ScannerConfig) {
     match scanner::scan_single(id, &config) {

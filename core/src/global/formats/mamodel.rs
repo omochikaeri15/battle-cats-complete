@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
-use crate::global::utils;
+
+use nyanko::common::csv;
 
 #[derive(Clone, Debug)]
 pub struct ModelPart {
@@ -69,7 +70,7 @@ impl Default for Model {
 impl Model {
     pub fn load(path: &Path) -> Option<Self> {
         let content = fs::read_to_string(path).ok()?;
-        let delimiter = utils::detect_csv_separator(&content);
+        let delimiter = csv::detect_separator(&content);
         let lines: Vec<&str> = content.lines().filter(|line_ref| !line_ref.trim().is_empty()).collect();
 
         if lines.is_empty() { return None; }

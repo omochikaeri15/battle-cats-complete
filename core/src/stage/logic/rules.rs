@@ -1,8 +1,9 @@
-use tracing::{debug, warn, instrument};
+use tracing::{debug, instrument, warn};
+
+use crate::global::context::GlobalContext;
+use crate::global::utils::strip_color_tags;
 use crate::stage::data::specialrulesmap::{RuleType, SpecialRule};
 use crate::stage::data::specialrulesmapoption::SpecialRuleOption;
-use crate::global::context::GlobalContext;
-use crate::stage::logic::restrictions::strip_color_tags;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct ProcessedRule {

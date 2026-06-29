@@ -1,10 +1,8 @@
-use std::process::Command;
-use std::path::Path;
 use std::env;
-use crate::addons::apkeditor::download::{get_apkeditor_path, get_java_path};
+use std::path::Path;
+use std::process::Command;
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
+use super::download::{get_apkeditor_path, get_java_path};
 
 fn execute_command(
     binary_path: &Path,
@@ -20,6 +18,7 @@ fn execute_command(
 
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         command.creation_flags(CREATE_NO_WINDOW);
     }

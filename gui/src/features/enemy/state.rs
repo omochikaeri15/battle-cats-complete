@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use eframe::egui;
-use nyanko::graphics::animation::Unit;
+use nyanko::graphics::actor::Unit;
 use serde::{Deserialize, Serialize};
 
 use core::enemy::logic::filter::EnemyFilterState;
@@ -12,7 +12,7 @@ use core::settings::logic::Settings;
 use crate::features::animation::viewer::AnimViewer;
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 use super::list::EnemyList;
 use super::master;
@@ -36,7 +36,7 @@ pub struct EnemyListState {
 
     // Texture Caches
     #[serde(skip)] pub detail_texture: Option<egui::TextureHandle>,
-    #[serde(skip)] pub img015_sheets: Vec<GuiSpriteSheet>,
+    #[serde(skip)] pub img015_sheets: Vec<SpriteSheet>,
 
     // NEW: Replaces old Model and SpriteSheet with the unified pure Rig
     #[serde(skip)] pub rig: Option<Arc<Unit>>,

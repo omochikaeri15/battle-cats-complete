@@ -1,12 +1,13 @@
-use directories::BaseDirs;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fs::{self, File};
 use std::hash::{Hash, Hasher};
-use std::path::{Path, PathBuf};
 use std::io::{BufReader, BufWriter};
+use std::path::{Path, PathBuf};
+
+use bincode::Options;
+use directories::BaseDirs;
 use rayon::prelude::*;
 use rustc_hash::FxHasher;
-use bincode::Options;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub fn get_cache_dir() -> Option<PathBuf> {
     if let Some(base_dirs) = BaseDirs::new() {

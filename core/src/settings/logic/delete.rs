@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 

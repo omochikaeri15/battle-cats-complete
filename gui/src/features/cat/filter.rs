@@ -9,7 +9,7 @@ use core::settings::logic::Settings;
 
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 pub const WINDOW_WIDTH: f32 = 500.0;
 pub const WINDOW_HEIGHT: f32 = 580.0;
@@ -20,7 +20,7 @@ pub const BTN_SIZE_FORM: [f32; 2] = [118.0, 24.0];
 pub fn show_popup(
     ctx: &egui::Context,
     state: &mut CatFilterState,
-    sheets: &mut Vec<GuiSpriteSheet>,
+    sheets: &mut Vec<SpriteSheet>,
     assets: &CustomAssets,
     settings: &Settings,
     drag_guard: &mut DragGuard,
@@ -292,7 +292,7 @@ fn render_display_group(
     target_group: DisplayGroup,
     is_vertical: bool,
     draw_labels: bool,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let mut icons_in_group = Vec::new();
@@ -354,7 +354,7 @@ fn render_filter_icon_row(
     state: &mut CatFilterState,
     icon: &AbilityIcon,
     draw_labels: bool,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let is_active = state.active_icons.contains(icon);
@@ -429,7 +429,7 @@ fn render_filter_icon(
     ui: &mut egui::Ui,
     icon: &AbilityIcon,
     active_icons: &mut HashSet<AbilityIcon>,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let is_active = active_icons.contains(icon);

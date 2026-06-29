@@ -1,17 +1,21 @@
 use std::fs;
-use std::io::{Cursor, Write, BufWriter};
+use std::io::{BufWriter, Cursor, Write};
 use std::path::PathBuf;
-use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 
+use gif::{
+    DisposalMethod, Encoder as GifEncoder,
+    Frame as GifFrame, Repeat as GifRepeat
+};
 use glow::HasContext;
 use image::RgbaImage;
 use webp_animation::Encoder as WebpEncoder;
-use gif::{Encoder as GifEncoder, Frame as GifFrame, Repeat as GifRepeat, DisposalMethod};
 
-use nyanko::graphics::animation::{Unit, Anim, resolve_frame};
+use nyanko::graphics::actor::{resolve_frame, Animation, Unit};
+
 use crate::animation::logic::canvas::GlowRenderer;
 
-// SHARED DATA STRUCTURES
 #[derive(Clone, Debug)]
 pub struct ExportConfig {
     pub width: u32,
@@ -55,7 +59,6 @@ pub enum EncoderStatus {
     Finished,
 }
 
-// NATIVE WORKER
 pub fn encode_native(
     config: ExportConfig,
     receiver: mpsc::Receiver<EncoderMessage>,
@@ -135,8 +138,6 @@ pub fn encode_native(
         ExportFormat::Zip => {
             let mut frame_index = 0;
             let step_direction = if config.start_frame <= config.end_frame { 1 } else { -1 };
-
-            // Native ZIP creation
             let Ok(file) = fs::File::create(temp_path) else { return false; };
             let mut zip_writer = zip::ZipWriter::new(BufWriter::new(file));
 
@@ -178,14 +179,13 @@ pub fn encode_native(
     is_success
 }
 
-// Strictly requiring an explicit Unit and Anim
 pub fn render_frame(
     renderer: &mut GlowRenderer,
     gl_context: &glow::Context,
     width: u32,
     height: u32,
     unit: &Unit,
-    animation: Option<&Anim>,
+    animation: Option<&Animation>,
     frame_time: f32,
     pan_x: f32,
     pan_y: f32,
@@ -261,16 +261,11 @@ pub fn render_frame(
 pub fn prepare_image(mut pixel_buffer: Vec<u8>, width: u32, height: u32, is_opaque_background: bool) -> RgbaImage {
     for chunk in pixel_buffer.chunks_exact_mut(4) {
         if is_opaque_background {
-            // Force fully opaque so encoders don't apply 1-bit transparency logic to anti-aliased edges
             chunk[3] = 255;
         } else {
-            // --- ALPHA SYNTHESIS ---
-            // Reconstruct the missing alpha for additive pixels by finding the brightest RGB channel.
-            // For standard premultiplied pixels, max(RGB) is always <= Alpha, so this does nothing.
             let alpha_value = chunk[3].max(chunk[0]).max(chunk[1]).max(chunk[2]);
             chunk[3] = alpha_value;
 
-            // Un-premultiply the straight-alpha encoders (GIF/WebP)
             if alpha_value > 0 && alpha_value < 255 {
                 let float_alpha = alpha_value as f32 / 255.0;
                 chunk[0] = (chunk[0] as f32 / float_alpha).min(255.0) as u8;

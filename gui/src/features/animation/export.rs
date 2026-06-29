@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use eframe::egui;
-use nyanko::graphics::animation::{Anim, Unit};
+use nyanko::graphics::actor::{Animation, Unit};
 
 use core::addons::toolpaths::{self, Presence};
 use core::animation::export::encoding::{EncoderStatus, ExportFormat};
@@ -23,7 +23,7 @@ pub fn show_popup(
     ui: &mut egui::Ui,
     state: &mut ExporterState,
     unit: Option<Arc<Unit>>,
-    animation: Option<Arc<Anim>>,
+    animation: Option<Arc<Animation>>,
     start_region_selection: &mut bool,
     settings: &mut Settings,
     available_anims: &[(usize, PathBuf)],
@@ -149,7 +149,7 @@ fn render_content(
     ui: &mut egui::Ui,
     state: &mut ExporterState,
     unit: Option<Arc<Unit>>,
-    animation: Option<Arc<Anim>>,
+    animation: Option<Arc<Animation>>,
     start_region_selection: &mut bool,
     settings: &mut Settings,
     available_anims: &[(usize, PathBuf)],
@@ -518,7 +518,7 @@ fn render_content(
                             for target_index in target_indices {
                                 if let Some((_, path)) = available_anims.iter().find(|(idx, _)| *idx == target_index)
                                     && let Ok(file_bytes) = std::fs::read(path)
-                                        && let Some(parsed_animation) = Anim::parse(&file_bytes) {
+                                        && let Some(parsed_animation) = Animation::parse(&file_bytes) {
                                             showcase_anims.push(parsed_animation);
                                         }
                             }

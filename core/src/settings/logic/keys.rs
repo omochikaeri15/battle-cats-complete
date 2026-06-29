@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::global::region::Region;
 use md5;
+use nyanko::common::Region;
+use serde::{Deserialize, Serialize};
 
 pub const EXPECTED_HASHES: [(&str, &str); 4] = [
     // (Key, IV)

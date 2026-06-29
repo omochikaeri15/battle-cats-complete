@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::collections::HashMap;
+
 use rayon::prelude::*;
 
-use crate::data::utilities::{audit, router, manifest, sort};
+use crate::data::utilities::{audit, manifest, router, sort};
 
 pub fn run(
     source_path_string: &str, 

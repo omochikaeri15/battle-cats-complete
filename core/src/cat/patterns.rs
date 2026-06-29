@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // Basic patterns
 pub const CAT_ID: &str = r"(\d{3})";
 pub const CAT_FORM: &str = r"([fcsu])";

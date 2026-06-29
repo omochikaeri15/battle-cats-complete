@@ -1,16 +1,18 @@
-use anyhow::{Context, Result};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use rasn_pkix::Certificate;
-use rsa::pkcs8::{DecodePrivateKey, EncodePublicKey};
-use rsa::pkcs1::DecodeRsaPrivateKey;
-use rsa::{Pkcs1v15Sign, RsaPublicKey, RsaPrivateKey};
-use sha2::{Digest as _, Sha256};
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
+
+use anyhow::{Context, Result};
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use rasn_pkix::Certificate;
 use rayon::prelude::*;
+use rsa::pkcs1::DecodeRsaPrivateKey;
+use rsa::pkcs8::{DecodePrivateKey, EncodePublicKey};
+use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
+use sha2::{Digest as _, Sha256};
 use tracing::{debug, info, trace};
+
 use crate::settings::logic::pem::get_active_pem;
 
 const APK_SIGNING_BLOCK_MAGIC: &[u8] = b"APK Sig Block 42";

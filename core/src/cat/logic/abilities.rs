@@ -1,8 +1,10 @@
-use crate::cat::logic::context::CatRenderContext;
+use nyanko::cat::abilities::{get_talent, AttrUnit, Identity, REGISTRY};
+use nyanko::common::img015;
+
 use crate::cat::registry::{self, AbilityIcon, DisplayGroup};
 use crate::global::game::abilities::{AbilityItem, CustomIcon};
-use nyanko::cat::abilities::{Identity, AttrUnit, REGISTRY, get_talent};
-use nyanko::common::img015;
+
+use super::context::CatRenderContext;
 
 pub fn collect_ability_data(
     ctx: &CatRenderContext

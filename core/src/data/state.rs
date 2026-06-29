@@ -1,8 +1,10 @@
-use serde::{Deserialize, Serialize};
-use std::sync::mpsc::Receiver;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::sync::mpsc::Receiver;
 use std::time::Instant;
+
+use serde::{Deserialize, Serialize};
+
 use crate::global::region::Region;
 
 #[derive(PartialEq, Clone, Copy, Debug, Deserialize, Serialize)]

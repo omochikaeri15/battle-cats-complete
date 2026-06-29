@@ -4,16 +4,16 @@ use core::global::io::paths;
 use core::global::resolver;
 use core::settings::logic::state::Settings;
 
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
-pub fn ensure_loaded(ctx: &egui::Context, sheets: &mut Vec<GuiSpriteSheet>, settings: &Settings) {
+pub fn ensure_loaded(ctx: &egui::Context, sheets: &mut Vec<SpriteSheet>, settings: &Settings) {
     let base_dir = paths::img022_folder(std::path::Path::new(""));
 
     let png_paths = resolver::get(&base_dir, ["img022.png"], &settings.general.language_priority);
     let cut_paths = resolver::get(&base_dir, ["img022.imgcut"], &settings.general.language_priority);
 
     if sheets.len() != png_paths.len() {
-        sheets.resize_with(png_paths.len(), GuiSpriteSheet::default);
+        sheets.resize_with(png_paths.len(), SpriteSheet::default);
     }
 
     for (i, (png_path, imgcut_path)) in png_paths.into_iter().zip(cut_paths).enumerate() {

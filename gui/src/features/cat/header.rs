@@ -3,6 +3,7 @@ use std::path::Path;
 
 use eframe::egui;
 use nyanko::cat::unit::TalentCost;
+use nyanko::common::img022;
 
 use core::cat::logic::scanner::CatEntry;
 use core::cat::logic::state::DetailTab;
@@ -11,7 +12,7 @@ use core::global::utils::autocrop;
 use core::settings::logic::Settings;
 
 use crate::global::name_box;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 pub const HEADER_NP_ICON_SIZE: f32 = 24.0;
 pub const HEADER_NP_TEXT_SIZE: f32 = 20.0;
@@ -39,7 +40,7 @@ pub fn render(
     _settings: &Settings,
     talent_levels: &mut HashMap<u8, u8>,
     talent_costs: &HashMap<u8, TalentCost>,
-    img022_sheets: &[GuiSpriteSheet],
+    img022_sheets: &[SpriteSheet],
 ) -> ExportAction {
     let mut export_action = ExportAction::None;
 
@@ -141,7 +142,7 @@ fn render_talent_controls(
     talent_data: &nyanko::cat::unit::Talent,
     talent_levels: &mut HashMap<u8, u8>,
     talent_costs: &HashMap<u8, TalentCost>,
-    img022_sheets: &[GuiSpriteSheet],
+    img022_sheets: &[SpriteSheet],
 ) {
     ui.vertical(|ui| {
         let total_np = core::cat::logic::talents::get_total_np_cost(talent_data, talent_levels, talent_costs);
@@ -151,7 +152,7 @@ fn render_talent_controls(
             
             let mut drawn = false;
             for sheet in img022_sheets {
-                if let Some(cut) = sheet.core.cuts_map.get(&core::global::game::img022::ICON_NP_COST)
+                if let Some(cut) = sheet.core.cuts_map.get(&img022::ICON_NP_COST)
                     && let Some(tex) = &sheet.texture_handle {
                         let aspect = cut.original_size.x / cut.original_size.y;
                         let size = egui::vec2(HEADER_NP_ICON_SIZE * aspect, HEADER_NP_ICON_SIZE);

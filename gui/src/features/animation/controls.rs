@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use eframe::egui;
-use nyanko::graphics::animation::Anim;
+use nyanko::graphics::actor::Animation;
 
 use core::settings::logic::state::Settings;
 
@@ -109,7 +109,7 @@ fn render_internal_ui(
 
     let (loop_lcm_result, max_frame_value) = if let Some(animation) = &anim_viewer.current_anim {
         if anim_viewer.loaded_anim_index <= 1 {
-            let true_loop = Anim::calculate_true_loop(animation);
+            let true_loop = Animation::calculate_true_loop(animation);
             (true_loop, true_loop.unwrap_or(animation.max_frame))
         } else {
             (Some(animation.max_frame), animation.max_frame)

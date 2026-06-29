@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
+use nyanko::common::csv::detect_separator;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct StageOption {
@@ -55,7 +55,7 @@ pub fn load(dir: &Path, filename: &str, priority: &[String]) -> HashMap<u32, Vec
         return map;
     };
 
-    let sep = detect_csv_separator(&content);
+    let sep = detect_separator(&content);
     let mut valid_lines = 0;
 
     for line in content.lines().skip(1) {

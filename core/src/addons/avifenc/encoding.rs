@@ -1,13 +1,19 @@
-use std::process::{Command, Stdio};
-use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::fs;
+use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 use std::thread;
-use crate::animation::export::encoding::{ExportConfig, EncoderMessage, EncoderStatus, prepare_image};
-use super::download; 
+
 use crate::addons::ffmpeg::download as ffmpeg_dl;
 use crate::addons::toolpaths::{self, Presence};
+use crate::animation::export::encoding::{
+    prepare_image, EncoderMessage,
+    EncoderStatus, ExportConfig,
+};
+
+use super::download;
 
 pub fn encode(
     config: ExportConfig, 
@@ -23,7 +29,6 @@ pub fn encode(
     }
 }
 
-// FFmpeg -> Pipe -> Avifenc
 fn encode_via_pipe(
     config: ExportConfig, 
     receiver: mpsc::Receiver<EncoderMessage>, 

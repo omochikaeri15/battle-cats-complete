@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use serde::{Serialize, Deserialize};
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
+use nyanko::common::csv::detect_separator;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
@@ -80,7 +80,7 @@ pub fn load(dir_path: &Path, filename: &str, lang_priority: &[String]) -> Option
 }
 
 fn parse(file_content: &str) -> StageRaw {
-    let csv_separator = detect_csv_separator(file_content);
+    let csv_separator = detect_separator(file_content);
     let mut clean_lines = file_content.lines()
         .map(|line| line.split("//").next().unwrap_or("").trim())
         .filter(|line| !line.is_empty());

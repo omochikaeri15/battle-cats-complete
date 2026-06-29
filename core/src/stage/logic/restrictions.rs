@@ -1,23 +1,9 @@
 use tracing::{debug, info, trace, warn};
-use crate::stage::registry::Stage;
-use crate::stage::data::charagroup::{CharaGroup, CharaGroupType};
+
 use crate::global::context::GlobalContext;
-
-pub fn strip_color_tags(input: &str) -> String {
-    let mut stripped = String::new();
-    let mut in_tag = false;
-
-    for c in input.chars() {
-        if c == '<' {
-            in_tag = true;
-        } else if c == '>' {
-            in_tag = false;
-        } else if !in_tag {
-            stripped.push(c);
-        }
-    }
-    stripped
-}
+use crate::global::utils::strip_color_tags;
+use crate::stage::data::charagroup::{CharaGroup, CharaGroupType};
+use crate::stage::registry::Stage;
 
 pub fn parse_restrictions(stage: &Stage, current_crown: i8, ctx: GlobalContext) -> Vec<String> {
     trace!(

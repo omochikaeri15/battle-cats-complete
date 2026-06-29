@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+
+use serde::{Deserialize, Serialize};
 
 fn default_source() -> String {
     "Battle Cats Complete".to_string()

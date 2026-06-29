@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::collections::HashMap;
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
+use nyanko::common::csv::detect_separator;
 
 pub fn load(dir_path: &Path, filename: &str, lang_priority: &[String]) -> HashMap<u32, u32> {
     let mut drop_chara_map = HashMap::new();
@@ -16,7 +16,7 @@ pub fn load(dir_path: &Path, filename: &str, lang_priority: &[String]) -> HashMa
         return drop_chara_map; 
     };
 
-    let csv_separator = detect_csv_separator(&file_content);
+    let csv_separator = detect_separator(&file_content);
 
     for line_string in file_content.lines().skip(1) {
         let clean_line = line_string.split("//").next().unwrap_or("").trim();

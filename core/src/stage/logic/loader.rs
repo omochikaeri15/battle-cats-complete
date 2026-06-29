@@ -1,6 +1,7 @@
-use crate::stage::logic::state::StageDataState;
 use crate::settings::logic::state::ScannerConfig;
+
 use super::scanner;
+use super::state::StageDataState;
 
 pub fn restart_scan(state: &mut StageDataState, config: ScannerConfig) {
     state.registry.clear_cache();

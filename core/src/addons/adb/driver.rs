@@ -1,6 +1,7 @@
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
+
 use super::download;
 
 pub fn get_adb_command() -> Result<std::path::PathBuf, String> {

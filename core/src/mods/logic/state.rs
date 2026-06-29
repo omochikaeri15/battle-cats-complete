@@ -1,11 +1,13 @@
-use std::sync::mpsc::Receiver;
 use std::path::PathBuf;
-use serde::{Serialize, Deserialize};
+use std::sync::mpsc::Receiver;
 
-use crate::data::state::ImportSubTab;
+use serde::{Deserialize, Serialize};
+
 use crate::addons::adb::mods::ModAdbEvent;
-use crate::mods::logic::metadata::ModMetadata;
+use crate::data::state::ImportSubTab;
 use crate::global::region::Region;
+
+use super::metadata::ModMetadata;
 
 #[derive(Clone, PartialEq, Default, Serialize, Deserialize, Debug)]
 pub enum ExportType {

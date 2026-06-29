@@ -1,11 +1,10 @@
-use nyanko::cat::abilities::{Identity, REGISTRY};
-use nyanko::cat::unit::{Battle, UnitBuy};
-use nyanko::common::Param;
-use nyanko::common::img015;
-use crate::global::game::abilities::CustomIcon;
 use std::collections::HashMap;
 
+use nyanko::cat::abilities::{Identity, REGISTRY};
+use nyanko::cat::unit::{Battle, UnitBuy};
+use nyanko::common::{img015, Param};
 
+use crate::global::game::abilities::CustomIcon;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum DisplayGroup {

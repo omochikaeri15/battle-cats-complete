@@ -1,12 +1,14 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use std::sync::mpsc::Sender;
-use std::sync::atomic::{AtomicBool, Ordering};
-use super::driver;
+
 use crate::data::state::{AdbImportType, AdbTarget};
 use crate::global::region::Region;
 use crate::settings::logic::state::EmulatorConfig;
+
+use super::driver;
 
 pub fn execute_pull(
     base_output_directory: &PathBuf,

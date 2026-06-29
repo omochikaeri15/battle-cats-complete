@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
-use crate::data::structure::{cat, enemy, global, stage};
+
 use crate::cat::patterns as cat_patterns;
+use crate::data::structure::{cat, enemy, global, stage};
 use crate::global::io::patterns as global_patterns;
 
 pub struct AssetRouter {

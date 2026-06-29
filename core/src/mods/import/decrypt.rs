@@ -1,35 +1,19 @@
+// TODO: Use Region from "nyanko" directly
 use std::fs;
 use std::path::Path;
-use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
+
+use nyanko::common::Region;
+use nyanko::pack::cryptology;
 use rayon::prelude::*;
 
-use nyanko::pack::cryptology;
-use nyanko::pack::cryptology::Region as NyankoRegion;
 use crate::settings::logic::keys::UserKeys;
 
 struct PackEntry {
     name: String,
     offset: usize,
     size: usize,
-}
-
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> Result<cryptology::Keys, String> {
-    let owned_tuples: Vec<(NyankoRegion, String, String)> = user_keys.as_tuples().into_iter().map(|(key_string, iv, region_enum)| {
-        let nyanko_region = match region_enum {
-            crate::global::region::Region::En => NyankoRegion::En,
-            crate::global::region::Region::Ja => NyankoRegion::Jp,
-            crate::global::region::Region::Ko => NyankoRegion::Kr,
-            crate::global::region::Region::Tw => NyankoRegion::Tw,
-        };
-        (nyanko_region, key_string, iv)
-    }).collect();
-
-    let ref_tuples: Vec<(NyankoRegion, &str, &str)> = owned_tuples.iter()
-        .map(|(region, key_string, iv)| (*region, key_string.as_str(), iv.as_str()))
-        .collect();
-
-    cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())
 }
 
 pub fn run(pack_dir: &Path, status_sender: Sender<String>, user_keys: &UserKeys) -> Result<(), String> {
@@ -59,7 +43,12 @@ pub fn run(pack_dir: &Path, status_sender: Sender<String>, user_keys: &UserKeys)
     }
 
     let pack_data = fs::read(&pack_path).map_err(|error| error.to_string())?;
-    let nyanko_keys = map_keys_to_nyanko(user_keys)?;
+    let owned_tuples = user_keys.as_tuples();
+    let ref_tuples: Vec<(Region, &str, &str)> = owned_tuples.iter()
+        .map(|(key_string, iv, region_enum)| (*region_enum, key_string.as_str(), iv.as_str()))
+        .collect();
+
+    let nyanko_keys = cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())?;
 
     let extracted_count = AtomicUsize::new(0);
 

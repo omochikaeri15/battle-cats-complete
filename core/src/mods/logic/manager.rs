@@ -1,12 +1,12 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
-use std::fs;
 use std::thread;
-use crate::mods::import::decrypt;
-use crate::addons::adb::mods;
-use crate::mods::logic::state::{ModPackType, ModDataState};
-use crate::mods::import::extract;
-use crate::addons::adb::mods::ModAdbEvent;
+
+use crate::addons::adb::mods::{self, ModAdbEvent};
+use crate::mods::import::{decrypt, extract};
+
+use super::state::{ModDataState, ModPackType};
 
 pub fn process_events(state: &mut ModDataState) -> bool {
     process_adb_events(state);

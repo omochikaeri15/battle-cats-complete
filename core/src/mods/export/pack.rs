@@ -1,18 +1,19 @@
 use std::fs::{self, File};
-use std::io::{Write, BufWriter};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
-use tracing::{debug, error, info, trace, warn};
 
 use nyanko::pack::cryptology;
+use tracing::{debug, error, info, trace, warn};
 
-use crate::mods::logic::state::ModDataState;
-use crate::global::region::Region;
 use crate::data::utilities::keys;
-use crate::settings::logic::state::Settings;
+use crate::global::region::Region;
+use crate::mods::logic::state::ModDataState;
 use crate::settings::logic::keys::RegionKey;
-use crate::mods::export::patch::{EVENT_RECEIVER, ExportEvent, spawn_log_adapter};
+use crate::settings::logic::state::Settings;
+
+use super::patch::{spawn_log_adapter, ExportEvent, EVENT_RECEIVER};
 
 pub fn start_pack_export(state: &mut ModDataState) {
     if state.export.is_busy {

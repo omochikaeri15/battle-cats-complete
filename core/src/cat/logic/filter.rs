@@ -1,11 +1,14 @@
 use std::collections::{HashMap, HashSet};
-use nyanko::cat::unit::{Battle, UnitBuy};
+
 use nyanko::cat::abilities::REGISTRY;
-use crate::cat::registry::{AbilityIcon, get_display_def, CAT_STATS_REGISTRY};
-use crate::global::game::abilities::CustomIcon;
-use crate::cat::logic::scanner::CatEntry;
-use crate::cat::logic::talents::apply_talent_stats;
+use nyanko::cat::unit::{Battle, UnitBuy};
 use nyanko::common::img015;
+
+use crate::cat::registry::{get_display_def, AbilityIcon, CAT_STATS_REGISTRY};
+use crate::global::game::abilities::CustomIcon;
+
+use super::scanner::CatEntry;
+use super::talents::apply_talent_stats;
 
 pub const ATTACK_TYPE_ICONS: &[AbilityIcon] = &[
     AbilityIcon::Standard(img015::ICON_SINGLE_ATTACK),

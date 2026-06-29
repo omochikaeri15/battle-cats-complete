@@ -1,9 +1,10 @@
-#![allow(dead_code)]
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
+
+use nyanko::common::csv::detect_separator;
+
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
 
 #[derive(Debug, Clone)]
 pub struct GatyaItemBuy {
@@ -35,7 +36,7 @@ pub fn load(dir_path: &Path, filename: &str, lang_priority: &[String]) -> HashMa
         return item_buy_map; 
     };
 
-    let csv_separator = detect_csv_separator(&file_content);
+    let csv_separator = detect_separator(&file_content);
 
     for (calculated_row_index, line_string) in file_content.lines().skip(1).enumerate() {
         let clean_line = line_string.split("//").next().unwrap_or("").trim();

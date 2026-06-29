@@ -1,21 +1,17 @@
-use std::path::{Path, PathBuf};
 use std::fs::{self, File};
 use std::io::Read;
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
+use std::sync::Mutex;
 
-use rayon::prelude::*;
-use serde::{Serialize, Deserialize};
 use nyanko::enemy::unit::Battle;
+use nyanko::graphics::actor::Animation;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::enemy::paths;
+use crate::enemy::waiter::{enemyname, enemypicturebook, t_unit};
 use crate::settings::logic::state::ScannerConfig;
-use crate::global::formats::maanim::Animation;
-use crate::enemy::waiter::{
-    enemyname,
-    enemypicturebook,
-    t_unit,
-};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EnemyEntry {
@@ -87,7 +83,7 @@ pub fn start_scan(config: ScannerConfig) -> Receiver<EnemyEntry> {
                 && let Some(resolved_atk) = crate::global::resolver::get(parent, [name], priority).into_iter().next()
                     && let Ok(bytes) = fs::read(&resolved_atk) {
                         let content = String::from_utf8_lossy(&bytes);
-                        let duration = Animation::scan_duration(&content);
+                        let duration = Animation::scan_duration(content.as_bytes());
                         atk_anim_frames = if duration > 0 { duration + 1 } else { 0 };
                     }
 
@@ -157,7 +153,7 @@ pub fn scan_single(id: u32, config: &ScannerConfig) -> Option<EnemyEntry> {
         if let Some(p) = resolved_atk
             && let Ok(bytes) = fs::read(&p) {
                 let content = String::from_utf8_lossy(&bytes);
-                let duration = Animation::scan_duration(&content);
+                let duration = Animation::scan_duration(content.as_bytes());
                 atk_anim_frames = if duration > 0 { duration + 1 } else { 0 };
             }
     }

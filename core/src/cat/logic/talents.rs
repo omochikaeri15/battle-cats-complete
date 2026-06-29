@@ -1,6 +1,8 @@
-use nyanko::cat::unit::{Battle, LevelCurve, TalentCost, Talent, TalentGroup};
-use nyanko::cat::abilities::{AttrUnit, get_talent};
 use std::collections::HashMap;
+
+use nyanko::cat::abilities::{get_talent, AttrUnit};
+use nyanko::cat::unit::{Battle, LevelCurve, Talent, TalentCost, TalentGroup};
+
 use crate::cat::registry::{get_display_def, CAT_STATS_REGISTRY};
 
 // --- CORE MATH ---

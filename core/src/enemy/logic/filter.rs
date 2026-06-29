@@ -1,8 +1,11 @@
 use std::collections::{HashMap, HashSet};
-use crate::enemy::registry::{Magnification, ENEMY_STATS_REGISTRY, get_display_def};
-use nyanko::enemy::unit::Battle;
-use crate::enemy::logic::scanner::EnemyEntry;
+
 use nyanko::enemy::abilities::{Identity, REGISTRY};
+use nyanko::enemy::unit::Battle;
+
+use crate::enemy::registry::{get_display_def, Magnification, ENEMY_STATS_REGISTRY};
+
+use super::scanner::EnemyEntry;
 
 pub const ATTACK_TYPE_IDENTITIES: &[Identity] = &[
     Identity::SingleAttack,

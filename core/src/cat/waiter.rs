@@ -3,14 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use nyanko::cat::unit::{
-    SkillDescriptions,
-    Talent,
-    TalentCost,
-    UnitBuy,
-    UnitEvolve,
-    UnitExplanation,
-    LevelCurve,
-    Battle,
+    Battle, LevelCurve, SkillDescriptions, Talent,
+    TalentCost, UnitBuy, UnitEvolve, UnitExplanation,
 };
 
 use crate::cat::paths;

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use eframe::egui;
 use nyanko::cat::unit::TalentCost;
-use nyanko::graphics::animation::Unit;
+use nyanko::graphics::actor::Unit;
 
 use core::cat::logic::context::CatRenderContext;
 use core::cat::logic::scanner::CatEntry;
@@ -17,7 +17,7 @@ use crate::features::cat::statblock::build_cat_statblock;
 use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 use super::{abilities, details, header, stats, talents, viewer};
 use super::header::ExportAction;
@@ -32,8 +32,8 @@ pub fn show(
     current_level: &mut i32,
     texture_cache: &mut Option<egui::TextureHandle>,
     current_key: &mut String,
-    img015_sheets: &mut Vec<GuiSpriteSheet>,
-    img022_sheets: &mut Vec<GuiSpriteSheet>,
+    img015_sheets: &mut Vec<SpriteSheet>,
+    img022_sheets: &mut Vec<SpriteSheet>,
     unit_sync: &mut Option<Arc<Unit>>,
     anim_viewer: &mut AnimViewer,
     talent_name_cache: &mut HashMap<String, egui::TextureHandle>,

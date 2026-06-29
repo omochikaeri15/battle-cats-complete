@@ -1,4 +1,5 @@
 use nyanko::enemy::unit::Battle;
+
 use crate::enemy::registry::Magnification;
 use crate::global::context::GlobalContext;
 

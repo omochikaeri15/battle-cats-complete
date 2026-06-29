@@ -1,11 +1,12 @@
-use std::sync::{Arc, Mutex, mpsc, atomic::AtomicBool};
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
+use std::sync::{mpsc, Arc, Mutex};
 
-use nyanko::graphics::animation::Anim;
+use nyanko::graphics::actor::Animation;
 
-use crate::animation::export::encoding::{ExportConfig, ExportFormat, EncoderStatus};
-use crate::animation::export::state::{ExporterState, ExportMode};
-use crate::animation::export::leader;
+use super::encoding::{EncoderStatus, ExportConfig, ExportFormat};
+use super::leader;
+use super::state::{ExportMode, ExporterState};
 
 pub static STATUS_RX: Mutex<Option<mpsc::Receiver<EncoderStatus>>> = Mutex::new(None);
 
@@ -112,7 +113,7 @@ pub fn start_export(state: &mut ExporterState) {
 
 pub fn calculate_export_time(
     state: &ExporterState,
-    animation_option: Option<&Anim>,
+    animation_option: Option<&Animation>,
     current_time: f32,
 ) -> f32 {
     let Some(animation) = animation_option else {

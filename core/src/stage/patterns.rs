@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // Map and Stage Data
 pub const MAP_STAGE_DATA_PATTERN: &str = r"^MapStageData([a-zA-Z]+)_(\d+)\.csv$";
 pub const MAP_NAME_PATTERN: &str = r"^mapname(\d+)_([a-zA-Z]{1,3})(?:_[a-zA-Z]{2})?\.(png|imgcut|maanim|mamodel)$";

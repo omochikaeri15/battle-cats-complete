@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // Global
 pub const ASSET_IMG015_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.png$";
 pub const ASSET_015CUT_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.imgcut$";

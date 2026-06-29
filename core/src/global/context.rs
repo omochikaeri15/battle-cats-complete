@@ -1,5 +1,6 @@
 use nyanko::common::Param;
-use crate::global::game::localizable::Localizable;
+
+use super::game::localizable::Localizable;
 
 #[derive(Clone, Copy)]
 pub struct GlobalContext<'a> {

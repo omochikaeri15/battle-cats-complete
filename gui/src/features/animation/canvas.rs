@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use eframe::egui;
-use nyanko::graphics::animation::{resolve_frame, Anim, Unit};
+use nyanko::graphics::actor::{resolve_frame, Animation, Unit};
 
 use core::animation::logic::canvas::GlowRenderer;
 
@@ -10,7 +10,7 @@ pub fn paint(
     rect: egui::Rect,
     renderer_reference: Arc<Mutex<Option<GlowRenderer>>>,
     unit: Arc<Unit>,
-    animation: Option<Arc<Anim>>,
+    animation: Option<Arc<Animation>>,
     current_frame: f32,
     pan: egui::Vec2,
     zoom: f32,
@@ -40,7 +40,7 @@ pub fn paint(
             // 1. Get the pure world geometry from the library
             let frame_geometry = resolve_frame(
                 &unit,
-                animation.as_deref(), // Converts Option<Arc<Anim>> to Option<&Anim>
+                animation.as_deref(), // Converts Option<Arc<Animation>> to Option<&Animation>
                 current_frame
             );
 

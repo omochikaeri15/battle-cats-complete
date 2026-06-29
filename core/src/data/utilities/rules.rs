@@ -1,4 +1,5 @@
 use regex::{Regex, RegexSet};
+
 use crate::global::io::patterns;
 use crate::settings::logic::exceptions::{ExceptionList, ExceptionRule};
 

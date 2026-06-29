@@ -1,8 +1,8 @@
 use std::fs::{self, File};
-use std::io::{Read, BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Read};
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
+
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ManifestEntry {

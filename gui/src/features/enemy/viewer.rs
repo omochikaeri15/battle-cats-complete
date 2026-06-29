@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use eframe::egui;
-use nyanko::graphics::animation::Unit;
+use nyanko::graphics::actor::Unit;
 
 use core::animation::logic::constants::{
     IDX_ATTACK, IDX_BURROW, IDX_IDLE, IDX_KB,

@@ -1,10 +1,11 @@
 use std::fs;
 use std::path::PathBuf;
-use std::sync::mpsc::Sender;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
+
+use crate::data::state::{AdbTarget, ImportMode};
 use crate::data::utilities::{engine, keys};
-use crate::data::state::{ImportMode, AdbTarget};
 
 pub fn run(
     source_path_string: &str,

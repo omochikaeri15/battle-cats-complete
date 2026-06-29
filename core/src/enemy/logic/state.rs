@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
+
 use serde::{Deserialize, Serialize};
 
-use crate::enemy::logic::scanner::EnemyEntry;
-use crate::settings::logic::ScannerConfig;
 use crate::enemy::registry::Magnification;
-use crate::enemy::logic::loader;
 use crate::global::formats::mamodel::Model;
+use crate::settings::logic::ScannerConfig;
+
+use super::loader;
+use super::scanner::EnemyEntry;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone, Copy)]
 #[derive(Default)]

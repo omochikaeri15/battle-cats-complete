@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use eframe::egui;
-use nyanko::graphics::animation::Unit;
+use nyanko::graphics::actor::Unit;
 
 use core::enemy::logic::context::EnemyRenderContext;
 use core::enemy::logic::scanner::{self, EnemyEntry};
@@ -14,7 +14,7 @@ use crate::features::animation::viewer::AnimViewer;
 use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 use super::statblock::build_enemy_statblock;
 use super::{abilities, details, header, stats, viewer};
@@ -27,7 +27,7 @@ pub fn show(
     current_tab: &mut EnemyDetailTab,
     mag_input: &mut String,
     magnification: &mut Magnification,
-    img015_sheets: &mut Vec<GuiSpriteSheet>,
+    img015_sheets: &mut Vec<SpriteSheet>,
     unit_sync: &mut Option<Arc<Unit>>,
     anim_viewer: &mut AnimViewer,
     settings: &mut Settings,

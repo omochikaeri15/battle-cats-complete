@@ -1,4 +1,5 @@
 use std::sync::mpsc::Sender;
+
 use crate::settings::logic::keys::UserKeys;
 
 pub fn verify(enforce_validation: bool, status_sender: &Sender<String>) -> Result<UserKeys, String> {

@@ -1,11 +1,16 @@
 use std::fs;
-use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 use std::thread;
 
-use crate::animation::export::encoding::{self, ExportConfig, ExportFormat, EncoderMessage, EncoderStatus};
+use crate::addons::avifenc::encoding as avifenc;
+use crate::addons::ffmpeg::encoding as ffmpeg;
 use crate::addons::toolpaths::{self, Presence};
-use crate::addons::avifenc::encoding as avif_addon;
-use crate::addons::ffmpeg::encoding as ffmpeg_addon;
+
+use super::encoding::{
+    self, EncoderMessage, EncoderStatus, 
+    ExportConfig, ExportFormat
+};
 
 pub fn start_encoding_thread(
     config: ExportConfig,
@@ -14,12 +19,10 @@ pub fn start_encoding_thread(
     abort_signal: Arc<AtomicBool>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        // Setup Directories
         if let Some(parent_directory) = config.output_path.parent() {
             let _ = fs::create_dir_all(parent_directory);
         }
 
-        // Determine Temp File Name
         let file_extension = match config.format {
             ExportFormat::Gif => "gif",
             ExportFormat::WebP => "webp",
@@ -34,30 +37,24 @@ pub fn start_encoding_thread(
         let file_stem = config.output_path.file_stem().unwrap_or_default().to_string_lossy();
         let temporary_filename = format!("{}.{}.tmp", file_stem, file_extension);
         let temporary_path = config.output_path.with_file_name(temporary_filename);
-
         let final_path = config.output_path.clone();
         let final_sender = status_sender.clone();
 
-        // Decision Logic
         let is_success = match config.format {
-            // AVIFENC (AVIF)
             ExportFormat::Avif if toolpaths::avifenc_status() == Presence::Installed => {
-                avif_addon::encode(config.clone(), receiver, status_sender, &temporary_path, abort_signal.clone())
+                avifenc::encode(config.clone(), receiver, status_sender, &temporary_path, abort_signal.clone())
             },
 
-            // FFmpeg (GIF, WebP, PNG, MP4, MKV, WebM)
             ExportFormat::Gif | ExportFormat::WebP | ExportFormat::Png | ExportFormat::Mp4 | ExportFormat::Mkv | ExportFormat::Webm | ExportFormat::Avif
             if toolpaths::ffmpeg_status() == Presence::Installed => {
-                ffmpeg_addon::encode(config.clone(), receiver, status_sender, &temporary_path, abort_signal.clone())
+                ffmpeg::encode(config.clone(), receiver, status_sender, &temporary_path, abort_signal.clone())
             },
 
-            // Native (WebP, GIF, ZIP)
             _ => {
                 encoding::encode_native(config.clone(), receiver, status_sender, &temporary_path, abort_signal.clone())
             }
         };
 
-        // Atomic Rename or Cleanup
         let is_aborted = abort_signal.load(Ordering::Relaxed);
         let should_save_file = is_success && !is_aborted;
 
@@ -68,19 +65,15 @@ pub fn start_encoding_thread(
             let _ = final_sender.send(EncoderStatus::Finished);
             return;
         }
-
         if !temporary_path.exists() {
             let _ = final_sender.send(EncoderStatus::Finished);
             return;
         }
-
         if final_path.exists() {
             let _ = fs::remove_file(&final_path);
         }
 
         let _ = fs::rename(&temporary_path, &final_path);
-
-        // Tell UI we are done
         let _ = final_sender.send(EncoderStatus::Finished);
     })
 }

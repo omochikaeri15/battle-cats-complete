@@ -1,11 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use nyanko::enemy::unit::{
-    EnemyName,
-    EnemyPictureBook,
-    Battle,
-};
+use nyanko::enemy::unit::{EnemyName, EnemyPictureBook, Battle};
 
 use crate::global::resolver;
 

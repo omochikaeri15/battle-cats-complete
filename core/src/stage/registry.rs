@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use crate::stage::data;
+
+use super::data;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Stage {

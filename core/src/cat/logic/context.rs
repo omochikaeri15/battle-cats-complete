@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use nyanko::cat::unit::{Battle, LevelCurve};
-use nyanko::cat::unit::Talent;
+
+use nyanko::cat::unit::{Battle, LevelCurve, Talent};
+
 use crate::global::context::GlobalContext;
 
 #[derive(Clone, Copy)]

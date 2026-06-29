@@ -1,4 +1,4 @@
-use crate::global::game::abilities::CustomIcon;
+use super::game::abilities::CustomIcon;
 
 pub const MULTIHIT: &[u8] = include_bytes!("../assets/multihit.png");
 pub const KAMIKAZE: &[u8] = include_bytes!("../assets/kamikaze.png");

@@ -1,19 +1,20 @@
-use std::sync::mpsc::Receiver;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::mpsc::Receiver;
+
+use nyanko::cat::unit::UnitBuy;
 use serde::{Deserialize, Serialize};
 
-use crate::settings::logic::ScannerConfig;
-use crate::stage::registry::StageRegistry;
-use crate::enemy::logic::scanner::EnemyEntry;
-use crate::stage::data::drop_chara;
-use crate::stage::data::{lockskipdata, scatcpusetting};
 use crate::cat::waiter::unitbuy;
-use nyanko::cat::unit::UnitBuy;
+use crate::enemy::logic::scanner::EnemyEntry;
+use crate::enemy::waiter::enemyname;
 use crate::global::formats::gatyaitembuy::{self, GatyaItemBuy};
 use crate::global::formats::gatyaitemname::{self, GatyaItemName};
-use crate::stage::logic::loader;
-use crate::enemy::waiter::enemyname;
+use crate::settings::logic::ScannerConfig;
+use crate::stage::data::{drop_chara, lockskipdata, scatcpusetting};
+use crate::stage::registry::StageRegistry;
+
+use super::loader;
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]

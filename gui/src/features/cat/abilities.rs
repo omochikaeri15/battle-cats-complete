@@ -11,13 +11,13 @@ use core::global::game::abilities::{
 
 use crate::global::assets::CustomAssets;
 use crate::global::shared::{render_fallback_icon, text_with_superscript, ICON_SIZE};
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 pub fn render(
     ui: &mut egui::Ui, 
     ctx: &CatRenderContext,
     cat: &CatEntry, 
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
     settings: &core::settings::logic::Settings
 ) {
@@ -68,7 +68,7 @@ pub fn render(
 pub fn render_icon_row(
     ui: &mut egui::Ui, 
     items: &Vec<AbilityItem>, 
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     border_color: egui::Color32,
     assets: &crate::global::assets::CustomAssets,
 ) {
@@ -86,7 +86,7 @@ pub fn render_icon_row(
 fn render_single_icon(
     ui: &mut egui::Ui, 
     item: &AbilityItem, 
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     border: egui::Color32,
     assets: &crate::global::assets::CustomAssets,
 ) -> egui::Response {
@@ -128,7 +128,7 @@ fn render_single_icon(
 pub fn render_list_view(
     ui: &mut egui::Ui, 
     items: &Vec<AbilityItem>, 
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     cat_id: u32,
     ctx: &CatRenderContext, 
     border_color: egui::Color32,

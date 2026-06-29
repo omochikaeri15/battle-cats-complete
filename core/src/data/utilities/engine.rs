@@ -1,19 +1,21 @@
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
-use std::sync::atomic::{AtomicI32, AtomicBool, AtomicUsize, Ordering};
 use std::collections::HashMap;
+use std::fs;
 use std::io::{Read, Seek, SeekFrom};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
+
+use nyanko::common::Region;
+use nyanko::pack::cryptology;
+use nyanko::pack::chronology;
 use rayon::prelude::*;
 
-use crate::data::utilities::{apk, audit, manifest, router, rules};
 use crate::global::io::patterns;
 use crate::settings::logic::exceptions::RuleHandling;
 use crate::settings::logic::keys::UserKeys;
 
-use nyanko::pack::{chronology, cryptology};
-use nyanko::pack::cryptology::Region as NyankoRegion;
+use super::{apk, audit, manifest, router, rules};
 
 #[derive(Clone)]
 struct UniversalTask {
@@ -51,24 +53,6 @@ fn cleanup_temporary_directories(directories: &[PathBuf]) {
     for directory in directories { let _ = fs::remove_dir_all(directory); }
 }
 
-fn map_keys_to_nyanko(user_keys: &UserKeys) -> Result<cryptology::Keys, String> {
-    let owned_tuples: Vec<(NyankoRegion, String, String)> = user_keys.as_tuples().into_iter().map(|(key_string, iv, region_enum)| {
-        let nyanko_region = match region_enum {
-            crate::global::region::Region::En => NyankoRegion::En,
-            crate::global::region::Region::Ja => NyankoRegion::Jp,
-            crate::global::region::Region::Ko => NyankoRegion::Kr,
-            crate::global::region::Region::Tw => NyankoRegion::Tw,
-        };
-        (nyanko_region, key_string, iv)
-    }).collect();
-
-    let ref_tuples: Vec<(NyankoRegion, &str, &str)> = owned_tuples.iter()
-        .map(|(region, key_string, iv)| (*region, key_string.as_str(), iv.as_str()))
-        .collect();
-
-    cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())
-}
-
 pub fn run_universal_import(
     source_directories: &[PathBuf],
     status_sender: &Sender<String>,
@@ -79,7 +63,13 @@ pub fn run_universal_import(
 
     let user_keys = UserKeys::load();
     if user_keys.is_empty() { return Err("Missing Decryption Keys".into()); }
-    let nyanko_keys = map_keys_to_nyanko(&user_keys)?;
+
+    let owned_tuples = user_keys.as_tuples();
+    let ref_tuples: Vec<(Region, &str, &str)> = owned_tuples.iter()
+        .map(|(key_string, iv, region_enum)| (*region_enum, key_string.as_str(), iv.as_str()))
+        .collect();
+
+    let nyanko_keys = cryptology::Keys::parse(&ref_tuples).map_err(|error| error.to_string())?;
 
     let game_root_path = Path::new("game");
     let meta_directory_path = game_root_path.join("meta");

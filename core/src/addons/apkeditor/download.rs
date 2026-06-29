@@ -1,9 +1,12 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 
-use crate::addons::toolpaths::{get_tools_dir, AddonStatus, JAVA_BIN, APKEDITOR_JAR};
 use crate::addons::manager::{self, DownloadConfig};
+use crate::addons::toolpaths::{
+    get_tools_dir, AddonStatus, 
+    APKEDITOR_JAR, JAVA_BIN
+};
 
 pub struct ApkeditorManager {
     pub status: AddonStatus,

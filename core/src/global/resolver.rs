@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
-use std::collections::HashMap;
 
 static ACTIVE_MOD: RwLock<Option<String>> = RwLock::new(None);
 static OVERRIDE_CACHE: RwLock<Option<HashMap<String, Option<PathBuf>>>> = RwLock::new(None);

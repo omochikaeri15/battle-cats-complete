@@ -19,23 +19,6 @@ pub fn autocrop(img: image::RgbaImage) -> image::RgbaImage {
     imageops::crop_imm(&img, min_x, min_y, max_x - min_x + 1, max_y - min_y + 1).to_image()
 }
 
-pub fn detect_csv_separator(content: &str) -> char {
-    let mut lines_checked = 0;
-
-    for line in content.lines() {
-        if line.trim().is_empty() { continue; }
-
-        if line.contains('|') {
-            return '|';
-        }
-
-        lines_checked += 1;
-        if lines_checked >= 3 { break; }
-    }
-
-    ','
-}
-
 pub fn strip_markdown(text: &str) -> String {
     let mut text = text.to_string();
 
@@ -54,4 +37,20 @@ pub fn strip_markdown(text: &str) -> String {
     text = text.replace("`", "");
 
     text
+}
+
+pub fn strip_color_tags(input: &str) -> String {
+    let mut stripped = String::new();
+    let mut in_tag = false;
+
+    for c in input.chars() {
+        if c == '<' {
+            in_tag = true;
+        } else if c == '>' {
+            in_tag = false;
+        } else if !in_tag {
+            stripped.push(c);
+        }
+    }
+    stripped
 }

@@ -1,7 +1,9 @@
-use crate::enemy::registry::{self, DisplayGroup, AbilityIcon};
+use nyanko::enemy::abilities::{AttrUnit, REGISTRY};
+
+use crate::enemy::registry::{self, AbilityIcon, DisplayGroup};
 use crate::global::game::abilities::{AbilityItem, CustomIcon};
-use crate::enemy::logic::context::EnemyRenderContext;
-use nyanko::enemy::abilities::{REGISTRY, AttrUnit};
+
+use super::context::EnemyRenderContext;
 
 pub fn collect_ability_data(
     ctx: &EnemyRenderContext,

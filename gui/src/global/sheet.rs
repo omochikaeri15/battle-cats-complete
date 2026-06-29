@@ -2,15 +2,15 @@ use std::path::Path;
 
 use eframe::egui;
 
-use core::global::formats::imgcut::SpriteSheet;
+use core::global::formats::imgcut::SpriteSheet as CoreSpriteSheet;
 
 #[derive(Default, Clone)]
-pub struct GuiSpriteSheet {
-    pub core: SpriteSheet,
+pub struct SpriteSheet {
+    pub core: CoreSpriteSheet,
     pub texture_handle: Option<egui::TextureHandle>,
 }
 
-impl GuiSpriteSheet {
+impl SpriteSheet {
     pub fn load(&mut self, png_path: &Path, imgcut_path: &Path, id_str: String) {
         self.core.load(png_path, imgcut_path, id_str);
     }
@@ -19,15 +19,15 @@ impl GuiSpriteSheet {
         self.core.update();
         if self.texture_handle.is_none() && !self.core.is_loading_active
             && let Some(image_data) = &self.core.image_data {
-                let size = [image_data.width() as usize, image_data.height() as usize];
-                let pixels = image_data.as_flat_samples();
-                let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
+            let size = [image_data.width() as usize, image_data.height() as usize];
+            let pixels = image_data.as_flat_samples();
+            let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
 
-                self.texture_handle = Some(ctx.load_texture(
-                    &self.core.sheet_name,
-                    color_image,
-                    egui::TextureOptions::LINEAR
-                ));
-            }
+            self.texture_handle = Some(ctx.load_texture(
+                &self.core.sheet_name,
+                color_image,
+                egui::TextureOptions::LINEAR
+            ));
+        }
     }
 }

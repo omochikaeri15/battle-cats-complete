@@ -2,17 +2,19 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
-use zip::ZipArchive;
-use tracing::{debug, error, info, info_span, warn};
-use resand::res_value::ResValueType;
 
-use crate::mods::logic::state::ModDataState;
-use crate::global::region::Region;
-use crate::data::utilities::keys;
-use crate::settings::logic::state::{Settings, ExportBehavior};
+use resand::res_value::ResValueType;
+use tracing::{debug, error, info, info_span, warn};
+use zip::ZipArchive;
+
 use crate::addons::apkeditor::xapk;
-use crate::mods::export::{modify, sign, pack};
-use crate::mods::export::patch::{EVENT_RECEIVER, ExportEvent, spawn_log_adapter};
+use crate::data::utilities::keys;
+use crate::global::region::Region;
+use crate::mods::logic::state::ModDataState;
+use crate::settings::logic::state::{ExportBehavior, Settings};
+
+use super::patch::{spawn_log_adapter, ExportEvent, EVENT_RECEIVER};
+use super::{modify, pack, sign};
 
 pub fn start_export(state: &mut ModDataState, settings: &Settings) {
     if state.export.is_busy {

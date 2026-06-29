@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+
 use nyanko::common::Param;
 
 pub fn load_param(data_directory: &Path, priority: &[String]) -> Option<Param> {

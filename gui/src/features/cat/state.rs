@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use eframe::egui;
-use nyanko::graphics::animation::Unit;
+use nyanko::graphics::actor::Unit;
 use serde::{Deserialize, Serialize};
 
 use core::cat::logic::filter::CatFilterState;
@@ -13,7 +13,7 @@ use core::settings::logic::Settings;
 use crate::features::animation::viewer::AnimViewer;
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 use super::list::CatList;
 
@@ -36,8 +36,8 @@ pub struct CatListState {
 
     // Texture Caches
     #[serde(skip)] pub detail_texture: Option<egui::TextureHandle>,
-    #[serde(skip)] pub img015_sheets: Vec<GuiSpriteSheet>,
-    #[serde(skip)] pub img022_sheets: Vec<GuiSpriteSheet>,
+    #[serde(skip)] pub img015_sheets: Vec<SpriteSheet>,
+    #[serde(skip)] pub img022_sheets: Vec<SpriteSheet>,
     #[serde(skip)] pub talent_name_textures: HashMap<String, egui::TextureHandle>,
     #[serde(skip)] pub gatya_item_textures: HashMap<i32, Option<egui::TextureHandle>>,
     #[serde(skip)] pub texture_cache_version: u64,

@@ -9,7 +9,7 @@ use core::settings::logic::state::Settings;
 
 use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use crate::global::sheet::GuiSpriteSheet;
+use crate::global::sheet::SpriteSheet;
 
 pub const WINDOW_WIDTH: f32 = 500.0;
 pub const WINDOW_HEIGHT: f32 = 580.0;
@@ -18,7 +18,7 @@ pub const TILDE_SPACING: f32 = 5.0;
 pub fn show_popup(
     ctx: &egui::Context,
     state: &mut EnemyFilterState,
-    sheets: &mut Vec<GuiSpriteSheet>,
+    sheets: &mut Vec<SpriteSheet>,
     assets: &CustomAssets,
     settings: &Settings,
     drag_guard: &mut DragGuard,
@@ -192,7 +192,7 @@ fn render_display_group(
     target_group: DisplayGroup,
     is_vertical: bool,
     draw_labels: bool,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let mut identities_in_group = Vec::new();
@@ -233,7 +233,7 @@ fn render_filter_icon_row(
     state: &mut EnemyFilterState,
     identity: Identity,
     draw_labels: bool,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let is_active = state.active_identities.contains(&identity);
@@ -308,7 +308,7 @@ fn render_filter_icon(
     ui: &mut egui::Ui,
     identity: Identity,
     active_identities: &mut HashSet<Identity>,
-    sheets: &[GuiSpriteSheet],
+    sheets: &[SpriteSheet],
     assets: &CustomAssets,
 ) {
     let is_active = active_identities.contains(&identity);
