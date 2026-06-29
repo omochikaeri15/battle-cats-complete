@@ -5,13 +5,12 @@ use tracing::{debug, warn, instrument};
 
 use core::stage::data::stage::{BossType, EnemyAmount};
 use core::global::utils::autocrop;
-use core::stage::registry::Stage;
+use core::stage::registry::{Stage, Map};
 use core::enemy::logic::scanner::EnemyEntry;
 use core::global::context::GlobalContext;
+use core::stage::data::specialrulesmap::{RuleType, SpecialRule};
 
 use super::treasure::center_header;
-
-// --- FORMATTERS ---
 
 fn format_enemy_amount(spawn_amount: &EnemyAmount) -> String {
     match spawn_amount {
@@ -74,6 +73,64 @@ fn format_base_hp_percentage(base_hp_percentage: u32, is_dojo_mechanic: bool) ->
     format!("{}%", base_hp_percentage)
 }
 
+fn strip_color_tags(input: &str) -> String {
+    let mut stripped = String::new();
+    let mut in_tag = false;
+
+    for character in input.chars() {
+        if character == '<' {
+            in_tag = true;
+        } else if character == '>' {
+            in_tag = false;
+        } else if !in_tag {
+            stripped.push(character);
+        }
+    }
+    stripped
+}
+
+#[instrument(skip(rule, global_ctx))]
+fn format_special_rule(rule: &SpecialRule, global_ctx: &GlobalContext) -> String {
+    let clean_key = rule.name_label.trim();
+    let explanation_key = clean_key.replace("Name", "Explanation");
+
+    let raw_description = global_ctx.localizable.lookup_or_empty(&explanation_key);
+    let mut description = strip_color_tags(&raw_description);
+
+    if description.is_empty() {
+        let raw_title = global_ctx.localizable.lookup_or_empty(clean_key);
+        let mut title = strip_color_tags(&raw_title);
+
+        if title.is_empty() {
+            title = clean_key.to_string();
+        }
+
+        description = format!("【{}】 Localization data missing.", title);
+    } else {
+        for target_rule in &rule.rules {
+            let parameters = match target_rule {
+                RuleType::TrustFund(params) => params,
+                RuleType::CooldownEquality(params) => params,
+                RuleType::RarityLimit(params) => params,
+                RuleType::CheapLabor(params) => params,
+                RuleType::RestrictPrice(params) => params,
+                RuleType::RestrictCd(params) => params,
+                RuleType::DeployLimit(params) => params,
+                RuleType::AwesomeCatSpawn(params) => params,
+                RuleType::AwesomeCatCannon(params) => params,
+                RuleType::AwesomeUnitSpeed(params) => params,
+                RuleType::Unknown(_, params) => params,
+            };
+
+            for param in parameters {
+                description = description.replacen("%d", &param.to_string(), 1);
+            }
+        }
+    }
+
+    description
+}
+
 #[instrument(skip(icon_file_path), fields(path = %icon_file_path.display()))]
 fn process_enemy_icon_texture(icon_file_path: &Path) -> Option<egui::ColorImage> {
     debug!("Loading raw image file for icon processing");
@@ -98,13 +155,12 @@ fn center_enemy_text(ui: &mut egui::Ui, display_text: impl Into<String>) {
     });
 }
 
-// --- MAIN UI DRAW LOOP ---
-
 #[instrument(skip_all, fields(stage_id = %stage_data.stage_id))]
 pub fn draw(
     egui_context: &egui::Context,
     ui: &mut egui::Ui,
     stage_data: &Stage,
+    map_data: &Map,
     enemy_registry: &HashMap<u32, EnemyEntry>,
     enemy_name_registry: &[String],
     texture_cache: &mut HashMap<u32, egui::TextureHandle>,
@@ -113,9 +169,7 @@ pub fn draw(
     ui.strong("Battleground");
     ui.separator();
 
-    // --- STAGE RESTRICTIONS SECTION ---
-    // Pass `0` since the UI is currently only rendering the 1-Crown perspective
-    let restrictions = core::stage::logic::restrictions::parse_restrictions(stage_data, 0, global_ctx);
+    let restrictions = core::stage::logic::restrictions::parse_restrictions(stage_data, 0, global_ctx.clone());
 
     if !restrictions.is_empty() {
         ui.add_space(4.0);
@@ -126,10 +180,27 @@ pub fn draw(
                 ui.label(format!("• {}", restriction));
             }
         });
+    }
 
+    if let Some(rule) = &map_data.special_rules {
         ui.add_space(8.0);
+        ui.label(egui::RichText::new("Special Rules").strong());
+
+        ui.indent("special_rules_indent", |ui| {
+            let rule_description = format_special_rule(rule, &global_ctx);
+
+            ui.label(format!("• {}", rule_description));
+
+            if !map_data.invalid_combos.is_empty() {
+                ui.label(format!("• Disabled Combos: {} total", map_data.invalid_combos.len()));
+            }
+        });
+    }
+
+    if restrictions.is_empty() && map_data.special_rules.is_none() {
+        debug!("No stage restrictions or special rules found for current crown to display");
     } else {
-        debug!("No stage restrictions found for current crown to display");
+        ui.add_space(8.0);
     }
 
     if stage_data.enemies.is_empty() {
@@ -137,8 +208,8 @@ pub fn draw(
         return;
     }
 
-    let show_score_column = stage_data.enemies.iter().any(|e| e.score > 0);
-    let is_dojo_mechanic = stage_data.enemies.iter().any(|e| e.base_hp_perc > 100);
+    let show_score_column = stage_data.enemies.iter().any(|enemy| enemy.score > 0);
+    let is_dojo_mechanic = stage_data.enemies.iter().any(|enemy| enemy.base_hp_perc > 100);
 
     egui::Grid::new("enemy_grid")
         .striped(true)
@@ -163,7 +234,7 @@ pub fn draw(
             for enemy_data in &stage_data.enemies {
                 let resolved_enemy_name = enemy_name_registry
                     .get(enemy_data.id as usize)
-                    .filter(|s| !s.is_empty())
+                    .filter(|string_val| !string_val.is_empty())
                     .cloned()
                     .unwrap_or_else(|| format!("{:03}-E", enemy_data.id));
 
@@ -176,7 +247,7 @@ pub fn draw(
                             break 'icon false;
                         };
 
-                        if let std::collections::hash_map::Entry::Vacant(e) = texture_cache.entry(enemy_data.id) {
+                        if let std::collections::hash_map::Entry::Vacant(cache_entry) = texture_cache.entry(enemy_data.id) {
                             debug!(enemy_id = enemy_data.id, "Texture cache miss, attempting processing");
                             let Some(processed_color_image) = process_enemy_icon_texture(enemy_icon_path) else {
                                 break 'icon false;
@@ -186,7 +257,7 @@ pub fn draw(
                                 processed_color_image,
                                 egui::TextureOptions::LINEAR
                             );
-                            e.insert(generated_texture_handle);
+                            cache_entry.insert(generated_texture_handle);
                         }
 
                         let Some(cached_texture_handle) = texture_cache.get(&enemy_data.id) else {

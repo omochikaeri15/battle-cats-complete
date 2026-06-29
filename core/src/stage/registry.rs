@@ -68,6 +68,7 @@ pub struct Map {
     pub ex_invasion: Option<u32>,
     pub score_bonuses: Option<data::scorebonusmap::ScoreBonus>,
     pub special_rules: Option<data::specialrulesmap::SpecialRule>,
+    pub invalid_combos: Vec<u32>,
     pub drop_items: Option<data::dropitem::DropItem>,
 }
 

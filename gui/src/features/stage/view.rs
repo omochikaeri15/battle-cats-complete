@@ -1,6 +1,7 @@
 use eframe::egui;
 use crate::features::stage::state::StageListState;
 use core::global::context::GlobalContext;
+use tracing::warn;
 
 pub fn draw(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut StageListState, global_ctx: GlobalContext) {
     let Some(stage_id) = &state.data.selected_stage else {
@@ -23,9 +24,12 @@ pub fn draw(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut StageListState, 
     let stage_texture_cache = &mut state.stage_texture_cache;
 
     let Some(stage) = state.data.registry.stages.get(stage_id) else { return; };
-
+    
     let map_key = format!("{}_{}", stage.category, stage.map_id);
-    let map_name = state.data.registry.maps.get(&map_key).map(|m| m.name.clone()).unwrap_or_default();
+    let Some(map_data) = state.data.registry.maps.get(&map_key) else {
+        warn!(map_key, "Failed to locate parent map for stage view");
+        return;
+    };
 
     egui::ScrollArea::vertical()
         .id_salt("view_scroll")
@@ -39,7 +43,7 @@ pub fn draw(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut StageListState, 
                         ctx,
                         ui,
                         stage,
-                        &map_name,
+                        &map_data.name,
                         active_language_priority_array,
                         stage_texture_cache,
                         &state.data.lock_skip_registry,
@@ -60,7 +64,7 @@ pub fn draw(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut StageListState, 
                     );
                     ui.add_space(20.0);
 
-                    super::battleground::draw(ctx, ui, stage, enemy_registry, enemy_name_registry, texture_cache, global_ctx);
+                    super::battleground::draw(ctx, ui, stage, map_data, enemy_registry, enemy_name_registry, texture_cache, global_ctx);
                 });
             });
         });

@@ -1,4 +1,5 @@
 {
+  "source": "default",
   "rules": [
     {
       "pattern": "img(015|022)",
@@ -14,8 +15,7 @@
         "fr": true,
         "it": true,
         "th": true
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "SkillDescriptions|GatyaitemName|MapStageLimitMessage|Map_Name",
@@ -31,8 +31,7 @@
         "fr": true,
         "it": true,
         "th": true
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "Skill_name_[0-9]{3}",
@@ -48,8 +47,7 @@
         "fr": true,
         "it": true,
         "th": true
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "Enemyname|localizable",
@@ -65,8 +63,7 @@
         "fr": true,
         "it": true,
         "th": true
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "497_[fc](0[0-3])?",
@@ -82,8 +79,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "(udi|uni|gatyachara_)?(281|347)_[fcsz](00)?",
@@ -99,8 +95,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "(udi|uni|gatyachara_)?320_[fcsz](0[0-3])?",
@@ -116,8 +111,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "(udi|uni)?(435|484)_c(0[0-3])?",
@@ -133,8 +127,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "(001|092)_s",
@@ -150,8 +143,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "391_e|399_[fc]",
@@ -167,8 +159,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "400_[fc](02)?",
@@ -184,8 +175,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "016_s",
@@ -201,8 +191,55 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
+    },
+    {
+      "pattern": "016_f(0[0-3])?",
+      "extension": "mamodel|maanim",
+      "handling": "Include",
+      "languages": {
+        "en": true,
+        "ja": false,
+        "tw": false,
+        "ko": false,
+        "es": false,
+        "de": false,
+        "fr": false,
+        "it": false,
+        "th": false
+      }
+    },
+    {
+      "pattern": "353_s(00|02|03)",
+      "extension": "maanim",
+      "handling": "Only",
+      "languages": {
+        "en": false,
+        "ja": false,
+        "tw": true,
+        "ko": false,
+        "es": false,
+        "de": false,
+        "fr": false,
+        "it": false,
+        "th": false
+      }
+    },
+    {
+      "pattern": "186_e(0[0-3])?|enemy_icon_186",
+      "extension": "png|imgcut|mamodel|maanim",
+      "handling": "Only",
+      "languages": {
+        "en": true,
+        "ja": true,
+        "tw": true,
+        "ko": true,
+        "es": false,
+        "de": false,
+        "fr": false,
+        "it": false,
+        "th": false
+      }
     },
     {
       "pattern": "021_e(_[a-z]{2})?",
@@ -218,8 +255,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "116_e|enemy_icon_116",
@@ -235,8 +271,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "(08[89]|09[0-6]|098|16[3-6]|278|34[6-9]|350)_e(0[0-3])?",
@@ -252,8 +287,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "enemy_icon_(08[89]|09[0-6]|098|16[3-6]|278|34[6-9]|350)",
@@ -269,8 +303,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     },
     {
       "pattern": "enemy_icon_55[5789]",
@@ -286,8 +319,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": true
+      }
     },
     {
       "pattern": "(057|549)_e",
@@ -303,8 +335,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": true
+      }
     },
     {
       "pattern": "(udi|uni|gatyachara_)?(848|840)_[fc](00)?",
@@ -320,8 +351,7 @@
         "fr": false,
         "it": false,
         "th": false
-      },
-      "locked": false
+      }
     }
   ]
 }

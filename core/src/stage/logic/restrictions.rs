@@ -3,7 +3,7 @@ use crate::stage::registry::Stage;
 use crate::stage::data::charagroup::{CharaGroup, CharaGroupType};
 use crate::global::context::GlobalContext;
 
-fn strip_color_tags(input: &str) -> String {
+pub fn strip_color_tags(input: &str) -> String {
     let mut stripped = String::new();
     let mut in_tag = false;
 

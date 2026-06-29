@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use indexmap::IndexMap; 
+use indexmap::IndexMap;
 use std::path::Path;
 use std::fs;
 
@@ -22,6 +22,15 @@ impl RuleHandling {
             Self::Ignore => "Ignore".to_string(),
         }
     }
+}
+
+// NEW: Define the source tracker
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum RuleSource {
+    #[default]
+    Default,
+    Custom,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -49,20 +58,24 @@ impl Default for ExceptionRule {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExceptionList {
+    #[serde(default)] // Automatically becomes RuleSource::Default if missing
+    pub source: RuleSource,
     pub rules: Vec<ExceptionRule>,
 }
 
 impl Default for ExceptionList {
     fn default() -> Self {
         let default_json = include_str!("exceptions.json");
-        serde_json::from_str(default_json).unwrap_or_else(|_| ExceptionList { 
-            rules: vec![ExceptionRule::default()] 
+        serde_json::from_str(default_json).unwrap_or_else(|_| ExceptionList {
+            source: RuleSource::Default,
+            rules: vec![ExceptionRule::default()]
         })
     }
 }
 
 impl ExceptionList {
-    pub fn save(&self) {
+    pub fn save(&mut self) {
+        self.source = RuleSource::Custom;
         crate::global::io::json::save("exceptions.json", self);
     }
 
@@ -70,7 +83,8 @@ impl ExceptionList {
         crate::global::io::json::load("exceptions.json").unwrap_or_default()
     }
 
-    pub fn save_to_file(&self, path: &Path) -> Result<(), std::io::Error> {
+    pub fn save_to_file(&mut self, path: &Path) -> Result<(), std::io::Error> {
+        self.source = RuleSource::Custom;
         let json = serde_json::to_string_pretty(self)?;
         fs::write(path, json)
     }
@@ -78,5 +92,20 @@ impl ExceptionList {
     pub fn load_from_file(path: &Path) -> Result<Self, String> {
         let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
         serde_json::from_str(&data).map_err(|e| e.to_string())
+    }
+
+    pub fn sync_on_boot() {
+        let disk_list = crate::global::io::json::load::<ExceptionList>("exceptions.json");
+
+        let needs_overwrite = match disk_list {
+            Some(list) => list.source == RuleSource::Default,
+            None => true,
+        };
+
+        if needs_overwrite {
+            tracing::info!("Syncing default exceptions.json to disk...");
+            let default_list = Self::default();
+            crate::global::io::json::save("exceptions.json", &default_list);
+        }
     }
 }

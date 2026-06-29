@@ -13,3 +13,4 @@ pub mod difficulty_level;
 pub mod drop_chara;
 pub mod lockskipdata;
 pub mod scatcpusetting;
+pub mod specialrulesmapoption;

@@ -5,3 +5,4 @@ pub mod treasure;
 pub mod state;
 pub mod restrictions;
 pub mod xp;
+pub mod rules;

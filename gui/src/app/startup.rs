@@ -16,6 +16,8 @@ impl BattleCatsApp {
         crate::app::tracing::init(app.settings.general.enable_logging);
         tracing::info!("Starting initialization sequence...");
 
+        core::settings::logic::exceptions::ExceptionList::sync_on_boot();
+
         #[cfg(target_os = "linux")]
         {
             tracing::debug!("Syncing Linux desktop data");

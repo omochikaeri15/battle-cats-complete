@@ -161,19 +161,20 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
 
                 if horizontal_ui.add_sized([button_width, button_height], egui::Button::new(egui::RichText::new(import_text).size(12.0).strong().color(egui::Color32::WHITE)).fill(import_color).rounding(4.0)).clicked()
                     && let Some(file_path) = rfd::FileDialog::new().add_filter("JSON", &["json"]).pick_file() {
-                        let success = match ExceptionList::load_from_file(&file_path) {
-                            Ok(list) => {
-                                state.rules = list.rules;
-                                ExceptionList { rules: state.rules.clone() }.save();
-                                true
-                            },
-                            Err(_) => false,
-                        };
-                        context.data_mut(|data_map| {
-                            data_map.insert_temp(egui::Id::new("exceptions_import_time"), current_time);
-                            data_map.insert_temp(egui::Id::new("exceptions_import_result"), success);
-                        });
-                    }
+                    let success = match ExceptionList::load_from_file(&file_path) {
+                        Ok(list) => {
+                            state.rules = list.rules;
+                            let mut imported_list = ExceptionList { rules: state.rules.clone(), ..Default::default() };
+                            imported_list.save();
+                            true
+                        },
+                        Err(_) => false,
+                    };
+                    context.data_mut(|data_map| {
+                        data_map.insert_temp(egui::Id::new("exceptions_import_time"), current_time);
+                        data_map.insert_temp(egui::Id::new("exceptions_import_result"), success);
+                    });
+                }
 
                 let export_time = context.data(|data_map| data_map.get_temp::<f64>(egui::Id::new("exceptions_export_time"))).unwrap_or(-10.0);
                 let export_result = context.data(|data_map| data_map.get_temp::<bool>(egui::Id::new("exceptions_export_result"))).unwrap_or(false);
@@ -184,7 +185,8 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                 if horizontal_ui.add_sized([button_width, button_height], egui::Button::new(egui::RichText::new(export_text).size(12.0).strong().color(egui::Color32::WHITE)).fill(export_color).rounding(4.0)).clicked() {
                     let export_directory = Path::new("exports");
                     let _ = fs::create_dir_all(export_directory);
-                    let success = ExceptionList { rules: state.rules.clone() }.save_to_file(&export_directory.join("exceptions.json")).is_ok();
+                    let mut export_list = ExceptionList { rules: state.rules.clone(), ..Default::default() };
+                    let success = export_list.save_to_file(&export_directory.join("exceptions.json")).is_ok();
                     context.data_mut(|data_map| {
                         data_map.insert_temp(egui::Id::new("exceptions_export_time"), current_time);
                         data_map.insert_temp(egui::Id::new("exceptions_export_result"), success);
@@ -214,7 +216,7 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
                 for (index, rule) in state.rules.iter_mut().enumerate() {
                     grid_ui.add(egui::TextEdit::singleline(&mut rule.pattern).desired_width(COLUMN_PATTERN_WIDTH));
                     grid_ui.add(egui::TextEdit::singleline(&mut rule.extension).desired_width(COLUMN_EXTENSION_WIDTH));
-                    
+
                     grid_ui.horizontal(|inner_horizontal_ui| {
                         inner_horizontal_ui.set_min_width(COLUMN_HANDLING_WIDTH);
                         let combo_width = 90.0;
@@ -259,11 +261,13 @@ pub fn show(context: &egui::Context, drag_guard: &mut DragGuard) {
 
     if show_reset_confirm_modal(context, drag_guard) {
         state.rules = ExceptionList::default().rules;
-        ExceptionList { rules: state.rules.clone() }.save();
+        let mut reset_list = ExceptionList { rules: state.rules.clone(), ..Default::default() };
+        reset_list.save();
     }
 
     if state.rules != original_rules || (state.is_open && !is_open) {
-        ExceptionList { rules: state.rules.clone() }.save();
+        let mut final_list = ExceptionList { rules: state.rules.clone(), ..Default::default() };
+        final_list.save();
     }
 
     state.is_open = is_open;

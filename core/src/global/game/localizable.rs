@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::global::resolver;
-use crate::global::utils::detect_csv_separator;
 
 /// A simple lookup table for strings in localizable.tsv
 #[derive(Default, Debug, Clone)]
@@ -20,25 +19,26 @@ impl Localizable {
 
     /// Look up a translation, returning an empty string if missing.
     pub fn lookup_or_empty(&self, key: &str) -> &str {
-        self.map.get(key).map(|s| s.as_str()).unwrap_or("")
+        self.map.get(key).map(|value_string| value_string.as_str()).unwrap_or("")
     }
 }
 
 /// Load the localizable.tsv file using regional fallbacks.
 pub fn load_localizable(dir: &Path, priority: &[String]) -> Localizable {
-    trace!("Attempting to load localizable.tsv from {}", dir.display());
+    info!("Initializing localizable dictionary load");
+    trace!(directory = %dir.display(), "Attempting to load localizable.tsv");
 
     // Build the regional filenames based on the priority list
     let mut target_files: Vec<String> = priority
         .iter()
-        .map(|lang| format!("localizable_{}.tsv", lang))
+        .map(|language_code| format!("localizable_{}.tsv", language_code))
         .collect();
 
     // Add the base non-regional file as the ultimate fallback
     target_files.push("localizable.tsv".to_string());
 
     // Map to &str for the resolver to consume
-    let file_targets: Vec<&str> = target_files.iter().map(|s| s.as_str()).collect();
+    let file_targets: Vec<&str> = target_files.iter().map(|target_string| target_string.as_str()).collect();
 
     // Attempt to grab the file using the dynamically generated regional targets
     let paths = resolver::get(dir, file_targets, priority);
@@ -48,32 +48,37 @@ pub fn load_localizable(dir: &Path, priority: &[String]) -> Localizable {
         return Localizable::default();
     };
 
+    debug!(path = %file_path.display(), "Located localizable file, beginning read");
+
     let Ok(content) = fs::read_to_string(file_path) else {
-        warn!("Found localizable.tsv at {}, but failed to read string data", file_path.display());
+        error!(path = %file_path.display(), "Found localizable.tsv, but failed to read string data");
         return Localizable::default();
     };
 
-    let sep = detect_csv_separator(&content);
     let mut map = HashMap::new();
 
-    for line in content.lines() {
-        let clean = line.split("//").next().unwrap_or("").trim();
-        if clean.is_empty() {
+    for (line_number, line) in content.lines().enumerate() {
+        let clean_line = line.split("//").next().unwrap_or("").trim();
+        if clean_line.is_empty() {
             continue;
         }
 
-        let parts: Vec<&str> = clean.split(sep).collect();
-        if parts.len() < 2 {
+        // PONOS often mixes tabs and spaces in localizable.tsv.
+        // Keys never contain whitespace, so splitting at the first whitespace
+        // safely handles both \t and accidental spaces.
+        let Some(whitespace_index) = clean_line.find(char::is_whitespace) else {
+            trace!(line_number, "Skipping line: no whitespace separator found");
             continue;
-        }
+        };
 
-        let key = parts[0].trim().to_string();
-        let value = parts[1].trim().to_string();
+        let parsed_key = clean_line[..whitespace_index].trim().to_string();
+        let parsed_value = clean_line[whitespace_index..].trim().to_string();
 
-        map.insert(key, value);
+        trace!(key = %parsed_key, "Successfully parsed localization string");
+        map.insert(parsed_key, parsed_value);
     }
 
-    debug!("Loaded {} localization strings from {}", map.len(), file_path.display());
+    info!(count = map.len(), path = %file_path.display(), "Successfully loaded localization strings");
 
     Localizable { map }
 }

@@ -4,7 +4,7 @@ use std::path::Path;
 use std::fs;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
-use tracing::warn;
+use tracing::{warn, instrument};
 
 use crate::settings::logic::state::ScannerConfig;
 use crate::stage::{paths, data};
@@ -20,10 +20,12 @@ pub struct ScanContext<'a> {
     pub drop_items: HashMap<u32, data::dropitem::DropItem>,
     pub score_bonuses: HashMap<u32, data::scorebonusmap::ScoreBonus>,
     pub special_rules: HashMap<u32, data::specialrulesmap::SpecialRule>,
+    pub special_rule_options: HashMap<u8, data::specialrulesmapoption::SpecialRuleOption>,
     pub ex_options: HashMap<u32, u32>,
     pub difficulties: HashMap<u32, Vec<u16>>,
 }
 
+#[instrument(skip(config))]
 pub fn start_scan(config: &ScannerConfig) -> Receiver<StageRegistry> {
     let (tx_channel, rx_channel) = mpsc::channel();
     let lang_priority_clone = config.language_priority.clone();
@@ -36,6 +38,7 @@ pub fn start_scan(config: &ScannerConfig) -> Receiver<StageRegistry> {
     rx_channel
 }
 
+#[instrument(skip(lang_priority))]
 fn scan_all(lang_priority: &[String]) -> StageRegistry {
     let mut registry = StageRegistry::default();
     let root_path = Path::new(paths::DIR_STAGES);
@@ -49,6 +52,7 @@ fn scan_all(lang_priority: &[String]) -> StageRegistry {
         drop_items: data::dropitem::load(root_path, "DropItem.csv", lang_priority),
         score_bonuses: data::scorebonusmap::load(&root_path.join("R"), "ScoreBonusMap.json", lang_priority),
         special_rules: data::specialrulesmap::load(&root_path.join("SR"), "SpecialRulesMap.json", lang_priority),
+        special_rule_options: data::specialrulesmapoption::load(&root_path.join("SR"), "SpecialRulesMapOption.json", lang_priority),
         ex_options: data::ex_option::load(root_path, "EX_option.csv", lang_priority),
         difficulties: data::difficulty_level::load(root_path, "difficulty_level.tsv", lang_priority),
     };
@@ -66,7 +70,7 @@ fn scan_all(lang_priority: &[String]) -> StageRegistry {
             cat_name.as_ref(),
             "backgrounds" | "castles" | "fixedlineup" | "MapStageLimitMessage" |
             "Map_Name" | "Map_option.csv" | "MapConditions.json" | "Stage_option.csv" |
-            "DropItem.csv" | "Charagroup.csv" | "EX_option.csv" | "R" | "SR" | "V" | "L" | "G" | "EX" | "difficulty_level.tsv"
+            "DropItem.csv" | "Charagroup.csv" | "EX_option.csv" | "difficulty_level.tsv"
         );
 
         if is_ignored_dir || !cat_path.is_dir() {
@@ -79,6 +83,7 @@ fn scan_all(lang_priority: &[String]) -> StageRegistry {
     registry
 }
 
+#[instrument(skip(registry, ctx))]
 fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContext) {
     let cat_prefix = cat_path.file_name().unwrap_or_default().to_string_lossy().to_string();
     let cat_display_name = data::map_name::get_category_name(&cat_prefix);
@@ -116,7 +121,6 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
                 ("Space", 7) => Some(3006),
                 ("Space", 8) => Some(3007),
                 ("Space", 9) => Some(3008),
-
                 _ => global_map_id,
             };
             if routed_id.is_some() && routed_id != global_map_id {
@@ -145,6 +149,7 @@ fn scan_category(registry: &mut StageRegistry, cat_path: &Path, ctx: &ScanContex
 }
 
 #[allow(clippy::too_many_arguments)]
+#[instrument(skip_all)]
 fn load_map(
     registry: &mut StageRegistry,
     cat_prefix: &str,
@@ -158,6 +163,35 @@ fn load_map(
 ) {
     let global_id_val = global_map_id.unwrap_or(0);
     let map_opt = ctx.map_options.get(&global_id_val).cloned().unwrap_or_default();
+
+    // Map the special rules and resolve invalid combos
+    let special_rules = ctx.special_rules.get(&global_id_val).cloned();
+    let mut invalid_combos = Vec::new();
+
+    if let Some(rule) = &special_rules {
+        for target_rule in &rule.rules {
+            let rule_id = match target_rule {
+                data::specialrulesmap::RuleType::TrustFund(_) => 0,
+                data::specialrulesmap::RuleType::CooldownEquality(_) => 1,
+                data::specialrulesmap::RuleType::RarityLimit(_) => 3,
+                data::specialrulesmap::RuleType::CheapLabor(_) => 4,
+                data::specialrulesmap::RuleType::RestrictPrice(_) => 5,
+                data::specialrulesmap::RuleType::RestrictCd(_) => 6,
+                data::specialrulesmap::RuleType::DeployLimit(_) => 7,
+                data::specialrulesmap::RuleType::AwesomeCatSpawn(_) => 8,
+                data::specialrulesmap::RuleType::AwesomeCatCannon(_) => 9,
+                data::specialrulesmap::RuleType::AwesomeUnitSpeed(_) => 10,
+                data::specialrulesmap::RuleType::Unknown(id, _) => *id,
+            };
+
+            if let Some(opt) = ctx.special_rule_options.get(&rule_id) {
+                invalid_combos.extend(&opt.invalid_combo_ids);
+            }
+        }
+
+        invalid_combos.sort_unstable();
+        invalid_combos.dedup();
+    }
 
     let mut map_struct = Map {
         id: format!("{}_{}", cat_prefix, map_id),
@@ -176,7 +210,8 @@ fn load_map(
         hidden_upon_clear: map_opt.hidden_upon_clear,
         ex_invasion: ctx.ex_options.get(&global_id_val).cloned(),
         score_bonuses: ctx.score_bonuses.get(&global_id_val).cloned(),
-        special_rules: ctx.special_rules.get(&global_id_val).cloned(),
+        special_rules,
+        invalid_combos,
         drop_items: ctx.drop_items.get(&global_id_val).cloned(),
     };
 

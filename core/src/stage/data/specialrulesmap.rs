@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, instrument};
 use crate::global::resolver;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -48,36 +49,48 @@ struct RulesMap {
     map_id: HashMap<String, RawRuleData>,
 }
 
+#[instrument(skip(dir, priority))]
 pub fn load(dir: &Path, filename: &str, priority: &[String]) -> HashMap<u32, SpecialRule> {
     let mut map = HashMap::new();
-    let paths = resolver::get(dir, [filename], priority);
+    let file_paths = resolver::get(dir, [filename], priority);
 
-    let Some(path) = paths.first() else { return map; };
-    let Ok(content) = fs::read_to_string(path) else { return map; };
-    let Ok(json_data) = serde_json::from_str::<RulesMap>(&content) else { return map; };
+    let Some(target_path) = file_paths.first() else {
+        debug!("Special rules map file not found");
+        return map;
+    };
+
+    let Ok(file_content) = fs::read_to_string(target_path) else {
+        error!(path = ?target_path, "Failed to read special rules map file");
+        return map;
+    };
+
+    let Ok(json_data) = serde_json::from_str::<RulesMap>(&file_content) else {
+        error!("Failed to deserialize special rules map JSON");
+        return map;
+    };
 
     for (map_id_str, raw_data) in json_data.map_id {
         let Ok(map_id) = map_id_str.parse::<u32>() else { continue; };
 
         let mut rules = Vec::new();
-        for (key_str, raw_type) in raw_data.rule_type {
-            let Ok(key) = key_str.parse::<u8>() else { continue; };
-            let params = raw_type.parameters;
-            
-            let rule_enum = match key {
-                0 => RuleType::TrustFund(params),
-                1 => RuleType::CooldownEquality(params),
-                3 => RuleType::RarityLimit(params),
-                4 => RuleType::CheapLabor(params),
-                5 => RuleType::RestrictPrice(params),
-                6 => RuleType::RestrictCd(params),
-                7 => RuleType::DeployLimit(params),
-                8 => RuleType::AwesomeCatSpawn(params),
-                9 => RuleType::AwesomeCatCannon(params),
-                10 => RuleType::AwesomeUnitSpeed(params),
-                _ => RuleType::Unknown(key, params),
+        for (rule_id_str, raw_type) in raw_data.rule_type {
+            let Ok(rule_id) = rule_id_str.parse::<u8>() else { continue; };
+            let parameters = raw_type.parameters;
+
+            let rule_enum = match rule_id {
+                0 => RuleType::TrustFund(parameters),
+                1 => RuleType::CooldownEquality(parameters),
+                3 => RuleType::RarityLimit(parameters),
+                4 => RuleType::CheapLabor(parameters),
+                5 => RuleType::RestrictPrice(parameters),
+                6 => RuleType::RestrictCd(parameters),
+                7 => RuleType::DeployLimit(parameters),
+                8 => RuleType::AwesomeCatSpawn(parameters),
+                9 => RuleType::AwesomeCatCannon(parameters),
+                10 => RuleType::AwesomeUnitSpeed(parameters),
+                _ => RuleType::Unknown(rule_id, parameters),
             };
-            
+
             rules.push(rule_enum);
         }
 
