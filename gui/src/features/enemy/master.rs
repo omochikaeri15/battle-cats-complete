@@ -69,14 +69,6 @@ pub fn show(
 
     ui.separator();
     ui.add_space(0.0);
-    
-    //if *current_tab != EnemyDetailTab::Animation
-    //    && !anim_viewer.loaded_id.is_empty() {
-    //        anim_viewer.held_unit = None;
-    //        anim_viewer.current_anim = None;
-    //        anim_viewer.loaded_id.clear();
-    //        *unit_sync = None;
-    //    }
 
     match current_tab {
         EnemyDetailTab::Abilities => {
