@@ -144,7 +144,7 @@ pub fn show(
             let desc = cat_entry.description[*current_form].as_ref().unwrap_or(&fallback);
             details::render(ui, desc);
             let text_fallback = Vec::new();
-            let ev_text = cat_entry.evolve_text.texts.get(*current_form).unwrap_or(&text_fallback);
+            let ev_text = cat_entry.evolve_text.texts[*current_form].as_ref().unwrap_or(&text_fallback);
             details::render_evolve(
                 ui,
                 ctx,
