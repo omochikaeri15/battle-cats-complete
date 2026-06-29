@@ -1,5 +1,7 @@
 use eframe::egui;
+
 use core::settings::logic::Settings;
+
 use crate::global::shared::DragGuard;
 
 pub fn show(context: &egui::Context, settings: &mut Settings, drag_guard: &mut DragGuard) -> bool {

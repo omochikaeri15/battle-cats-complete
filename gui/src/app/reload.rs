@@ -1,6 +1,8 @@
 use std::path::Path;
-use crate::app::BattleCatsApp;
+
 use core::global::game::param::load_param;
+
+use super::BattleCatsApp;
 
 impl BattleCatsApp {
     pub fn perform_full_data_reload(&mut self) {

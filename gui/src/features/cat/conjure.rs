@@ -1,13 +1,16 @@
 use eframe::egui;
-use core::cat::logic::stats;
-use core::cat::logic::abilities;
-use crate::global::sheet::GuiSpriteSheet;
-use core::settings::logic::Settings;
-use crate::global::shared::{render_fallback_icon, text_with_superscript};
 use nyanko::common::img015;
-use core::global::game::abilities::ABILITY_Y;
-use crate::features::statblock::builder::SpiritData;
+
+use core::cat::logic::abilities;
 use core::cat::logic::context::CatRenderContext;
+use core::cat::logic::stats;
+use core::cat::waiter::unitid;
+use core::global::game::abilities::ABILITY_Y;
+use core::settings::logic::Settings;
+
+use crate::features::statblock::builder::SpiritData;
+use crate::global::shared::{render_fallback_icon, text_with_superscript, ICON_SIZE};
+use crate::global::sheet::GuiSpriteSheet;
 
 pub fn render_conjure_toggle(ui: &mut egui::Ui, text: &str, id: egui::Id, settings: &Settings) {
     ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -43,7 +46,7 @@ pub fn render_conjure_details(
             ui.spacing_mut().item_spacing.y = 0.0;
             let spirit_border = egui::Color32::WHITE;
             
-            let conjure_stats_vec = match stats::load_from_id(ctx.base_stats.conjure_unit_id, &settings.general.language_priority) {
+            let conjure_stats_vec = match unitid(ctx.base_stats.conjure_unit_id, &settings.general.language_priority) {
                 Some(s) => s,
                 None => {
                     ui.label(egui::RichText::new("Spirit data not found").weak());
@@ -76,7 +79,7 @@ pub fn render_conjure_details(
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
                 let icon = img015::ICON_AREA_ATTACK;
-                let size = egui::vec2(stats::ICON_SIZE, stats::ICON_SIZE);
+                let size = egui::vec2(ICON_SIZE, ICON_SIZE);
                 
                 let mut drawn = false;
                 for sheet in sheets {
@@ -140,7 +143,7 @@ pub fn build_spirit_data(
     settings: &Settings
 ) -> Option<SpiritData> {
     if ctx.base_stats.conjure_unit_id > 0
-        && let Some(c_vec) = stats::load_from_id(ctx.base_stats.conjure_unit_id, &settings.general.language_priority)
+        && let Some(c_vec) = unitid(ctx.base_stats.conjure_unit_id, &settings.general.language_priority)
             && let Some(c_stats) = c_vec.first() {
                 let conjure_final = stats::get_final_stats(c_stats, ctx.level_curve, ctx.current_level, None, None);
 

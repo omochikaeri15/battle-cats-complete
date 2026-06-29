@@ -1,8 +1,10 @@
-use eframe::egui;
 use std::collections::HashMap;
 use std::path::Path;
+
+use eframe::egui;
 use image::GenericImageView;
 use nyanko::cat::unit::UnitBuy;
+
 use core::global::io::paths;
 
 pub fn render(ui: &mut egui::Ui, description: &[String]) {

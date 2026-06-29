@@ -1,6 +1,8 @@
 use eframe::egui;
+
 use core::stage::logic::navigate;
-use crate::features::stage::state::StageListState;
+
+use super::state::StageListState;
 
 pub const BTN_SPACING_X: f32 = 14.0; // Total horizontal space given to the separator
 pub const BTN_SPACING_Y: f32 = 6.0;  // Vertical padding between list buttons

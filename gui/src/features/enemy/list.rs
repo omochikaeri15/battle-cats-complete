@@ -1,13 +1,13 @@
-use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+
+use eframe::egui;
 use image::imageops;
 
+use core::enemy::logic::filter::{self, EnemyFilterState};
 use core::enemy::logic::scanner::EnemyEntry;
-use core::enemy::logic::filter::EnemyFilterState;
-use core::enemy::logic::filter;
 
 struct LoadedImage {
     id: u32,

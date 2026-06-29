@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::global::formats::gatyaitembuy::GatyaItemBuy;
 use crate::global::formats::gatyaitemname::GatyaItemName;
 use nyanko::cat::unit::UnitBuy;
-use crate::cat::data::unitexplanation;
+use crate::cat::waiter::unitexplanation;
 use crate::cat::paths;
 
 pub struct ResolvedDrop {
@@ -55,7 +55,7 @@ pub fn resolve_drop(
         let cat_folder = Path::new(paths::DIR_CATS).join(format!("{:03}", located_chara_id));
 
         // THE WAITER HAND-OFF: Let the unitexplanation module manage the language fallback directories
-        let explanation = unitexplanation::load(located_chara_id, &cat_folder, active_language_priority_array);
+        let explanation = unitexplanation(located_chara_id, &cat_folder, active_language_priority_array);
 
         // Default to a numerical ID string if the localized name is missing
         let mut name = format!("{}-1", located_chara_id);
@@ -81,7 +81,7 @@ pub fn resolve_drop(
     // =========================================================================
     if let Some((&unit_id, _)) = unit_buy_registry.iter().find(|(_, row_data)| row_data.true_form_id == target_item_id as i32) {
         let cat_folder = Path::new(paths::DIR_CATS).join(format!("{:03}", unit_id));
-        let explanation = unitexplanation::load(unit_id, &cat_folder, active_language_priority_array);
+        let explanation = unitexplanation(unit_id, &cat_folder, active_language_priority_array);
 
         // Default to a numerical ID string if the localized name is missing
         let mut name = format!("{}-3", unit_id);

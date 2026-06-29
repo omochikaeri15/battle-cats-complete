@@ -1,9 +1,13 @@
 use std::fs;
 use std::path::Path;
+
 use eframe::egui;
-use core::settings::logic::state::{GameDataSettings, RuntimeState};
+
 use core::settings::logic::delete::FolderDeleter;
+use core::settings::logic::state::{GameDataSettings, RuntimeState};
+
 use crate::global::shared::DragGuard;
+
 use super::tabs::toggle_ui;
 
 #[derive(Clone, Default)]

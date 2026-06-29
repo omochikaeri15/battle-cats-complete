@@ -1,8 +1,11 @@
-use eframe::egui;
 use std::path::PathBuf;
-use crate::features::animation::viewer::AnimViewer;
-use core::settings::logic::state::Settings;
+
+use eframe::egui;
 use nyanko::graphics::animation::Anim;
+
+use core::settings::logic::state::Settings;
+
+use super::viewer::AnimViewer;
 
 const TILE_HEIGHT: f32 = 28.0;
 const GAP: f32 = 4.0;

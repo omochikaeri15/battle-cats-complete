@@ -1,8 +1,10 @@
-use eframe::egui;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
+
+use eframe::egui;
 use self_update;
+
 use crate::global::shared::DragGuard;
 use crate::global::utils::process_markdown;
 

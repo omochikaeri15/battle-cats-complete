@@ -1,14 +1,19 @@
-use eframe::egui;
-use std::path::{Path, PathBuf};
 use std::cell::RefCell;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use core::enemy::logic::scanner::EnemyEntry;
+use eframe::egui;
 use nyanko::graphics::animation::Unit;
-use crate::features::animation::viewer::AnimViewer;
-use core::settings::logic::state::Settings;
+
+use core::animation::logic::constants::{
+    IDX_ATTACK, IDX_BURROW, IDX_IDLE, IDX_KB,
+    IDX_SURFACE, IDX_WALK,
+};
+use core::enemy::logic::scanner::EnemyEntry;
 use core::enemy::paths::{self, AnimType};
-use core::animation::logic::constants::{IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
+use core::settings::logic::state::Settings;
+
+use crate::features::animation::viewer::AnimViewer;
 use crate::global::shared::DragGuard;
 
 thread_local! {

@@ -1,7 +1,8 @@
-
 use eframe::egui;
+
 use core::global::assets::*;
 use core::global::game::abilities::CustomIcon;
+
 #[derive(Clone)]
 pub struct CustomAssets {
     pub multihit: egui::TextureHandle,

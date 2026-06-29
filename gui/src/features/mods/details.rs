@@ -1,9 +1,13 @@
-use eframe::egui;
 use std::path::Path;
-use core::settings::logic::Settings;
-use crate::features::mods::state::ModListState;
-use crate::global::shared::DragGuard;
+
+use eframe::egui;
+
 use core::mods::logic::manager;
+use core::settings::logic::Settings;
+
+use crate::global::shared::DragGuard;
+
+use super::state::ModListState;
 
 const HEADER_BOTTOM_PADDING: f32 = 4.0;
 const HEADER_TOP_PADDING: f32 = 3.8;

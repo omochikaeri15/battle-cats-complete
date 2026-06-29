@@ -1,19 +1,23 @@
-use eframe::egui;
-use core::enemy::logic::scanner::{self, EnemyEntry};
-use crate::features::enemy::state::EnemyDetailTab;
-use core::settings::logic::Settings;
-use core::enemy::registry::Magnification;
-use crate::global::sheet::GuiSpriteSheet;
-use nyanko::graphics::animation::Unit;
 use std::sync::Arc;
-use crate::features::animation::viewer::AnimViewer;
-use crate::global::assets::CustomAssets;
-use core::global::context::GlobalContext;
+
+use eframe::egui;
+use nyanko::graphics::animation::Unit;
+
 use core::enemy::logic::context::EnemyRenderContext;
+use core::enemy::logic::scanner::{self, EnemyEntry};
+use core::enemy::logic::state::EnemyDetailTab;
+use core::enemy::registry::Magnification;
+use core::global::context::GlobalContext;
+use core::settings::logic::Settings;
+
+use crate::features::animation::viewer::AnimViewer;
 use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
-use crate::features::enemy::statblock::build_enemy_statblock;
+use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
-use super::{header, stats, abilities, details, viewer};
+use crate::global::sheet::GuiSpriteSheet;
+
+use super::statblock::build_enemy_statblock;
+use super::{abilities, details, header, stats, viewer};
 use super::header::ExportAction;
 
 pub fn show(

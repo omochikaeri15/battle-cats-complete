@@ -1,8 +1,9 @@
-use core::enemy::logic::scanner::EnemyEntry;
-use core::enemy::registry::{get_enemy_stat, format_enemy_stat};
 use core::enemy::logic::abilities::collect_ability_data;
 use core::enemy::logic::context::EnemyRenderContext;
-use crate::features::statblock::builder::{StatblockData, StatCell};
+use core::enemy::logic::scanner::EnemyEntry;
+use core::enemy::registry::{format_enemy_stat, get_enemy_stat};
+
+use crate::features::statblock::builder::{StatCell, StatblockData};
 
 pub fn build_enemy_statblock(
     ctx: &EnemyRenderContext,

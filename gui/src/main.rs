@@ -5,9 +5,10 @@ mod updater;
 mod features;
 mod global;
 
-use eframe::egui;
 use std::panic;
 use std::fs;
+
+use eframe::egui;
 
 fn main() -> eframe::Result<()> {
     panic::set_hook(Box::new(|panic_info| {

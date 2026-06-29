@@ -1,22 +1,21 @@
-use eframe::egui;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use core::enemy::logic::state::EnemyDataState;
-use core::settings::logic::Settings;
-use core::global::context::GlobalContext;
-
-pub use core::enemy::logic::state::EnemyDetailTab;
-
-use crate::features::enemy::list::EnemyList;
-use crate::features::enemy::master;
-use crate::features::animation::viewer::AnimViewer;
-use crate::global::shared::DragGuard;
-use crate::features::enemy::filter::EnemyFilterState;
-use crate::global::sheet::GuiSpriteSheet;
-use crate::global::assets::CustomAssets;
-
+use eframe::egui;
 use nyanko::graphics::animation::Unit;
+use serde::{Deserialize, Serialize};
+
+use core::enemy::logic::filter::EnemyFilterState;
+use core::enemy::logic::state::EnemyDataState;
+use core::global::context::GlobalContext;
+use core::settings::logic::Settings;
+
+use crate::features::animation::viewer::AnimViewer;
+use crate::global::assets::CustomAssets;
+use crate::global::shared::DragGuard;
+use crate::global::sheet::GuiSpriteSheet;
+
+use super::list::EnemyList;
+use super::master;
 
 pub const TOP_PANEL_PADDING: f32 = 2.5;
 pub const SEARCH_FILTER_GAP: f32 = 5.0;

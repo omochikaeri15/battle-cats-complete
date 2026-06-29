@@ -1,13 +1,13 @@
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
+
 use eframe::egui;
 
-use core::stage::data::{map_name, lockskipdata, scatcpusetting};
-use core::global::utils::autocrop;
-use core::stage::registry::Stage;
 use core::global::resolver;
-
+use core::global::utils::autocrop;
+use core::stage::data::{lockskipdata, map_name, scatcpusetting};
 use core::stage::paths;
+use core::stage::registry::Stage;
 
 const MAP_IMG_HEIGHT: f32 = 50.0;
 const STAGE_IMG_HEIGHT: f32 = 35.0;

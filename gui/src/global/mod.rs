@@ -1,7 +1,6 @@
 pub mod name_box;
 pub mod stat_grid;
 pub mod shared;
-pub mod context;
 pub mod sheet;
 pub mod img015;
 pub mod img022;

@@ -1,7 +1,10 @@
 use std::fs;
 use std::path::Path;
+
 use eframe::egui;
+
 use core::settings::logic::keys::UserKeys;
+
 use crate::global::shared::DragGuard;
 
 const COLUMN_REGION_WIDTH: f32 = 40.0;

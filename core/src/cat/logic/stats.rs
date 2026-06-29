@@ -1,9 +1,10 @@
 use nyanko::cat::unit::{Battle, LevelCurve};
-pub use crate::cat::data::unitid::load_from_id;
-pub use crate::cat::data::unitid::ICON_SIZE;
+pub use crate::cat::waiter::unitid;
 
 use nyanko::cat::unit::Talent;
 use std::collections::HashMap;
+
+
 
 pub fn apply_level(base_stats: &Battle, curve: Option<&LevelCurve>, level: i32) -> Battle {
     let mut s = base_stats.clone();

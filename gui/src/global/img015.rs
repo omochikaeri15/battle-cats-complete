@@ -1,7 +1,9 @@
 use eframe::egui;
+
 use core::global::io::paths;
 use core::global::resolver;
 use core::settings::logic::state::Settings;
+
 use crate::global::sheet::GuiSpriteSheet;
 
 pub fn ensure_loaded(ctx: &egui::Context, sheets: &mut Vec<GuiSpriteSheet>, settings: &Settings) {

@@ -1,11 +1,13 @@
-use eframe::egui;
 use std::sync::atomic::Ordering;
+
+use eframe::egui;
+
 use core::settings::logic::state::{GeneralSettings, RuntimeState};
 use core::settings::logic::{lang, nightly, upd::UpdateMode};
-use super::tabs::toggle_ui;
-
 #[cfg(target_os = "linux")]
 use core::settings::logic::desktop;
+
+use super::tabs::toggle_ui;
 
 #[cfg(target_os = "linux")]
 #[derive(Clone, Copy, PartialEq)]

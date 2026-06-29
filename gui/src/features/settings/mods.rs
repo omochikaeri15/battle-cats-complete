@@ -1,7 +1,9 @@
 use eframe::egui;
 use tracing::{debug, trace};
+
+use core::settings::logic::state::{ExportBehavior, ModsSettings};
+
 use crate::global::shared::DragGuard;
-use core::settings::logic::state::{ModsSettings, ExportBehavior};
 
 pub fn show(ui_container: &mut egui::Ui, settings: &mut ModsSettings, drag_guard: &mut DragGuard) -> bool {
     let context = ui_container.ctx().clone();

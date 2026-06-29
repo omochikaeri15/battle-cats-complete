@@ -1,8 +1,10 @@
 use eframe::egui;
-use core::cat::logic::scanner::CatEntry;
 use nyanko::cat::unit::Battle;
+
+use core::cat::logic::scanner::CatEntry;
+use core::cat::registry::{format_cat_stat, get_cat_stat};
+
 use crate::global::stat_grid::{grid_cell, grid_cell_custom, render_frames};
-use core::cat::registry::{get_cat_stat, format_cat_stat};
 
 pub fn render(
     ui: &mut egui::Ui,

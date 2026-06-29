@@ -1,7 +1,8 @@
 use eframe::egui;
+
 use core::settings::logic::Settings;
-use crate::features::mods::state::ModListState;
-use super::{details, import};
+
+use super::{details, import, state::ModListState};
 
 pub fn show(ctx: &egui::Context, state: &mut ModListState, settings: &mut Settings) {
     let mut list = state.list.take().unwrap_or_default();

@@ -1,16 +1,15 @@
-use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::Path;
+
 use eframe::egui;
+use serde::{Deserialize, Serialize};
 
 use core::data::state::DataConfigState;
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ImportState {
-    pub config: DataConfigState, // The core logic wrapper
-
-    // UI Elements
+    pub config: DataConfigState,
     #[serde(skip)] pub import_censored: String,
     #[serde(skip)] pub decrypt_censored: String,
 }

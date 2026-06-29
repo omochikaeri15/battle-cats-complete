@@ -1,4 +1,5 @@
 use eframe::egui;
+
 use core::global::utils::strip_markdown;
 
 pub fn process_markdown(ui: &mut egui::Ui, raw_text: &str) {

@@ -1,7 +1,8 @@
 use eframe::egui;
 use serde::{Deserialize, Serialize};
-use crate::global::utils::process_markdown;
+
 use crate::global::shared::DragGuard;
+use crate::global::utils::process_markdown;
 
 // Note: No notice will appear if NOTICE_CONTENT is empty
 pub const NOTICE_TITLE: &str = "NOTICE";

@@ -1,11 +1,13 @@
+use std::fs;
+use std::process::Command;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-use std::fs;
-use self_update::cargo_crate_version;
-use eframe::egui;
-use std::process::Command;
 
-use core::settings::logic::{Settings, upd::UpdateMode};
+use eframe::egui;
+use self_update::cargo_crate_version;
+
+use core::settings::logic::{upd::UpdateMode, Settings};
+
 use crate::global::shared::DragGuard;
 
 const REPO_OWNER: &str = "omochikaeri15";

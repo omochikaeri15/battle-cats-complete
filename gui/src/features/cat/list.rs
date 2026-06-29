@@ -1,13 +1,14 @@
-use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
+
+use eframe::egui;
 use image::imageops;
 
-use core::cat::logic::scanner::CatEntry;
 use core::cat::logic::filter::{entity_passes_filter, CatFilterState};
+use core::cat::logic::scanner::CatEntry;
 
 struct LoadedImage {
     id: u32,

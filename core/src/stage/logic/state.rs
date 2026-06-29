@@ -8,11 +8,12 @@ use crate::stage::registry::StageRegistry;
 use crate::enemy::logic::scanner::EnemyEntry;
 use crate::stage::data::drop_chara;
 use crate::stage::data::{lockskipdata, scatcpusetting};
-use crate::cat::data::unitbuy;
+use crate::cat::waiter::unitbuy;
 use nyanko::cat::unit::UnitBuy;
 use crate::global::formats::gatyaitembuy::{self, GatyaItemBuy};
 use crate::global::formats::gatyaitemname::{self, GatyaItemName};
 use crate::stage::logic::loader;
+use crate::enemy::waiter::enemyname;
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -43,7 +44,7 @@ impl StageDataState {
         let lang_priority = &scanner_configuration.language_priority;
 
         let enemies_directory_path = Path::new("game/enemies");
-        self.enemy_name_registry = crate::enemy::data::enemyname::load(
+        self.enemy_name_registry = enemyname(
             enemies_directory_path,
             lang_priority
         );
@@ -75,7 +76,7 @@ impl StageDataState {
         self.scat_cpu_setting = load_stage_file!(scatcpusetting, "ScatCPUsetting.csv");
 
         let cats_directory_path = Path::new("game/cats");
-        self.unit_buy_registry = unitbuy::load_unitbuy(
+        self.unit_buy_registry = unitbuy(
             cats_directory_path,
             lang_priority
         );

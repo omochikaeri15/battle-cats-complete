@@ -1,5 +1,7 @@
 use eframe::egui;
 
+pub const ICON_SIZE: f32 = 40.0;
+
 pub fn paint_fallback_at(ui: &mut egui::Ui, rect: egui::Rect, text: &str, border_color: egui::Color32) {
     if !ui.is_rect_visible(rect) { return; }
 

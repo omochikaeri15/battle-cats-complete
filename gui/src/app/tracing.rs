@@ -1,8 +1,9 @@
-use directories::BaseDirs;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use directories::BaseDirs;
 use tracing_subscriber::{fmt, EnvFilter};
 
 fn find_override_file(cwd: &Path, names: &[&str]) -> Option<PathBuf> {

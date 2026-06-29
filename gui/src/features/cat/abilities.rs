@@ -1,15 +1,17 @@
 use eframe::egui;
-use core::cat::logic::scanner::CatEntry;
-use core::cat::logic::stats;
-use core::cat::logic::abilities;
-use crate::global::sheet::GuiSpriteSheet;
-use crate::global::shared::{render_fallback_icon, text_with_superscript};
-use core::global::game::abilities::{ABILITY_X, ABILITY_Y, TRAIT_Y};
-use core::global::game::abilities::{AbilityItem, CustomIcon};
-use core::cat::registry::AbilityIcon;
 use nyanko::common::img015;
+
+use core::cat::logic::abilities;
 use core::cat::logic::context::CatRenderContext;
+use core::cat::logic::scanner::CatEntry;
+use core::cat::registry::AbilityIcon;
+use core::global::game::abilities::{
+    AbilityItem, CustomIcon, ABILITY_X, ABILITY_Y, TRAIT_Y,
+};
+
 use crate::global::assets::CustomAssets;
+use crate::global::shared::{render_fallback_icon, text_with_superscript, ICON_SIZE};
+use crate::global::sheet::GuiSpriteSheet;
 
 pub fn render(
     ui: &mut egui::Ui, 
@@ -88,7 +90,7 @@ fn render_single_icon(
     border: egui::Color32,
     assets: &crate::global::assets::CustomAssets,
 ) -> egui::Response {
-    let size = egui::vec2(stats::ICON_SIZE, stats::ICON_SIZE);
+    let size = egui::vec2(ICON_SIZE, ICON_SIZE);
 
     // Try Custom Icon first
     if let Some(tex) = assets.get_icon_texture(item.custom_icon) {

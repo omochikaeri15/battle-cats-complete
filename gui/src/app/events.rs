@@ -1,15 +1,17 @@
-use eframe::egui;
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 
-use crate::app::BattleCatsApp;
-use crate::global::watcher::GuiWatcher;
-use core::global::resolver;
+use eframe::egui;
 
 use core::cat::logic::loader as cat_loader;
 use core::cat::{paths as cat_paths, patterns as cat_patterns};
 use core::enemy::logic::loader as enemy_loader;
+use core::global::resolver;
+
+use crate::global::watcher::GuiWatcher;
+
+use super::BattleCatsApp;
 
 impl BattleCatsApp {
     pub fn process_file_events(&mut self, ctx: &egui::Context) {

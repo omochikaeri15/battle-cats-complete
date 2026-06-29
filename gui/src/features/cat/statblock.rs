@@ -1,9 +1,11 @@
-use core::cat::logic::scanner::CatEntry;
-use core::cat::registry::{get_cat_stat, format_cat_stat};
 use core::cat::logic::abilities::collect_ability_data;
 use core::cat::logic::context::CatRenderContext;
+use core::cat::logic::scanner::CatEntry;
+use core::cat::registry::{format_cat_stat, get_cat_stat};
 use core::settings::logic::Settings;
-use crate::features::statblock::builder::{StatblockData, StatCell};
+
+use crate::features::statblock::builder::{StatCell, StatblockData};
+
 use super::conjure::build_spirit_data;
 
 pub fn build_cat_statblock(

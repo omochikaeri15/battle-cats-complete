@@ -1,18 +1,21 @@
 use eframe::egui;
+
 use core::global::context::GlobalContext;
-use crate::app::BattleCatsApp;
-
-use crate::features::home;
-use crate::features::cat::state::show as show_cats;
-use crate::features::enemy::state::show as show_enemies;
-use crate::features::stage::master::show as show_stages;
-use crate::features::mods::frame::show as show_mods;
-use crate::features::data::manager::show as show_data;
-use crate::features::settings::show as show_settings;
-
 // START | Nightly
 use core::settings::logic::nightly::NIGHTLY_FEATURES_ACTIVE;
 //  END  | Nightly
+
+use crate::features::cat::state::show as show_cats;
+use crate::features::data::manager::show as show_data;
+use crate::features::enemy::state::show as show_enemies;
+use crate::features::home;
+use crate::features::mods::frame::show as show_mods;
+use crate::features::settings::show as show_settings;
+use crate::features::stage::master::show as show_stages;
+
+use super::BattleCatsApp;
+
+
 
 #[derive(PartialEq, Clone, Copy, serde::Deserialize, serde::Serialize)]
 pub enum Page {

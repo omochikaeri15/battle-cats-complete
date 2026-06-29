@@ -1,5 +1,7 @@
 use eframe::egui;
+
 use core::settings::logic::state::EnemyDataSettings;
+
 use super::tabs::toggle_ui;
 
 pub fn show(ui: &mut egui::Ui, settings: &mut EnemyDataSettings) -> bool {

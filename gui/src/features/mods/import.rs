@@ -1,11 +1,14 @@
-use eframe::egui;
 use std::path::PathBuf;
-use core::mods::logic::state::ModPackType;
-use crate::features::mods::state::ModListState;
-use core::settings::logic::Settings;
-use core::data::state::ImportSubTab;
+
+use eframe::egui;
+
 use core::addons::toolpaths::{self, Presence};
+use core::data::state::ImportSubTab;
 use core::mods::logic::manager;
+use core::mods::logic::state::ModPackType;
+use core::settings::logic::Settings;
+
+use super::state::ModListState;
 
 const PACKAGE_INPUT_PADDING: f32 = 5.0;
 

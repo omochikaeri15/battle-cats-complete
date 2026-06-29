@@ -1,8 +1,9 @@
 use eframe::egui;
-use crate::features::stage::state::StageListState;
-use core::settings::logic::Settings;
+
 use core::global::context::GlobalContext;
-use super::{list, view};
+use core::settings::logic::Settings;
+
+use super::{list, state::StageListState, view};
 
 const ANIM_SPEED: f32 = 0.15;
 const TOGGLE_BTN_GAP: f32 = 5.0;

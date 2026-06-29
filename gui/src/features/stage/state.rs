@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
-use core::stage::logic::state::StageDataState;
 use core::enemy::logic::scanner::EnemyEntry;
+use core::stage::logic::state::StageDataState;
 
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]

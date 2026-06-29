@@ -1,7 +1,9 @@
 use eframe::egui;
+
 use core::enemy::logic::scanner::EnemyEntry;
+use core::enemy::registry::{format_enemy_stat, get_enemy_stat, Magnification};
+
 use crate::global::stat_grid::{grid_cell, grid_cell_custom, render_frames};
-use core::enemy::registry::{get_enemy_stat, format_enemy_stat, Magnification};
 
 pub fn render(ui: &mut egui::Ui, enemy: &EnemyEntry, magnification: Magnification) {
     let stats = &enemy.stats;

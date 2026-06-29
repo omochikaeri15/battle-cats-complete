@@ -1,11 +1,12 @@
 use std::collections::HashMap;
-use image::{RgbaImage, Rgba};
+
 use ab_glyph::PxScale;
+use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
 use imageproc::rect::Rect;
 
-use core::global::game::abilities::{AbilityItem, CustomIcon};
 use core::global::formats::imgcut::SpriteCut;
+use core::global::game::abilities::{AbilityItem, CustomIcon};
 
 pub const SUPERSCRIPT_SCALE: f32 = 0.75;
 pub const SUPERSCRIPT_OFFSET_Y: f32 = 0.0;

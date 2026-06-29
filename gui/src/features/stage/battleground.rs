@@ -1,14 +1,15 @@
-use std::path::Path;
 use std::collections::HashMap;
-use eframe::egui;
-use tracing::{debug, warn, instrument};
+use std::path::Path;
 
-use core::stage::data::stage::{BossType, EnemyAmount};
-use core::global::utils::autocrop;
-use core::stage::registry::{Stage, Map};
+use eframe::egui;
+use tracing::{debug, instrument, warn};
+
 use core::enemy::logic::scanner::EnemyEntry;
 use core::global::context::GlobalContext;
+use core::global::utils::autocrop;
 use core::stage::data::specialrulesmap::{RuleType, SpecialRule};
+use core::stage::data::stage::{BossType, EnemyAmount};
+use core::stage::registry::{Map, Stage};
 
 use super::treasure::center_header;
 

@@ -1,16 +1,21 @@
-use eframe::egui;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nyanko::graphics::animation::{Unit, Anim};
-use core::animation::logic::canvas::GlowRenderer;
+use eframe::egui;
+use nyanko::graphics::animation::{Anim, Unit};
 
-use core::animation::logic::constants::{IDX_NONE, IDX_MODEL, IDX_SPIRIT, IDX_WALK, IDX_IDLE, IDX_ATTACK, IDX_KB, IDX_BURROW, IDX_SURFACE};
-use core::animation::export::state::{ExporterState, ExportMode};
+use core::animation::export::state::{ExportMode, ExporterState};
+use core::animation::logic::canvas::GlowRenderer;
+use core::animation::logic::constants::{
+    IDX_ATTACK, IDX_BURROW, IDX_IDLE, IDX_KB, IDX_MODEL, IDX_NONE, IDX_SPIRIT,
+    IDX_SURFACE, IDX_WALK,
+};
 use core::settings::logic::state::Settings;
-use crate::features::animation::{process, canvas, controls, export};
-use crate::features::animation::controls::render_controls_overlay;
+
 use crate::global::shared::DragGuard;
+
+use super::controls::render_controls_overlay;
+use super::{canvas, controls, export, process};
 
 pub struct AnimViewer {
     pub zoom_level: f32,

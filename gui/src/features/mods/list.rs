@@ -1,12 +1,13 @@
-use eframe::egui;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+
+use eframe::egui;
 use image::imageops;
 
-use core::settings::logic::Settings;
 use core::mods::logic::state::ModDataState;
+use core::settings::logic::Settings;
 
 const TOP_PANEL_PADDING: f32 = 2.5;
 const SEARCH_FILTER_GAP: f32 = 5.0;

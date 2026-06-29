@@ -1,7 +1,8 @@
-use eframe::egui;
 use std::sync::{Arc, Mutex};
 
-use nyanko::graphics::animation::{Unit, Anim, resolve_frame};
+use eframe::egui;
+use nyanko::graphics::animation::{resolve_frame, Anim, Unit};
+
 use core::animation::logic::canvas::GlowRenderer;
 
 pub fn paint(

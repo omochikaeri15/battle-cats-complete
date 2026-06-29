@@ -1,19 +1,21 @@
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
-use std::fs;
 use std::collections::HashMap;
-use image::{RgbaImage, Rgba};
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use ab_glyph::{Font, FontRef, PxScale};
-use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
-use imageproc::rect::Rect;
 use arboard::{Clipboard, ImageData};
 use eframe::egui;
+use image::{Rgba, RgbaImage};
+use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size};
+use imageproc::rect::Rect;
 use nyanko::common::img015;
 
-use core::global::utils::autocrop;
-use core::global::formats::imgcut::SpriteCut;
-use core::global::game::abilities::{CustomIcon, AbilityItem, ABILITY_X, ABILITY_Y, TRAIT_Y};
 use core::global::assets;
+use core::global::formats::imgcut::SpriteCut;
+use core::global::game::abilities::{AbilityItem, CustomIcon, ABILITY_X, ABILITY_Y, TRAIT_Y};
+use core::global::utils::autocrop;
+
 use crate::features::statblock::draw::*;
 
 #[derive(Clone)]

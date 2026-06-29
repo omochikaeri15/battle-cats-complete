@@ -1,16 +1,15 @@
-use eframe::egui;
 use std::collections::HashSet;
 
-use crate::global::sheet::GuiSpriteSheet;
-use crate::global::assets::CustomAssets;
-use crate::global::shared::DragGuard;
-use core::cat::registry::{DisplayGroup, AbilityIcon};
-use core::settings::logic::Settings;
-
+use eframe::egui;
 use nyanko::cat::abilities::REGISTRY;
 
-pub use core::cat::logic::filter::{CatFilterState, MatchMode, TalentFilterMode};
-use core::cat::logic::filter::ATTACK_TYPE_ICONS;
+use core::cat::logic::filter::{ATTACK_TYPE_ICONS, CatFilterState, MatchMode, TalentFilterMode};
+use core::cat::registry::{AbilityIcon, DisplayGroup};
+use core::settings::logic::Settings;
+
+use crate::global::assets::CustomAssets;
+use crate::global::shared::DragGuard;
+use crate::global::sheet::GuiSpriteSheet;
 
 pub const WINDOW_WIDTH: f32 = 500.0;
 pub const WINDOW_HEIGHT: f32 = 580.0;

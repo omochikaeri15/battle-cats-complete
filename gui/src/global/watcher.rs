@@ -1,10 +1,11 @@
-use eframe::egui;
-use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use eframe::egui;
+use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct GuiWatcher {
     _watcher: RecommendedWatcher,

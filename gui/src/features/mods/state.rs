@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use core::mods::logic::state::ModDataState;
+
 use crate::global::shared::DragGuard;
-use crate::features::mods::list::ModList;
+
+use super::list::ModList;
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]

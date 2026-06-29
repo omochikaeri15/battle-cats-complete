@@ -1,5 +1,7 @@
-use eframe::egui;
 use std::path::Path;
+
+use eframe::egui;
+
 use core::global::formats::imgcut::SpriteSheet;
 
 #[derive(Default, Clone)]

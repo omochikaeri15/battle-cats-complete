@@ -1,10 +1,12 @@
 use eframe::egui;
-use core::mods::logic::state::ExportType;
-use crate::features::mods::state::ModListState;
+
 use core::global::region::Region;
-use core::settings::logic::Settings;
+use core::mods::export::{apk, pack, patch};
 use core::mods::logic::metadata;
-use core::mods::export::{patch, apk, pack};
+use core::mods::logic::state::ExportType;
+use core::settings::logic::Settings;
+
+use super::state::ModListState;
 
 pub fn show(context: &egui::Context, state: &mut ModListState, settings: &Settings) {
     let mut is_open = state.data.export.is_open;

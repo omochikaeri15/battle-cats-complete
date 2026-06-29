@@ -1,21 +1,26 @@
-use eframe::egui;
 use std::collections::HashMap;
 use std::sync::Arc;
-use core::cat::logic::scanner::CatEntry;
-use crate::features::cat::header::DetailTab;
-use crate::global::sheet::GuiSpriteSheet;
-use nyanko::graphics::animation::Unit;
-use core::settings::logic::Settings;
-use crate::features::animation::viewer::AnimViewer;
+
+use eframe::egui;
 use nyanko::cat::unit::TalentCost;
-use crate::global::assets::CustomAssets;
-use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
-use super::{header, stats, abilities, talents, details, viewer};
-use super::header::ExportAction;
-use crate::features::cat::statblock::build_cat_statblock;
-use core::global::context::GlobalContext;
+use nyanko::graphics::animation::Unit;
+
 use core::cat::logic::context::CatRenderContext;
+use core::cat::logic::scanner::CatEntry;
+use core::cat::logic::state::DetailTab;
+use core::cat::waiter::unitid;
+use core::global::context::GlobalContext;
+use core::settings::logic::Settings;
+
+use crate::features::animation::viewer::AnimViewer;
+use crate::features::cat::statblock::build_cat_statblock;
+use crate::features::statblock::builder::{generate_and_copy, generate_and_save};
+use crate::global::assets::CustomAssets;
 use crate::global::shared::DragGuard;
+use crate::global::sheet::GuiSpriteSheet;
+
+use super::{abilities, details, header, stats, talents, viewer};
+use super::header::ExportAction;
 
 pub fn show(
     ctx: &egui::Context,
@@ -49,7 +54,7 @@ pub fn show(
         ctx, ui, cat_entry, current_form, current_tab, current_level, level_input, texture_cache, current_key, settings, talent_levels, talent_costs, img022_sheets
     );
 
-    let dynamic_stats = core::cat::logic::stats::load_from_id(cat_entry.id as i32, &settings.general.language_priority);
+    let dynamic_stats = unitid(cat_entry.id as i32, &settings.general.language_priority);
     let base_stats = dynamic_stats.as_ref().and_then(|v| v.get(*current_form));
     let form_allows_talents = *current_form >= 2;
 

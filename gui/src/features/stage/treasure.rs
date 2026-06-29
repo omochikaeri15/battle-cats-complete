@@ -1,14 +1,15 @@
-use eframe::egui;
 use std::collections::HashMap;
 use std::path::Path;
 
-use core::stage::registry::Stage;
-use core::stage::data::mapstagedata::RewardStructure;
+use eframe::egui;
 use nyanko::cat::unit::UnitBuy;
+
 use core::global::formats::gatyaitembuy::GatyaItemBuy;
 use core::global::formats::gatyaitemname::GatyaItemName;
-use core::stage::logic::treasure as treasure_logic; // Pure core logic
 use core::global::utils::autocrop;
+use core::stage::data::mapstagedata::RewardStructure;
+use core::stage::logic::treasure;
+use core::stage::registry::Stage;
 
 // --- FORMATTERS & UTILS ---
 
@@ -105,7 +106,7 @@ pub fn draw(
                     grid.end_row();
 
                     for drop_data in valid_drops_array {
-                        let drop_info = treasure_logic::resolve_drop(
+                        let drop_info = treasure::resolve_drop(
                             drop_data.id,
                             drop_data.amount,
                             item_buy_registry,
@@ -169,7 +170,7 @@ pub fn draw(
                     grid.end_row();
 
                     for score_data in timed_scores {
-                        let drop_info = treasure_logic::resolve_drop(
+                        let drop_info = treasure::resolve_drop(
                             score_data.id,
                             score_data.amount,
                             item_buy_registry,

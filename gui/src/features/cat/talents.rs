@@ -1,15 +1,18 @@
-use eframe::egui;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use crate::global::sheet::GuiSpriteSheet;
-use core::global::utils::autocrop;
-use core::settings::logic::Settings;
-use nyanko::cat::unit::{Battle, LevelCurve, TalentCost,Talent, TalentGroup};
+
+use eframe::egui;
+use nyanko::cat::abilities::get_talent;
+use nyanko::cat::unit::{Battle, LevelCurve, Talent, TalentCost, TalentGroup};
+
 use core::cat::logic::talents;
 use core::cat::paths;
-use nyanko::cat::abilities::get_talent;
-use crate::global::shared::render_fallback_icon;
+use core::global::utils::autocrop;
+use core::settings::logic::Settings;
+
 use crate::global::assets::CustomAssets;
+use crate::global::shared::render_fallback_icon;
+use crate::global::sheet::GuiSpriteSheet;
 
 pub const TALENT_NP_ICON_SIZE: f32 = 20.0;
 pub const TALENT_NP_TEXT_SIZE: f32 = 18.0;

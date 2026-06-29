@@ -1,7 +1,9 @@
 use eframe::egui;
-use crate::features::stage::state::StageListState;
-use core::global::context::GlobalContext;
 use tracing::warn;
+
+use core::global::context::GlobalContext;
+
+use super::state::StageListState;
 
 pub fn draw(ctx: &egui::Context, ui: &mut egui::Ui, state: &mut StageListState, global_ctx: GlobalContext) {
     let Some(stage_id) = &state.data.selected_stage else {

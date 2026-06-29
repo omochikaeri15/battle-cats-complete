@@ -1,13 +1,17 @@
-use eframe::egui;
 use std::path::Path;
-use core::global::assets;
-use core::global::io::json;
-use core::global::game::param::load_param;
-use crate::updater;
-use core::settings::logic::{lang, upd::UpdateMode};
-use crate::app::BattleCatsApp;
+
+use eframe::egui;
+
 use core::cat::paths as cat_paths;
-use core::cat::data::{skilllevel, skilldescriptions};
+use core::cat::waiter::{skilldescriptions, skilllevel};
+use core::global::assets;
+use core::global::game::param::load_param;
+use core::global::io::json;
+use core::settings::logic::{lang, upd::UpdateMode};
+
+use crate::updater;
+
+use super::BattleCatsApp;
 
 impl BattleCatsApp {
     pub fn new(creation_context: &eframe::CreationContext<'_>) -> Self {
@@ -45,8 +49,8 @@ impl BattleCatsApp {
             expected_hash = hash;
             needs_validation = true;
             let cats_directory = Path::new(cat_paths::DIR_CATS);
-            let costs_arc = std::sync::Arc::new(skilllevel::load(cats_directory, priority));
-            let descriptions_arc = std::sync::Arc::new(skilldescriptions::load(cats_directory, priority));
+            let costs_arc = std::sync::Arc::new(skilllevel(cats_directory, priority));
+            let descriptions_arc = std::sync::Arc::new(skilldescriptions(cats_directory, priority));
 
             app.cat_list_state.data.cats = cached_cats.into_iter().map(|mut cat| {
                 cat.talent_costs = std::sync::Arc::clone(&costs_arc);

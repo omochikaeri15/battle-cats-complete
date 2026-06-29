@@ -1,9 +1,12 @@
 use std::fs;
 use std::path::Path;
+
 use eframe::egui;
 
-use core::settings::logic::exceptions::{ExceptionRule, ExceptionList, RuleHandling};
+use core::settings::logic::exceptions::{ExceptionList, ExceptionRule, RuleHandling};
+
 use crate::global::shared::DragGuard;
+
 use super::tabs::toggle_ui;
 
 const COLUMN_PATTERN_WIDTH: f32 = 210.0;
