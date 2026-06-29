@@ -308,12 +308,12 @@ pub fn get_display_def(identity: Identity) -> EnemyAbilityDisplayDef {
             group: DisplayGroup::Headline1,
             formatter: |_,_,_,_,param| fmt_sage(param),
         },
-        Identity::TypeSupervillain => EnemyAbilityDisplayDef {
-            name: "Supervillain",
+        Identity::TypeKaijin => EnemyAbilityDisplayDef {
+            name: "Kaijin",
             fallback: "Villn",
             icon: AbilityIcon::Standard(img015::ICON_SUPERVILLIAN),
             group: DisplayGroup::Headline1,
-            formatter: |_,_,_,_,_| "Supervillain Enemy".into(),
+            formatter: |_,_,_,_,_| "Kaijin Enemy".into(),
         },
         Identity::TypeWitch => EnemyAbilityDisplayDef {
             name: "Witch",
