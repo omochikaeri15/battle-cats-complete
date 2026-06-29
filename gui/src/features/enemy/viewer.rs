@@ -20,7 +20,7 @@ pub fn show(
     ctx: &egui::Context,
     enemy_entry: &EnemyEntry,
     anim_viewer: &mut AnimViewer,
-    unit_sync: &mut Option<Arc<Unit>>, // Waiter Pattern Bridge
+    unit_sync: &mut Option<Arc<Unit>>,
     settings: &mut Settings,
     drag_guard: &mut DragGuard,
 ) {
