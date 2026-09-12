@@ -1,5 +1,5 @@
 # Battle Cats Complete
-An all-in-one desktop toolkit for The Battle Cats. BCC is a passion project and hobby.
+An all-in-one desktop toolkit for The Battle Cats. This app is a passion project and hobby.
 
 ## Usage
 To use BCC, you must provide game files for it to read. These files are not included in the app or repository; they must be obtained through your own personal and legal means.
