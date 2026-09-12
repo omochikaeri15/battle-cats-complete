@@ -17,7 +17,7 @@ Because BCC is not signed with a paid certificate, your OS may flag it on the fi
 >
 > To start the app, click **More info**, then click **Run anyway**.
 
-> [MacOS]
+> #### MacOS
 >
 > You may see an error saying **"App is damaged and can't be opened"** or **"Unidentified Developer"** (Gatekeeper).
 >

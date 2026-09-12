@@ -41,7 +41,7 @@ CHANGELOG.md
 # IDE Settings
 .vscode/
 .idea/
-*.swp
+*swp
 
 # OS Junk
 .DS_Store
