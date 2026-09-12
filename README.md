@@ -12,11 +12,13 @@ BCC requires two additional third-party resources to unlock full functionality. 
 Because BCC is not signed with a paid certificate, your OS may flag it on the first run:
 
 > [Windows]
+>
 > You may see a blue popup saying **"Windows protected your PC"** (Microsoft Defender SmartScreen).
 >
 > To start the app, click **More info**, then click **Run anyway**.
 
 > [MacOS]
+>
 > You may see an error saying **"App is damaged and can't be opened"** or **"Unidentified Developer"** (Gatekeeper).
 >
 > To fix this, type the following command in Terminal: `xattr -cr`, then drag the app binary into the terminal window to auto-fill the path.
