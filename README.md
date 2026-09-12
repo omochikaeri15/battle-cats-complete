@@ -1,22 +1,22 @@
 # Battle Cats Complete
-An all-in-one desktop toolkit for The Battle Cats. This app is a hobby and passion project.
+An all-in-one desktop toolkit for The Battle Cats. BCC is a passion project and hobby.
 
 ## Usage
-To use this app, you must provide game files for it to read. These files are not included in the app or repository; they must be obtained through your own personal and legal means.
+To use BCC, you must provide game files for it to read. These files are not included in the app or repository; they must be obtained through your own personal and legal means.
 
 ### Setup
-Requires two additional third-party resources to unlock full functionality. Without these, the apps capabilities are limited:
+BCC requires two additional third-party resources to unlock full functionality. Without these, the apps capabilities are limited:
 - Rooted Android device/emulator that is not Bluestacks and can run The Battle Cats.
 - Legally obtained Decryption Keys and Initialization Vectors for every region.
 
-Because this app is not signed with a paid certificate, your OS may flag it on the first run.
+Because BCC is not signed with a paid certificate, your OS may flag it on the first run:
 
-#### Windows
+> [Windows]
 > You may see a blue popup saying **"Windows protected your PC"** (Microsoft Defender SmartScreen).
 >
 > To start the app, click **More info**, then click **Run anyway**.
 
-#### MacOS
+> [MacOS]
 > You may see an error saying **"App is damaged and can't be opened"** or **"Unidentified Developer"** (Gatekeeper).
 >
 > To fix this, type the following command in Terminal: `xattr -cr`, then drag the app binary into the terminal window to auto-fill the path.
