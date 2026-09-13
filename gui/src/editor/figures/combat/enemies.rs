@@ -42,16 +42,16 @@ pub(in crate::editor::figures) fn rule(field: &str) -> Option<Rule> {
         "hitpoints" | "knockbacks" | "speed" | "attack_1_damage" | "attack_cooldown" | "time_until_attack_1"
         | "freeze_duration" | "slow_duration" | "weaken_duration" | "attack_2_damage" | "attack_3_damage"
         | "time_until_attack_2" | "time_until_attack_3" | "warp_duration" | "curse_duration"
-        | "dodge_duration" => Some(Rule::Floor(0)),
+        | "dodge_duration" | "wave_level" | "surge_level" | "death_surge_level" => Some(Rule::Floor(0)),
 
         "attack_count_total" | "time_before_death" | "spawn_animation_type" | "soul_animation_type" => Some(Rule::Floor(-1)),
 
-        "standing_range" | "cash_drop" | "hitbox_position" | "hitbox_width" | "wave_level"
+        "standing_range" | "cash_drop" | "hitbox_position" | "hitbox_width"
         | "strengthen_boost" | "long_distance_1_anchor" | "long_distance_1_span" | "burrow_amount"
         | "burrow_distance" | "revive_count" | "revive_time" | "revive_hp" | "barrier_hitpoints"
         | "warp_distance_anchor" | "warp_distance_span" | "savage_blow_boost" | "toxic_damage"
-        | "surge_spawn_anchor" | "surge_spawn_span" | "surge_level" | "shield_hitpoints" | "shield_regen"
-        | "death_surge_spawn_anchor" | "death_surge_spawn_span" | "death_surge_level"
+        | "surge_spawn_anchor" | "surge_spawn_span" | "shield_hitpoints" | "shield_regen"
+        | "death_surge_spawn_anchor" | "death_surge_spawn_span"
         | "long_distance_2_anchor" | "long_distance_2_span" | "long_distance_3_anchor"
         | "long_distance_3_span" | "explosion_spawn_anchor" | "explosion_spawn_span" => Some(Rule::Plain),
 

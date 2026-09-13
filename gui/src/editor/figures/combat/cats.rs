@@ -37,14 +37,14 @@ pub(in crate::editor::figures) fn rule(field: &str) -> Option<Rule> {
         "hitpoints" | "knockbacks" | "speed" | "attack_1_damage" | "attack_cooldown"
         | "time_until_attack_1" | "freeze_duration" | "slow_duration" | "weaken_duration" | "attack_2_damage"
         | "attack_3_damage" | "time_until_attack_2" | "time_until_attack_3" | "warp_duration" | "dodge_duration"
-        | "curse_duration" | "behemoth_dodge_duration" => Some(Rule::Floor(0)),
+        | "curse_duration" | "behemoth_dodge_duration" | "wave_level" | "surge_level" => Some(Rule::Floor(0)),
 
         "attack_count_total" | "time_before_death" | "spawn_animation_type" | "soul_animation_type" => Some(Rule::Floor(-1)),
 
         "standing_range" | "eoc1_cost" | "hitbox_position" | "hitbox_width" | "minimum_z_layer"
-        | "maximum_z_layer" | "wave_level" | "strengthen_boost" | "long_distance_1_anchor"
+        | "maximum_z_layer" | "strengthen_boost" | "long_distance_1_anchor"
         | "long_distance_1_span" | "warp_distance_anchor" | "warp_distance_span" | "savage_blow_boost"
-        | "surge_spawn_anchor" | "surge_spawn_span" | "surge_level" | "long_distance_2_anchor"
+        | "surge_spawn_anchor" | "surge_spawn_span" | "long_distance_2_anchor"
         | "long_distance_2_span" | "long_distance_3_anchor" | "long_distance_3_span" | "conjure_unit_id"
         | "explosion_spawn_anchor" | "explosion_spawn_span" => Some(Rule::Plain),
 
