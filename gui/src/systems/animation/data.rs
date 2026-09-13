@@ -270,6 +270,25 @@ impl State {
         }
     }
 
+    pub fn selected_slot(&self) -> Option<usize> {
+        let index = self.selected?;
+
+        self.slots.iter().position(|seat| *seat == Some(index))
+    }
+
+    fn landing(&self, slot: usize) -> Option<usize> {
+        (0..=slot)
+            .rev()
+            .find_map(|at| self.slots.get(at).copied().flatten())
+            .or_else(|| self.clips.iter().position(|clip| clip.anim.is_none()))
+    }
+
+    pub fn select_slot(&mut self, slot: usize) {
+        if let Some(index) = self.landing(slot) {
+            self.select(index);
+        }
+    }
+
     pub fn select(&mut self, index: usize) {
         if self.selected == Some(index) || index >= self.clips.len() {
             return;
@@ -341,21 +360,6 @@ impl State {
         self.loaded_rig.clear();
         self.failed_rig.clear();
         self.cache.clear();
-    }
-
-    pub fn holds(&self, key: &str) -> bool {
-        self.set_key == key
-    }
-
-    pub fn shed_rig(&mut self) {
-        self.held_unit = None;
-        self.current_anim = None;
-        self.loaded_rig.clear();
-        self.failed_rig.clear();
-        self.loaded_clip = None;
-        self.bounds = None;
-        self.measured = None;
-        self.mapped.replace(None);
     }
 
     pub fn reset_display(&mut self) {
@@ -878,6 +882,43 @@ mod tests {
 
     fn model() -> Request {
         Request { slot: Some(SLOT_MODEL), trailing: true }
+    }
+
+    // Switching rigs in Studio keeps the button the user was on. A rig that has no clip
+    // on that button walks back down the row rather than jumping to the first one.
+    #[test]
+    fn a_carried_button_degrades_one_slot_at_a_time() {
+        let held = State {
+            slots: place(&[at(0), at(3), model()]),
+            clips: vec![clip(None, Some("a.maanim")), clip(None, Some("b.maanim")), clip(None, None)],
+            ..State::default()
+        };
+
+        assert_eq!(held.landing(3), Some(1), "the rig has that button");
+        assert_eq!(held.landing(2), Some(0), "a vacant button walks back down the row");
+        assert_eq!(held.landing(6), Some(1), "and keeps walking past a run of them");
+    }
+
+    #[test]
+    fn a_row_with_nothing_below_falls_back_to_the_model() {
+        let held = State {
+            slots: vec![None, None, None],
+            clips: vec![clip(None, Some("a.maanim")), clip(None, None)],
+            ..State::default()
+        };
+
+        assert_eq!(held.landing(2), Some(1), "the model is the last resort");
+    }
+
+    #[test]
+    fn a_selected_button_reads_back_as_its_slot_not_its_clip() {
+        let mut held = State { slots: vec![None, Some(7), Some(2)], selected: Some(2), ..State::default() };
+
+        assert_eq!(held.selected_slot(), Some(2));
+
+        held.selected = Some(7);
+
+        assert_eq!(held.selected_slot(), Some(1));
     }
 
     #[test]

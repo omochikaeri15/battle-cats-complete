@@ -212,10 +212,6 @@ impl State {
     }
 
     pub fn preload(&mut self, key: &str, build: impl FnOnce() -> ClipSet, anim_state: &AnimState) -> Task<Message> {
-        if !self.data.holds(key) {
-            self.data.shed_rig();
-        }
-
         self.adopt_camera(anim_state);
         self.data.restore_offset(anim_state.placement);
         Self::preload_task(self.data.preload_request(key, build))
@@ -223,10 +219,6 @@ impl State {
 
     fn preload_task(request: Option<data::PreloadRequest>) -> Task<Message> {
         request.map_or_else(Task::none, |request| Task::perform(smol::unblock(move || request.run()), Message::Preloaded))
-    }
-
-    pub fn shed(&mut self) {
-        self.data.shed_rig();
     }
 
     pub fn invalidate_paths(&mut self) {
@@ -383,6 +375,15 @@ impl State {
 
     pub fn select_label(&mut self, label: &str) {
         self.data.select_label(label);
+        self.sync_playhead();
+    }
+
+    pub fn selected_slot(&self) -> Option<usize> {
+        self.data.selected_slot()
+    }
+
+    pub fn select_slot(&mut self, slot: usize) {
+        self.data.select_slot(slot);
         self.sync_playhead();
     }
 

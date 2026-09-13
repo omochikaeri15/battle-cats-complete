@@ -740,6 +740,7 @@ struct Session {
     history: History,
     key: String,
     keyed: Option<FrameCount>,
+    slotting: Option<usize>,
     primed: bool,
     watching: bool,
     watch_token: u64,
@@ -791,6 +792,8 @@ impl State {
         self.flush_now();
         self.stash();
 
+        let carried = self.session.as_ref().and_then(|session| session.viewer.selected_slot());
+
         let Showing {
             viewer,
             draft,
@@ -810,11 +813,8 @@ impl State {
                 return showing;
             }
 
-            let mut viewer = showing.viewer;
-            viewer.shed();
-
             Showing {
-                viewer,
+                viewer: showing.viewer,
                 rows: showing.rows,
                 widest: showing.widest,
                 listed: showing.listed,
@@ -875,6 +875,7 @@ impl State {
             history,
             key: String::new(),
             keyed: None,
+            slotting: carried,
             primed: false,
             watching: false,
             watch_token: 0,
@@ -902,6 +903,10 @@ impl State {
         match copied {
             true => self.manage.adopt(set.clone()),
             false => self.manage.seal(set.clone()),
+        }
+
+        if let Some(session) = self.session.as_mut() {
+            session.viewer.clear();
         }
 
         self.begin(plan(set, target_mod, clip));
@@ -2114,8 +2119,13 @@ impl Session {
         } else {
             priming = self.viewer.preload(&self.key, || set.clips(frames), anim).map(Message::Viewer);
 
-            if let Some(label) = self.plan.clip.as_deref() {
-                self.viewer.select_label(label);
+            match self.slotting.take() {
+                Some(slot) => self.viewer.select_slot(slot),
+                None => {
+                    if let Some(label) = self.plan.clip.as_deref() {
+                        self.viewer.select_label(label);
+                    }
+                }
             }
         }
 
