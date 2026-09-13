@@ -810,8 +810,11 @@ impl State {
                 return showing;
             }
 
+            let mut viewer = showing.viewer;
+            viewer.shed();
+
             Showing {
-                viewer: showing.viewer,
+                viewer,
                 rows: showing.rows,
                 widest: showing.widest,
                 listed: showing.listed,

@@ -343,6 +343,21 @@ impl State {
         self.cache.clear();
     }
 
+    pub fn holds(&self, key: &str) -> bool {
+        self.set_key == key
+    }
+
+    pub fn shed_rig(&mut self) {
+        self.held_unit = None;
+        self.current_anim = None;
+        self.loaded_rig.clear();
+        self.failed_rig.clear();
+        self.loaded_clip = None;
+        self.bounds = None;
+        self.measured = None;
+        self.mapped.replace(None);
+    }
+
     pub fn reset_display(&mut self) {
         self.held_unit = None;
         self.current_anim = None;

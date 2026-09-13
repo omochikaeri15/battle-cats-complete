@@ -95,14 +95,14 @@ pub fn calculate_talent_display(
             let modifier_string = stat_definition.talent_modifier_fmt.map(|format_func| format_func(modifier_one, modifier_two)).unwrap_or_default();
 
             return Some(if modifier_string.is_empty() {
-                format!("{}: {}", stat_definition.display_name, (stat_definition.formatter)(displayed_value))
+                format!("{}: {}", stat_definition.display_name, stat_definition.under_talent(displayed_value))
             } else {
-                format!("{}: {} {}", stat_definition.display_name, (stat_definition.formatter)(displayed_value), modifier_string)
+                format!("{}: {} {}", stat_definition.display_name, stat_definition.under_talent(displayed_value), modifier_string)
             });
         }
 
-        let old_string_format = (stat_definition.formatter)(old_stat_value);
-        let new_string_format = (stat_definition.formatter)(new_stat_value);
+        let old_string_format = stat_definition.under_talent(old_stat_value);
+        let new_string_format = stat_definition.under_talent(new_stat_value);
         let modifier_string = stat_definition.talent_modifier_fmt.map(|format_func| format_func(value_one, value_two)).unwrap_or_default();
 
         return Some(format!("{}: {} {} -> {}", stat_definition.display_name, old_string_format, modifier_string, new_string_format));

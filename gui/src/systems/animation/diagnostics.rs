@@ -7,7 +7,7 @@ use nyanko::graphics::animate::{resolve_frame, FrameData};
 use nyanko::graphics::rig::{BoundingBox, Rig};
 use nyanko::graphics::tools::part;
 
-use kore::domains::settings::{Overlays, Scope, Tier};
+use kore::domains::settings::{Overlays, Scope, StudioSettings, Tier};
 
 use super::canvas as viewer;
 use super::data;
@@ -282,9 +282,46 @@ pub(super) struct Shot {
     pub(super) scope: Scope,
     pub(super) picked: Option<usize>,
     pub(super) reach: Option<BoundingBox>,
+    pub(super) onion: Option<StudioSettings>,
+}
+
+pub(super) struct Trail {
+    pub(super) step: i32,
+    pub(super) tint: [f32; 4],
+    pub(super) fade: f32,
 }
 
 impl Shot {
+    pub(super) fn trails(&self) -> Vec<Trail> {
+        let Some(anim) = self.onion.as_ref().filter(|held| held.onion_on()) else {
+            return Vec::new();
+        };
+
+        let Some(gap) = anim.onion_step() else {
+            return Vec::new();
+        };
+
+        let mut trails = Vec::new();
+
+        for (life, way, first, tint) in [
+            (anim.onion_behind().unwrap_or(0), -1, 0, anim.onion_before_wash()),
+            (anim.onion_ahead().unwrap_or(0), 1, 1, anim.onion_after_wash()),
+        ] {
+            for step in (first..first + anim.onion_skins(life)).rev() {
+                let away = step * gap;
+                let fade = anim.onion_fade(away as f32, life);
+
+                if fade <= 0.0 || away == 0 {
+                    continue;
+                }
+
+                trails.push(Trail { step: way * away, tint, fade });
+            }
+        }
+
+        trails
+    }
+
     fn level(&self, unit: &Rig, part: Option<usize>) -> u8 {
         let mut tier = self.overlays.rig;
 
@@ -525,6 +562,7 @@ mod tests {
             scope: Scope::Selected,
             picked: Some(4),
             reach: None,
+            onion: None,
         };
 
         let held = std::thread::spawn(move || (shot.scope, shot.picked));
@@ -537,7 +575,7 @@ mod tests {
         // "Include Debug" opts in, it never enables. With the viewer's overlays
         // all off the export has to come out exactly as it would untoggled.
         let shot =
-            Shot { overlays: Overlays::default(), scope: Scope::Rig, picked: None, reach: None };
+            Shot { overlays: Overlays::default(), scope: Scope::Rig, picked: None, reach: None, onion: None };
 
         assert!(shot.silent());
 
@@ -546,8 +584,45 @@ mod tests {
             scope: Scope::Rig,
             picked: None,
             reach: None,
+            onion: None,
         };
 
         assert!(!lit.silent(), "one visible overlay is enough to draw");
+    }
+
+    // "Include Debug" is what carries the studio's onionskin into a render, so a shot
+    // with the skins armed has to hand the export the same ghosts the viewer draws.
+    #[test]
+    fn an_armed_onionskin_hands_the_export_one_trail_per_skin() {
+        let mut studio = StudioSettings::default();
+        studio.onion_arm(true);
+        studio.onion_after_life = "10".to_string();
+
+        let shot = Shot {
+            overlays: Overlays::default(),
+            scope: Scope::Rig,
+            picked: None,
+            reach: None,
+            onion: Some(studio),
+        };
+
+        let trails = shot.trails();
+
+        assert_eq!(trails.len(), 3, "two behind at 15 frames, one ahead at 10, every gap 5");
+        assert!(trails.iter().all(|trail| trail.fade > 0.0 && trail.step != 0));
+        assert!(trails.iter().any(|trail| trail.step < 0) && trails.iter().any(|trail| trail.step > 0));
+    }
+
+    #[test]
+    fn a_disarmed_onionskin_leaves_the_export_untouched() {
+        let shot = Shot {
+            overlays: Overlays::default(),
+            scope: Scope::Rig,
+            picked: None,
+            reach: None,
+            onion: Some(StudioSettings::default()),
+        };
+
+        assert!(shot.trails().is_empty());
     }
 }

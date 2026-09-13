@@ -107,7 +107,7 @@ impl Renderer {
         frame_time: f32,
         take: Take<'_>,
     ) -> Result<Vec<u8>, String> {
-        let Take { camera, background, offset, debug } = take;
+        let Take { camera, background, offset, debug, ghosts } = take;
         let at = frame_time.floor() as i32;
         let whole = || resolve_frame(unit, animation, at, offset);
 
@@ -124,8 +124,16 @@ impl Renderer {
 
         remap_glow(&mut parts);
 
+        let mut layered: Vec<Painted> = Vec::new();
+
+        for ghost in ghosts {
+            layered.extend(self.ghost_parts(unit, offset, debug, ghost));
+        }
+
+        layered.extend(parts.iter().cloned().map(Painted::plain));
+
         let mut pixels =
-            self.render_parts(unit.sheet.image_data.as_ref(), &parts, camera, background)?;
+            self.render_parts(unit.sheet.image_data.as_ref(), &layered, camera, background)?;
 
         if let Some(shot) = debug {
             let marked: Vec<(Option<usize>, FrameData)> = match mapped {
@@ -143,10 +151,43 @@ impl Renderer {
         Ok(pixels)
     }
 
+    fn ghost_parts(
+        &self,
+        unit: &Rig,
+        offset: Option<usize>,
+        debug: Option<&diagnostics::Shot>,
+        ghost: &Ghost<'_>,
+    ) -> Vec<Painted> {
+        let at = ghost.frame_time.floor() as i32;
+        let whole = || resolve_frame(unit, ghost.animation, at, offset);
+
+        let mapped = debug.and_then(|_| {
+            part::resolve(unit, ghost.animation, at, offset)
+                .ok()
+                .map(|held| held.into_iter().map(|entry| (entry.part, entry.frame)).collect::<Vec<_>>())
+        });
+
+        let mut parts = match debug {
+            Some(shot) => scoped(unit, shot, mapped.as_deref(), &whole),
+            None => whole(),
+        };
+
+        remap_glow(&mut parts);
+
+        parts
+            .into_iter()
+            .filter_map(|mut frame| {
+                frame.opacity *= ghost.fade;
+
+                (frame.opacity > 0.0).then_some(Painted { frame, tint: ghost.tint })
+            })
+            .collect()
+    }
+
     fn render_parts(
         &mut self,
         image: Option<&Arc<RgbaImage>>,
-        parts: &[FrameData],
+        parts: &[Painted],
         camera: Camera,
         background: [u8; 4],
     ) -> Result<Vec<u8>, String> {
@@ -159,8 +200,7 @@ impl Renderer {
             && !parts.is_empty() {
             self.pipeline.upload_atlas(&self.device, &self.queue, image);
 
-            let plain: Vec<Painted> = parts.iter().cloned().map(Painted::plain).collect();
-            let (vertex_data, index_data, batches) = build_vertices(&plain, &view_proj);
+            let (vertex_data, index_data, batches) = build_vertices(parts, &view_proj);
             self.pipeline.batches = batches;
             self.pipeline.upload_vertices(&self.device, &self.queue, &vertex_data);
             self.pipeline.upload_indices(&self.device, &self.queue, &index_data);
@@ -295,11 +335,19 @@ fn scoped(
         .collect()
 }
 
+struct Ghost<'a> {
+    animation: Option<&'a Animation>,
+    frame_time: f32,
+    tint: [f32; 4],
+    fade: f32,
+}
+
 struct Take<'a> {
     camera: Camera,
     background: [u8; 4],
     offset: Option<usize>,
     debug: Option<&'a diagnostics::Shot>,
+    ghosts: &'a [Ghost<'a>],
 }
 
 pub struct Job {
@@ -341,12 +389,9 @@ fn run(job: Job) {
     let delay_ms = (1000.0 / job.fps as f32) as u32;
     let background = if job.background { [80, 80, 80, 255] } else { [0, 0, 0, 0] };
 
-    for progress in 0..frame_count {
-        if job.abort.load(Ordering::Relaxed) {
-            warn!("Export render loop aborted at frame {progress}/{frame_count}");
-            return;
-        }
+    let trails = job.debug.as_ref().map_or_else(Vec::new, diagnostics::Shot::trails);
 
+    let seat = |progress: i32| {
         let (animation, local_time) = match &clips {
             Some(clips) => {
                 let (role, time) = showcase_segment(job.lengths, progress);
@@ -360,7 +405,26 @@ fn run(job: Job) {
             None => (job.animation.as_deref(), 0.0),
         };
 
-        let frame_time = calculate_export_time(&job.timing, animation, local_time, progress);
+        (animation, calculate_export_time(&job.timing, animation, local_time, progress))
+    };
+
+    for progress in 0..frame_count {
+        if job.abort.load(Ordering::Relaxed) {
+            warn!("Export render loop aborted at frame {progress}/{frame_count}");
+            return;
+        }
+
+        let (animation, frame_time) = seat(progress);
+
+        let ghosts: Vec<Ghost<'_>> = trails
+            .iter()
+            .filter_map(|trail| {
+                let (ghost_anim, ghost_time) = seat(ghost_seat(progress, trail.step, frame_count));
+
+                (ghost_time.floor() != frame_time.floor())
+                    .then_some(Ghost { animation: ghost_anim, frame_time: ghost_time, tint: trail.tint, fade: trail.fade })
+            })
+            .collect();
 
         match renderer.render_frame(
             &job.unit,
@@ -371,6 +435,7 @@ fn run(job: Job) {
                 background,
                 offset: job.offset,
                 debug: job.debug.as_ref(),
+                ghosts: &ghosts,
             },
         ) {
             Ok(pixels) => {
@@ -441,6 +506,10 @@ fn showcase_segment(lengths: ShowcaseLengths, progress: i32) -> (Role, f32) {
     }
 }
 
+fn ghost_seat(progress: i32, step: i32, frame_count: i32) -> i32 {
+    (progress + step).rem_euclid(frame_count.max(1))
+}
+
 fn align_bytes_per_row(width: u32) -> u32 {
     let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     (width * 4).div_ceil(align) * align
@@ -491,3 +560,30 @@ fn export_view_proj(width: f32, height: f32, camera: Camera) -> [f32; 9] {
     multiply_mat3(&projection, &view)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::ghost_seat;
+
+    // A trail reaching behind the first frame resolved to a negative frame time, which
+    // sits outside the clip, so the export opened on the rig in its rest pose. Every
+    // ghost has to land on a frame the export itself renders.
+    #[test]
+    fn a_trail_never_reaches_outside_the_exported_range() {
+        let frame_count = 40;
+
+        for progress in 0..frame_count {
+            for step in [-80, -40, -10, -5, -1, 1, 5, 10, 40, 80] {
+                let at = ghost_seat(progress, step, frame_count);
+
+                assert!((0..frame_count).contains(&at), "progress {progress} step {step} left the range at {at}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_single_frame_export_keeps_every_ghost_on_its_one_frame() {
+        for step in [-5, -1, 1, 5] {
+            assert_eq!(ghost_seat(0, step, 1), 0);
+        }
+    }
+}

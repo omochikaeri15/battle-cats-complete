@@ -1238,8 +1238,15 @@ pub struct StatsDef {
     pub display_name: &'static str,
     pub get_value: fn(&StatContext<'_>) -> i32,
     pub formatter: fn(i32) -> String,
+    pub talent_fmt: Option<fn(i32) -> String>,
     pub linked_talent_id: Option<u8>,
     pub talent_modifier_fmt: Option<fn(i32, i32) -> String>,
+}
+
+impl StatsDef {
+    pub fn under_talent(&self, value: i32) -> String {
+        self.talent_fmt.map_or_else(|| (self.formatter)(value), |format_func| format_func(value))
+    }
 }
 
 pub const STAT_HITPOINTS: StatsDef = StatsDef {
@@ -1247,6 +1254,7 @@ pub const STAT_HITPOINTS: StatsDef = StatsDef {
     display_name: "Hitpoints",
     get_value: |ctx| (ctx.stats.hitpoints as f32 * (ctx.magnification.hitpoints as f32 / 100.0)).round() as i32,
     formatter: |hitpoints| format!("{}", hitpoints),
+    talent_fmt: None,
     linked_talent_id: Some(32),
     talent_modifier_fmt: Some(|percent, _| format!("(+{}%)", percent)),
 };
@@ -1256,6 +1264,7 @@ pub const STAT_KNOCKBACKS: StatsDef = StatsDef {
     display_name: "Knockback",
     get_value: |ctx| ctx.stats.knockbacks,
     formatter: |knockbacks| format!("{}", knockbacks),
+    talent_fmt: None,
     linked_talent_id: Some(28),
     talent_modifier_fmt: Some(|count, _| format!("(+{})", count)),
 };
@@ -1265,6 +1274,7 @@ pub const STAT_SPEED: StatsDef = StatsDef {
     display_name: "Speed",
     get_value: |ctx| ctx.stats.speed,
     formatter: |speed| format!("{}", speed),
+    talent_fmt: None,
     linked_talent_id: Some(27),
     talent_modifier_fmt: Some(|speed, _| format!("(+{})", speed)),
 };
@@ -1274,6 +1284,7 @@ pub const STAT_RANGE: StatsDef = StatsDef {
     display_name: "Range",
     get_value: |ctx| ctx.stats.standing_range,
     formatter: |range| format!("{}", range),
+    talent_fmt: None,
     linked_talent_id: None,
     talent_modifier_fmt: None,
 };
@@ -1283,6 +1294,7 @@ pub const STAT_ATTACK: StatsDef = StatsDef {
     display_name: "Attack",
     get_value: |ctx| ctx.scaled_attack(),
     formatter: |attack| format!("{}", attack),
+    talent_fmt: None,
     linked_talent_id: Some(31),
     talent_modifier_fmt: Some(|percent, _| format!("(+{}%)", percent)),
 };
@@ -1298,6 +1310,7 @@ pub const STAT_DPS: StatsDef = StatsDef {
         ((ctx.scaled_attack() as f32 * 30.0) / attack_cycle as f32).round() as i32
     },
     formatter: |dps| format!("{}", dps),
+    talent_fmt: None,
     linked_talent_id: None,
     talent_modifier_fmt: None,
 };
@@ -1307,6 +1320,7 @@ pub const STAT_ATK_CYCLE: StatsDef = StatsDef {
     display_name: "Atk Cycle",
     get_value: |ctx| ctx.stats.attack_cycle(ctx.animation_frames),
     formatter: |frames| format!("{}f", frames),
+    talent_fmt: None,
     linked_talent_id: None,
     talent_modifier_fmt: None,
 };
@@ -1324,6 +1338,7 @@ pub const STAT_RARITY: StatsDef = StatsDef {
         5 => "Legend Rare".to_string(),
         _ => "??".to_string(),
     },
+    talent_fmt: None,
     linked_talent_id: None,
     talent_modifier_fmt: None,
 };
@@ -1333,6 +1348,7 @@ pub const STAT_COST: StatsDef = StatsDef {
     display_name: "Cost",
     get_value: |ctx| (ctx.stats.eoc1_cost as f32 * 1.5).round() as i32,
     formatter: |cost| format!("{}¢", cost),
+    talent_fmt: None,
     linked_talent_id: Some(25),
     talent_modifier_fmt: Some(|reduction, _| format!("(-{}¢)", (reduction as f32 * 1.5).round() as i32)),
 };
@@ -1342,6 +1358,7 @@ pub const STAT_COOLDOWN: StatsDef = StatsDef {
     display_name: "Cooldown",
     get_value: |ctx| (ctx.stats.cooldown - 264).max(60),
     formatter: |cooldown| format!("{:.2}s^{}f", cooldown as f32 / 30.0, cooldown),
+    talent_fmt: Some(|cooldown| format!("{}f", cooldown)),
     linked_talent_id: Some(26),
     talent_modifier_fmt: Some(|frames, _| format!("(-{}f)", frames)),
 };
@@ -1351,6 +1368,7 @@ const STAT_ATTACK_COOLDOWN: StatsDef = StatsDef {
     display_name: "Attack Cooldown",
     get_value: |ctx| ctx.stats.attack_cooldown,
     formatter: |attack_cooldown| format!("{}f", attack_cooldown),
+    talent_fmt: None,
     linked_talent_id: Some(61),
     talent_modifier_fmt: Some(|percent, _| format!("(-{}%)", percent)),
 };
@@ -1360,6 +1378,7 @@ pub const STAT_CASH_DROP: StatsDef = StatsDef {
     display_name: "Cash Drop",
     get_value: |ctx| (ctx.stats.cash_drop as f32 * 3.95).floor() as i32,
     formatter: |cash| format!("{}¢", cash),
+    talent_fmt: None,
     linked_talent_id: None,
     talent_modifier_fmt: None,
 };
