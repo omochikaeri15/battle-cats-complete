@@ -10,6 +10,7 @@ use super::{blank_curve, Cadence};
 const BOM: [u8; 3] = [0xef, 0xbb, 0xbf];
 const NAME_FIELD: usize = 5;
 const HEADER_LINES: usize = 3;
+const NUDGE: i32 = 4096;
 
 #[derive(Clone)]
 pub struct Maanim {
@@ -127,15 +128,22 @@ impl Maanim {
         }
 
         let seeded = timeline::value(held, frame).unwrap_or(0);
-        let ease = held.keyframes.last().map_or(0, |key| key.ease);
-        let key = Keyframe { frame, value: seeded, ease, ease_power: 0 };
+        let at = held.keyframes.partition_point(|existing| existing.frame < frame);
+        let split = at.checked_sub(1).and_then(|before| held.keyframes.get(before)).or_else(|| held.keyframes.get(at));
+        let (ease, ease_power) = split.map_or((0, 0), |key| (key.ease, key.ease_power));
+        let key = Keyframe { frame, value: seeded, ease, ease_power };
 
-        let keyframes = &mut Arc::make_mut(&mut self.animation).modifications.get_mut(track)?.keyframes;
-        let at = keyframes.partition_point(|existing| existing.frame < frame);
-
-        keyframes.insert(at, key);
+        Arc::make_mut(&mut self.animation).modifications.get_mut(track)?.keyframes.insert(at, key);
 
         Some(at)
+    }
+
+    fn readable(&self, track: usize, at: usize, frame: i32) -> usize {
+        let Some(held) = self.track(track) else {
+            return at;
+        };
+
+        (at..held.keyframes.len()).find(|candidate| reads(held, *candidate, frame)).unwrap_or(at)
     }
 
     pub fn pose(
@@ -153,6 +161,8 @@ impl Maanim {
         let Some(at) = self.ensure_key(track, frame) else {
             return false;
         };
+
+        let at = self.readable(track, at, frame);
 
         let Some(key) = self.edit(track).and_then(|track| track.keyframes.get_mut(at)) else {
             return false;
@@ -336,6 +346,18 @@ fn names(lines: &[Line], tracks: usize) -> Vec<String> {
     found
 }
 
+fn reads(held: &AnimModification, at: usize, frame: i32) -> bool {
+    let mut nudged = held.clone();
+
+    let Some(key) = nudged.keyframes.get_mut(at) else {
+        return false;
+    };
+
+    key.value = key.value.wrapping_add(NUDGE);
+
+    timeline::value(&nudged, frame) != timeline::value(held, frame)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +398,37 @@ mod tests {
         assert_eq!(doc.track(track).map(|t| t.keyframes[at].value), Some(held));
         assert_eq!(doc.posed(0, 4, 10), Some(held));
         assert_eq!(doc.track(track).map(|t| t.keyframes.len()), Some(3));
+    }
+
+    #[test]
+    fn a_key_inserted_into_an_eased_segment_keeps_the_segment_ease() {
+        // Found on 865_c part 180. The new key took the last key's power-0 exponential
+        // ease, which the engine reads as the next key's value on its own frame, so
+        // grabbing the joint threw the sprite across the screen instead.
+        let eased = "[modelanim:animation]\n1\n1\n0,4,1,0,0,\n3\n0,0,1,0\n33,0,2,-1\n41,800,2,0\n";
+        let mut doc = Maanim::parse(eased.as_bytes()).expect("the sample parses");
+        let held = doc.posed(0, 4, 36);
+
+        let track = doc.effective(0, 4).expect("the channel exists");
+        doc.ensure_key(track, 36).expect("a key lands on the frame");
+
+        assert_eq!(doc.posed(0, 4, 36), held, "adding the key alone must not move the part");
+
+        assert!(doc.pose(0, 4, 36, 500, None));
+        assert_eq!(doc.posed(0, 4, 36), Some(500));
+    }
+
+    #[test]
+    fn posing_onto_a_key_the_engine_skips_edits_the_one_it_reads() {
+        // A power-0 exponential key never shows its own value; its whole segment reads the
+        // next key. Writing the skipped key reads back unchanged, so the drag went nowhere.
+        let skipped = "[modelanim:animation]\n1\n1\n0,4,1,0,0,\n3\n0,0,1,0\n36,-9,2,0\n37,424,1,0\n";
+        let mut doc = Maanim::parse(skipped.as_bytes()).expect("the sample parses");
+
+        assert_eq!(doc.posed(0, 4, 36), Some(424));
+        assert!(doc.pose(0, 4, 36, 100, None));
+        assert_eq!(doc.posed(0, 4, 36), Some(100));
+        assert_eq!(doc.track(0).map(|t| t.keyframes.len()), Some(3), "no key was added to get there");
     }
 
     #[test]

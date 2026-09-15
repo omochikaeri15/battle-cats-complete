@@ -120,6 +120,8 @@ pub(super) struct Track {
     from: Point,
     lag: f32,
     idle: Option<Point>,
+    pending: f32,
+    sighted: Option<Point>,
 }
 
 struct Gizmo {
@@ -235,13 +237,19 @@ pub(super) struct Ring {
     pub(super) knob: Point,
     pub(super) lag: f32,
     pub(super) slack: f32,
+    pending: f32,
 }
 
 impl Ring {
     pub(super) fn new(origin: Point, knob: Point, lag: f32, zoom: f32) -> Self {
         let reach = (knob.x - origin.x).hypot(knob.y - origin.y) / zoom.max(f32::EPSILON);
 
-        Self { origin, knob, lag, slack: (SLACK / reach.max(1.0)).min(BLEED) }
+        Self { origin, knob, lag, slack: (SLACK / reach.max(1.0)).min(BLEED), pending: 0.0 }
+    }
+
+    pub(super) fn pending(mut self, spun: f32) -> Self {
+        self.pending = spun;
+        self
     }
 }
 
@@ -266,6 +274,8 @@ fn seized(track: &mut Track, at: Point, part: Option<usize>) -> Turn {
     track.grip = Some(Grip::Move);
     track.from = at;
     track.lag = 0.0;
+    track.pending = 0.0;
+    track.sighted = None;
 
     Turn::Seize(part)
 }
@@ -277,7 +287,7 @@ pub(super) fn lagging(origin: Point, at: Point, knob: Point) -> f32 {
 fn tracked(ring: &Ring, from: Point, at: Point) -> f32 {
     let seen = turn_at(ring.origin, at);
     let walked = wrapped(seen - turn_at(ring.origin, from));
-    let standing = wrapped(seen + ring.lag - turn_at(ring.origin, ring.knob));
+    let standing = wrapped(seen + ring.lag - turn_at(ring.origin, ring.knob) - ring.pending);
     let adrift = standing - walked;
 
     walked + (adrift.abs() - ring.slack).clamp(0.0, BLEED) * adrift.signum()
@@ -504,9 +514,13 @@ impl canvas::Program<Message> for Gizmo {
 
                 match (self.claimed(bounds, at), self.picked) {
                     (Some(grip), Some(part)) => {
+                        let knob = lever(&quad, origin).1;
+
                         track.grip = Some(grip);
                         track.from = at;
-                        track.lag = lagging(origin, at, lever(&quad, origin).1);
+                        track.lag = lagging(origin, at, knob);
+                        track.pending = 0.0;
+                        track.sighted = Some(knob);
 
                         Some(canvas::Action::publish(Message::Gizmo(Turn::Begin(part, grip))).and_capture())
                     }
@@ -548,10 +562,18 @@ impl canvas::Program<Message> for Gizmo {
                 let grip = track.grip?;
                 let at = Point::new(position.x - bounds.x, position.y - bounds.y);
                 let (quad, origin) = self.held(bounds)?;
-                let ring = Ring::new(origin, lever(&quad, origin).1, track.lag, self.camera.1);
+                let knob = lever(&quad, origin).1;
+
+                if track.sighted != Some(knob) {
+                    track.sighted = Some(knob);
+                    track.pending = 0.0;
+                }
+
+                let ring = Ring::new(origin, knob, track.lag, self.camera.1).pending(track.pending);
                 let sweep = swept(&ring, track.from, at, grip);
 
                 track.from = at;
+                track.pending = wrapped(track.pending + sweep.spun);
 
                 Some(canvas::Action::publish(Message::Gizmo(Turn::Drag(sweep))).and_capture())
             }
@@ -793,6 +815,24 @@ mod tests {
         let ignored = swept(&Ring::new(middle(), nudged, 0.0, 1.0), from, at, Grip::Rotate);
 
         assert!((ignored.spun - quarter).abs() < 1.0e-5);
+    }
+
+    #[test]
+    fn rotation_sent_ahead_of_a_redraw_is_not_bled_back_twice() {
+        // Several cursor moves can land before the gizmo redraws, so the knob still shows
+        // the old angle. Treating that as the part lagging the hand bled a correction in on
+        // every move, and the part overshot and snapped back while spinning.
+        let quarter = std::f32::consts::FRAC_PI_2;
+        let (from, at) = (Point::new(50.0, 150.0), Point::new(-50.0, 50.0));
+        let stale = Point::new(150.0, 50.0);
+
+        let blind = swept(&Ring::new(middle(), stale, 0.0, 1.0), from, at, Grip::Rotate);
+
+        assert!(blind.spun > quarter + BLEED / 2.0, "the stale knob reads as the part falling behind");
+
+        let aware = swept(&Ring::new(middle(), stale, 0.0, 1.0).pending(quarter), from, at, Grip::Rotate);
+
+        assert!((aware.spun - quarter).abs() < 1.0e-5);
     }
 
     #[test]
