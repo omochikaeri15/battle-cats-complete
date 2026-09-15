@@ -21,7 +21,7 @@ use kore::systems::animation::posing::{self, Gizmo, Probe};
 use kore::systems::animation::authoring::{self as authoring, bound, Beat, Cadence, Imgcut, CUT_FIELDS, CUT_NAME_FIELD, ease_label, ease_takes_power, ease_value, key_label, kind_label, loop_label, nameable, Maanim, Mamodel, EASES, FIELDS, NAME_FIELD};
 use image::RgbaImage;
 use nyanko::graphics::rig::{Keyframe, Model, ModelPart, Opaque, Rig, SpriteCut, SpriteSheet};
-use nyanko::graphics::tools::crash::{self, Side};
+use nyanko::graphics::tools::crash::Side;
 use nyanko::graphics::tools::timeline as curve;
 
 use crate::app::state::{AnimState, StudioState};
@@ -47,7 +47,7 @@ mod shipout;
 mod timeline;
 mod tree;
 
-use blame::{Alarm, Blame, Notice};
+use blame::{Alarm, Audit, Blame, Notice};
 use documents::*;
 use history::{History, Tag};
 use panel::*;
@@ -495,6 +495,7 @@ pub enum Message {
     Picture(picture::Message),
     Carved(Option<Arc<Sheet>>),
     Resheeted(u64, PathBuf, Option<Arc<SpriteSheet>>),
+    Audited(u64, Vec<usize>),
     Cut(usize, usize, String),
     Frame(usize),
     Trim(usize),
@@ -760,6 +761,8 @@ struct Session {
     placed: Vec<viewer::Posed>,
     blame: Blame,
     alarms: Vec<usize>,
+    unaudited: bool,
+    auditing: u64,
     faulting: Faults,
 }
 
@@ -897,6 +900,8 @@ impl State {
             placed: Vec::new(),
             blame: Blame::default(),
             alarms: Vec::new(),
+            unaudited: false,
+            auditing: 0,
             faulting: Faults::default(),
         });
     }
@@ -1406,6 +1411,13 @@ impl State {
 
                 Task::none()
             }
+            Message::Audited(token, alarms) => {
+                if token == session.auditing {
+                    session.alarms = alarms;
+                }
+
+                Task::none()
+            }
             Message::Resheeted(token, cuts, sheet) => {
                 let Some(sheet) = sheet.filter(|_| token == session.resheeting) else {
                     return Task::none();
@@ -1815,9 +1827,11 @@ impl State {
             | Message::Export => Task::none(),
         };
 
+        let audit = self.session.as_mut().map_or_else(Task::none, Session::audit);
+
         self.settle_notice();
 
-        task
+        Task::batch([task, audit])
     }
 
     fn chrome(&mut self, message: &Message, settings: &mut Settings) -> Option<Task<Message>> {
@@ -2874,50 +2888,31 @@ impl Session {
         self.draft.as_ref().is_some_and(|draft| slotted(&draft.backing.read_from))
     }
 
-    fn alarming(&self) -> Vec<usize> {
-        let (Some(side), Some(rig)) = (self.faulting.side(), self.viewer.rig()) else {
-            return Vec::new();
-        };
-
-        let mut found = Vec::new();
-
-        for (index, clip) in self.viewer.clips() {
-            let Some(path) = clip.anim.as_deref() else {
-                if self.blame.rigged() {
-                    found.push(index);
-                }
-
-                continue;
-            };
-
-            let open = self
-                .draft
-                .as_ref()
-                .filter(|draft| draft.backing.read_from == path)
-                .map(|draft| draft.doc.shared());
-
-            let held = match open {
-                Some(held) => Some(held),
-                None => fs::read(path)
-                    .ok()
-                    .and_then(|bytes| Maanim::parse(&bytes).ok())
-                    .map(|doc| doc.shared()),
-            };
-
-            let Some(anim) = held else {
-                continue;
-            };
-
-            let attacking = slotted(path) || self.faulting.attacking();
-            let faulted = !crash::anim_faults(&anim, &rig.model).is_empty()
-                || (attacking && !crash::attack_faults(&anim, side).is_empty());
-
-            if faulted {
-                found.push(index);
-            }
+    fn audit(&mut self) -> Task<Message> {
+        if !std::mem::take(&mut self.unaudited) {
+            return Task::none();
         }
 
-        found
+        self.auditing = self.auditing.wrapping_add(1);
+
+        let (Some(side), Some(rig)) = (self.faulting.side(), self.viewer.shared_rig()) else {
+            self.alarms.clear();
+
+            return Task::none();
+        };
+
+        let audit = Audit {
+            rig,
+            side,
+            attacking: self.faulting.attacking(),
+            rigged: self.blame.rigged(),
+            clips: self.viewer.clips().map(|(index, clip)| (index, clip.anim.clone())).collect(),
+            open: self.draft.as_ref().map(|draft| (draft.backing.read_from.clone(), draft.doc.shared())),
+        };
+
+        let token = self.auditing;
+
+        Task::perform(smol::unblock(move || audit.run()), move |alarms| Message::Audited(token, alarms))
     }
 
     fn relist(&mut self) {
@@ -2945,7 +2940,7 @@ impl Session {
             _ => Blame::default(),
         };
 
-        self.alarms = self.alarming();
+        self.unaudited = true;
 
         let listed = listing(tracks, model, &self.expanded, self.loose_open, &self.blame);
 
