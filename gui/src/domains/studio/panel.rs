@@ -914,7 +914,7 @@ fn dial_row<'a>(
 ) -> Element<'a, Message> {
     let live = dial.live(animated);
     let picker: Element<'_, Message> = match dial {
-        Dial::Gizmo => dial_combo(anim.gizmo, &Gizmo::ALL, live, Message::Handed),
+        Dial::Gizmo => dial_combo(handed(animated, anim), &Gizmo::ALL, live, Message::Handed),
         Dial::Onion => dial_combo(anim.onion, &Switch::ALL, live, Message::Onioning),
         Dial::Module => dial_combo(readout, &Readout::ALL, live, Message::Module),
         Dial::Fault => dial_combo(anim.faults, &Faults::ALL, live, Message::Faulted),

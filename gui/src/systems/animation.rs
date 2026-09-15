@@ -16,6 +16,7 @@ use iced::widget::{button, column, container, stack, text, Space};
 use iced::{Alignment, Background, Border, Color, Element, Length, Padding, Size, Task, Theme};
 
 use nyanko::graphics::rig::{Animation, Model, Rig};
+use nyanko::graphics::tools::joint::Joint;
 use nyanko::graphics::tools::part;
 
 use kore::domains::settings::{Overlays, Scope, ScrubBehavior, Settings};
@@ -100,13 +101,15 @@ pub(crate) fn shows(
     }
 }
 
-fn seated(unit: &Rig, entry: part::PartFrame) -> Posed {
+fn seated(joints: &[Joint], entry: part::PartFrame) -> Posed {
     let quad = entry.frame.vertices;
     let corners: [iced::Point; 4] =
         std::array::from_fn(|at| iced::Point::new(quad[at * 2], quad[at * 2 + 1]));
 
-    let origin = diagnostics::pivot_of(unit, entry.part, &entry.frame, &corners)
-        .map_or_else(|| midpoint(&corners), |found| (found.x, found.y));
+    let origin = joints
+        .get(entry.part)
+        .and_then(|joint| joint.origin)
+        .unwrap_or_else(|| midpoint(&corners));
 
     Posed { part: entry.part, quad, origin }
 }
@@ -348,6 +351,7 @@ impl State {
 
         let frame = self.data.playback_frame(self.canvas.current_frame).floor() as i32;
         let picked = self.highlight;
+        let joints = self.data.joints(frame).unwrap_or_default();
 
         self.data
             .mapped(frame)
@@ -355,10 +359,14 @@ impl State {
                 mapped
                     .into_iter()
                     .filter(|entry| shows(&unit.model, entity, picked, entry.part))
-                    .map(|entry| seated(unit, entry))
+                    .map(|entry| seated(&joints, entry))
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    pub fn joints(&self) -> Vec<Joint> {
+        self.data.joints(self.frame()).unwrap_or_default()
     }
 
     pub fn loaded_rig(&self) -> &str {

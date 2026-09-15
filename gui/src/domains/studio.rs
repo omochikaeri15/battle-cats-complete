@@ -189,6 +189,7 @@ const UNKNOWN_DETAIL: &str = "The game's animation pass faults on this";
 const FAULT_HINT: &str = "Manage faults under Option page 2";
 const ATTACK_HINT: &str = "Only consider this fault for attacks";
 const ROOT_MOVE_NOTICE: &str = "The root ignores its model X and Y\nSwitch the Gizmo to Channel to move it";
+const ROOT_PIVOT_NOTICE: &str = "The root ignores its model X and Y\nSwitch the Gizmo to Channel to move its pivot";
 const ROOT_FIELD_HINT: &str = "The root ignores this column; key an X or Y channel instead";
 const PINNED_NOTICE: &str = "The offset row is pinned to this part\nMoving it cancels out and the game draws it unmoved";
 const PLACE_X_FIELD: usize = 4;
@@ -244,6 +245,13 @@ fn stepped<T: Copy + PartialEq>(all: &[T], held: T) -> T {
     let at = all.iter().position(|known| *known == held).map_or(0, |at| at + 1);
 
     all.get(at % all.len().max(1)).copied().unwrap_or(held)
+}
+
+fn handed(animated: bool, anim: &StudioSettings) -> Gizmo {
+    match animated {
+        true => anim.gizmo,
+        false => Gizmo::Model,
+    }
 }
 
 fn spanned(at: usize, active: Option<usize>, rows: usize) -> Option<Span> {
@@ -732,6 +740,7 @@ struct Session {
     gizmo: gizmo::State,
     drift: Vec<(usize, f32)>,
     winding: f32,
+    sliding: Option<handle::Slide>,
     drag: Drag,
     confirm: Slot<usize>,
     focus: Focus,
@@ -867,6 +876,7 @@ impl State {
             gizmo: gizmo::State::default(),
             drift: Vec::new(),
             winding: 1.0,
+            sliding: None,
             drag: Drag::default(),
             confirm: Slot::default(),
             focus,
@@ -1723,6 +1733,10 @@ impl State {
             }
             Message::Undo => session.undo(),
             Message::Handed(hand) => {
+                if !session.animated() {
+                    return Task::none();
+                }
+
                 settings.studio.gizmo = hand;
 
                 Task::none()
@@ -1814,6 +1828,10 @@ impl State {
                 Some(Task::none())
             }
             Message::Cycle(dial) => {
+                if !dial.live(self.session.as_ref().is_some_and(Session::animated)) {
+                    return Some(Task::none());
+                }
+
                 let anim = &mut settings.studio;
 
                 match dial {

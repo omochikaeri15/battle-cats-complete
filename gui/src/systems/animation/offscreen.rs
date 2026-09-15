@@ -12,6 +12,7 @@ use tracing::{error, warn};
 
 use nyanko::graphics::animate::{resolve_frame, FrameData};
 use nyanko::graphics::rig::{Animation, Rig};
+use nyanko::graphics::tools::joint;
 use nyanko::graphics::tools::part;
 
 use kore::systems::animation::export::process::calculate_export_time;
@@ -136,9 +137,18 @@ impl Renderer {
             self.render_parts(unit.sheet.image_data.as_ref(), &layered, camera, background)?;
 
         if let Some(shot) = debug {
-            let marked: Vec<(Option<usize>, FrameData)> = match mapped {
-                Some(held) => held.into_iter().map(|(part, frame)| (Some(part), frame)).collect(),
-                None => whole().into_iter().map(|frame| (None, frame)).collect(),
+            let joints = joint::resolve(unit, animation, at, offset);
+            let origin = |part: usize| joints.get(part).and_then(|held| held.origin);
+
+            let marked: Vec<diagnostics::Marked> = match mapped {
+                Some(held) => held
+                    .into_iter()
+                    .map(|(part, frame)| diagnostics::Marked { part: Some(part), frame, origin: origin(part) })
+                    .collect(),
+                None => whole()
+                    .into_iter()
+                    .map(|frame| diagnostics::Marked { part: None, frame, origin: None })
+                    .collect(),
             };
 
             let to_screen = |x: f32, y: f32| {

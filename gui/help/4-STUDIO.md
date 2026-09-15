@@ -108,6 +108,7 @@ Parts can be posed directly in the viewer. Left click selects a part and reveals
 - **Middle** moves the part.
 - **Edges & Corners** stretch it. Dragging an edge past the opposite one flips it.
 - **The Ring** on the part's axis rotates it.
+- **The Dot** is the joint that moves the pivot point.
 - **Scrolling** while holding changes its opacity.
 
 The `Option` column picks what the Gizmo writes. This is disabled and forced to `Model` when no animation is loaded.

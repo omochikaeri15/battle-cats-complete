@@ -31,11 +31,16 @@ const TURN_INK: Color = Color::from_rgb(0.38, 0.20, 0.62);
 const TURN_LIVE: Color = Color::from_rgb(0.55, 0.32, 0.85);
 const ORBIT_INK: Color = Color::from_rgba(0.46, 0.26, 0.76, 0.85);
 const ORBIT_WIDTH: f32 = 1.0;
+const PIVOT_DOT: f32 = 5.0;
+const PIVOT_GRAB: f32 = 7.0;
+const PIVOT_ROOM: f32 = 21.0;
+const PIVOT_INK: Color = Color::from_rgb(0.1, 0.46, 0.7);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Grip {
     Move,
     Rotate,
+    Pivot,
     Scale { across: i8, down: i8 },
 }
 
@@ -142,6 +147,11 @@ impl Gizmo {
 
     fn claimed(&self, bounds: Rectangle, at: Point) -> Option<Grip> {
         let (quad, origin) = self.held(bounds)?;
+
+        if pivoting(&quad, origin, at) {
+            return Some(Grip::Pivot);
+        }
+
         let grip = reachable(&quad, origin, at).then(|| grip_at(&quad, origin, at))?;
 
         if grip == Grip::Move && topmost(&self.posed, at, &self.seat(bounds)) != self.picked {
@@ -189,6 +199,14 @@ pub(super) fn grip_at(quad: &[Point; 4], origin: Point, at: Point) -> Grip {
         (0, 0) => Grip::Move,
         (across, down) => Grip::Scale { across, down },
     }
+}
+
+pub(super) fn pivoting(quad: &[Point; 4], origin: Point, at: Point) -> bool {
+    let (wide, tall) = sides(quad);
+
+    !turning(quad, origin, at)
+        && wide.min(tall) >= PIVOT_ROOM
+        && (at.x - origin.x).hypot(at.y - origin.y) <= PIVOT_GRAB
 }
 
 pub(super) fn reachable(quad: &[Point; 4], origin: Point, at: Point) -> bool {
@@ -407,7 +425,6 @@ impl canvas::Program<Message> for Gizmo {
                 &Path::circle(origin, orbit),
                 Stroke::default().with_color(ORBIT_INK).with_width(ORBIT_WIDTH),
             );
-            frame.fill(&Path::circle(origin, ORBIT_WIDTH * 2.0), ORBIT_INK);
         }
 
         frame.stroke(&Path::line(edge, knob), Stroke::default().with_color(turn).with_width(OUTLINE));
@@ -435,6 +452,9 @@ impl canvas::Program<Message> for Gizmo {
             frame.fill(&box_at, ink);
             frame.stroke(&box_at, Stroke::default().with_color(Color::BLACK).with_width(1.0));
         }
+
+        frame.fill(&Path::circle(origin, PIVOT_DOT), PIVOT_INK);
+        frame.stroke(&Path::circle(origin, PIVOT_DOT), Stroke::default().with_color(Color::BLACK).with_width(1.0));
 
         vec![frame.into_geometry()]
     }
@@ -570,6 +590,7 @@ impl canvas::Program<Message> for Gizmo {
         match grip {
             Grip::Move => mouse::Interaction::Move,
             Grip::Rotate => mouse::Interaction::Grab,
+            Grip::Pivot => mouse::Interaction::Crosshair,
             Grip::Scale { .. } => mouse::Interaction::ResizingDiagonallyDown,
         }
     }
@@ -603,6 +624,21 @@ mod tests {
         assert_eq!(grip_at(&box_at, mid, Point::new(50.0, 50.0)), Grip::Move);
         assert_eq!(grip_at(&box_at, mid, Point::new(103.0, 50.0)), Grip::Scale { across: 1, down: 0 });
         assert_eq!(grip_at(&box_at, mid, Point::new(2.0, 103.0)), Grip::Scale { across: -1, down: 1 });
+    }
+
+    #[test]
+    fn a_pivot_on_an_edge_is_grabbed_before_the_scale_band_under_it() {
+        // Joints usually sit on an edge, right where the scale band lives. The dot
+        // has to win there, but a part too small to hold it keeps its move grip.
+        let edge = Point::new(0.0, 50.0);
+
+        assert_eq!(grip_at(&quad(), edge, edge), Grip::Scale { across: -1, down: 0 });
+        assert!(pivoting(&quad(), edge, Point::new(3.0, 52.0)));
+        assert!(!pivoting(&quad(), edge, Point::new(10.0, 50.0)));
+
+        let small = [Point::new(0.0, 0.0), Point::new(0.0, 16.0), Point::new(16.0, 0.0), Point::new(16.0, 16.0)];
+
+        assert!(!pivoting(&small, Point::new(8.0, 8.0), Point::new(8.0, 8.0)));
     }
 
     #[test]
