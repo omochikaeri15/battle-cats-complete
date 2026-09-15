@@ -538,14 +538,17 @@ impl State {
                 Task::batch([filter_task, preload_task])
             }
             Message::AnimationTick => {
-                if let Some(cat) = self.selected_cat.and_then(|id| self.data.cats.iter().find(|c| c.id == id)) {
-                    let vfs = &global_ctx.vault.vfs;
-                    let form = self.selected_form;
-                    let key = cat_animation::set_id(cat, form);
-                    self.animation.sync(&key, || cat_animation::clips(cat, form, vfs), settings, &app_state.animation);
-                }
+                let measuring = match self.selected_cat.and_then(|id| self.data.cats.iter().find(|c| c.id == id)) {
+                    Some(cat) => {
+                        let vfs = &global_ctx.vault.vfs;
+                        let form = self.selected_form;
+                        let key = cat_animation::set_id(cat, form);
+                        self.animation.sync(&key, || cat_animation::clips(cat, form, vfs), settings, &app_state.animation)
+                    }
+                    None => Task::none(),
+                };
                 self.animation.tick();
-                Task::none()
+                measuring.map(Message::Animation)
             }
             Message::SearchChanged(query) => {
                 self.search_query = query;

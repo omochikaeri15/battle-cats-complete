@@ -136,9 +136,9 @@ impl State {
                 Task::none()
             }
             Message::Tick => {
-                self.sync(settings, &app_state.animation);
+                let measuring = self.sync(settings, &app_state.animation);
                 self.viewer.tick();
-                Task::none()
+                measuring.map(Message::Viewer)
             }
             Message::OpenSettings => {
                 self.settings_open = true;
@@ -178,10 +178,9 @@ impl State {
         self.viewer.reset_playhead();
     }
 
-    fn sync(&mut self, settings: &Settings, anim_state: &AnimState) {
+    fn sync(&mut self, settings: &Settings, anim_state: &AnimState) -> Task<viewer::Message> {
         let (Some(png), Some(cut), Some(model)) = (&self.png, &self.imgcut, &self.mamodel) else {
-            self.viewer.sync("", Default::default, settings, anim_state);
-            return;
+            return self.viewer.sync("", Default::default, settings, anim_state);
         };
 
         let key = builder::key(png, cut, model, &self.anims, settings.utilities.frame_count);
@@ -189,7 +188,7 @@ impl State {
 
         let frames = settings.utilities.frame_count;
 
-        self.viewer.sync(&key, || builder::clips(png, cut, model, anims, frames), settings, anim_state);
+        self.viewer.sync(&key, || builder::clips(png, cut, model, anims, frames), settings, anim_state)
     }
 
     pub(crate) fn is_expanded(&self) -> bool {

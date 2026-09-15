@@ -20,7 +20,7 @@ use kore::domains::studio as sets;
 use kore::systems::animation::posing::{self, Gizmo, Probe};
 use kore::systems::animation::authoring::{self as authoring, bound, Beat, Cadence, Imgcut, CUT_FIELDS, CUT_NAME_FIELD, ease_label, ease_takes_power, ease_value, key_label, kind_label, loop_label, nameable, Maanim, Mamodel, EASES, FIELDS, NAME_FIELD};
 use image::RgbaImage;
-use nyanko::graphics::rig::{Keyframe, Model, ModelPart, Opaque, Rig, SpriteCut};
+use nyanko::graphics::rig::{Keyframe, Model, ModelPart, Opaque, Rig, SpriteCut, SpriteSheet};
 use nyanko::graphics::tools::crash::{self, Side};
 use nyanko::graphics::tools::timeline as curve;
 
@@ -494,6 +494,7 @@ pub enum Message {
     DragEnd,
     Picture(picture::Message),
     Carved(Option<Arc<Sheet>>),
+    Resheeted(u64, PathBuf, Option<Arc<SpriteSheet>>),
     Cut(usize, usize, String),
     Frame(usize),
     Trim(usize),
@@ -736,6 +737,7 @@ struct Session {
     framing: Option<usize>,
     slice: Option<usize>,
     carving: bool,
+    resheeting: u64,
     slicing: Slot<usize>,
     gizmo: gizmo::State,
     drift: Vec<(usize, f32)>,
@@ -872,6 +874,7 @@ impl State {
             framing: None,
             slice: None,
             carving: false,
+            resheeting: 0,
             slicing: Slot::default(),
             gizmo: gizmo::State::default(),
             drift: Vec::new(),
@@ -1403,6 +1406,16 @@ impl State {
 
                 Task::none()
             }
+            Message::Resheeted(token, cuts, sheet) => {
+                let Some(sheet) = sheet.filter(|_| token == session.resheeting) else {
+                    return Task::none();
+                };
+
+                session.viewer.adopt_sheet(&cuts, sheet);
+                session.aim();
+
+                Task::none()
+            }
             Message::Cut(at, cell, value) => {
                 session.remember(Tag::Cut(at, cell));
 
@@ -1681,9 +1694,11 @@ impl State {
                 session.restamp();
 
                 if let Some(atlas) = session.atlas.as_mut().filter(|atlas| atlas.backing.token == token) {
-                    atlas.backing.settle(path, stamp);
+                    if atlas.backing.settle(path, stamp) == Settled::Failed {
+                        return Task::none();
+                    }
 
-                    return Task::none();
+                    return session.resheet();
                 }
 
                 if let Some(pose) = session.pose.as_mut().filter(|pose| pose.backing.token == token) {
@@ -2125,18 +2140,19 @@ impl Session {
     fn sync(&mut self, settings: &Settings, anim: &AnimState) -> Task<Message> {
         let set = self.plan.set.clone();
         let frames = settings.studio.frame_count;
-        let mut priming = Task::none();
-
         if self.keyed != Some(frames) {
             self.keyed = Some(frames);
             self.key = set.key(frames);
         }
 
-        if std::mem::replace(&mut self.primed, true) {
-            self.viewer.sync(&self.key, || set.clips(frames), settings, anim);
-        } else {
-            priming = self.viewer.preload(&self.key, || set.clips(frames), anim).map(Message::Viewer);
+        let primed = std::mem::replace(&mut self.primed, true);
 
+        let priming = match primed {
+            true => self.viewer.sync(&self.key, || set.clips(frames), settings, anim).map(Message::Viewer),
+            false => self.viewer.preload(&self.key, || set.clips(frames), anim).map(Message::Viewer),
+        };
+
+        if !primed {
             match self.slotting.take() {
                 Some(slot) => self.viewer.select_slot(slot),
                 None => {
@@ -2743,6 +2759,28 @@ impl Session {
         Task::perform(
             smol::unblock(move || Sheet::assemble(backing, bytes, art).map(Arc::new)),
             Message::Carved,
+        )
+    }
+
+    fn resheet(&mut self) -> Task<Message> {
+        let (Some(atlas), Some(png)) = (self.atlas.as_ref(), self.viewer.selected_sheet()) else {
+            return Task::none();
+        };
+
+        let (png, cuts, body) = (png.to_path_buf(), atlas.backing.read_from.clone(), atlas.doc.write());
+        let held = self.viewer.rig().and_then(|rig| rig.sheet.image_data.clone());
+
+        self.resheeting = self.resheeting.wrapping_add(1);
+
+        let token = self.resheeting;
+
+        Task::perform(
+            smol::unblock(move || {
+                let sheet = sheet_of(&png, &body, held);
+
+                (cuts, sheet)
+            }),
+            move |(cuts, sheet)| Message::Resheeted(token, cuts, sheet),
         )
     }
 

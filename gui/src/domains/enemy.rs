@@ -402,13 +402,16 @@ impl EnemyState {
                 Task::batch([filter_task, preload_task])
             }
             Message::AnimationTick => {
-                if let Some(enemy) = self.selected_enemy.and_then(|id| self.data.enemies.iter().find(|e| e.id == id)) {
-                    let vfs = &global_ctx.vault.vfs;
-                    let key = enemy_animation::set_id(enemy);
-                    self.animation.sync(&key, || enemy_animation::clips(enemy, vfs), settings, &app_state.animation);
-                }
+                let measuring = match self.selected_enemy.and_then(|id| self.data.enemies.iter().find(|e| e.id == id)) {
+                    Some(enemy) => {
+                        let vfs = &global_ctx.vault.vfs;
+                        let key = enemy_animation::set_id(enemy);
+                        self.animation.sync(&key, || enemy_animation::clips(enemy, vfs), settings, &app_state.animation)
+                    }
+                    None => Task::none(),
+                };
                 self.animation.tick();
-                Task::none()
+                measuring.map(Message::Animation)
             }
             Message::SearchChanged(query) => {
                 self.search_query = query;

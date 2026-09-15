@@ -1228,6 +1228,22 @@ pub(super) fn retarget_file(anim: &Path, moved: &[Option<usize>]) {
     }
 }
 
+pub(super) fn sheet_of(png: &Path, cuts: &[u8], held: Option<Arc<RgbaImage>>) -> Option<Arc<SpriteSheet>> {
+    let art = fs::read(png)
+        .inspect_err(|err| warn!(path = %png.display(), "Studio could not read the atlas for the entity view: {}", err))
+        .ok()?;
+
+    let mut sheet = SpriteSheet::parse(art, cuts)
+        .inspect_err(|err| warn!(path = %png.display(), "Studio could not rebuild the atlas for the entity view: {}", err))
+        .ok()?;
+
+    if let Some(held) = held.filter(|held| sheet.image_data.as_deref() == Some(held.as_ref())) {
+        sheet.image_data = Some(held);
+    }
+
+    Some(Arc::new(sheet))
+}
+
 pub(super) fn write_now(path: &Path, body: &[u8], stamp: Stamp) -> Option<Stamp> {
     preview::save(path, body, stamp)
         .inspect_err(|err| warn!(path = %path.display(), "Studio could not write the file: {}", err))

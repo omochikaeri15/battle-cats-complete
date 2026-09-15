@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tracing::warn;
 
-use nyanko::graphics::rig::{Animation, BoundingBox, Model, Rig};
+use nyanko::graphics::rig::{Animation, BoundingBox, Model, Rig, SpriteSheet};
 use nyanko::graphics::tools::joint::{self, Joint};
 use nyanko::graphics::tools::part;
 
@@ -31,7 +31,7 @@ pub struct State {
     failed_rig: String,
     loaded_clip: Option<usize>,
     bounds: Option<BoundingBox>,
-    measured: Option<(String, Option<usize>, Option<usize>)>,
+    measured: Option<Measure>,
     cache: RigCache,
     mapped: RefCell<Option<Mapped>>,
 }
@@ -47,13 +47,60 @@ struct Mapped {
 
 impl Mapped {
     fn serves(&self, rig: &Arc<Rig>, anim: Option<&Arc<Animation>>, frame: i32, offset: Option<usize>) -> bool {
-        let same = match (self.anim.as_ref(), anim) {
-            (Some(held), Some(wanted)) => Arc::ptr_eq(held, wanted),
-            (None, None) => true,
-            _ => false,
-        };
+        same(self.anim.as_ref(), anim) && self.frame == frame && self.offset == offset && Arc::ptr_eq(&self.rig, rig)
+    }
+}
 
-        same && self.frame == frame && self.offset == offset && Arc::ptr_eq(&self.rig, rig)
+fn same<T>(held: Option<&Arc<T>>, wanted: Option<&Arc<T>>) -> bool {
+    match (held, wanted) {
+        (Some(held), Some(wanted)) => Arc::ptr_eq(held, wanted),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
+#[derive(Clone)]
+pub struct Measure {
+    rig: String,
+    clip: Option<usize>,
+    row: Option<usize>,
+    unit: Option<Arc<Rig>>,
+}
+
+impl Measure {
+    fn placed(&self, rig: &str, clip: Option<usize>, row: Option<usize>) -> bool {
+        self.rig == rig && self.clip == clip && self.row == row
+    }
+
+    fn matches(&self, other: &Measure) -> bool {
+        self.placed(&other.rig, other.clip, other.row) && same(self.unit.as_ref(), other.unit.as_ref())
+    }
+}
+
+pub struct MeasureRequest {
+    key: Measure,
+    anim: Option<Arc<Animation>>,
+    tolerance: f32,
+}
+
+impl MeasureRequest {
+    pub fn run(self) -> Measured {
+        let anims: Vec<&Animation> = self.anim.as_deref().into_iter().collect();
+        let bounds = self.key.unit.as_ref().and_then(|unit| unit.calculate_bounds(&anims, self.tolerance, None, self.key.row));
+
+        Measured { key: self.key, bounds }
+    }
+}
+
+#[derive(Clone)]
+pub struct Measured {
+    key: Measure,
+    bounds: Option<BoundingBox>,
+}
+
+impl std::fmt::Debug for Measured {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Measured").field("rig", &self.key.rig).field("clip", &self.key.clip).finish()
     }
 }
 
@@ -235,22 +282,34 @@ impl State {
         self.bounds
     }
 
-    pub fn measure(&mut self, tolerance: f32) {
+    pub fn measure(&mut self, tolerance: f32) -> Option<MeasureRequest> {
         let offset = self.offset();
-        let fresh = self.measured.as_ref().is_some_and(|(rig, clip, row)| {
-            rig == &self.loaded_rig && *clip == self.loaded_clip && *row == offset
-        });
+        let placed = self.measured.as_ref().is_some_and(|held| held.placed(&self.loaded_rig, self.loaded_clip, offset));
 
-        if fresh {
-            return;
+        if placed && self.measured.as_ref().is_some_and(|held| same(held.unit.as_ref(), self.held_unit.as_ref())) {
+            return None;
         }
 
-        self.measured = Some((self.loaded_rig.clone(), self.loaded_clip, offset));
-        self.bounds = self.held_unit.as_ref().and_then(|unit| {
-            let anims: Vec<&Animation> = self.current_anim.as_deref().into_iter().collect();
+        if !placed || self.held_unit.is_none() {
+            self.bounds = None;
+        }
 
-            unit.calculate_bounds(&anims, tolerance, None, offset)
-        });
+        let key = Measure {
+            rig: self.loaded_rig.clone(),
+            clip: self.loaded_clip,
+            row: offset,
+            unit: self.held_unit.clone(),
+        };
+
+        self.measured = Some(key.clone());
+
+        key.unit.is_some().then(|| MeasureRequest { key, anim: self.current_anim.clone(), tolerance })
+    }
+
+    pub fn apply_measure(&mut self, result: Measured) {
+        if self.measured.as_ref().is_some_and(|held| held.matches(&result.key)) {
+            self.bounds = result.bounds;
+        }
     }
 
     pub fn loaded_rig(&self) -> &str {
@@ -337,8 +396,23 @@ impl State {
 
         self.held_unit = Some(Arc::clone(&fresh));
         self.cache.insert(&self.loaded_rig, fresh, stamp);
-        self.measured = None;
-        self.bounds = None;
+    }
+
+    pub fn adopt_sheet(&mut self, cuts: &Path, sheet: Arc<SpriteSheet>) {
+        let Some(clip) = self.current_clip().filter(|clip| clip.rig.cut == cuts && self.is_loaded(&clip.rig.id)) else {
+            return;
+        };
+
+        let stamp = RigStamp::of(&clip.rig);
+
+        let Some(unit) = self.held_unit.as_deref().filter(|unit| unit.sheet.cuts != sheet.cuts) else {
+            return;
+        };
+
+        let fresh = Arc::new(Rig { model: unit.model.clone(), sheet: Arc::unwrap_or_clone(sheet) });
+
+        self.held_unit = Some(Arc::clone(&fresh));
+        self.cache.insert(&self.loaded_rig, fresh, stamp);
     }
 
     pub fn adopt_anim(&mut self, path: &Path, anim: Arc<Animation>) {
