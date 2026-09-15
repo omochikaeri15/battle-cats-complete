@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tracing::warn;
 
 use nyanko::graphics::rig::{Animation, BoundingBox, Model, Rig};
+use nyanko::graphics::tools::joint::{self, Joint};
 use nyanko::graphics::tools::part;
 
 use kore::common::preview::{self, Stamp};
@@ -41,6 +42,7 @@ struct Mapped {
     frame: i32,
     offset: Option<usize>,
     parts: Vec<part::PartFrame>,
+    joints: Vec<Joint>,
 }
 
 impl Mapped {
@@ -115,32 +117,31 @@ impl State {
         self.placement = placement;
     }
 
-    fn served(&self, rig: &Arc<Rig>, anim: Option<&Arc<Animation>>, frame: i32, offset: Option<usize>) -> Option<Vec<part::PartFrame>> {
-        let held = self.mapped.borrow();
-
-        held.as_ref().filter(|held| held.serves(rig, anim, frame, offset)).map(|held| held.parts.clone())
+    pub fn mapped(&self, frame: i32) -> Option<Vec<part::PartFrame>> {
+        self.served(frame, |held| held.parts.clone())
     }
 
-    pub fn mapped(&self, frame: i32) -> Option<Vec<part::PartFrame>> {
+    pub fn joints(&self, frame: i32) -> Option<Vec<Joint>> {
+        self.served(frame, |held| held.joints.clone())
+    }
+
+    fn served<T>(&self, frame: i32, take: impl Fn(&Mapped) -> T) -> Option<T> {
         let rig = self.held_unit.as_ref()?;
         let anim = self.current_anim.as_ref();
         let offset = self.offset();
 
-        if let Some(parts) = self.served(rig, anim, frame, offset) {
-            return Some(parts);
+        if let Some(held) = self.mapped.borrow().as_ref().filter(|held| held.serves(rig, anim, frame, offset)) {
+            return Some(take(held));
         }
 
         let parts = part::resolve(rig, anim.map(Arc::as_ref), frame, offset).ok()?;
+        let joints = joint::resolve(rig, anim.map(Arc::as_ref), frame, offset);
+        let held = Mapped { rig: Arc::clone(rig), anim: anim.cloned(), frame, offset, parts, joints };
+        let taken = take(&held);
 
-        *self.mapped.borrow_mut() = Some(Mapped {
-            rig: Arc::clone(rig),
-            anim: anim.cloned(),
-            frame,
-            offset,
-            parts: parts.clone(),
-        });
+        *self.mapped.borrow_mut() = Some(held);
 
-        Some(parts)
+        Some(taken)
     }
 
     pub fn slots(&self) -> &[Option<usize>] {

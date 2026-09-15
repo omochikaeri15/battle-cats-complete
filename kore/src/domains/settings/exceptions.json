@@ -1,5 +1,5 @@
 {
-  "source": "default",
+  "source": "custom",
   "rules": [
     {
       "pattern": "img(015|022)",
@@ -351,6 +351,22 @@
         "fr": false,
         "it": false,
         "th": false
+      }
+    },
+    {
+      "pattern": "FeverEffect",
+      "extension": "png|imgcut|mamodel|maanim",
+      "handling": "Only",
+      "languages": {
+        "en": true,
+        "ja": true,
+        "tw": true,
+        "ko": true,
+        "es": true,
+        "de": true,
+        "fr": true,
+        "it": true,
+        "th": true
       }
     }
   ]

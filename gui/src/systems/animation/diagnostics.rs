@@ -5,6 +5,7 @@ use iced::{Color, Element, Length, Point, Rectangle, Renderer, Theme, Vector};
 
 use nyanko::graphics::animate::{resolve_frame, FrameData};
 use nyanko::graphics::rig::{BoundingBox, Rig};
+use nyanko::graphics::tools::joint::Joint;
 use nyanko::graphics::tools::part;
 
 use kore::domains::settings::{Overlays, Scope, StudioSettings, Tier};
@@ -109,13 +110,6 @@ impl Parts<'_> {
         usize::try_from(model.parts.get(part)?.parent).ok()
     }
 
-    fn anchor(&self, part: Option<usize>, geometry: &FrameData, quad: &[Point; 4]) -> Point {
-        self.pivot(part, geometry, quad).unwrap_or_else(|| centroid(quad))
-    }
-
-    fn pivot(&self, part: Option<usize>, geometry: &FrameData, quad: &[Point; 4]) -> Option<Point> {
-        pivot_of(self.data.held_unit.as_ref()?, part?, geometry, quad)
-    }
 }
 
 fn corners(frame: &FrameData, to_screen: &impl Fn(f32, f32) -> Point) -> [Point; 4] {
@@ -128,32 +122,20 @@ fn placed_corners(frame: &FrameData) -> [Point; 4] {
     corners(frame, &|x, y| Point::new(x, y))
 }
 
-pub(crate) fn pivot_of(unit: &Rig, part: usize, geometry: &FrameData, quad: &[Point; 4]) -> Option<Point> {
-    let declared = unit.model.parts.get(part)?;
-    let cut = unit.sheet.cuts.get(geometry.sprite_index)?;
+fn origin_of(part: Option<usize>, joints: &[Joint], to_screen: &impl Fn(f32, f32) -> Point) -> Option<Point> {
+    let (x, y) = joints.get(part?)?.origin?;
 
-    if cut.width == 0 || cut.height == 0 {
-        return None;
-    }
-
-    let across = declared.pivot_x as f32 / cut.width as f32;
-    let down = declared.pivot_y as f32 / cut.height as f32;
-    let [top_left, bottom_left, top_right, _] = *quad;
-
-    Some(Point::new(
-        top_left.x + across * (top_right.x - top_left.x) + down * (bottom_left.x - top_left.x),
-        top_left.y + across * (top_right.y - top_left.y) + down * (bottom_left.y - top_left.y),
-    ))
+    Some(to_screen(x, y))
 }
 
 pub fn anchor(data: &data::State, frame: f32, part: usize) -> Option<Point> {
-    let unit = data.held_unit.as_ref()?;
     let at = data.playback_frame(frame).floor() as i32;
     let mapped = data.mapped(at)?;
     let found = mapped.iter().find(|entry| entry.part == part)?;
     let quad = placed_corners(&found.frame);
+    let joints = data.joints(at).unwrap_or_default();
 
-    pivot_of(unit, part, &found.frame, &quad).or_else(|| Some(centroid(&quad)))
+    origin_of(Some(part), &joints, &|x, y| Point::new(x, y)).or_else(|| Some(centroid(&quad)))
 }
 
 fn centroid(corners: &[Point; 4]) -> Point {
@@ -201,11 +183,13 @@ impl<M> canvas::Program<M> for Parts<'_> {
             Point::new(center.x + (x + self.pan.x) * self.zoom, center.y + (y + self.pan.y) * self.zoom)
         };
 
+        let joints = self.data.joints(self.data.playback_frame(self.frame).floor() as i32).unwrap_or_default();
+
         let placed: Vec<(Option<usize>, [Point; 4], Point)> = parts
             .iter()
             .map(|(index, geometry)| {
                 let quad = corners(geometry, &to_screen);
-                let origin = self.anchor(*index, geometry, &quad);
+                let origin = origin_of(*index, &joints, &to_screen).unwrap_or_else(|| centroid(&quad));
 
                 (*index, quad, origin)
             })
@@ -275,6 +259,12 @@ impl<M> canvas::Program<M> for Parts<'_> {
 
         vec![frame.into_geometry()]
     }
+}
+
+pub(super) struct Marked {
+    pub(super) part: Option<usize>,
+    pub(super) frame: FrameData,
+    pub(super) origin: Option<(f32, f32)>,
 }
 
 pub(super) struct Shot {
@@ -435,7 +425,7 @@ pub(super) fn paint(
     width: u32,
     height: u32,
     unit: &Rig,
-    parts: &[(Option<usize>, FrameData)],
+    parts: &[Marked],
     to_screen: impl Fn(f32, f32) -> Point,
     shot: &Shot,
 ) {
@@ -448,13 +438,11 @@ pub(super) fn paint(
 
     let placed: Vec<(Option<usize>, [Point; 4], Point)> = parts
         .iter()
-        .map(|(index, geometry)| {
-            let quad = corners(geometry, &to_screen);
-            let origin = index
-                .and_then(|part| pivot_of(unit, part, geometry, &quad))
-                .unwrap_or_else(|| centroid(&quad));
+        .map(|marked| {
+            let quad = corners(&marked.frame, &to_screen);
+            let origin = marked.origin.map_or_else(|| centroid(&quad), |(x, y)| to_screen(x, y));
 
-            (*index, quad, origin)
+            (marked.part, quad, origin)
         })
         .collect();
 

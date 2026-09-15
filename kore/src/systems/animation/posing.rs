@@ -44,6 +44,7 @@ pub struct Probe {
     frame: i32,
     offset: Option<usize>,
     part: usize,
+    seen: usize,
     resting: Option<[f32; 8]>,
 }
 
@@ -55,11 +56,17 @@ impl Probe {
         offset: Option<usize>,
         part: usize,
     ) -> Self {
-        Self { rig, anim, frame, offset, part, resting: None }
+        Self { rig, anim, frame, offset, part, seen: part, resting: None }
     }
 
     pub fn seeded(mut self, resting: [f32; 8]) -> Self {
         self.resting = Some(resting);
+        self
+    }
+
+    pub fn watching(mut self, seen: usize) -> Self {
+        self.seen = seen;
+        self.resting = None;
         self
     }
 
@@ -71,7 +78,7 @@ impl Probe {
         part::resolve(&self.rig, self.anim.as_deref(), self.frame, self.offset)
             .ok()?
             .iter()
-            .find(|entry| entry.part == self.part)
+            .find(|entry| entry.part == self.seen)
             .map(|found| found.frame.vertices)
     }
 
