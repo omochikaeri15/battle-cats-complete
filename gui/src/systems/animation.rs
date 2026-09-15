@@ -15,7 +15,7 @@ use std::time::Duration;
 use iced::widget::{button, column, container, stack, text, Space};
 use iced::{Alignment, Background, Border, Color, Element, Length, Padding, Size, Task, Theme};
 
-use nyanko::graphics::rig::{Animation, Model, Rig};
+use nyanko::graphics::rig::{Animation, Model, Rig, SpriteSheet};
 use nyanko::graphics::tools::joint::Joint;
 use nyanko::graphics::tools::part;
 
@@ -143,6 +143,7 @@ pub enum Message {
     Export(export::Message),
     Overlay(overlay::Message),
     Preloaded(data::PreloadResult),
+    Measured(data::Measured),
     ToggleExpanded,
 }
 
@@ -170,13 +171,17 @@ impl State {
         }
     }
 
-    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> ClipSet, settings: &Settings, anim_state: &AnimState) {
+    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> ClipSet, settings: &Settings, anim_state: &AnimState) -> Task<Message> {
         self.adopt_camera(anim_state);
         self.data.restore_offset(anim_state.placement);
         self.data.sync(key, build);
-        self.data.measure(settings.animation.bounds_cull as f32 / CULL_SCALE);
+
+        let measuring = self.data.measure(settings.animation.bounds_cull as f32 / CULL_SCALE);
+
         self.export.sync(&self.data, settings, anim_state);
         self.sync_playhead();
+
+        measuring.map_or_else(Task::none, |request| Task::perform(smol::unblock(move || request.run()), Message::Measured))
     }
 
     pub fn reset_playhead(&mut self) {
@@ -250,6 +255,10 @@ impl State {
 
     pub fn adopt_model(&mut self, model: Arc<Model>) {
         self.data.adopt_model(model);
+    }
+
+    pub fn adopt_sheet(&mut self, cuts: &Path, sheet: Arc<SpriteSheet>) {
+        self.data.adopt_sheet(cuts, sheet);
     }
 
     pub(crate) fn clips(&self) -> impl Iterator<Item = (usize, &kore::systems::animation::Clip)> {
@@ -497,6 +506,10 @@ impl State {
             Message::Preloaded(result) => {
                 self.data.apply_preload(result);
                 self.sync_playhead();
+                Task::none()
+            }
+            Message::Measured(result) => {
+                self.data.apply_measure(result);
                 Task::none()
             }
             Message::ToggleExpanded => {
