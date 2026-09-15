@@ -35,6 +35,7 @@ const PIVOT_DOT: f32 = 5.0;
 const PIVOT_GRAB: f32 = 7.0;
 const PIVOT_ROOM: f32 = 21.0;
 const PIVOT_INK: Color = Color::from_rgb(0.1, 0.46, 0.7);
+const PIVOT_LIVE: Color = Color::from_rgb(0.3, 0.64, 0.9);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Grip {
@@ -204,9 +205,12 @@ pub(super) fn grip_at(quad: &[Point; 4], origin: Point, at: Point) -> Grip {
 pub(super) fn pivoting(quad: &[Point; 4], origin: Point, at: Point) -> bool {
     let (wide, tall) = sides(quad);
 
-    !turning(quad, origin, at)
-        && wide.min(tall) >= PIVOT_ROOM
-        && (at.x - origin.x).hypot(at.y - origin.y) <= PIVOT_GRAB
+    let grab = match wide.min(tall) >= PIVOT_ROOM {
+        true => PIVOT_GRAB,
+        false => PIVOT_DOT,
+    };
+
+    (at.x - origin.x).hypot(at.y - origin.y) <= grab
 }
 
 pub(super) fn reachable(quad: &[Point; 4], origin: Point, at: Point) -> bool {
@@ -453,7 +457,9 @@ impl canvas::Program<Message> for Gizmo {
             frame.stroke(&box_at, Stroke::default().with_color(Color::BLACK).with_width(1.0));
         }
 
-        frame.fill(&Path::circle(origin, PIVOT_DOT), PIVOT_INK);
+        let pivot = if live { PIVOT_LIVE } else { PIVOT_INK };
+
+        frame.fill(&Path::circle(origin, PIVOT_DOT), pivot);
         frame.stroke(&Path::circle(origin, PIVOT_DOT), Stroke::default().with_color(Color::BLACK).with_width(1.0));
 
         vec![frame.into_geometry()]
@@ -629,16 +635,29 @@ mod tests {
     #[test]
     fn a_pivot_on_an_edge_is_grabbed_before_the_scale_band_under_it() {
         // Joints usually sit on an edge, right where the scale band lives. The dot
-        // has to win there, but a part too small to hold it keeps its move grip.
+        // has to win there.
         let edge = Point::new(0.0, 50.0);
 
         assert_eq!(grip_at(&quad(), edge, edge), Grip::Scale { across: -1, down: 0 });
         assert!(pivoting(&quad(), edge, Point::new(3.0, 52.0)));
         assert!(!pivoting(&quad(), edge, Point::new(10.0, 50.0)));
+    }
+
+    #[test]
+    fn a_thin_part_still_hands_over_the_dot_on_its_edge() {
+        // A limb only a few pixels wide on screen used to lose its pivot outright, so a
+        // joint drawn on its edge could be seen and never grabbed. Wherever the dot shows,
+        // it wins; only the extra slack around it is given up to leave the part a middle.
+        let thin = [Point::new(0.0, 0.0), Point::new(0.0, 12.0), Point::new(100.0, 0.0), Point::new(100.0, 12.0)];
+        let joint = Point::new(0.0, 6.0);
+
+        assert!(pivoting(&thin, joint, Point::new(2.0, 8.0)));
+        assert!(!pivoting(&thin, joint, Point::new(6.0, 6.0)), "past the dot the part keeps its own grips");
 
         let small = [Point::new(0.0, 0.0), Point::new(0.0, 16.0), Point::new(16.0, 0.0), Point::new(16.0, 16.0)];
 
-        assert!(!pivoting(&small, Point::new(8.0, 8.0), Point::new(8.0, 8.0)));
+        assert!(pivoting(&small, Point::new(8.0, 8.0), Point::new(8.0, 8.0)));
+        assert!(!pivoting(&small, Point::new(8.0, 8.0), Point::new(4.0, 4.0)));
     }
 
     #[test]
