@@ -150,6 +150,58 @@ impl Blame {
     }
 }
 
+pub(super) struct Audit {
+    pub(super) rig: Arc<Rig>,
+    pub(super) side: Side,
+    pub(super) attacking: bool,
+    pub(super) rigged: bool,
+    pub(super) clips: Vec<(usize, Option<PathBuf>)>,
+    pub(super) open: Option<(PathBuf, Arc<Animation>)>,
+}
+
+impl Audit {
+    pub(super) fn run(self) -> Vec<usize> {
+        let mut found = Vec::new();
+
+        for (index, path) in self.clips {
+            let Some(path) = path else {
+                if self.rigged {
+                    found.push(index);
+                }
+
+                continue;
+            };
+
+            let open = self.open.as_ref().filter(|(held, _)| *held == path).map(|(_, anim)| Arc::clone(anim));
+
+            let Some(anim) = open.or_else(|| read_anim(&path)) else {
+                continue;
+            };
+
+            let attacking = slotted(&path) || self.attacking;
+            let faulted = !crash::anim_faults(&anim, &self.rig.model).is_empty()
+                || (attacking && !crash::attack_faults(&anim, self.side).is_empty());
+
+            if faulted {
+                found.push(index);
+            }
+        }
+
+        found
+    }
+}
+
+fn read_anim(path: &Path) -> Option<Arc<Animation>> {
+    let bytes = fs::read(path)
+        .inspect_err(|err| warn!(path = %path.display(), "Studio could not read an animation to check for faults: {}", err))
+        .ok()?;
+
+    Maanim::parse(&bytes)
+        .inspect_err(|err| warn!(path = %path.display(), "Studio could not parse an animation to check for faults: {}", err))
+        .ok()
+        .map(|doc| doc.shared())
+}
+
 fn majority(model: &Model) -> Option<i32> {
     let mut tally: Vec<(i32, usize)> = Vec::new();
 
