@@ -258,7 +258,7 @@ impl State {
         column![
             text("Game").size(18.0),
             Space::new().height(10.0),
-            nav_row(&[("Cats", Page::Cats), ("Enemies", Page::Enemies), ("Stages", Page::Stages)]),
+            nav_row(&[("Sandbox", Page::Sandbox), ("Cats", Page::Cats), ("Enemies", Page::Enemies), ("Stages", Page::Stages)]),
             Space::new().height(SPACE_BETWEEN_SECTIONS),
 
             text("Data").size(18.0),

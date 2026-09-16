@@ -9,4 +9,5 @@ pub(crate) mod help;
 pub(crate) mod import;
 pub(crate) mod mining;
 pub(crate) mod mods;
+pub(crate) mod sandbox;
 pub(crate) mod utilities;

@@ -26,6 +26,7 @@ pub struct AppState {
     pub(crate) studio: StudioState,
     pub(crate) notice: NoticeState,
     pub(crate) help: HelpState,
+    pub(crate) sandbox: SandboxState,
     pub(crate) popups: BTreeMap<String, StoredSize>,
 }
 
@@ -47,6 +48,12 @@ pub(crate) struct StudioState {
 #[serde(default)]
 pub(crate) struct NoticeState {
     pub acknowledged: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
+pub(crate) struct SandboxState {
+    pub acknowledged: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

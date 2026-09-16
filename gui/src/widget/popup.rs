@@ -116,9 +116,10 @@ pub enum Kind {
     StudioManage,
     StudioOnion,
     StudioShipout,
+    Acknowledgement,
 }
 
-pub(crate) const KIND_COUNT: usize = 41;
+pub(crate) const KIND_COUNT: usize = 42;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -162,6 +163,7 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::StudioManage,
     Kind::StudioOnion,
     Kind::StudioShipout,
+    Kind::Acknowledgement,
 ];
 
 impl Kind {
@@ -208,6 +210,7 @@ impl Kind {
             Self::StudioManage => "studio_manage",
             Self::StudioOnion => "studio_onion",
             Self::StudioShipout => "studio_shipout",
+            Self::Acknowledgement => "acknowledgement",
         }
     }
 

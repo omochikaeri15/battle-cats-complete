@@ -26,7 +26,7 @@ use kore::{ContentStore, Vault};
 use crate::common::feedback::Slot;
 use crate::common::fonts;
 use crate::common::watcher::{self, Asset, Change};
-use crate::domains::{cat, enemy, files, help, home, import, mining, mods, settings as gui_settings, stage, studio, utilities};
+use crate::domains::{cat, enemy, files, help, home, import, mining, mods, sandbox, settings as gui_settings, stage, studio, utilities};
 use crate::editor;
 use crate::widget::{fade, nightly_label, popup, slide, smooth_scroll, Slide};
 
@@ -45,6 +45,7 @@ pub use theme::AppTheme;
 #[derive(PartialEq, Clone, Copy, serde::Deserialize, serde::Serialize, Debug)]
 pub enum Page {
     Home,
+    Sandbox,
     Cats,
     Enemies,
     Stages,
@@ -62,6 +63,7 @@ impl Page {
     pub fn tab_name(self) -> &'static str {
         match self {
             Self::Home => "Home",
+            Self::Sandbox => "Sandbox",
             Self::Cats => "Cats",
             Self::Enemies => "Enemies",
             Self::Stages => "Stages",
@@ -118,6 +120,7 @@ const SIDEBAR_BAR_MARGIN: f32 = 4.0;
 
 const ALL_PAGES: &[Page] = &[
     Page::Home,
+    Page::Sandbox,
     Page::Cats,
     Page::Enemies,
     Page::Stages,
@@ -198,11 +201,12 @@ enum ActivePopup {
     StudioOnion,
     StudioShipout,
     StudioExport,
+    SandboxAcknowledge,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 20] = [
+    const ALL: [Self; 21] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -223,6 +227,7 @@ impl ActivePopup {
         Self::StudioOnion,
         Self::StudioShipout,
         Self::StudioExport,
+        Self::SandboxAcknowledge,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -247,6 +252,7 @@ impl ActivePopup {
             Self::StudioOnion => popup::Kind::StudioOnion,
             Self::StudioShipout => popup::Kind::StudioShipout,
             Self::StudioExport => popup::Kind::Animator,
+            Self::SandboxAcknowledge => popup::Kind::Acknowledgement,
         }
     }
 }
@@ -285,6 +291,7 @@ pub enum Message {
     Import(import::Message),
     Mining(mining::Message),
     Studio(studio::Message),
+    Sandbox(sandbox::Message),
     Help(help::Message),
     Utilities(utilities::Message),
     Settings(gui_settings::Message),
@@ -352,6 +359,8 @@ pub struct BattleCatsApp {
     pub mining_state: mining::State,
     #[serde(skip)]
     pub studio_state: studio::State,
+    #[serde(skip)]
+    pub sandbox_state: sandbox::State,
     #[serde(skip)]
     pub help_state: help::State,
     #[serde(skip)]
@@ -430,6 +439,7 @@ impl Default for BattleCatsApp {
             import_state: import::State::default(),
             mining_state: mining::State::default(),
             studio_state: studio::State::default(),
+            sandbox_state: sandbox::State::default(),
             help_state: help::State::default(),
             utilities_state: utilities::State::default(),
             settings_state: gui_settings::State::default(),
@@ -549,6 +559,12 @@ impl BattleCatsApp {
             }
             Page::Utilities => self.utilities_state.export_scroll_task(),
             Page::Studio => self.studio_state.export_scroll_task(),
+            Page::Sandbox => {
+                self.sandbox_state.enter(self.app_state.sandbox.acknowledged);
+                self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
+
+                Task::none()
+            }
             Page::Mining => {
                 let scope = mining::Scope {
                     cats: &self.cat_state.data.cats,
@@ -1417,6 +1433,18 @@ impl BattleCatsApp {
 
                 task
             }
+            Message::Sandbox(msg) => {
+                let disagreed = matches!(msg, sandbox::Message::Disagree);
+                let task = self.sandbox_state.update(msg, &mut self.app_state).map(Message::Sandbox);
+
+                self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
+
+                if disagreed {
+                    return Task::batch([task, self.navigate(Page::Home)]);
+                }
+
+                task
+            }
             Message::Editor(msg) => {
                 let task = self
                     .editor
@@ -1495,6 +1523,7 @@ impl BattleCatsApp {
                 .studio_state
                 .view(&self.settings, &self.app_state.animation)
                 .map(Message::Studio),
+            Page::Sandbox => self.sandbox_state.view().map(Message::Sandbox),
             Page::Utilities => self.utilities_state.view(&self.settings, &self.app_state).map(Message::Utilities),
             Page::Help => {
                 let ui_theme = self.theme();
@@ -1690,6 +1719,13 @@ impl BattleCatsApp {
                         }
 
                         self.studio_state.export_popup_view(self.window_size).map(|view| view.map(Message::Studio))
+                    }
+                    ActivePopup::SandboxAcknowledge => {
+                        if !matches!(self.current_page, Page::Sandbox) {
+                            return None;
+                        }
+
+                        self.sandbox_state.prompt_view(self.window_size, self.theme()).map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SettingsPem => {
                         if !matches!(self.current_page, Page::Settings) {
