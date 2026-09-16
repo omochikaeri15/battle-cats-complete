@@ -3,7 +3,7 @@ use std::hash::{BuildHasher, Hasher};
 
 const SEED_SPAN: u64 = 0x7fff_ffff;
 
-pub fn rng_core(seed: &mut u32, bound: i32) -> i32 {
+pub fn rng(seed: &mut u32, bound: i32) -> i32 {
     if bound <= 0 {
         return 0;
     }
