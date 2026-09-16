@@ -1,5 +1,7 @@
 use crate::fault::Fault;
 
+use super::CastleRow;
+
 pub const SIZE: usize = 0x500000;
 
 pub const ENTITY_BASE: usize = 0x838f8;
@@ -17,6 +19,7 @@ const _: () = assert!(RNG_STATE + 4 <= SIZE);
 pub struct AppContext {
     raw: Box<[u8]>,
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
+    pub enemy_castle: Vec<CastleRow>,
 }
 
 impl Default for AppContext {
@@ -27,7 +30,7 @@ impl Default for AppContext {
 
 impl AppContext {
     pub fn new() -> Self {
-        Self { raw: vec![0u8; SIZE].into_boxed_slice(), stage_enemies: Vec::new() }
+        Self { raw: vec![0u8; SIZE].into_boxed_slice(), stage_enemies: Vec::new(), enemy_castle: Vec::new() }
     }
 
     pub fn entity_field(team: i32, idx: i32, field: usize) -> usize {
