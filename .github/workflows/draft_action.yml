@@ -2,12 +2,12 @@ name: Draft Action Notification
 
 on:
   push:
-    branches:
-      - nightly
+    branches-ignore:
+      - main
   pull_request:
     types: [closed]
-    branches:
-      - nightly
+    branches-ignore:
+      - main
 
 jobs:
   notify-commits:
