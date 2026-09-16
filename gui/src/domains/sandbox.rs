@@ -6,7 +6,16 @@ use crate::app::state::AppState;
 use crate::app::theme;
 use crate::widget::{popup, smooth_scroll};
 
-const ACKNOWLEDGEMENT: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../.cargo/acknowledge.txt"));
+const ACKNOWLEDGEMENT: &str = r#"
+The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
+By accepting this agreement, you must have read, understood, and accepted the following facts about Sandbox:
+
+- Sandbox may have known but subtle inaccuracies, mechanical bugs, or logical quirks when compared to the real game.
+- Sandbox may not be updated to support features and/or mechanics from the latest game version(s) within a timely manner.
+- Sandbox is not an avenue that replaces the appeal and purpose of the game in any capacity, whether that be vanilla or modded.
+
+You can accept the agreement by clicking the "Agree" button below. Selecting "Disagree" will redirect you to the Home menu.
+"#;
 const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 420.0));
 const BODY_SIZE: f32 = 14.0;
 const BODY_PADDING: f32 = 20.0;
