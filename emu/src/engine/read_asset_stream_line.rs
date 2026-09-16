@@ -18,25 +18,25 @@ pub fn read_asset_stream_line(stm: &mut AssetStream<'_>, out: &mut Cell) -> bool
     out.len = len;
     stm.cursor = hit + 1;
 
-    let mut i = len + 1;
+    let mut kept = len + 1;
 
     out.len = loop {
-        if i == 1 {
+        if kept == 1 {
             break len;
         }
 
-        let byte = stm.bytes[out.at + i - 2];
-        i -= 1;
+        let byte = stm.bytes[out.at + kept - 2];
+        kept -= 1;
 
         if byte == b'\n' || byte == b'\r' {
             continue;
         }
 
-        if i == 0 {
+        if kept == 0 {
             break len;
         }
 
-        break len.min(i);
+        break len.min(kept);
     };
 
     true

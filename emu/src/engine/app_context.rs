@@ -45,6 +45,43 @@ impl AppContext {
         self.raw[RNG_STATE..RNG_STATE + 4].copy_from_slice(&state.to_le_bytes());
     }
 
+    pub fn zero(&mut self, off: usize, len: usize) -> Result<(), Fault> {
+        let bytes = self
+            .raw
+            .get_mut(off..)
+            .and_then(|rest| rest.get_mut(..len))
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+
+        bytes.fill(0);
+
+        Ok(())
+    }
+
+    pub fn block_at<const N: usize>(&self, off: usize) -> Result<[u8; N], Fault> {
+        let bytes = self
+            .raw
+            .get(off..)
+            .and_then(|rest| rest.get(..N))
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+
+        let mut block = [0u8; N];
+        block.copy_from_slice(bytes);
+
+        Ok(block)
+    }
+
+    pub fn set_block_at<const N: usize>(&mut self, off: usize, value: [u8; N]) -> Result<(), Fault> {
+        let bytes = self
+            .raw
+            .get_mut(off..)
+            .and_then(|rest| rest.get_mut(..N))
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+
+        bytes.copy_from_slice(&value);
+
+        Ok(())
+    }
+
     pub fn u8_at(&self, off: usize) -> Result<u8, Fault> {
         self.raw
             .get(off)

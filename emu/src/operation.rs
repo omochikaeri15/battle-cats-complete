@@ -16,6 +16,31 @@ pub trait Truncating: sealed::Sealed + Copy + core::ops::Div<Output = Self> + Fr
 impl Truncating for i32 {}
 impl Truncating for i64 {}
 
+pub fn slli_epi32(lanes: [u8; 16], count: u32) -> [u8; 16] {
+    let mut out = [0u8; 16];
+
+    for dword in 0..4 {
+        let mut word = [0u8; 4];
+        word.copy_from_slice(&lanes[dword * 4..dword * 4 + 4]);
+        out[dword * 4..dword * 4 + 4].copy_from_slice(&(i32::from_le_bytes(word) << count).to_le_bytes());
+    }
+
+    out
+}
+
+pub fn blend_epi16(a: [u8; 16], b: [u8; 16], mask: u8) -> [u8; 16] {
+    let mut out = a;
+
+    for lane in 0..8 {
+        if mask & (1 << lane) != 0 {
+            out[lane * 2] = b[lane * 2];
+            out[lane * 2 + 1] = b[lane * 2 + 1];
+        }
+    }
+
+    out
+}
+
 pub fn div_5<T: Truncating>(x: T) -> T {
     x / T::from(5)
 }
