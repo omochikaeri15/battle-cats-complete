@@ -7,6 +7,8 @@ pub const ENTITY_STRIDE: usize = 0x3e8;
 pub const TEAM_STRIDE: usize = 0xc738;
 pub const SLOTS_PER_TEAM: i32 = 51;
 
+pub const STAGE_ENEMY_COLUMNS: usize = 14;
+
 const RNG_STATE: usize = 0x46f790;
 const SITE: &str = "app_context";
 
@@ -14,6 +16,7 @@ const _: () = assert!(RNG_STATE + 4 <= SIZE);
 
 pub struct AppContext {
     raw: Box<[u8]>,
+    pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
 }
 
 impl Default for AppContext {
@@ -24,7 +27,7 @@ impl Default for AppContext {
 
 impl AppContext {
     pub fn new() -> Self {
-        Self { raw: vec![0u8; SIZE].into_boxed_slice() }
+        Self { raw: vec![0u8; SIZE].into_boxed_slice(), stage_enemies: Vec::new() }
     }
 
     pub fn entity_field(team: i32, idx: i32, field: usize) -> usize {
