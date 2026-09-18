@@ -110,6 +110,8 @@ impl Entity {
     pub const WEAKEN_IMMUNE: usize = 0x16c;
     pub const BURROW_COUNT: usize = 0x184;
     pub const BURROW_START_X: usize = 0x188;
+    pub const IMMUNE_FX_FRAME: usize = 0x194;
+    pub const IMMUNE_FX_ACTIVE: usize = 0x198;
     pub const REVIVE_COUNT: usize = 0x19c;
     pub const REVIVE_HP: usize = 0x1a0;
     pub const REVIVE_TIME: usize = 0x1a4;
