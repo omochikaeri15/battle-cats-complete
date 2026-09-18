@@ -16,13 +16,7 @@ pub struct FixedLineupStore {
     pub hints: Vec<FixedLineupRow>,
 }
 
-pub fn has_fixed_lineup(
-    ctx: &mut AppContext,
-    store: usize,
-    mut map_id: i32,
-    mut stage: i32,
-    mut level: i32,
-) -> Result<bool, Fault> {
+pub fn has_fixed_lineup(ctx: &mut AppContext, mut map_id: i32, mut stage: i32, mut level: i32) -> Result<bool, Fault> {
     if map_id == -1 {
         map_id = get_global_map_id(ctx, 0)?;
         stage = get_stage_index(ctx)?;
@@ -35,7 +29,7 @@ pub fn has_fixed_lineup(
         }
     }
 
-    for row in &ctx.fixed_lineup_store_at(store)?.rows {
+    for row in &ctx.fixed_lineup_store.rows {
         if row.map_id == map_id && row.stage == stage && row.level == level {
             return Ok(true);
         }

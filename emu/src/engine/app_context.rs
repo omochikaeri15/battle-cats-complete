@@ -14,7 +14,6 @@ pub const SLOTS_PER_TEAM: i32 = 51;
 pub const STAGE_ENEMY_COLUMNS: usize = 14;
 
 const RNG_STATE: usize = 0x46f790;
-const FIXED_LINEUP_STORE: usize = 0x468;
 const SITE: &str = "app_context";
 
 const _: () = assert!(RNG_STATE + 4 <= SIZE);
@@ -117,14 +116,6 @@ impl AppContext {
             .wrapping_mul(TEAM_STRIDE)
             .wrapping_add((idx as usize).wrapping_mul(ENTITY_STRIDE))
             .wrapping_add(field)
-    }
-
-    pub fn fixed_lineup_store_at(&self, store: usize) -> Result<&FixedLineupStore, Fault> {
-        if store != FIXED_LINEUP_STORE {
-            return Err(Fault::IndexOutOfRange { site: SITE, index: store as i64, limit: FIXED_LINEUP_STORE as i64 });
-        }
-
-        Ok(&self.fixed_lineup_store)
     }
 
     pub fn sound(&mut self) -> Option<&mut (dyn SoundManager + 'static)> {

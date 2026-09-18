@@ -11,7 +11,7 @@ pub fn has_talent(ctx: &mut AppContext, _team: i32, unit_id: i32, form: i32, abi
         return Ok(false);
     }
 
-    if get_scene_id(ctx)? == 0x12c && has_fixed_lineup(ctx, 0x468, -1, -1, -1)? {
+    if get_scene_id(ctx)? == 0x12c && has_fixed_lineup(ctx, -1, -1, -1)? {
         return Ok(false);
     }
 
