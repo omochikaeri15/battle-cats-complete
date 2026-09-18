@@ -17,7 +17,7 @@ By accepting this agreement, you must have read, understood, and accepted the fo
 
 You can accept the agreement by clicking the "Agree" button below. Selecting "Disagree" will redirect you to the Home menu.
 "#;
-const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 420.0));
+const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
 const BODY_SIZE: f32 = 14.0;
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
