@@ -138,6 +138,7 @@ impl Entity {
     pub const WEAKEN_TIMER: usize = 0x12c;
     pub const WEAKEN_ACTIVE: usize = 0x130;
     pub const SURVIVE_USED: usize = 0x134;
+    pub const SURVIVE_FX_FRAME: usize = 0x138;
     pub const WEAKEN_ACTIVE_PCT: usize = 0x13c;
     pub const ATTACK_UP_FX_FRAME: usize = 0x140;
     pub const ATTACK_1_LD_ANCHOR: usize = 0x150;
@@ -636,6 +637,7 @@ impl AppContext {
     pub const STAGE_RECORD_NEG6: usize = 0x37b1b0;
     pub const SAVED_MAP_TYPE: usize = 0x3836b4;
     pub const CHAPTER_COST_TIER: usize = 0x388028;
+    pub const PROC_ROLLS: usize = 0x3880dc;
     pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
     pub const STAR_LEVEL: usize = 0x38fecc;
     pub const EX_MAP_INDEX: usize = 0x402168;
