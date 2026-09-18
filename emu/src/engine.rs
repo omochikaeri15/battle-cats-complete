@@ -678,7 +678,7 @@ pub use add_shockwave_counter::add_shockwave_counter;
 pub use add_slow_timer::add_slow_timer;
 pub use add_warp_timer::add_warp_timer;
 pub use add_weaken_timer::add_weaken_timer;
-pub use app_context::{AppContext, STAGE_ENEMY_COLUMNS, ENTITY_BASE, ENTITY_STRIDE, SIZE, SLOTS_PER_FACTION, FACTION_STRIDE};
+pub use app_context::{AppContext, CatStats, EnemyStats, Entity, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, ENEMY_STATS, ENEMY_STATS_STRIDE, STAGE_ENEMY_COLUMNS, ENTITY_BASE, ENTITY_STRIDE, SIZE, SLOTS_PER_FACTION, FACTION_STRIDE};
 pub use asset_stream::{AssetStream, Cell};
 pub use attack_ability_fields::ATTACK_ABILITY_FIELDS;
 pub use attack_damage_fields::ATTACK_DAMAGE_FIELDS;

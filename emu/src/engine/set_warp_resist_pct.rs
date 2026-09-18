@@ -1,7 +1,7 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn set_warp_resist_pct(ctx: &mut AppContext, faction: i32, slot: i32, value: i32) -> Result<(), Fault> {
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0x83b70), value)
+    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::WARP_RESIST_PCT), value)
 }

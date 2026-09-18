@@ -7,5 +7,5 @@ pub fn set_proc_badge(ctx: &mut AppContext, faction: i32, slot: i32, index: i32,
         .get(index as usize)
         .ok_or(Fault::IndexOutOfRange { site: "set_proc_badge", index: index as i64, limit: 5 })?;
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0x838f8).wrapping_add((field as usize).wrapping_mul(4)), value)
+    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0).wrapping_add((field as usize).wrapping_mul(4)), value)
 }

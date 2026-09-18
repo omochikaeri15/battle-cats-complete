@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn set_slot_kind(ctx: &mut AppContext, faction: i32, slot: i32, mode: i32, unit_id: i32) -> Result<(), Fault> {
     let kind = match mode {
@@ -10,5 +10,5 @@ pub fn set_slot_kind(ctx: &mut AppContext, faction: i32, slot: i32, mode: i32, u
         _ => return Ok(()),
     };
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0x838f8), kind)
+    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::SLOT_KIND), kind)
 }

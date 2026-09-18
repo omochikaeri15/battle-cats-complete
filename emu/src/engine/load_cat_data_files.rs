@@ -41,7 +41,7 @@ pub fn load_cat_data_files(
         let mut column = 0;
 
         while column != GROWTH_COLUMNS {
-            ctx.set_i32_at(growth_at + 0x4475a4 + (column as usize) * 4, read_csv_cell(unitlevel, column) as i32)?;
+            ctx.set_i32_at(growth_at + AppContext::UNIT_LEVEL_CURVE + (column as usize) * 4, read_csv_cell(unitlevel, column) as i32)?;
             column += 1;
         }
 
@@ -56,7 +56,7 @@ pub fn load_cat_data_files(
         let mut column = 0;
 
         while column != GROWTH_COLUMNS {
-            ctx.set_i32_at(growth_at + 0x458764 + (column as usize) * 4, read_csv_cell(unitexp, column) as i32)?;
+            ctx.set_i32_at(growth_at + AppContext::UNIT_EXP_CURVE + (column as usize) * 4, read_csv_cell(unitexp, column) as i32)?;
             column += 1;
         }
 

@@ -1,9 +1,9 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn add_attacks_remaining(ctx: &mut AppContext, faction: i32, slot: i32, delta: i32) -> Result<(), Fault> {
-    let field = AppContext::entity_field(faction, slot, 0x83ac4);
+    let field = AppContext::entity_field(faction, slot, Entity::ATTACKS_REMAINING);
     let current = ctx.i32_at(field)?;
 
     ctx.set_i32_at(field, current.wrapping_add(delta))

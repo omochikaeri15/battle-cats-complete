@@ -1,7 +1,7 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn get_slow_resist_pct(ctx: &AppContext, faction: i32, slot: i32) -> Result<i32, Fault> {
-    ctx.i32_at(AppContext::entity_field(faction, slot, 0x83b64))
+    ctx.i32_at(AppContext::entity_field(faction, slot, Entity::SLOW_RESIST_PCT))
 }

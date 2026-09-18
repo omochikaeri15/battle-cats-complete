@@ -1,11 +1,10 @@
 use crate::Fault;
 
-use super::{read_flag, AppContext};
+use super::{read_flag, AppContext, Entity};
 
 pub fn is_metal(ctx: &AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
-    let faction_index = faction as usize;
-    let cat_side = read_flag(ctx, faction_index.wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 != 0;
-    let field = if cat_side { 0x83a20 } else { 0x839a4 };
+    let cat_side = read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0;
+    let field = if cat_side { Entity::METAL_CAT } else { Entity::TRAIT_METAL };
 
     Ok(ctx.i32_at(AppContext::entity_field(faction, slot, field))? != 0)
 }

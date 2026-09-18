@@ -1,7 +1,7 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn set_orb_dodge_timer(ctx: &mut AppContext, faction: i32, slot: i32, value: i32) -> Result<(), Fault> {
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0x83ca0), value)
+    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::ORB_DODGE_TIMER), value)
 }

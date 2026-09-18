@@ -7,5 +7,5 @@ pub fn set_attack_abilities(ctx: &mut AppContext, faction: i32, slot: i32, attac
         .get(attack as usize)
         .ok_or(Fault::IndexOutOfRange { site: "set_attack_abilities", index: attack as i64, limit: 3 })?;
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0x838f8).wrapping_add((field as usize).wrapping_mul(4)), value)
+    ctx.set_i32_at(AppContext::entity_field(faction, slot, 0).wrapping_add((field as usize).wrapping_mul(4)), value)
 }

@@ -1,7 +1,7 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn has_barrier_breaker_chance(ctx: &AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
-    Ok(ctx.i32_at(AppContext::entity_field(faction, slot, 0x83b08))? != 0)
+    Ok(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::BARRIER_BREAKER_CHANCE))? != 0)
 }

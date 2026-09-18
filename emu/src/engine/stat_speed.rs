@@ -2,13 +2,14 @@ use crate::{operation, Fault};
 
 use super::{
     get_cat_combo_bonus, get_global_map_id, get_special_rule_params, get_talent_value, read_flag, AppContext,
+    CatStats, EnemyStats,
 };
 
 pub fn stat_speed(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32) -> Result<i32, Fault> {
-    let mut speed = if read_flag(ctx, (faction as usize).wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 == 0 {
-        ctx.i32_at(((unit_id.wrapping_add(2) as i64) * 0x1c4 + 0x233110) as usize)?
+    let mut speed = if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
+        ctx.i32_at(AppContext::enemy_stat(unit_id, EnemyStats::SPEED))?
     } else {
-        let base = ctx.i32_at(((unit_id.wrapping_add(2) as i64) * 0x760 + (form as i64) * 0x1d8 + 0x9e570) as usize)?;
+        let base = ctx.i32_at(AppContext::cat_stat(unit_id, form, CatStats::SPEED))?;
         let boosted = get_talent_value(ctx, faction, unit_id, form, 0x1b, 0)?.wrapping_mul(2).wrapping_add(base);
 
         operation::div_100(get_cat_combo_bonus(ctx, &ctx.combo_store, 2, unit_id)?.wrapping_add(0x64).wrapping_mul(boosted))

@@ -1,9 +1,9 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, Entity};
 
 pub fn add_score_hit_mask(ctx: &mut AppContext, faction: i32, slot: i32, delta: i32) -> Result<(), Fault> {
-    let field = AppContext::entity_field(faction, slot, 0x83c98);
+    let field = AppContext::entity_field(faction, slot, Entity::SCORE_HIT_MASK);
     let current = ctx.i32_at(field)?;
 
     ctx.set_i32_at(field, current.wrapping_add(delta))
