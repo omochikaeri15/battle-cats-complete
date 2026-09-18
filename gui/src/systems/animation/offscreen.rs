@@ -389,8 +389,8 @@ fn run(job: Job) {
         return;
     };
 
-    let clips = if job.timing.mode == ExportMode::Showcase {
-        Some(ShowcaseClips::load(&job.role_paths))
+    let motions = if job.timing.mode == ExportMode::Showcase {
+        Some(ShowcaseMotions::load(&job.role_paths))
     } else {
         None
     };
@@ -402,10 +402,10 @@ fn run(job: Job) {
     let trails = job.debug.as_ref().map_or_else(Vec::new, diagnostics::Shot::trails);
 
     let seat = |progress: i32| {
-        let (animation, local_time) = match &clips {
-            Some(clips) => {
+        let (animation, local_time) = match &motions {
+            Some(motions) => {
                 let (role, time) = showcase_segment(job.lengths, progress);
-                let animation = clips.get(role);
+                let animation = motions.get(role);
                 let time = match animation {
                     Some(anim) if anim.declared_frames() > 1 => time,
                     _ => 0.0,
@@ -466,14 +466,14 @@ fn run(job: Job) {
     }
 }
 
-struct ShowcaseClips {
+struct ShowcaseMotions {
     walk: Option<Animation>,
     idle: Option<Animation>,
     attack: Option<Animation>,
     kb: Option<Animation>,
 }
 
-impl ShowcaseClips {
+impl ShowcaseMotions {
     fn load(role_paths: &[(Role, PathBuf)]) -> Self {
         let parse = |role: Role| -> Option<Animation> {
             let (_, path) = role_paths.iter().find(|(known, _)| *known == role)?;
@@ -575,7 +575,7 @@ mod tests {
     use super::ghost_seat;
 
     // A trail reaching behind the first frame resolved to a negative frame time, which
-    // sits outside the clip, so the export opened on the rig in its rest pose. Every
+    // sits outside the motion, so the export opened on the rig in its rest pose. Every
     // ghost has to land on a frame the export itself renders.
     #[test]
     fn a_trail_never_reaches_outside_the_exported_range() {

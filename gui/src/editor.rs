@@ -125,7 +125,7 @@ struct ChannelTarget {
 
 struct AnimTarget {
     key: String,
-    clip: Option<String>,
+    motion: Option<String>,
     asset: Asset,
     unlocked: bool,
     active_mod: Option<String>,
@@ -1009,7 +1009,7 @@ impl State {
             },
             Action::EditAnimation(plan) => match adopt_set(plan, vfs) {
                 Some((set, copied, side)) => {
-                    studio.adopt(set, plan.target_mod.clone(), plan.clip.clone(), copied, side);
+                    studio.adopt(set, plan.target_mod.clone(), plan.motion.clone(), copied, side);
 
                     Outcome::Opened(Page::Studio)
                 }
@@ -1715,19 +1715,19 @@ fn named_files(app: &BattleCatsApp, names: Vec<String>) -> Vec<AssetFile> {
 fn anim_target(app: &BattleCatsApp, cats: bool, enemies: bool) -> Option<AnimTarget> {
     let vfs = &app.vault.vfs;
 
-    let (files, clip) = match app.current_page {
+    let (files, motion) = match app.current_page {
         Page::Cats if cats => {
             let id = app.app_state.cat.selected_cat?;
             let form = app.app_state.cat.selected_form;
             let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
-            (cat_animation::rig_files(cat, form, vfs)?, app.cat_state.animation_clip())
+            (cat_animation::rig_files(cat, form, vfs)?, app.cat_state.selected_motion())
         }
         Page::Enemies if enemies => {
             let id = app.app_state.enemy.selected_enemy?;
             let enemy = app.enemy_state.data.enemies.iter().find(|enemy| enemy.id == id)?;
 
-            (enemy_animation::rig_files(enemy, vfs)?, app.enemy_state.animation_clip())
+            (enemy_animation::rig_files(enemy, vfs)?, app.enemy_state.selected_motion())
         }
         _ => return None,
     };
@@ -1737,7 +1737,7 @@ fn anim_target(app: &BattleCatsApp, cats: bool, enemies: bool) -> Option<AnimTar
 
     Some(AnimTarget {
         key,
-        clip,
+        motion,
         asset,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
@@ -1750,7 +1750,7 @@ pub(crate) struct AnimPlan {
     files: Vec<String>,
     target_mod: Option<String>,
     unlocked: bool,
-    clip: Option<String>,
+    motion: Option<String>,
 }
 
 fn anim_plan(target: &AnimTarget, target_mod: Option<String>) -> AnimPlan {
@@ -1759,7 +1759,7 @@ fn anim_plan(target: &AnimTarget, target_mod: Option<String>) -> AnimPlan {
         files: target.asset.names(),
         target_mod,
         unlocked: target.unlocked,
-        clip: target.clip.clone(),
+        motion: target.motion.clone(),
     }
 }
 fn adopt_set(plan: &AnimPlan, vfs: &Vfs) -> Option<(studio::Set, bool, Option<Side>)> {

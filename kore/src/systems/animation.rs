@@ -52,19 +52,19 @@ pub struct Rigging {
     pub model: PathBuf,
 }
 
-pub struct Clip {
+pub struct Motion {
     pub name: Option<String>,
     pub slot: Option<usize>,
     pub role: Option<Role>,
     pub looping: Loop,
     pub rig: Arc<Rigging>,
-    pub anim: Option<PathBuf>,
+    pub file: Option<PathBuf>,
 }
 
 #[derive(Default)]
-pub struct ClipSet {
+pub struct MotionSet {
     pub name: String,
-    pub clips: Vec<Clip>,
+    pub motions: Vec<Motion>,
     pub offsets: Vec<Offset>,
 }
 
@@ -104,7 +104,7 @@ pub fn named_offsets(placement: &'static str) -> Vec<Offset> {
     vec![Offset::none(RAW_OFFSET), Offset::at(0, COMBAT_OFFSET), Offset::at(1, placement)]
 }
 
-impl Clip {
+impl Motion {
     pub fn model(rig: Arc<Rigging>) -> Self {
         Self {
             name: Some(MODEL_NAME.to_string()),
@@ -112,7 +112,7 @@ impl Clip {
             role: None,
             looping: Loop::Frames,
             rig,
-            anim: None,
+            file: None,
         }
     }
 
@@ -121,7 +121,7 @@ impl Clip {
             return name.clone();
         }
 
-        self.anim
+        self.file
             .as_deref()
             .and_then(Path::file_stem)
             .and_then(OsStr::to_str)

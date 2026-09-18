@@ -364,7 +364,7 @@ impl State {
                 self.exporter.frame_end_str.clear();
             }
 
-            let slug = data.current_clip().map_or_else(|| "anim".to_string(), |clip| clip.slug());
+            let slug = data.current_motion().map_or_else(|| "anim".to_string(), |motion| motion.slug());
             self.exporter.name_prefix = derive_name_prefix(data.export_name(), &slug);
         }
 
@@ -972,7 +972,7 @@ impl State {
                 let worker_abort = abort.clone();
                 let worker_progress = progress.clone();
                 thread::spawn(move || {
-                    let mut showcase_clips = Vec::new();
+                    let mut showcase_motions = Vec::new();
 
                     if is_showcase {
                         for (role, length) in showcase_slots {
@@ -983,18 +983,18 @@ impl State {
                             if let Some((_, path)) = role_paths.iter().find(|(known, _)| *known == role)
                                 && let Ok(bytes) = fs::read(path)
                                 && let Ok(anim) = Animation::parse(&bytes) {
-                                showcase_clips.push((anim, length));
+                                showcase_motions.push((anim, length));
                             }
                         }
                     }
 
-                    let clips: Vec<(&Animation, Option<i32>)> = if is_showcase {
-                        showcase_clips.iter().map(|(anim, length)| (anim, Some(*length))).collect()
+                    let motions: Vec<(&Animation, Option<i32>)> = if is_showcase {
+                        showcase_motions.iter().map(|(anim, length)| (anim, Some(*length))).collect()
                     } else {
                         current_anim.iter().map(|anim| (anim.as_ref(), Some(scan_limit))).collect()
                     };
 
-                    let outcome = find_bounds::search(&unit, &clips, tolerance, offset, &worker_progress, &worker_abort);
+                    let outcome = find_bounds::search(&unit, &motions, tolerance, offset, &worker_progress, &worker_abort);
                     let _ = tx.unbounded_send(outcome);
                 });
 
@@ -1621,12 +1621,12 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
-    use kore::systems::animation::{Clip, ClipSet, Loop, Rigging, Role};
+    use kore::systems::animation::{Motion, MotionSet, Loop, Rigging, Role};
 
     use super::*;
 
-    fn clip(role: Option<Role>) -> Clip {
-        Clip {
+    fn motion(role: Option<Role>) -> Motion {
+        Motion {
             name: None,
             slot: None,
             role,
@@ -1637,16 +1637,16 @@ mod tests {
                 cut: PathBuf::from("t.imgcut"),
                 model: PathBuf::from("t.mamodel"),
             }),
-            anim: Some(PathBuf::from("000_f00.maanim")),
+            file: Some(PathBuf::from("000_f00.maanim")),
         }
     }
 
     fn seeded(key: &str, role: Option<Role>) -> data::State {
         let mut held = data::State::default();
 
-        held.sync(key, || ClipSet {
+        held.sync(key, || MotionSet {
             name: key.to_owned(),
-            clips: vec![clip(role)],
+            motions: vec![motion(role)],
             offsets: Vec::new(),
         });
 

@@ -1,4 +1,4 @@
-use crate::systems::animation::{self, named_offsets, Clip, ClipSet, Loop, RigFiles};
+use crate::systems::animation::{self, named_offsets, Motion, MotionSet, Loop, RigFiles};
 use crate::Vfs;
 
 use super::files;
@@ -24,39 +24,39 @@ pub fn rig_files(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<RigFiles> {
     animation::rig_files(vfs, &set_id(cat, form), &base)
 }
 
-pub fn clips(cat: &CatEntry, form: usize, vfs: &Vfs) -> ClipSet {
+pub fn motions(cat: &CatEntry, form: usize, vfs: &Vfs) -> MotionSet {
     let egg_ids = cat.egg_ids.unwrap_or((-1, -1));
     let base = vec![files::anim_base_filename(cat.id, form, egg_ids)];
     let id = set_id(cat, form);
 
-    let mut clips = Vec::new();
+    let mut motions = Vec::new();
 
     if let Some(rig) = animation::rigging(vfs, &id, &base) {
         for (suffix, path) in animation::maanims(vfs, &base) {
             let index = suffix.parse::<usize>().ok();
             let named = index.and_then(animation::standard);
 
-            clips.push(Clip {
+            motions.push(Motion {
                 name: named.map(|(name, _, _)| name.to_string()),
                 slot: named.map(|(_, slot, _)| slot),
                 role: named.map(|(_, _, role)| role),
                 looping: if named.is_some_and(|(_, _, role)| role.loops()) { Loop::Exact } else { Loop::Frames },
                 rig: rig.clone(),
-                anim: Some(path),
+                file: Some(path),
             });
         }
 
-        clips.push(Clip::model(rig));
+        motions.push(Motion::model(rig));
     }
 
-    if let Some(spirit) = spirit_clip(cat, form, vfs) {
-        clips.push(spirit);
+    if let Some(spirit) = spirit_motion(cat, form, vfs) {
+        motions.push(spirit);
     }
 
-    ClipSet { name: id, clips, offsets: named_offsets("Gacha") }
+    MotionSet { name: id, motions, offsets: named_offsets("Gacha") }
 }
 
-fn spirit_clip(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<Clip> {
+fn spirit_motion(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<Motion> {
     let conjure_id = cat.stats.get(form)?.as_ref()?.conjure_unit_id;
 
     if conjure_id <= 0 {
@@ -68,12 +68,12 @@ fn spirit_clip(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<Clip> {
     let rig = animation::rigging(vfs, &format!("spirit_{}", spirit_id), &base)?;
     let anim = vfs.find(&files::maanim_file(spirit_id, 0, (-1, -1), SPIRIT_ATTACK))?;
 
-    Some(Clip {
+    Some(Motion {
         name: Some("Spirit".to_string()),
         slot: None,
         role: None,
         looping: Loop::Frames,
         rig,
-        anim: Some(anim),
+        file: Some(anim),
     })
 }

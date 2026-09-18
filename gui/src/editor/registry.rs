@@ -18,7 +18,7 @@ const UNALIGNED_NOTICE: &str = "This model declares no unit divisors, and the re
 const NO_OFFSET_NOTICE: &str = "This model declares no offset rows to remove";
 const NOT_DRAWN_NOTICE: &str = "This part is not drawn on the current frame";
 const EVERY_CHANNEL_NOTICE: &str = "This part already has every channel";
-const NO_CLIP_NOTICE: &str = "Select an animation clip to add channels";
+const NO_MOTION_NOTICE: &str = "Select an animation to add channels";
 const FULL_NOTICE: &str =
     "Every slot the engine addresses is taken: 500 maps to a category, and 100 stages to a map";
 const VANILLA_NOTICE: &str =
@@ -275,7 +275,7 @@ fn channels(target: &studio::Channels) -> Vec<Item> {
         .collect();
 
     let adding = match (target.channelled, absent.as_slice()) {
-        (false, _) => Item::disabled(format!("Add channel to \"{subject}\""), NO_CLIP_NOTICE),
+        (false, _) => Item::disabled(format!("Add channel to \"{subject}\""), NO_MOTION_NOTICE),
         (_, []) => Item::disabled(format!("Add channel to \"{subject}\""), EVERY_CHANNEL_NOTICE),
         (_, [(kind, label)]) => Item::new(
             format!("Add \"{label}\" to \"{subject}\""),

@@ -41,7 +41,8 @@ pub(crate) struct StudioState {
     pub sealed: bool,
     pub target_mod: Option<String>,
     pub atlas: bool,
-    pub clip: Option<String>,
+    #[serde(alias = "clip")]
+    pub motion: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

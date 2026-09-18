@@ -188,7 +188,7 @@ impl State {
 
         let frames = settings.utilities.frame_count;
 
-        self.viewer.sync(&key, || builder::clips(png, cut, model, anims, frames), settings, anim_state)
+        self.viewer.sync(&key, || builder::motions(png, cut, model, anims, frames), settings, anim_state)
     }
 
     pub(crate) fn is_expanded(&self) -> bool {

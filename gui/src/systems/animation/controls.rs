@@ -198,7 +198,7 @@ fn control_style(t: &Theme, status: button::Status, is_active: bool) -> button::
     }
 }
 
-fn clip_style(t: &Theme, status: button::Status, is_active: bool, alarmed: bool) -> button::Style {
+fn motion_style(t: &Theme, status: button::Status, is_active: bool, alarmed: bool) -> button::Style {
     let base = control_style(t, status, is_active);
 
     if !alarmed {
@@ -311,13 +311,13 @@ fn fitted_size(label: &str) -> f32 {
         .unwrap_or(ANIM_TEXT_FLOOR)
 }
 
-fn clip_tile(data: &data::State, index: usize, alarmed: bool) -> Element<'_, Message> {
-    let Some(clip) = data.clip(index) else {
+fn motion_tile(data: &data::State, index: usize, alarmed: bool) -> Element<'_, Message> {
+    let Some(motion) = data.motion(index) else {
         return vacant_tile();
     };
 
     let is_active = data.selected() == Some(index);
-    let label = clip.label();
+    let label = motion.label();
     let size = fitted_size(&label);
 
     let face = container(
@@ -338,7 +338,7 @@ fn clip_tile(data: &data::State, index: usize, alarmed: bool) -> Element<'_, Mes
         .height(Length::Fixed(ANIM_BUTTON_H))
         .padding(ANIM_LABEL_INSET)
         .on_press(Message::SelectAnimation(index))
-        .style(move |t: &Theme, status| clip_style(t, status, is_active, alarmed))
+        .style(move |t: &Theme, status| motion_style(t, status, is_active, alarmed))
         .into()
 }
 
@@ -351,7 +351,7 @@ fn anim_grid<'a>(data: &'a data::State, alarms: &[usize]) -> Element<'a, Message
 
         for slot in chunk {
             buttons = buttons.push(
-                slot.map_or_else(vacant_tile, |index| clip_tile(data, index, alarms.contains(&index))),
+                slot.map_or_else(vacant_tile, |index| motion_tile(data, index, alarms.contains(&index))),
             );
         }
 
@@ -517,7 +517,7 @@ impl State {
 
     fn transport_row<'a>(&'a self, canvas: &'a canvas::State, data: &'a data::State) -> Element<'a, Message> {
         let base_available = data.held_unit.is_some();
-        let anim_loaded = base_available && data.current_clip().is_some();
+        let anim_loaded = base_available && data.current_motion().is_some();
 
         let play_icon = if canvas.is_playing { PAUSE_GLYPH } else { PLAY_GLYPH };
 

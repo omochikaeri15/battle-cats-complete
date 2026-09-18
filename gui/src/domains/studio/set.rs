@@ -187,7 +187,7 @@ impl State {
                 let stem = seeded.file_stem().and_then(OsStr::to_str).map(str::to_owned);
 
                 self.manage.anims_mut().push(seeded);
-                self.aim_clip(stem);
+                self.aim_motion(stem);
 
                 self.resettle(Swap::Same)
             }
@@ -307,9 +307,9 @@ impl State {
         }
 
         let target_mod = self.session.as_ref().and_then(|session| session.plan.target_mod.clone());
-        let clip = self.session.as_ref().and_then(|session| session.viewer.selected_label());
+        let motion = self.session.as_ref().and_then(|session| session.viewer.selected_label());
 
-        self.begin(plan(wanted, target_mod, clip));
+        self.begin(plan(wanted, target_mod, motion));
         self.manage.restock();
 
         Task::none()
@@ -329,12 +329,12 @@ impl State {
         }
     }
 
-    fn aim_clip(&mut self, label: Option<String>) {
+    fn aim_motion(&mut self, label: Option<String>) {
         let Some(session) = self.session.as_mut() else {
             return;
         };
 
-        session.plan.clip = label;
+        session.plan.motion = label;
         session.primed = false;
     }
 
@@ -381,7 +381,7 @@ impl State {
             self.manage.retrack(stem);
         }
 
-        self.aim_clip(self.manage.set().slot_label(&renamed).or(stem));
+        self.aim_motion(self.manage.set().slot_label(&renamed).or(stem));
 
         self.resettle(Swap::Same)
     }

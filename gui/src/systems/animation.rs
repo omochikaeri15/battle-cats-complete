@@ -20,7 +20,7 @@ use nyanko::graphics::tools::joint::Joint;
 use nyanko::graphics::tools::part;
 
 use kore::domains::settings::{Overlays, Scope, ScrubBehavior, Settings};
-use kore::systems::animation::ClipSet;
+use kore::systems::animation::MotionSet;
 
 use crate::app::state::AnimState;
 use crate::app::theme;
@@ -131,7 +131,7 @@ pub struct State {
     is_expanded: bool,
     authoring: bool,
     playhead_rig: String,
-    playhead_clip: Option<usize>,
+    playhead_motion: Option<usize>,
     playhead_reset: bool,
     camera: ((f32, f32), f32),
 }
@@ -165,13 +165,13 @@ impl State {
             is_expanded: false,
             authoring: false,
             playhead_rig: String::new(),
-            playhead_clip: None,
+            playhead_motion: None,
             playhead_reset: false,
             camera: ((0.0, 0.0), 1.0),
         }
     }
 
-    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> ClipSet, settings: &Settings, anim_state: &AnimState) -> Task<Message> {
+    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> MotionSet, settings: &Settings, anim_state: &AnimState) -> Task<Message> {
         self.adopt_camera(anim_state);
         self.data.restore_offset(anim_state.placement);
         self.data.sync(key, build);
@@ -191,7 +191,7 @@ impl State {
     pub fn clear(&mut self) {
         self.data.reset_display();
         self.playhead_rig.clear();
-        self.playhead_clip = None;
+        self.playhead_motion = None;
     }
 
     pub fn is_model_selected(&self) -> bool {
@@ -199,18 +199,18 @@ impl State {
     }
 
     pub fn selected_anim(&self) -> Option<&PathBuf> {
-        self.data.current_clip().and_then(|clip| clip.anim.as_ref())
+        self.data.current_motion().and_then(|motion| motion.file.as_ref())
     }
 
     fn sync_playhead(&mut self) {
-        let (rig, clip) = self.data.playhead_key();
+        let (rig, motion) = self.data.playhead_key();
 
-        if self.playhead_rig == rig && self.playhead_clip == clip {
+        if self.playhead_rig == rig && self.playhead_motion == motion {
             return;
         }
 
         self.playhead_rig = rig.to_string();
-        self.playhead_clip = clip;
+        self.playhead_motion = motion;
 
         if std::mem::take(&mut self.playhead_reset) {
             self.canvas.current_frame = 0.0;
@@ -219,7 +219,7 @@ impl State {
         controls::clamp_frame(&mut self.canvas, &self.data);
     }
 
-    pub fn preload(&mut self, key: &str, build: impl FnOnce() -> ClipSet, anim_state: &AnimState) -> Task<Message> {
+    pub fn preload(&mut self, key: &str, build: impl FnOnce() -> MotionSet, anim_state: &AnimState) -> Task<Message> {
         self.adopt_camera(anim_state);
         self.data.restore_offset(anim_state.placement);
         Self::preload_task(self.data.preload_request(key, build))
@@ -261,8 +261,8 @@ impl State {
         self.data.adopt_sheet(cuts, sheet);
     }
 
-    pub(crate) fn clips(&self) -> impl Iterator<Item = (usize, &kore::systems::animation::Clip)> {
-        self.data.clips()
+    pub(crate) fn motions(&self) -> impl Iterator<Item = (usize, &kore::systems::animation::Motion)> {
+        self.data.motions()
     }
 
     pub fn rig(&self) -> Option<&Rig> {

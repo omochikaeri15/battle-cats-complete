@@ -111,12 +111,12 @@ struct Interaction {
 
 impl Viewport<'_> {
     fn scoped(&self, unit: &nyanko::graphics::rig::Rig, frame: i32) -> Vec<FrameData> {
-        let clip = self.data.current_anim.as_deref();
+        let motion = self.data.current_anim.as_deref();
         let offset = self.data.offset();
         let entity = self.anim.map_or(Scope::Rig, |held| held.entity);
 
         if entity == Scope::Rig {
-            return resolve_frame(unit, clip, frame, offset);
+            return resolve_frame(unit, motion, frame, offset);
         }
 
         if entity == Scope::None {
@@ -124,7 +124,7 @@ impl Viewport<'_> {
         }
 
         let Some(mapped) = self.data.mapped(frame) else {
-            return resolve_frame(unit, clip, frame, offset);
+            return resolve_frame(unit, motion, frame, offset);
         };
 
         mapped

@@ -155,7 +155,7 @@ pub(super) struct Audit {
     pub(super) side: Side,
     pub(super) attacking: bool,
     pub(super) rigged: bool,
-    pub(super) clips: Vec<(usize, Option<PathBuf>)>,
+    pub(super) motions: Vec<(usize, Option<PathBuf>)>,
     pub(super) open: Option<(PathBuf, Arc<Animation>)>,
 }
 
@@ -163,7 +163,7 @@ impl Audit {
     pub(super) fn run(self) -> Vec<usize> {
         let mut found = Vec::new();
 
-        for (index, path) in self.clips {
+        for (index, path) in self.motions {
             let Some(path) = path else {
                 if self.rigged {
                     found.push(index);
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn only_the_rigs_own_faults_reach_the_model_button() {
-        // The model clip stands for the mamodel, so it carries the faults the rig has on
+        // The model motion stands for the mamodel, so it carries the faults the rig has on
         // its own and never the ones an animation brings.
         let broken = Model { scale_unit: 0, ..chain(&[609, 609]) };
 

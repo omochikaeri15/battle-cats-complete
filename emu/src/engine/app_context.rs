@@ -1,6 +1,6 @@
 use crate::fault::Fault;
 
-use super::CastleRow;
+use super::{CastleRow, SoundManager};
 
 pub const SIZE: usize = 0x500000;
 
@@ -20,6 +20,7 @@ pub struct AppContext {
     raw: Box<[u8]>,
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
     pub enemy_castle: Vec<CastleRow>,
+    sound: Option<Box<dyn SoundManager>>,
 }
 
 impl Default for AppContext {
@@ -30,7 +31,7 @@ impl Default for AppContext {
 
 impl AppContext {
     pub fn new() -> Self {
-        Self { raw: vec![0u8; SIZE].into_boxed_slice(), stage_enemies: Vec::new(), enemy_castle: Vec::new() }
+        Self { raw: vec![0u8; SIZE].into_boxed_slice(), stage_enemies: Vec::new(), enemy_castle: Vec::new(), sound: None }
     }
 
     pub fn entity_field(team: i32, idx: i32, field: usize) -> usize {
@@ -38,6 +39,14 @@ impl AppContext {
             .wrapping_mul(TEAM_STRIDE)
             .wrapping_add((idx as usize).wrapping_mul(ENTITY_STRIDE))
             .wrapping_add(field)
+    }
+
+    pub fn sound(&mut self) -> Option<&mut (dyn SoundManager + 'static)> {
+        self.sound.as_deref_mut()
+    }
+
+    pub fn set_sound(&mut self, sound: Box<dyn SoundManager>) {
+        self.sound = Some(sound);
     }
 
     pub fn rng_state(&self) -> u32 {

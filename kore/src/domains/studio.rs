@@ -18,7 +18,7 @@ pub use crate::domains::mods::patch_root;
 
 use crate::common::architecture::{GAME, MODS, STUDIO};
 use crate::domains::settings::FrameCount;
-use crate::systems::animation::{self, Clip, ClipSet, Rigging};
+use crate::systems::animation::{self, Motion, MotionSet, Rigging};
 
 pub use blank::SEED_SUFFIX;
 
@@ -154,9 +154,9 @@ impl Set {
         stem_id(stem).map(|_| stem.to_owned())
     }
 
-    pub fn clips(&self, frames: FrameCount) -> ClipSet {
+    pub fn motions(&self, frames: FrameCount) -> MotionSet {
         let (Some(sheet), Some(cuts), Some(model)) = (&self.sheet, &self.cuts, &self.model) else {
-            return ClipSet::default();
+            return MotionSet::default();
         };
 
         let rig = Arc::new(Rigging {
@@ -168,26 +168,26 @@ impl Set {
 
         let unit = self.addressed();
 
-        let mut clips: Vec<Clip> = self
+        let mut motions: Vec<Motion> = self
             .anims
             .iter()
             .map(|anim| {
                 let named = unit.as_deref().and_then(|unit| slotted(unit, anim));
 
-                Clip {
+                Motion {
                     name: named.map(|(name, _, _)| name.to_owned()),
                     slot: named.map(|(_, slot, _)| slot),
                     role: named.map(|(_, _, role)| role),
                     looping: frames.looping(),
                     rig: Arc::clone(&rig),
-                    anim: Some(anim.clone()),
+                    file: Some(anim.clone()),
                 }
             })
             .collect();
 
-        clips.push(Clip::model(rig));
+        motions.push(Motion::model(rig));
 
-        ClipSet { name: self.name.clone(), clips, offsets: Vec::new() }
+        MotionSet { name: self.name.clone(), motions, offsets: Vec::new() }
     }
 }
 
@@ -717,15 +717,15 @@ mod tests {
             ],
         };
 
-        let clips = set.clips(FrameCount::Automatic).clips;
-        let labelled: Vec<String> = clips.iter().map(Clip::label).collect();
+        let motions = set.motions(FrameCount::Automatic).motions;
+        let labelled: Vec<String> = motions.iter().map(Motion::label).collect();
 
         assert_eq!(labelled, vec!["044_f00", "044_f02", "044_f_zombie00", "Model"]);
-        assert!(clips.iter().all(|clip| clip.role.is_none()), "no clip claims a role");
+        assert!(motions.iter().all(|motion| motion.role.is_none()), "no motion claims a role");
 
-        // Slots are what pinned a clip to a fixed grid cell; without them the buttons
+        // Slots are what pinned a motion to a fixed grid cell; without them the buttons
         // follow the file order exactly.
-        assert!(clips.iter().filter(|clip| clip.anim.is_some()).all(|clip| clip.slot.is_none()));
+        assert!(motions.iter().filter(|motion| motion.file.is_some()).all(|motion| motion.slot.is_none()));
     }
 
     #[test]
@@ -768,7 +768,7 @@ mod tests {
     }
 
     #[test]
-    fn a_renamed_track_reports_the_label_its_clip_will_carry() {
+    fn a_renamed_track_reports_the_label_its_motion_will_carry() {
         // Renaming in place to a recognised slot renames the button too, so re-selecting
         // by the old file stem loses the animation the user was editing.
         let seat = |at: &str| Set {

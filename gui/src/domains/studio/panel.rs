@@ -604,7 +604,7 @@ impl Session {
             (Some(true), _) => EMPTY_TRACK_NOTICE,
             (Some(false), _) => NO_ENTRY_CHOSEN,
             (None, true) => UNREADABLE_NOTICE,
-            (None, false) => NO_CLIP_NOTICE,
+            (None, false) => NO_MOTION_NOTICE,
         }
     }
 }

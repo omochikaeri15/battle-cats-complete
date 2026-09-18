@@ -1,4 +1,4 @@
-use crate::systems::animation::{self, named_offsets, Clip, ClipSet, Loop, RigFiles};
+use crate::systems::animation::{self, named_offsets, Motion, MotionSet, Loop, RigFiles};
 use crate::Vfs;
 
 use super::files;
@@ -17,15 +17,15 @@ pub fn rig_files(enemy: &EnemyEntry, vfs: &Vfs) -> Option<RigFiles> {
     animation::rig_files(vfs, &set_id(enemy), &bases)
 }
 
-pub fn clips(enemy: &EnemyEntry, vfs: &Vfs) -> ClipSet {
+pub fn motions(enemy: &EnemyEntry, vfs: &Vfs) -> MotionSet {
     let plain = files::anim_base_filename(enemy.id);
     let bases = vec![plain.clone(), format!("i{}", plain)];
 
     let Some(rig) = animation::rigging(vfs, &plain, &bases) else {
-        return ClipSet::default();
+        return MotionSet::default();
     };
 
-    let mut clips = Vec::new();
+    let mut motions = Vec::new();
 
     for (suffix, path) in animation::maanims(vfs, &bases) {
         let zombie = suffix.strip_prefix(ZOMBIE_MARK);
@@ -33,7 +33,7 @@ pub fn clips(enemy: &EnemyEntry, vfs: &Vfs) -> ClipSet {
 
         let named = if zombie.is_some() { None } else { index.and_then(animation::standard) };
 
-        clips.push(Clip {
+        motions.push(Motion {
             name: named
                 .map(|(name, _, _)| name.to_string())
                 .or_else(|| zombie.and(index).and_then(zombie_name).map(str::to_string)),
@@ -41,13 +41,13 @@ pub fn clips(enemy: &EnemyEntry, vfs: &Vfs) -> ClipSet {
             role: named.map(|(_, _, role)| role),
             looping: if named.is_some_and(|(_, _, role)| role.loops()) { Loop::Exact } else { Loop::Frames },
             rig: rig.clone(),
-            anim: Some(path),
+            file: Some(path),
         });
     }
 
-    clips.push(Clip::model(rig));
+    motions.push(Motion::model(rig));
 
-    ClipSet { name: set_id(enemy), clips, offsets: named_offsets("Base HP") }
+    MotionSet { name: set_id(enemy), motions, offsets: named_offsets("Base HP") }
 }
 
 fn zombie_name(index: usize) -> Option<&'static str> {

@@ -68,7 +68,7 @@ fn typable_level(value: &str) -> bool {
 fn animation_preload(state: &mut animation::State, cat: &CatEntry, form: usize, vfs: &Vfs, anim_state: &AnimState) -> Task<Message> {
     let key = cat_animation::set_id(cat, form);
 
-    state.preload(&key, || cat_animation::clips(cat, form, vfs), anim_state).map(Message::Animation)
+    state.preload(&key, || cat_animation::motions(cat, form, vfs), anim_state).map(Message::Animation)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -543,7 +543,7 @@ impl State {
                         let vfs = &global_ctx.vault.vfs;
                         let form = self.selected_form;
                         let key = cat_animation::set_id(cat, form);
-                        self.animation.sync(&key, || cat_animation::clips(cat, form, vfs), settings, &app_state.animation)
+                        self.animation.sync(&key, || cat_animation::motions(cat, form, vfs), settings, &app_state.animation)
                     }
                     None => Task::none(),
                 };
@@ -727,7 +727,7 @@ impl State {
         self.animation.is_expanded()
     }
 
-    pub(crate) fn animation_clip(&self) -> Option<String> {
+    pub(crate) fn selected_motion(&self) -> Option<String> {
         self.animation.selected_label()
     }
 

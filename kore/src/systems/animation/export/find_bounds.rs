@@ -15,13 +15,13 @@ const YIELD_INTERVAL: usize = 100;
 
 pub fn search(
     unit: &Rig,
-    clips: &[(&Animation, Option<i32>)],
+    motions: &[(&Animation, Option<i32>)],
     tolerance: f32,
     offset: Option<usize>,
     progress: &ProgressCounter,
     abort_signal: &AtomicBool,
 ) -> BoundsOutcome {
-    let limits: Vec<i32> = clips.iter()
+    let limits: Vec<i32> = motions.iter()
         .map(|(animation, to_frame)| {
             let last = playback_frames(animation).saturating_sub(1);
             to_frame.map_or(last, |to| last.min(to))
@@ -35,13 +35,13 @@ pub fn search(
 
     let strictness = Tolerance::new(tolerance);
 
-    if clips.is_empty() {
+    if motions.is_empty() {
         return resting(unit, strictness, offset, progress);
     }
 
     let mut bounds: Option<BoundingBox> = None;
 
-    for ((animation, _), last) in clips.iter().zip(&limits) {
+    for ((animation, _), last) in motions.iter().zip(&limits) {
         for frame in 0..=*last {
             if abort_signal.load(Ordering::Relaxed) {
                 info!("Bounds measurement explicitly aborted by user.");

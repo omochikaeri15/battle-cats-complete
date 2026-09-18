@@ -9,7 +9,7 @@ use nyanko::graphics::tools::joint::{self, Joint};
 use nyanko::graphics::tools::part;
 
 use kore::common::preview::{self, Stamp};
-use kore::systems::animation::{cycle, loop_frame, restart, restart_frame, Clip, ClipSet, Loop, Offset, Placement, Rigging, Role, NO_OFFSET};
+use kore::systems::animation::{cycle, loop_frame, restart, restart_frame, Motion, MotionSet, Loop, Offset, Placement, Rigging, Role, NO_OFFSET};
 
 pub(super) const COLUMNS: usize = 4;
 const DEFAULT_SLOTS: usize = 8;
@@ -19,7 +19,7 @@ pub struct State {
     pub held_unit: Option<Arc<Rig>>,
     pub current_anim: Option<Arc<Animation>>,
 
-    clips: Vec<Clip>,
+    motions: Vec<Motion>,
     slots: Vec<Option<usize>>,
     selected: Option<usize>,
 
@@ -29,7 +29,7 @@ pub struct State {
     placement: Placement,
     loaded_rig: String,
     failed_rig: String,
-    loaded_clip: Option<usize>,
+    loaded_motion: Option<usize>,
     bounds: Option<BoundingBox>,
     measured: Option<Measure>,
     cache: RigCache,
@@ -62,18 +62,18 @@ fn same<T>(held: Option<&Arc<T>>, wanted: Option<&Arc<T>>) -> bool {
 #[derive(Clone)]
 pub struct Measure {
     rig: String,
-    clip: Option<usize>,
+    motion: Option<usize>,
     row: Option<usize>,
     unit: Option<Arc<Rig>>,
 }
 
 impl Measure {
-    fn placed(&self, rig: &str, clip: Option<usize>, row: Option<usize>) -> bool {
-        self.rig == rig && self.clip == clip && self.row == row
+    fn placed(&self, rig: &str, motion: Option<usize>, row: Option<usize>) -> bool {
+        self.rig == rig && self.motion == motion && self.row == row
     }
 
     fn matches(&self, other: &Measure) -> bool {
-        self.placed(&other.rig, other.clip, other.row) && same(self.unit.as_ref(), other.unit.as_ref())
+        self.placed(&other.rig, other.motion, other.row) && same(self.unit.as_ref(), other.unit.as_ref())
     }
 }
 
@@ -100,7 +100,7 @@ pub struct Measured {
 
 impl std::fmt::Debug for Measured {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Measured").field("rig", &self.key.rig).field("clip", &self.key.clip).finish()
+        f.debug_struct("Measured").field("rig", &self.key.rig).field("motion", &self.key.motion).finish()
     }
 }
 
@@ -195,28 +195,28 @@ impl State {
         &self.slots
     }
 
-    pub fn clips(&self) -> impl Iterator<Item = (usize, &Clip)> {
-        self.clips.iter().enumerate()
+    pub fn motions(&self) -> impl Iterator<Item = (usize, &Motion)> {
+        self.motions.iter().enumerate()
     }
 
-    pub fn clip(&self, index: usize) -> Option<&Clip> {
-        self.clips.get(index)
+    pub fn motion(&self, index: usize) -> Option<&Motion> {
+        self.motions.get(index)
     }
 
     pub fn selected(&self) -> Option<usize> {
         self.selected
     }
 
-    pub fn current_clip(&self) -> Option<&Clip> {
-        self.selected.and_then(|index| self.clips.get(index))
+    pub fn current_motion(&self) -> Option<&Motion> {
+        self.selected.and_then(|index| self.motions.get(index))
     }
 
     pub fn is_model(&self) -> bool {
-        self.current_clip().is_some_and(|clip| clip.anim.is_none())
+        self.current_motion().is_some_and(|motion| motion.file.is_none())
     }
 
     fn looping(&self) -> Loop {
-        self.current_clip().map_or(Loop::Frames, |clip| clip.looping)
+        self.current_motion().map_or(Loop::Frames, |motion| motion.looping)
     }
 
     pub fn loop_supported(&self) -> bool {
@@ -228,21 +228,21 @@ impl State {
     }
 
     pub fn showcasable(&self) -> bool {
-        self.clips.iter().any(|clip| clip.role.is_some() && clip.anim.is_some())
+        self.motions.iter().any(|motion| motion.role.is_some() && motion.file.is_some())
     }
 
     pub fn role_paths(&self) -> Vec<(Role, PathBuf)> {
-        self.clips
+        self.motions
             .iter()
-            .filter_map(|clip| Some((clip.role?, clip.anim.clone()?)))
+            .filter_map(|motion| Some((motion.role?, motion.file.clone()?)))
             .collect()
     }
 
     pub fn role_path(&self, role: Role) -> Option<&PathBuf> {
-        self.clips
+        self.motions
             .iter()
-            .find(|clip| clip.role == Some(role))
-            .and_then(|clip| clip.anim.as_ref())
+            .find(|motion| motion.role == Some(role))
+            .and_then(|motion| motion.file.as_ref())
     }
 
     pub fn loop_bound(&self) -> Option<i32> {
@@ -284,7 +284,7 @@ impl State {
 
     pub fn measure(&mut self, tolerance: f32) -> Option<MeasureRequest> {
         let offset = self.offset();
-        let placed = self.measured.as_ref().is_some_and(|held| held.placed(&self.loaded_rig, self.loaded_clip, offset));
+        let placed = self.measured.as_ref().is_some_and(|held| held.placed(&self.loaded_rig, self.loaded_motion, offset));
 
         if placed && self.measured.as_ref().is_some_and(|held| same(held.unit.as_ref(), self.held_unit.as_ref())) {
             return None;
@@ -296,7 +296,7 @@ impl State {
 
         let key = Measure {
             rig: self.loaded_rig.clone(),
-            clip: self.loaded_clip,
+            motion: self.loaded_motion,
             row: offset,
             unit: self.held_unit.clone(),
         };
@@ -321,11 +321,11 @@ impl State {
     }
 
     pub fn selected_label(&self) -> Option<String> {
-        self.current_clip().map(Clip::label)
+        self.current_motion().map(Motion::label)
     }
 
     pub fn select_label(&mut self, label: &str) {
-        if let Some(index) = self.clips.iter().position(|clip| clip.label() == label) {
+        if let Some(index) = self.motions.iter().position(|motion| motion.label() == label) {
             self.select(index);
         }
     }
@@ -340,7 +340,7 @@ impl State {
         (0..=slot)
             .rev()
             .find_map(|at| self.slots.get(at).copied().flatten())
-            .or_else(|| self.clips.iter().position(|clip| clip.anim.is_none()))
+            .or_else(|| self.motions.iter().position(|motion| motion.file.is_none()))
     }
 
     pub fn select_slot(&mut self, slot: usize) {
@@ -350,7 +350,7 @@ impl State {
     }
 
     pub fn select(&mut self, index: usize) {
-        if self.selected == Some(index) || index >= self.clips.len() {
+        if self.selected == Some(index) || index >= self.motions.len() {
             return;
         }
 
@@ -359,13 +359,13 @@ impl State {
     }
 
     pub fn selected_model(&self) -> Option<&Path> {
-        self.current_clip().map(|clip| clip.rig.model.as_path())
+        self.current_motion().map(|motion| motion.rig.model.as_path())
     }
 
     pub fn anim_paths(&self) -> Vec<PathBuf> {
-        let mut found: Vec<PathBuf> = Vec::with_capacity(self.clips.len());
+        let mut found: Vec<PathBuf> = Vec::with_capacity(self.motions.len());
 
-        for path in self.clips.iter().filter_map(|clip| clip.anim.as_ref()) {
+        for path in self.motions.iter().filter_map(|motion| motion.file.as_ref()) {
             if !found.contains(path) {
                 found.push(path.clone());
             }
@@ -375,11 +375,11 @@ impl State {
     }
 
     pub fn selected_sheet(&self) -> Option<&Path> {
-        self.current_clip().map(|clip| clip.rig.png.as_path())
+        self.current_motion().map(|motion| motion.rig.png.as_path())
     }
 
     pub fn selected_cuts(&self) -> Option<&Path> {
-        self.current_clip().map(|clip| clip.rig.cut.as_path())
+        self.current_motion().map(|motion| motion.rig.cut.as_path())
     }
 
     pub fn adopt_model(&mut self, model: Arc<Model>) {
@@ -392,18 +392,18 @@ impl State {
 
         let fresh = Arc::new(fresh);
 
-        let stamp = self.current_clip().map(|clip| RigStamp::of(&clip.rig)).unwrap_or_default();
+        let stamp = self.current_motion().map(|motion| RigStamp::of(&motion.rig)).unwrap_or_default();
 
         self.held_unit = Some(Arc::clone(&fresh));
         self.cache.insert(&self.loaded_rig, fresh, stamp);
     }
 
     pub fn adopt_sheet(&mut self, cuts: &Path, sheet: Arc<SpriteSheet>) {
-        let Some(clip) = self.current_clip().filter(|clip| clip.rig.cut == cuts && self.is_loaded(&clip.rig.id)) else {
+        let Some(motion) = self.current_motion().filter(|motion| motion.rig.cut == cuts && self.is_loaded(&motion.rig.id)) else {
             return;
         };
 
-        let stamp = RigStamp::of(&clip.rig);
+        let stamp = RigStamp::of(&motion.rig);
 
         let Some(unit) = self.held_unit.as_deref().filter(|unit| unit.sheet.cuts != sheet.cuts) else {
             return;
@@ -422,8 +422,8 @@ impl State {
 
         let showing = self
             .selected
-            .and_then(|index| self.clips.get(index))
-            .and_then(|clip| clip.anim.as_deref());
+            .and_then(|index| self.motions.get(index))
+            .and_then(|motion| motion.file.as_deref());
 
         if showing == Some(path) {
             self.current_anim = Some(anim);
@@ -440,7 +440,7 @@ impl State {
     pub fn reset_display(&mut self) {
         self.held_unit = None;
         self.current_anim = None;
-        self.clips.clear();
+        self.motions.clear();
         self.slots.clear();
         self.selected = None;
         self.set_key.clear();
@@ -448,47 +448,47 @@ impl State {
         self.offsets.clear();
         self.loaded_rig.clear();
         self.failed_rig.clear();
-        self.loaded_clip = None;
+        self.loaded_motion = None;
         self.bounds = None;
         self.measured = None;
         self.mapped.replace(None);
     }
 
-    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> ClipSet) {
+    pub fn sync(&mut self, key: &str, build: impl FnOnce() -> MotionSet) {
         self.prepare(key, build);
         self.load_active();
     }
 
-    pub fn preload_request(&mut self, key: &str, build: impl FnOnce() -> ClipSet) -> Option<PreloadRequest> {
+    pub fn preload_request(&mut self, key: &str, build: impl FnOnce() -> MotionSet) -> Option<PreloadRequest> {
         self.prepare(key, build);
         self.build_request()
     }
 
-    fn prepare(&mut self, key: &str, build: impl FnOnce() -> ClipSet) {
+    fn prepare(&mut self, key: &str, build: impl FnOnce() -> MotionSet) {
         if self.set_key != key {
-            let previous = self.current_clip().map(Clip::label);
+            let previous = self.current_motion().map(Motion::label);
             let set = build();
 
             self.set_key = key.to_string();
             self.set_name = set.name;
-            self.clips = set.clips;
+            self.motions = set.motions;
             self.offsets = set.offsets;
-            self.loaded_clip = None;
+            self.loaded_motion = None;
             let requests: Vec<Request> = self
-                .clips
+                .motions
                 .iter()
-                .map(|clip| Request { slot: clip.slot, trailing: clip.anim.is_none() })
+                .map(|motion| Request { slot: motion.slot, trailing: motion.file.is_none() })
                 .collect();
 
             self.slots = place(&requests);
-            self.selected = previous.and_then(|label| self.clips.iter().position(|clip| clip.label() == label));
+            self.selected = previous.and_then(|label| self.motions.iter().position(|motion| motion.label() == label));
         }
 
         self.select_valid();
     }
 
     fn select_valid(&mut self) {
-        if self.selected.is_some_and(|index| index < self.clips.len()) {
+        if self.selected.is_some_and(|index| index < self.motions.len()) {
             return;
         }
 
@@ -497,33 +497,33 @@ impl State {
         if self.selected.is_none() {
             self.held_unit = None;
             self.current_anim = None;
-            self.loaded_clip = None;
+            self.loaded_motion = None;
         }
     }
 
     fn build_request(&mut self) -> Option<PreloadRequest> {
         let index = self.selected?;
-        let rig_id = self.clips.get(index)?.rig.id.clone();
+        let rig_id = self.motions.get(index)?.rig.id.clone();
 
         if self.is_loaded(&rig_id) || self.failed_rig == rig_id || self.apply_cached(index) {
             return None;
         }
 
-        let clip = self.clips.get(index)?;
+        let motion = self.motions.get(index)?;
 
         Some(PreloadRequest {
             rig_id,
-            png: clip.rig.png.clone(),
-            cut: clip.rig.cut.clone(),
-            model: clip.rig.model.clone(),
-            anim: clip.anim.clone(),
+            png: motion.rig.png.clone(),
+            cut: motion.rig.cut.clone(),
+            model: motion.rig.model.clone(),
+            anim: motion.file.clone(),
         })
     }
 
     pub fn apply_preload(&mut self, result: PreloadResult) {
         let wanted = self
-            .current_clip()
-            .is_some_and(|clip| clip.rig.id == result.rig_id && !self.is_loaded(&result.rig_id));
+            .current_motion()
+            .is_some_and(|motion| motion.rig.id == result.rig_id && !self.is_loaded(&result.rig_id));
 
         let Some(unit) = result.unit else {
             if wanted {
@@ -531,7 +531,7 @@ impl State {
                 self.failed_rig = result.rig_id;
                 self.held_unit = None;
                 self.current_anim = None;
-                self.loaded_clip = None;
+                self.loaded_motion = None;
             }
             return;
         };
@@ -562,12 +562,12 @@ impl State {
     }
 
     fn apply_cached(&mut self, index: usize) -> bool {
-        let Some(clip) = self.clips.get(index) else {
+        let Some(motion) = self.motions.get(index) else {
             return false;
         };
 
-        let rig_id = clip.rig.id.clone();
-        let stamp = RigStamp::of(&clip.rig);
+        let rig_id = motion.rig.id.clone();
+        let stamp = RigStamp::of(&motion.rig);
 
         let Some(unit) = self.cache.lookup(&rig_id, &stamp) else {
             return false;
@@ -585,14 +585,14 @@ impl State {
             return;
         };
 
-        let Some(rig) = self.clips.get(index).map(|clip| clip.rig.clone()) else {
+        let Some(rig) = self.motions.get(index).map(|motion| motion.rig.clone()) else {
             return;
         };
 
         let rig_id = rig.id.clone();
 
         if self.is_loaded(&rig_id) {
-            if self.loaded_clip != Some(index) {
+            if self.loaded_motion != Some(index) {
                 self.load_anim(index);
             }
             return;
@@ -624,15 +624,15 @@ impl State {
                 self.failed_rig = rig_id;
                 self.held_unit = None;
                 self.current_anim = None;
-                self.loaded_clip = None;
+                self.loaded_motion = None;
             }
         }
     }
 
     fn load_anim(&mut self, index: usize) {
-        self.loaded_clip = Some(index);
+        self.loaded_motion = Some(index);
 
-        let Some(path) = self.clips.get(index).and_then(|clip| clip.anim.clone()) else {
+        let Some(path) = self.motions.get(index).and_then(|motion| motion.file.clone()) else {
             self.current_anim = None;
             return;
         };
@@ -884,42 +884,42 @@ mod tests {
         })
     }
 
-    fn clip(role: Option<Role>, anim: Option<&str>) -> Clip {
-        Clip {
+    fn motion(role: Option<Role>, anim: Option<&str>) -> Motion {
+        Motion {
             name: None,
             slot: None,
             role,
             looping: Loop::Auto,
             rig: rigging(),
-            anim: anim.map(PathBuf::from),
+            file: anim.map(PathBuf::from),
         }
     }
 
-    fn seeded(key: &str, clips: Vec<Clip>) -> State {
+    fn seeded(key: &str, motions: Vec<Motion>) -> State {
         let mut held = State::default();
 
-        held.sync(key, || ClipSet { name: key.to_owned(), clips, offsets: Vec::new() });
+        held.sync(key, || MotionSet { name: key.to_owned(), motions, offsets: Vec::new() });
 
         held
     }
 
-    // Showcase composes the four standard role clips. A Studio set in its own workspace and
+    // Showcase composes the four standard role motions. A Studio set in its own workspace and
     // every Utilities rig carry no roles at all, so the export rendered the resting pose for
     // every frame and read as "the animation never loaded".
     #[test]
     fn a_rig_with_no_roles_cannot_be_showcased() {
         let unit = seeded("unit", vec![
-            clip(Some(Role::Walk), Some("000_f00.maanim")),
-            clip(Some(Role::Idle), Some("000_f01.maanim")),
+            motion(Some(Role::Walk), Some("000_f00.maanim")),
+            motion(Some(Role::Idle), Some("000_f01.maanim")),
         ]);
 
         assert!(unit.showcasable(), "a rig whose slots resolved is a unit we can compose");
 
-        let loose = seeded("loose", vec![clip(None, Some("something.maanim")), clip(None, None)]);
+        let loose = seeded("loose", vec![motion(None, Some("something.maanim")), motion(None, None)]);
 
-        assert!(!loose.showcasable(), "no role resolved means we do not know what any clip is");
+        assert!(!loose.showcasable(), "no role resolved means we do not know what any motion is");
 
-        let modelled = seeded("modelled", vec![clip(Some(Role::Walk), None)]);
+        let modelled = seeded("modelled", vec![motion(Some(Role::Walk), None)]);
 
         assert!(!modelled.showcasable(), "a role with no file on disk cannot be loaded either");
     }
@@ -959,13 +959,13 @@ mod tests {
         Request { slot: Some(SLOT_MODEL), trailing: true }
     }
 
-    // Switching rigs in Studio keeps the button the user was on. A rig that has no clip
+    // Switching rigs in Studio keeps the button the user was on. A rig that has no motion
     // on that button walks back down the row rather than jumping to the first one.
     #[test]
     fn a_carried_button_degrades_one_slot_at_a_time() {
         let held = State {
             slots: place(&[at(0), at(3), model()]),
-            clips: vec![clip(None, Some("a.maanim")), clip(None, Some("b.maanim")), clip(None, None)],
+            motions: vec![motion(None, Some("a.maanim")), motion(None, Some("b.maanim")), motion(None, None)],
             ..State::default()
         };
 
@@ -978,7 +978,7 @@ mod tests {
     fn a_row_with_nothing_below_falls_back_to_the_model() {
         let held = State {
             slots: vec![None, None, None],
-            clips: vec![clip(None, Some("a.maanim")), clip(None, None)],
+            motions: vec![motion(None, Some("a.maanim")), motion(None, None)],
             ..State::default()
         };
 
@@ -986,7 +986,7 @@ mod tests {
     }
 
     #[test]
-    fn a_selected_button_reads_back_as_its_slot_not_its_clip() {
+    fn a_selected_button_reads_back_as_its_slot_not_its_motion() {
         let mut held = State { slots: vec![None, Some(7), Some(2)], selected: Some(2), ..State::default() };
 
         assert_eq!(held.selected_slot(), Some(2));
@@ -1006,7 +1006,7 @@ mod tests {
 
     #[test]
     fn collisions_walk_forward_in_numerical_order() {
-        // Two clips want slot 2; the later one settles on 3, pushing the slot-3 request to 4.
+        // Two motions want slot 2; the later one settles on 3, pushing the slot-3 request to 4.
         let slots = place(&[at(3), at(2), at(2)]);
 
         assert_eq!(slots[2..5], [Some(1), Some(2), Some(0)]);

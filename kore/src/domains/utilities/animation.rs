@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::domains::settings::FrameCount;
-use crate::systems::animation::{Clip, ClipSet, Rigging};
+use crate::systems::animation::{Motion, MotionSet, Rigging};
 
 pub fn key(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: FrameCount) -> String {
     let mut key = format!("{:?}|{}", frames, rig_id(png, cut, model));
@@ -15,7 +15,7 @@ pub fn key(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: Fram
     key
 }
 
-pub fn clips(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: FrameCount) -> ClipSet {
+pub fn motions(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: FrameCount) -> MotionSet {
     let rig = Arc::new(Rigging {
         id: rig_id(png, cut, model),
         png: png.to_path_buf(),
@@ -23,21 +23,21 @@ pub fn clips(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: Fr
         model: model.to_path_buf(),
     });
 
-    let mut clips: Vec<Clip> = anims
+    let mut motions: Vec<Motion> = anims
         .iter()
-        .map(|anim| Clip {
+        .map(|anim| Motion {
             name: None,
             slot: None,
             role: None,
             looping: frames.looping(),
             rig: rig.clone(),
-            anim: Some(anim.clone()),
+            file: Some(anim.clone()),
         })
         .collect();
 
-    clips.push(Clip::model(rig));
+    motions.push(Motion::model(rig));
 
-    ClipSet { name: stem_of(model), clips, offsets: Vec::new() }
+    MotionSet { name: stem_of(model), motions, offsets: Vec::new() }
 }
 
 fn rig_id(png: &Path, cut: &Path, model: &Path) -> String {

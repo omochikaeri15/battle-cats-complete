@@ -149,7 +149,7 @@ const NOT_DRAWN: i32 = -1;
 const LOADING_NOTICE: &str = "Loading animation\u{2026}";
 const NO_SET_NOTICE: &str = "No set is loaded";
 const NO_SET_HINT: &str = "Open Manage to import, pick or create a set";
-const NO_CLIP_NOTICE: &str = "This clip has no channels to edit";
+const NO_MOTION_NOTICE: &str = "This animation has no channels to edit";
 const UNREADABLE_NOTICE: &str = "This animation could not be read";
 const EMPTY_TRACK_NOTICE: &str = "This channel holds no keyframes";
 const NO_ENTRY_CHOSEN: &str = "Select a part or channel to edit";
@@ -443,15 +443,15 @@ pub(crate) struct Channels {
 pub(crate) struct Plan {
     set: sets::Set,
     target_mod: Option<String>,
-    clip: Option<String>,
+    motion: Option<String>,
 }
 
 pub(crate) fn slotted(anim: &Path) -> bool {
     matches!(sets::home(anim), sets::Home::Game | sets::Home::Mod) && sets::attack_slot(anim)
 }
 
-fn plan(set: sets::Set, target_mod: Option<String>, clip: Option<String>) -> Plan {
-    Plan { set, target_mod, clip }
+fn plan(set: sets::Set, target_mod: Option<String>, motion: Option<String>) -> Plan {
+    Plan { set, target_mod, motion }
 }
 
 #[derive(Debug, Clone)]
@@ -607,7 +607,7 @@ impl Landing {
 struct Recall {
     key: String,
     expanded: HashSet<usize>,
-    clip: Option<String>,
+    motion: Option<String>,
     curve: Option<Held>,
     part: Option<usize>,
     focus: Focus,
@@ -779,7 +779,7 @@ impl State {
         let held = Recall {
             key: session.plan.set.name.clone(),
             expanded: session.expanded.clone(),
-            clip: session.viewer.selected_label(),
+            motion: session.viewer.selected_label(),
             curve: session.draft.as_ref().and_then(|draft| held_curve(&draft.doc, draft.track?)),
             part: session.pose.as_ref().and_then(|pose| pose.part),
             focus: session.focus,
@@ -844,8 +844,8 @@ impl State {
         let wanted_part = held.and_then(|held| held.part);
         let focus = held.map_or_else(Focus::default, |held| held.focus);
 
-        if let Some(clip) = held.and_then(|held| held.clip.clone()) {
-            plan.clip = Some(clip);
+        if let Some(motion) = held.and_then(|held| held.motion.clone()) {
+            plan.motion = Some(motion);
         }
 
         let history = self.recall_history(&plan.set.name);
@@ -910,7 +910,7 @@ impl State {
         &mut self,
         set: Set,
         target_mod: Option<String>,
-        clip: Option<String>,
+        motion: Option<String>,
         copied: bool,
         side: Option<Side>,
     ) {
@@ -927,7 +927,7 @@ impl State {
             session.viewer.clear();
         }
 
-        self.begin(plan(set, target_mod, clip));
+        self.begin(plan(set, target_mod, motion));
 
         if !copied {
             return;
@@ -1153,7 +1153,7 @@ impl State {
         state.sealed = self.sealed();
         state.target_mod = self.session.as_ref().and_then(|session| session.plan.target_mod.clone());
         state.atlas = self.mode == Mode::Atlas;
-        state.clip = self.session.as_ref().and_then(|session| session.viewer.selected_label());
+        state.motion = self.session.as_ref().and_then(|session| session.viewer.selected_label());
     }
 
     pub(crate) fn restore_state(&mut self, state: &StudioState, mounted: Option<&str>) {
@@ -1180,7 +1180,7 @@ impl State {
             false => self.manage.adopt(set.clone()),
         }
 
-        self.begin(plan(set, state.target_mod.clone(), state.clip.clone()));
+        self.begin(plan(set, state.target_mod.clone(), state.motion.clone()));
     }
 
     pub(crate) fn pace(&self) -> Option<Duration> {
@@ -2162,15 +2162,15 @@ impl Session {
         let primed = std::mem::replace(&mut self.primed, true);
 
         let priming = match primed {
-            true => self.viewer.sync(&self.key, || set.clips(frames), settings, anim).map(Message::Viewer),
-            false => self.viewer.preload(&self.key, || set.clips(frames), anim).map(Message::Viewer),
+            true => self.viewer.sync(&self.key, || set.motions(frames), settings, anim).map(Message::Viewer),
+            false => self.viewer.preload(&self.key, || set.motions(frames), anim).map(Message::Viewer),
         };
 
         if !primed {
             match self.slotting.take() {
                 Some(slot) => self.viewer.select_slot(slot),
                 None => {
-                    if let Some(label) = self.plan.clip.as_deref() {
+                    if let Some(label) = self.plan.motion.as_deref() {
                         self.viewer.select_label(label);
                     }
                 }
@@ -2220,7 +2220,7 @@ impl Session {
 
         self.wanted = self.draft.as_ref().and_then(|draft| held_curve(&draft.doc, draft.track?));
         self.wanted_part = self.pose.as_ref().and_then(|pose| pose.part);
-        self.plan.clip = self.viewer.selected_label();
+        self.plan.motion = self.viewer.selected_label();
 
         self.history.clear();
         self.primed = false;
@@ -2732,7 +2732,7 @@ impl Session {
     }
 
     fn resplice(&mut self) {
-        self.plan.clip = self.viewer.selected_label();
+        self.plan.motion = self.viewer.selected_label();
         self.opened = None;
         self.posed = None;
         self.wanted = None;
@@ -2906,7 +2906,7 @@ impl Session {
             side,
             attacking: self.faulting.attacking(),
             rigged: self.blame.rigged(),
-            clips: self.viewer.clips().map(|(index, clip)| (index, clip.anim.clone())).collect(),
+            motions: self.viewer.motions().map(|(index, motion)| (index, motion.file.clone())).collect(),
             open: self.draft.as_ref().map(|draft| (draft.backing.read_from.clone(), draft.doc.shared())),
         };
 

@@ -521,11 +521,11 @@ impl Board<'_> {
             };
 
             let (_, card_right) = card_span(lane.label);
-            let clip = card_right - CARD_BLEED;
+            let motion = card_right - CARD_BLEED;
 
             if let Some(settles) = lane.beat.settles().filter(|settles| *settles < reach) {
-                let start = near(self.at(width, settles as f64)).max(clip);
-                let end = near(self.at(width, reach as f64)).max(clip);
+                let start = near(self.at(width, settles as f64)).max(motion);
+                let end = near(self.at(width, reach as f64)).max(motion);
 
                 frame.fill(
                     &Path::rectangle(
@@ -559,8 +559,8 @@ impl Board<'_> {
 
             if stride < MIN_PASS {
                 let stop = lane.beat.settles().unwrap_or(reach).min(reach);
-                let start = near(self.at(width, f64::from(lane.beat.first))).max(clip);
-                let end = near(self.at(width, stop as f64)).max(clip);
+                let start = near(self.at(width, f64::from(lane.beat.first))).max(motion);
+                let end = near(self.at(width, stop as f64)).max(motion);
 
                 frame.fill(
                     &Path::rectangle(Point::new(start, body), Size::new((end - start).max(0.0), tall)),
@@ -585,7 +585,7 @@ impl Board<'_> {
                 }
 
                 let met = opens < card_right;
-                let (opens, closes) = (near(opens).max(clip), near(closes));
+                let (opens, closes) = (near(opens).max(motion), near(closes));
                 let round = Radius::from(theme::RADIUS_SM);
                 let block = Path::rounded_rectangle(
                     Point::new(opens, body),

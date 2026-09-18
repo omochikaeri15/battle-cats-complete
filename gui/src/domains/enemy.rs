@@ -53,7 +53,7 @@ const EMPTY_CAT_ICON: &str = "uni.png";
 fn animation_preload(state: &mut animation::State, enemy: &EnemyEntry, vfs: &Vfs, anim_state: &AnimState) -> Task<Message> {
     let key = enemy_animation::set_id(enemy);
 
-    state.preload(&key, || enemy_animation::clips(enemy, vfs), anim_state).map(Message::Animation)
+    state.preload(&key, || enemy_animation::motions(enemy, vfs), anim_state).map(Message::Animation)
 }
 
 fn typable_magnification(value: &str) -> bool {
@@ -406,7 +406,7 @@ impl EnemyState {
                     Some(enemy) => {
                         let vfs = &global_ctx.vault.vfs;
                         let key = enemy_animation::set_id(enemy);
-                        self.animation.sync(&key, || enemy_animation::clips(enemy, vfs), settings, &app_state.animation)
+                        self.animation.sync(&key, || enemy_animation::motions(enemy, vfs), settings, &app_state.animation)
                     }
                     None => Task::none(),
                 };
@@ -515,7 +515,7 @@ impl EnemyState {
         self.animation.is_expanded()
     }
 
-    pub(crate) fn animation_clip(&self) -> Option<String> {
+    pub(crate) fn selected_motion(&self) -> Option<String> {
         self.animation.selected_label()
     }
 
