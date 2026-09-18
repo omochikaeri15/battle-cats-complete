@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, SoundManager};
+use super::{CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, SoundManager, TreasureStore};
 
 pub const SIZE: usize = 0x500000;
 
@@ -25,6 +25,8 @@ pub struct AppContext {
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
     pub chara_groups: BTreeMap<i32, CharaGroup>,
+    pub star_multipliers: BTreeMap<i32, Vec<i32>>,
+    pub treasure_store: TreasureStore,
     pub map_data: BTreeMap<i32, MapData>,
     pub map_data_ids: BTreeMap<i32, Vec<i32>>,
     pub map_stage_sets: BTreeMap<i32, Vec<i32>>,
@@ -77,6 +79,8 @@ impl AppContext {
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),
             chara_groups: Default::default(),
+            star_multipliers: Default::default(),
+            treasure_store: Default::default(),
             map_data: Default::default(),
             map_data_ids: Default::default(),
             map_stage_sets: Default::default(),
