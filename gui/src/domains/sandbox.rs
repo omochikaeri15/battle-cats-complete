@@ -12,7 +12,7 @@ By accepting this agreement, you must have read, understood, and accepted the fo
 
 - Sandbox may have known but subtle inaccuracies, mechanical bugs, or logical quirks when compared to the real game.
 - Sandbox may not be updated to support features and/or mechanics from the latest game version(s) within a timely manner.
-- Sandbox is representative of the vanilla game's capabilities only, with no custom functionality added or planned.
+- Sandbox is representative of the vanilla game logic and it's capabilities only, with no custom functionality added or planned.
 - Sandbox is not an avenue that replaces the appeal and purpose of the game in any capacity, whether that be vanilla or modded.
 
 You can accept the agreement by clicking the "Agree" button below. Selecting "Disagree" will redirect you to the Home menu.
