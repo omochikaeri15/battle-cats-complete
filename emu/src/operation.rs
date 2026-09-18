@@ -1,6 +1,8 @@
+mod strtol;
 mod xor_cell_decode;
 mod xor_row_decode;
 
+pub use strtol::{strtol, Strtol};
 pub use xor_cell_decode::xor_cell_decode;
 pub use xor_row_decode::xor_row_decode;
 
@@ -63,4 +65,8 @@ pub fn div_500<T: Truncating>(x: T) -> T {
 
 pub fn div_1000<T: Truncating>(x: T) -> T {
     x / T::from(1000)
+}
+
+pub fn div_10000<T: Truncating>(x: T) -> T {
+    x / T::from(10000)
 }

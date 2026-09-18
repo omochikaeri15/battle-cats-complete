@@ -10,7 +10,7 @@ pub fn stat_shield_hitpoints(ctx: &mut AppContext, faction: i32, unit_id: i32, _
         return Ok(0);
     }
 
-    if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(0x32c5c8)? != 0 {
+    if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let shield = ctx.i32_at(AppContext::enemy_stat(unit_id, EnemyStats::SHIELD_HITPOINTS))?;
         let row = ctx.stage_enemies.get(enemy_row as usize).ok_or(Fault::IndexOutOfRange {

@@ -13,6 +13,9 @@ pub const SLOTS_PER_FACTION: i32 = 51;
 
 pub const STAGE_ENEMY_COLUMNS: usize = 14;
 
+pub const UNIT_BUY: usize = 0x4af08;
+pub const UNIT_BUY_STRIDE: usize = 0x100;
+
 pub const CAT_STATS: usize = 0x9e568;
 pub const CAT_STATS_UNIT_STRIDE: usize = 0x760;
 pub const CAT_STATS_FORM_STRIDE: usize = 0x1d8;
@@ -27,10 +30,17 @@ const SITE: &str = "app_context";
 
 const _: () = assert!(RNG_STATE + 4 <= SIZE);
 
+pub struct UnitBuy;
+
+impl UnitBuy {
+    pub const RARITY: usize = 0x34;
+    pub const KEY: usize = 0xfc;
+}
+
 pub struct Entity;
 
 impl Entity {
-    pub const SLOT_KIND: usize = 0x0;
+    pub const OCCUPANT: usize = 0x0;
     pub const STATE: usize = 0x4;
     pub const FRAME: usize = 0x8;
     pub const POS_X: usize = 0xc;
@@ -51,6 +61,7 @@ impl Entity {
     pub const ATTACK_1_FORESWING: usize = 0x54;
     pub const CANNON_HIT_STAMP: usize = 0x58;
     pub const CANNON_BLAST_HIT: usize = 0x5c;
+    pub const CANNON_UNIT_ID: usize = 0x68;
     pub const CRIT_FX: usize = 0x98;
     pub const WAVE_CHANCE: usize = 0x9c;
     pub const WAVE_LEVEL: usize = 0xa0;
@@ -483,6 +494,8 @@ pub struct AppContext {
     pub combo_store: ComboStore,
     pub chara_groups: BTreeMap<i32, CharaGroup>,
     pub star_multipliers: BTreeMap<i32, Vec<i32>>,
+    pub map_cost_multipliers: BTreeMap<i32, i32>,
+    pub settings: BTreeMap<Vec<u8>, Vec<u8>>,
     pub treasure_store: TreasureStore,
     pub orb_store: OrbStore,
     pub special_rules: SpecialRuleStore,
@@ -531,15 +544,50 @@ impl Default for AppContext {
 }
 
 impl AppContext {
+    pub const DECK_KEY: usize = 0x28;
+    pub const DECK_STRIDE: usize = 0x2c;
+    pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
+    pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
     pub const SCENE_ID: usize = 0x3450;
+    pub const DECK_PRESETS: usize = 0xc310;
+    pub const FACTION_1_DECK: usize = 0xc33c;
+    pub const BATTLE_DECK: usize = 0xc6ac;
+    pub const STAGES_CLEARED_CHAPTERS: usize = 0xc94c;
+    pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
+    pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
+    pub const STAGE_CASTLE_ID: usize = 0x836fc;
+    pub const TREASURE_PROGRESS: usize = 0x83708;
     pub const STAGE_LENGTH: usize = 0x9e528;
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
+    pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
+    pub const BUTTON_UNIT_FORMS: usize = 0x327f40;
+    pub const BATTLE_IS_OUTBREAK: usize = 0x32c5c8;
+    pub const OUTBREAKS_ENABLED: usize = 0x32c5c9;
+    pub const BATTLE_IS_INVASION: usize = 0x32c5d6;
+    pub const BATTLE_IS_Z_INVASION: usize = 0x32c5d7;
+    pub const INVASION_STAGE: usize = 0x32c5d8;
+    pub const MAP_NEG15_CLEARED: usize = 0x32c5d9;
+    pub const MAP_NEG25_CLEARED: usize = 0x32c5da;
     pub const MAP_INDEX: usize = 0x3388b8;
+    pub const STAGES_CLEARED_STORY: usize = 0x33e020;
+    pub const STAGES_CLEARED_NEG6: usize = 0x340748;
+    pub const STAGE_RECORD_STORY: usize = 0x340818;
+    pub const STAGE_RECORD_NEG6: usize = 0x37b1b0;
     pub const SAVED_MAP_TYPE: usize = 0x3836b4;
+    pub const CHAPTER_COST_TIER: usize = 0x388028;
+    pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
     pub const STAR_LEVEL: usize = 0x38fecc;
+    pub const EX_MAP_INDEX: usize = 0x402168;
+    pub const EX_STAGE_INDEX: usize = 0x402170;
     pub const UNIT_LEVEL_CURVE: usize = 0x4475a4;
     pub const UNIT_EXP_CURVE: usize = 0x458764;
+    pub const STAGE_NO_CONTINUES: usize = 0x46a9b4;
+    pub const STAGE_EX_CHANCE: usize = 0x46a9b8;
+    pub const STAGE_EX_MAP: usize = 0x46a9bc;
+    pub const STAGE_EX_STAGE_MIN: usize = 0x46a9c0;
+    pub const STAGE_EX_STAGE_MAX: usize = 0x46a9c4;
+    pub const STAGE_RECORD_NEG8: usize = 0x46a9c8;
 
     pub fn new() -> Self {
         Self {
@@ -550,6 +598,8 @@ impl AppContext {
             combo_store: Default::default(),
             chara_groups: Default::default(),
             star_multipliers: Default::default(),
+            map_cost_multipliers: Default::default(),
+            settings: Default::default(),
             treasure_store: Default::default(),
             orb_store: Default::default(),
             special_rules: Default::default(),

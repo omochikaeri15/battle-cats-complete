@@ -66,7 +66,7 @@ pub fn compute_hp(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32, l
         return Ok(hp as i32);
     }
 
-    let mut hp = if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(0x32c5c8)? != 0 {
+    let mut hp = if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let base = ctx.i32_at(AppContext::enemy_stat(unit_id, EnemyStats::HITPOINTS))? as i64;
         let entry = ctx.stage_enemies.get(mag_slot as usize).ok_or(Fault::IndexOutOfRange {

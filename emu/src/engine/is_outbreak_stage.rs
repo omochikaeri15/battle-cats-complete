@@ -4,10 +4,10 @@ use super::{get_scene_id, AppContext};
 
 pub fn is_outbreak_stage(ctx: &AppContext) -> Result<bool, Fault> {
     if get_scene_id(ctx)? == 0x12c {
-        return Ok(ctx.u8_at(0x32c5c8)? != 0);
+        return Ok(ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0);
     }
 
-    if ctx.u8_at(0x32c5c9)? == 0 {
+    if ctx.u8_at(AppContext::OUTBREAKS_ENABLED)? == 0 {
         return Ok(false);
     }
 

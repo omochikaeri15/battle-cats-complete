@@ -5,17 +5,17 @@ use super::{parse_stage_enemy_row, read_csv_cell, read_csv_row, AppContext, Asse
 pub fn load_stage_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) -> Result<(), Fault> {
     read_csv_row(stm);
 
-    ctx.set_i32_at(0x836fc, read_csv_cell(stm, 0) as i32)?;
-    ctx.set_i32_at(0x46a9b4, 0)?;
-    ctx.set_i32_at(0x46a9b4, read_csv_cell(stm, 1) as i32)?;
-    ctx.set_i32_at(0x46a9b8, 0)?;
-    ctx.set_i32_at(0x46a9b8, read_csv_cell(stm, 2) as i32)?;
-    ctx.set_i32_at(0x46a9bc, 0)?;
-    ctx.set_i32_at(0x46a9bc, read_csv_cell(stm, 3) as i32)?;
-    ctx.set_i32_at(0x46a9c0, 0)?;
-    ctx.set_i32_at(0x46a9c0, read_csv_cell(stm, 4) as i32)?;
-    ctx.set_i32_at(0x46a9c4, 0)?;
-    ctx.set_i32_at(0x46a9c4, read_csv_cell(stm, 5) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_CASTLE_ID, read_csv_cell(stm, 0) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, 0)?;
+    ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, read_csv_cell(stm, 1) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, 0)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, read_csv_cell(stm, 2) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_MAP, 0)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_MAP, read_csv_cell(stm, 3) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MIN, 0)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MIN, read_csv_cell(stm, 4) as i32)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MAX, 0)?;
+    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MAX, read_csv_cell(stm, 5) as i32)?;
 
     read_csv_row(stm);
 

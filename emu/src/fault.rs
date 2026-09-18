@@ -5,6 +5,8 @@ pub enum Fault {
     IndexOutOfRange { site: &'static str, index: i64, limit: i64 },
     KeyNotFound { site: &'static str, key: i64 },
     HostMissing { site: &'static str },
+    InvalidArgument { site: &'static str },
+    OutOfRange { site: &'static str },
     Unrepresentable { site: &'static str, reason: &'static str },
 }
 
@@ -18,6 +20,8 @@ impl std::fmt::Display for Fault {
                 write!(f, "{site} stopped where the game itself would have carried on: {reason}")
             }
             Self::HostMissing { site } => write!(f, "{site} has no host attached"),
+            Self::InvalidArgument { site } => write!(f, "{site} was given text that holds no number"),
+            Self::OutOfRange { site } => write!(f, "{site} was given a number too large to store"),
             Self::IndexOutOfRange { site, index, limit } => {
                 write!(f, "{site} reached {index}, past its limit of {limit}")
             }

@@ -32,7 +32,7 @@ pub fn get_stages_cleared(
     }
 
     if map_type as u32 <= 4 {
-        let cell = (map_type as u32 as i64) * 0x7d0 + (map_idx as i64) * 4 + star as i64 + 0x33e020;
+        let cell = (map_type as u32 as i64) * 0x7d0 + (map_idx as i64) * 4 + star as i64 + AppContext::STAGES_CLEARED_STORY as i64;
 
         return Ok(ctx.i8_at(cell as usize)? as i32);
     }
@@ -88,7 +88,7 @@ pub fn get_stages_cleared(
             })
         }
         0x12 => {
-            let cell = (map_idx as i64) * 0x10 + (star as i64) * 4 + 0x340748;
+            let cell = (map_idx as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGES_CLEARED_NEG6 as i64;
 
             ctx.i32_at(cell as usize)
         }
@@ -99,7 +99,7 @@ pub fn get_stages_cleared(
                 _ => map_idx,
             };
 
-            xor_row_get(ctx.bytes_from(0xc94c)?, chapter as i64 as usize)
+            xor_row_get(ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?, chapter as i64 as usize)
                 .map(|cleared| cleared as i32)
                 .ok_or(Fault::IndexOutOfRange { site: "get_stages_cleared", index: chapter as i64, limit: 10 })
         }

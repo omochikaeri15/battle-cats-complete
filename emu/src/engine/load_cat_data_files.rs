@@ -1,9 +1,7 @@
 use crate::Fault;
 
-use super::{read_csv_cell, read_csv_row, AppContext, AssetStream};
+use super::{read_csv_cell, read_csv_row, AppContext, AssetStream, UnitBuy, UNIT_BUY, UNIT_BUY_STRIDE};
 
-const BUY_TABLE: usize = 0x4af08;
-const BUY_STRIDE: usize = 0x100;
 const BUY_ROWS: usize = 0x36c;
 const BUY_COLUMNS: i32 = 0x3f;
 
@@ -17,7 +15,7 @@ pub fn load_cat_data_files(
     unitlevel: &mut AssetStream<'_>,
     unitexp: &mut AssetStream<'_>,
 ) -> Result<(), Fault> {
-    let mut buy = BUY_TABLE;
+    let mut buy = UNIT_BUY;
 
     for row in 0..BUY_ROWS {
         read_csv_row(unitbuy);
@@ -25,12 +23,12 @@ pub fn load_cat_data_files(
         let mut column = 0;
 
         while column != BUY_COLUMNS {
-            let key = ctx.i32_at((row << 8) + 0x4b004)?;
+            let key = ctx.i32_at((row << 8) + UNIT_BUY + UnitBuy::KEY)?;
             ctx.set_i32_at(buy + (column as usize) * 4, read_csv_cell(unitbuy, column) as i32 ^ key)?;
             column += 1;
         }
 
-        buy += BUY_STRIDE;
+        buy += UNIT_BUY_STRIDE;
     }
 
     let mut growth_at = 0;

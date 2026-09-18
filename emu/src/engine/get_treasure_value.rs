@@ -13,7 +13,7 @@ pub type TreasureStore = [Vec<TreasureGroup>; 10];
 
 pub fn get_treasure_value(ctx: &AppContext, store: &TreasureStore, effect: i32) -> Result<i32, Fault> {
     let mut total = 0i32;
-    let mut progress_row = 0x83708usize;
+    let mut progress_row = AppContext::TREASURE_PROGRESS;
 
     for (chapter, groups) in store.iter().enumerate() {
         for (group_index, group) in groups.iter().enumerate() {

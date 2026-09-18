@@ -3,7 +3,7 @@ use crate::Fault;
 use super::{is_map_cleared, AppContext};
 
 pub fn invasion_z_available(ctx: &mut AppContext, chapter: i32) -> Result<bool, Fault> {
-    if chapter != 9 || ctx.u8_at(0x32c5d9)? == 0 || ctx.u8_at(0x32c5da)? != 0 {
+    if chapter != 9 || ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? == 0 || ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? != 0 {
         return Ok(false);
     }
 

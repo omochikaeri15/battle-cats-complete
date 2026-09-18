@@ -16,7 +16,7 @@ pub fn get_map_index(ctx: &mut AppContext, base_only: u8) -> Result<i32, Fault> 
     }
 
     if get_map_type(ctx, 0)? == -8 {
-        return ctx.i32_at(0x402168);
+        return ctx.i32_at(AppContext::EX_MAP_INDEX);
     }
 
     if get_map_type(ctx, 0)? == -0xf || get_map_type(ctx, 0)? == -0x19 {

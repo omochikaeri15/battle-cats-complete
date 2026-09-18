@@ -32,7 +32,7 @@ pub fn get_stage_record(
             + (map_idx as i64) * 0x60
             + (stage as i64) * 8
             + (star as i64) * 2
-            + 0x340818;
+            + AppContext::STAGE_RECORD_STORY as i64;
 
         return Ok(ctx.i16_at(cell as usize)? as i32);
     }
@@ -58,7 +58,7 @@ pub fn get_stage_record(
                     limit: maps.len() as i64,
                 })
         }
-        0x01 => Ok(ctx.u8_at(0x32c5da)? as i32),
+        0x01 => Ok(ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? as i32),
         0x05 => Ok((get_cleared_count(ctx, 0xad0)? > stage) as i32),
         0x07 => {
             let maps = &ctx.stage_record_neg19;
@@ -98,7 +98,7 @@ pub fn get_stage_record(
                 limit: maps.len() as i64,
             })
         }
-        0x0b => Ok(ctx.u8_at(0x32c5d9)? as i32),
+        0x0b => Ok(ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? as i32),
         0x0c..=0x0e => {
             let stages = match case {
                 0x0c => std_map_int_map_subscript(&mut ctx.outbreak_cleared, &map_idx.wrapping_add(7)),
@@ -122,7 +122,7 @@ pub fn get_stage_record(
             })
         }
         0x12 => {
-            let cell = (map_idx as i64) * 0x30 + (stage as i64) * 4 + 0x46a9c8;
+            let cell = (map_idx as i64) * 0x30 + (stage as i64) * 4 + AppContext::STAGE_RECORD_NEG8 as i64;
 
             ctx.i32_at(cell as usize)
         }
@@ -132,14 +132,14 @@ pub fn get_stage_record(
                 0x17 => map_idx.wrapping_add(4),
                 _ => map_idx,
             };
-            let row = (chapter as i64) * 0xd0 + 0xc978;
+            let row = (chapter as i64) * 0xd0 + AppContext::STAGE_RECORD_CHAPTERS as i64;
 
             xor_row51_get(ctx.bytes_from(row as usize)?, stage as i64 as usize)
                 .map(|record| record as i32)
                 .ok_or(Fault::IndexOutOfRange { site: "get_stage_record", index: stage as i64, limit: 0x33 })
         }
         0x14 => {
-            let cell = (map_idx as i64) * 0x320 + (stage as i64) * 0x10 + (star as i64) * 4 + 0x37b1b0;
+            let cell = (map_idx as i64) * 0x320 + (stage as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGE_RECORD_NEG6 as i64;
 
             ctx.i32_at(cell as usize)
         }

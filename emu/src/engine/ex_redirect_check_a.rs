@@ -19,5 +19,5 @@ pub fn ex_redirect_check_a(ctx: &mut AppContext) -> Result<bool, Fault> {
         return Ok(false);
     }
 
-    Ok(ctx.u8_at(0x1490)? == 0)
+    Ok(ctx.u8_at(AppContext::EX_REDIRECT_A_BLOCKED)? == 0)
 }

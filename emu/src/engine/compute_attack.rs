@@ -90,7 +90,7 @@ pub fn compute_attack(
         return Ok(hp as i32);
     }
 
-    let mut hp = if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(0x32c5c8)? != 0 {
+    let mut hp = if ctx.i32_at(AppContext::CHAPTER_MODE)? > 2 || ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let column = *STAT_ATTACK_COLUMNS.get((3 + atk_idx as i64) as usize).ok_or(Fault::IndexOutOfRange {
             site: "compute_attack",
