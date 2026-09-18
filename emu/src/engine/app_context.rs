@@ -79,6 +79,8 @@ impl Entity {
     pub const FRAME: usize = 0x8;
     pub const POS_X: usize = 0xc;
     pub const POS_Y: usize = 0x10;
+    pub const Z_LAYER: usize = 0x14;
+    pub const LEVEL: usize = 0x18;
     pub const MAX_HP: usize = 0x1c;
     pub const HP: usize = 0x20;
     pub const KNOCKBACKS: usize = 0x24;
@@ -121,6 +123,7 @@ impl Entity {
     pub const KB_PROC_HIT: usize = 0xf0;
     pub const FREEZE_TIMER: usize = 0xf4;
     pub const SLOW_TIMER: usize = 0xf8;
+    pub const DOUBLE_BOUNTY_STATE: usize = 0xfc;
     pub const BOSS_TYPE: usize = 0x100;
     pub const SHOCKWAVE_COUNTER: usize = 0x104;
     pub const FREEZE_LENGTH: usize = 0x108;
@@ -134,7 +137,9 @@ impl Entity {
     pub const METAL_CAT: usize = 0x128;
     pub const WEAKEN_TIMER: usize = 0x12c;
     pub const WEAKEN_ACTIVE: usize = 0x130;
+    pub const SURVIVE_USED: usize = 0x134;
     pub const WEAKEN_ACTIVE_PCT: usize = 0x13c;
+    pub const ATTACK_UP_FX_FRAME: usize = 0x140;
     pub const ATTACK_1_LD_ANCHOR: usize = 0x150;
     pub const WAVE_IMMUNE: usize = 0x158;
     pub const WAVE_BLOCK: usize = 0x15c;
@@ -142,6 +147,11 @@ impl Entity {
     pub const FREEZE_IMMUNE: usize = 0x164;
     pub const SLOW_IMMUNE: usize = 0x168;
     pub const WEAKEN_IMMUNE: usize = 0x16c;
+    pub const WAVE_IMMUNE_FX_FRAME: usize = 0x170;
+    pub const WAVE_IMMUNE_FX_ACTIVE: usize = 0x174;
+    pub const WAVE_BLOCK_FX_FRAME: usize = 0x178;
+    pub const WAVE_BLOCK_FX_ACTIVE: usize = 0x17c;
+    pub const HIT_SPARK_TYPE: usize = 0x180;
     pub const BURROW_COUNT: usize = 0x184;
     pub const BURROW_START_X: usize = 0x188;
     pub const IMMUNE_FX_FRAME: usize = 0x194;
@@ -585,7 +595,9 @@ impl AppContext {
     pub const DECK_KEY: usize = 0x28;
     pub const DECK_STRIDE: usize = 0x2c;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
+    pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
     pub const BASE_GUARD_NOTICE: usize = 0x870;
+    pub const KILLS_SINCE_SPAWN_TICK: usize = 0x10f8;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
@@ -593,11 +605,17 @@ impl AppContext {
     pub const BATTLE_DECK: usize = 0xc6ac;
     pub const STAGES_CLEARED_CHAPTERS: usize = 0xc94c;
     pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
+    pub const SEEN_ENEMIES: usize = 0xd968;
     pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
+    pub const BATTLE_STATUS: usize = 0x836ac;
     pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
+    pub const SPAWN_COUNTDOWN: usize = 0x838c0;
     pub const STAGE_LENGTH: usize = 0x9e528;
+    pub const STAGE_SPAWN_MIN: usize = 0x9e530;
+    pub const STAGE_SPAWN_MAX: usize = 0x9e534;
+    pub const STAGE_MAX_ENEMIES: usize = 0x9e53c;
     pub const CASTLE_ENEMY_ROW: usize = 0x9e540;
     pub const STAGE_BOSS_GUARD: usize = 0x9e548;
     pub const STAGE_INDEX: usize = 0x325c48;
