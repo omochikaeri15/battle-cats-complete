@@ -8,6 +8,9 @@ pub struct Imgcut {
     pub png: String,
     pub cut: String,
     pub flag: i32,
+    pub width: i32,
+    pub height: i32,
+    pub whole: u8,
 }
 
 pub fn imgcut_load(sheet: &mut Imgcut, png: &str, cut: &str, flag: i32, stm: Option<&mut AssetStream<'_>>) {
@@ -16,6 +19,7 @@ pub fn imgcut_load(sheet: &mut Imgcut, png: &str, cut: &str, flag: i32, stm: Opt
     sheet.cut.clear();
     sheet.cut.push_str(cut);
     sheet.flag = flag;
+    sheet.whole = 0;
 
     if sheet.cut.is_empty() {
         return;

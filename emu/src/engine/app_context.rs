@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, OrbStore, SoundManager, SpecialRuleStore, TreasureStore};
+use super::{Mamodel, CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, OrbStore, SoundManager, SpecialRuleStore, TreasureStore};
 
 pub const SIZE: usize = 0x500000;
 
@@ -95,6 +95,7 @@ impl Entity {
     pub const ATTACK_1_FORESWING: usize = 0x54;
     pub const CANNON_HIT_STAMP: usize = 0x58;
     pub const CANNON_BLAST_HIT: usize = 0x5c;
+    pub const BACK_BOUND: usize = 0x78;
     pub const CRIT_FX: usize = 0x98;
     pub const WAVE_CHANCE: usize = 0x9c;
     pub const WAVE_LEVEL: usize = 0xa0;
@@ -525,6 +526,7 @@ pub struct AppContext {
     raw: Box<[u8]>,
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
     pub spawn_states: Vec<[i32; 3]>,
+    pub unit_models: [Vec<Mamodel>; 2],
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
@@ -592,6 +594,7 @@ impl AppContext {
     pub const STAGES_CLEARED_CHAPTERS: usize = 0xc94c;
     pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
     pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
+    pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
     pub const STAGE_LENGTH: usize = 0x9e528;
@@ -633,6 +636,7 @@ impl AppContext {
             raw: vec![0u8; SIZE].into_boxed_slice(),
             stage_enemies: Vec::new(),
             spawn_states: Vec::new(),
+            unit_models: [Vec::new(), Vec::new()],
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),

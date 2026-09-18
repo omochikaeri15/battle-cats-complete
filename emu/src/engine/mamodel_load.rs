@@ -1,4 +1,6 @@
-use super::{read_asset_stream_line, read_csv_cell, read_csv_row, AssetStream, Cell};
+use std::rc::Rc;
+
+use super::{read_asset_stream_line, read_csv_cell, read_csv_row, AssetStream, Cell, Imgcut};
 
 pub const PART_STRIDE: usize = 0xb0;
 
@@ -18,6 +20,14 @@ impl Default for MamodelPart {
 }
 
 impl MamodelPart {
+    pub fn from_raw(raw: [u8; PART_STRIDE]) -> Self {
+        Self { raw }
+    }
+
+    pub fn raw(&self) -> &[u8; PART_STRIDE] {
+        &self.raw
+    }
+
     pub fn i32_at(&self, off: usize) -> i32 {
         let mut word = [0u8; 4];
         word.copy_from_slice(&self.raw[off..off + 4]);
@@ -26,6 +36,18 @@ impl MamodelPart {
     }
 
     pub fn set_i32_at(&mut self, off: usize, value: i32) {
+        self.raw[off..off + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    pub fn u8_at(&self, off: usize) -> u8 {
+        self.raw[off]
+    }
+
+    pub fn set_u8_at(&mut self, off: usize, value: u8) {
+        self.raw[off] = value;
+    }
+
+    pub fn set_f32_at(&mut self, off: usize, value: f32) {
         self.raw[off..off + 4].copy_from_slice(&value.to_le_bytes());
     }
 
@@ -50,9 +72,12 @@ pub struct MamodelAnchor {
 
 #[derive(Default)]
 pub struct Mamodel {
+    pub sheet: Option<Rc<Imgcut>>,
+    pub sheet_table: Vec<Option<Rc<Imgcut>>>,
+    pub single_sheet: u8,
     pub parts: Vec<MamodelPart>,
-    pub part_scratch: Vec<i32>,
-    pub part_order: Vec<i32>,
+    pub draw_order: Vec<i32>,
+    pub draw_z: Vec<i32>,
     pub scale_unit: i32,
     pub angle_unit: i32,
     pub opacity_unit: i32,
@@ -64,8 +89,8 @@ pub struct Mamodel {
 
 pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStream<'_>>) -> bool {
     model.parts.clear();
-    model.part_scratch.clear();
-    model.part_order.clear();
+    model.draw_order.clear();
+    model.draw_z.clear();
     model.anchors.clear();
     model.path.clear();
     model.mirror = 0;
@@ -85,8 +110,8 @@ pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStrea
     let part_count = read_csv_cell(stm, 0) as i32 as i64 as usize;
 
     model.parts.resize(part_count, MamodelPart::default());
-    model.part_scratch.resize(part_count, 0);
-    model.part_order.resize(part_count, 0);
+    model.draw_order.resize(part_count, 0);
+    model.draw_z.resize(part_count, 0);
 
     for row in 0..model.parts.len() {
         read_csv_row(stm);

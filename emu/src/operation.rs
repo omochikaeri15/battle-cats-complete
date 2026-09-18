@@ -74,3 +74,31 @@ pub fn div_1000<T: Truncating>(x: T) -> T {
 pub fn div_10000<T: Truncating>(x: T) -> T {
     x / T::from(10000)
 }
+
+pub fn cvttsd2si(x: f64) -> i32 {
+    if x > -2147483649.0 && x < 2147483648.0 {
+        x as i32
+    } else {
+        i32::MIN
+    }
+}
+
+pub fn div_wide(dividend: i64, divisor: i64) -> Option<i64> {
+    if (dividend | divisor) as u64 >> 0x20 == 0 {
+        return (dividend as u32).checked_div(divisor as u32).map(i64::from);
+    }
+
+    dividend.checked_div(divisor)
+}
+
+pub fn idiv(dividend: i32, divisor: i32) -> Option<i32> {
+    dividend.checked_div(divisor)
+}
+
+pub fn irem(dividend: i32, divisor: i32) -> Option<i32> {
+    dividend.checked_rem(divisor)
+}
+
+pub fn div_neg_100<T: Truncating>(x: T) -> T {
+    x / T::from(-100)
+}
