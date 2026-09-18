@@ -1,0 +1,1 @@
+pub const ATTACK_LD_FLAG_STORE_FIELDS: [i32; 2] = [203, 204];

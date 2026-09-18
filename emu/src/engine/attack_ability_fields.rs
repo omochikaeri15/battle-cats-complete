@@ -1,0 +1,1 @@
+pub const ATTACK_ABILITY_FIELDS: [i32; 3] = [123, 124, 125];

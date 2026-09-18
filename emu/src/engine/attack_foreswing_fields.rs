@@ -1,0 +1,1 @@
+pub const ATTACK_FORESWING_FIELDS: [i32; 3] = [21, 121, 122];
