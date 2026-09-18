@@ -524,6 +524,7 @@ impl EnemyStats {
 pub struct AppContext {
     raw: Box<[u8]>,
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
+    pub spawn_states: Vec<[i32; 3]>,
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
@@ -582,6 +583,7 @@ impl AppContext {
     pub const DECK_KEY: usize = 0x28;
     pub const DECK_STRIDE: usize = 0x2c;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
+    pub const BASE_GUARD_NOTICE: usize = 0x870;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
@@ -593,6 +595,8 @@ impl AppContext {
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
     pub const STAGE_LENGTH: usize = 0x9e528;
+    pub const CASTLE_ENEMY_ROW: usize = 0x9e540;
+    pub const STAGE_BOSS_GUARD: usize = 0x9e548;
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
     pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
@@ -628,6 +632,7 @@ impl AppContext {
         Self {
             raw: vec![0u8; SIZE].into_boxed_slice(),
             stage_enemies: Vec::new(),
+            spawn_states: Vec::new(),
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),
