@@ -2,13 +2,13 @@ use crate::Fault;
 
 use super::{AppContext, ATTACK_LD_ANCHOR_FIELDS, ATTACK_LD_FLAG_FIELDS};
 
-pub fn get_ld_anchor(ctx: &AppContext, team: i32, slot: i32, attack: i32) -> Result<i32, Fault> {
+pub fn get_ld_anchor(ctx: &AppContext, faction: i32, slot: i32, attack: i32) -> Result<i32, Fault> {
     let marker = 'resolved: {
         if attack > 0 {
             let flag_field = *ATTACK_LD_FLAG_FIELDS
                 .get(attack as usize)
                 .ok_or(Fault::IndexOutOfRange { site: "get_ld_anchor", index: attack as i64, limit: 3 })?;
-            let entity = AppContext::entity_field(team, slot, 0x838f8);
+            let entity = AppContext::entity_field(faction, slot, 0x838f8);
 
             if ctx.i32_at(entity.wrapping_add((flag_field as usize).wrapping_mul(4)))? != 0 {
                 let anchor_field = *ATTACK_LD_ANCHOR_FIELDS
@@ -20,7 +20,7 @@ pub fn get_ld_anchor(ctx: &AppContext, team: i32, slot: i32, attack: i32) -> Res
             }
         }
 
-        let anchor_missing = ctx.i32_at(AppContext::entity_field(team, slot, 0x83a48))? == 0;
+        let anchor_missing = ctx.i32_at(AppContext::entity_field(faction, slot, 0x83a48))? == 0;
 
         -(anchor_missing as i32)
     };
@@ -29,5 +29,5 @@ pub fn get_ld_anchor(ctx: &AppContext, team: i32, slot: i32, attack: i32) -> Res
         .get(source as usize)
         .ok_or(Fault::IndexOutOfRange { site: "get_ld_anchor", index: source as i64, limit: 3 })?;
 
-    ctx.i32_at(AppContext::entity_field(team, slot, 0x838f8).wrapping_add((field as usize).wrapping_mul(4)))
+    ctx.i32_at(AppContext::entity_field(faction, slot, 0x838f8).wrapping_add((field as usize).wrapping_mul(4)))
 }

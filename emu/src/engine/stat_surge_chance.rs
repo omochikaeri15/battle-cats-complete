@@ -2,13 +2,13 @@ use crate::Fault;
 
 use super::{get_talent_value, read_flag, AppContext};
 
-pub fn stat_surge_chance(ctx: &mut AppContext, team: i32, unit_id: i32, form: i32) -> Result<i32, Fault> {
-    if read_flag(ctx, (team as usize).wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 == 0 {
+pub fn stat_surge_chance(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32) -> Result<i32, Fault> {
+    if read_flag(ctx, (faction as usize).wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 == 0 {
         return ctx.i32_at(((unit_id.wrapping_add(2) as i64) * 0x1c4 + 0x23324c) as usize);
     }
 
     let base = ctx.i32_at(((unit_id.wrapping_add(2) as i64) * 0x760 + (form as i64) * 0x1d8 + 0x9e6c0) as usize)?;
-    let first = get_talent_value(ctx, team, unit_id, form, 0x38, 0)?;
+    let first = get_talent_value(ctx, faction, unit_id, form, 0x38, 0)?;
 
-    Ok(get_talent_value(ctx, team, unit_id, form, 0x41, 0)?.wrapping_add(first).wrapping_add(base))
+    Ok(get_talent_value(ctx, faction, unit_id, form, 0x41, 0)?.wrapping_add(first).wrapping_add(base))
 }

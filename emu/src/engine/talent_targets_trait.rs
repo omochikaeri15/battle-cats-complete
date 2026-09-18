@@ -4,7 +4,7 @@ use super::{get_scene_id, has_fixed_lineup, has_talent, is_trait_targeted_talent
 
 pub fn talent_targets_trait(
     ctx: &mut AppContext,
-    team: i32,
+    faction: i32,
     unit_id: i32,
     form: i32,
     trait_bit: i32,
@@ -39,7 +39,7 @@ pub fn talent_targets_trait(
     if target_talents.contains_key(&trait_bit) {
         let abil = *target_talents.entry(trait_bit).or_default();
 
-        if has_talent(ctx, team, unit_id, form, abil)? {
+        if has_talent(ctx, faction, unit_id, form, abil)? {
             return Ok(true);
         }
     }

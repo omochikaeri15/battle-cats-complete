@@ -2,14 +2,14 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{CastleRow, FixedLineupStore, MapData, SoundManager};
+use super::{CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, SoundManager};
 
 pub const SIZE: usize = 0x500000;
 
 pub const ENTITY_BASE: usize = 0x838f8;
 pub const ENTITY_STRIDE: usize = 0x3e8;
-pub const TEAM_STRIDE: usize = 0xc738;
-pub const SLOTS_PER_TEAM: i32 = 51;
+pub const FACTION_STRIDE: usize = 0xc738;
+pub const SLOTS_PER_FACTION: i32 = 51;
 
 pub const STAGE_ENEMY_COLUMNS: usize = 14;
 
@@ -23,6 +23,8 @@ pub struct AppContext {
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
+    pub combo_store: ComboStore,
+    pub chara_groups: BTreeMap<i32, CharaGroup>,
     pub map_data: BTreeMap<i32, MapData>,
     pub map_data_ids: BTreeMap<i32, Vec<i32>>,
     pub map_stage_sets: BTreeMap<i32, Vec<i32>>,
@@ -73,6 +75,8 @@ impl AppContext {
             stage_enemies: Vec::new(),
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
+            combo_store: Default::default(),
+            chara_groups: Default::default(),
             map_data: Default::default(),
             map_data_ids: Default::default(),
             map_stage_sets: Default::default(),
@@ -111,9 +115,9 @@ impl AppContext {
         }
     }
 
-    pub fn entity_field(team: i32, idx: i32, field: usize) -> usize {
-        (team as usize)
-            .wrapping_mul(TEAM_STRIDE)
+    pub fn entity_field(faction: i32, idx: i32, field: usize) -> usize {
+        (faction as usize)
+            .wrapping_mul(FACTION_STRIDE)
             .wrapping_add((idx as usize).wrapping_mul(ENTITY_STRIDE))
             .wrapping_add(field)
     }

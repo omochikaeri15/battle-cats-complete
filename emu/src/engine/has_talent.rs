@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{get_scene_id, has_fixed_lineup, AppContext};
 
-pub fn has_talent(ctx: &mut AppContext, _team: i32, unit_id: i32, form: i32, abil: i32) -> Result<bool, Fault> {
+pub fn has_talent(ctx: &mut AppContext, _faction: i32, unit_id: i32, form: i32, abil: i32) -> Result<bool, Fault> {
     if !ctx.talent_definitions.contains_key(&unit_id) {
         return Ok(false);
     }

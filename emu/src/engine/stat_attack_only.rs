@@ -2,8 +2,8 @@ use crate::Fault;
 
 use super::{has_talent, read_flag, AppContext};
 
-pub fn stat_attack_only(ctx: &mut AppContext, team: i32, unit_id: i32, form: i32) -> Result<bool, Fault> {
-    if read_flag(ctx, (team as usize).wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 == 0 {
+pub fn stat_attack_only(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32) -> Result<bool, Fault> {
+    if read_flag(ctx, (faction as usize).wrapping_mul(0x1f0).wrapping_add(0x2648))? & 1 == 0 {
         return Ok(false);
     }
 
@@ -11,5 +11,5 @@ pub fn stat_attack_only(ctx: &mut AppContext, team: i32, unit_id: i32, form: i32
         return Ok(true);
     }
 
-    has_talent(ctx, team, unit_id, form, 0x4)
+    has_talent(ctx, faction, unit_id, form, 0x4)
 }

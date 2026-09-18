@@ -4,13 +4,13 @@ use super::{has_talent, AppContext};
 
 pub fn get_talent_value(
     ctx: &mut AppContext,
-    team: i32,
+    faction: i32,
     unit_id: i32,
     form: i32,
     abil: i32,
     param: i32,
 ) -> Result<i32, Fault> {
-    if !has_talent(ctx, team, unit_id, form, abil)? {
+    if !has_talent(ctx, faction, unit_id, form, abil)? {
         return Ok(0);
     }
 
