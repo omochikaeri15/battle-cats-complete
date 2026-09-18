@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 use crate::operation::{blend_epi16, slli_epi32};
 
 use super::{get_column_count, read_cell_stream, read_csv_cell, read_csv_row, AppContext, AssetStream};

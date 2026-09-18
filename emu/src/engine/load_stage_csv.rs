@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 
 use super::{parse_stage_enemy_row, read_csv_cell, read_csv_row, AppContext, AssetStream, STAGE_ENEMY_COLUMNS};
 

@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 
 use super::{call_rng, play_sound, read_flag, sound_manager, AppContext};
 

@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct CastleRow {

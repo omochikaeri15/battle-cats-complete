@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 
 use super::{read_csv_cell, read_csv_row, AppContext, AssetStream};
 

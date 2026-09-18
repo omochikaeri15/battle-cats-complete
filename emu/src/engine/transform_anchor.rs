@@ -1,4 +1,4 @@
-use crate::fault::Fault;
+use crate::Fault;
 
 use super::{transform_point, Mamodel, MamodelPart};
 

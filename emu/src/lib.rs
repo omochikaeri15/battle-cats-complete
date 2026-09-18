@@ -1,4 +1,6 @@
 pub mod engine;
-pub mod fault;
+mod fault;
 pub mod operation;
 pub mod runtime;
+
+pub use fault::Fault;
