@@ -37,6 +37,40 @@ impl UnitBuy {
     pub const KEY: usize = 0xfc;
 }
 
+pub struct Base;
+
+impl Base {
+    pub const OCCUPANT: usize = 0x0;
+    pub const STATE: usize = 0x4;
+    pub const CANNON_MAKES_WAVE: usize = 0x14;
+    pub const LEVEL: usize = 0x18;
+    pub const CASTLE_ANIM_STATE: usize = 0x24;
+    pub const CASTLE_ANIM_FRAME: usize = 0x28;
+    pub const CANNON_RECHARGE: usize = 0x2c;
+    pub const CANNON_COUNTDOWN: usize = 0x30;
+    pub const CANNON_SHOT_ID: usize = 0x34;
+    pub const CANNON_BASE_DAMAGE: usize = 0x40;
+    pub const CANNON_TYPE: usize = 0x44;
+    pub const CANNON_STRIKE_X: usize = 0x48;
+    pub const CANNON_DAMAGE: usize = 0x50;
+    pub const CANNON_WALL_HP_PCT: usize = 0x54;
+    pub const CANNON_STRIKE_WIDTH: usize = 0x54;
+    pub const CANNON_WALL_LIFETIME: usize = 0x58;
+    pub const CANNON_HP_MODE: usize = 0x58;
+    pub const CANNON_ID: usize = 0x5c;
+    pub const CANNON_FOUNDATION_ID: usize = 0x60;
+    pub const CANNON_DECOR_ID: usize = 0x64;
+    pub const CANNON_UNIT_ID: usize = 0x68;
+    pub const CANNON_WALL_OFFSET: usize = 0x6c;
+    pub const CANNON_METAL_PERMILLE: usize = 0x6c;
+    pub const CANNON_ZOMBIE_PERMILLE: usize = 0x6c;
+    pub const CANNON_RECOIL: usize = 0x70;
+    pub const CANNON_READY_FX: usize = 0x74;
+    pub const CANNON_NONMETAL_PERMILLE: usize = 0x78;
+    pub const CANNON_NONZOMBIE_PERMILLE: usize = 0x78;
+    pub const CANNON_BURROWED_PERMILLE: usize = 0x7c;
+}
+
 pub struct Entity;
 
 impl Entity {
@@ -61,7 +95,6 @@ impl Entity {
     pub const ATTACK_1_FORESWING: usize = 0x54;
     pub const CANNON_HIT_STAMP: usize = 0x58;
     pub const CANNON_BLAST_HIT: usize = 0x5c;
-    pub const CANNON_UNIT_ID: usize = 0x68;
     pub const CRIT_FX: usize = 0x98;
     pub const WAVE_CHANCE: usize = 0x9c;
     pub const WAVE_LEVEL: usize = 0xa0;

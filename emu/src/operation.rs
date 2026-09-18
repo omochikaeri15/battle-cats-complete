@@ -51,6 +51,10 @@ pub fn div_10<T: Truncating>(x: T) -> T {
     x / T::from(10)
 }
 
+pub fn div_20<T: Truncating>(x: T) -> T {
+    x / T::from(20)
+}
+
 pub fn div_100<T: Truncating>(x: T) -> T {
     x / T::from(100)
 }
