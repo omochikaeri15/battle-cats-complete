@@ -1,6 +1,6 @@
-const KEY: usize = 0x28;
+const KEY: usize = 0xcc;
 
-pub fn xor_row_get(obj: &[u8], index: usize) -> Option<u32> {
+pub fn xor_row51_get(obj: &[u8], index: usize) -> Option<u32> {
     let value = obj.get(index.checked_mul(4)?..)?.get(..4)?;
     let key = obj.get(KEY..KEY + 4)?;
 
