@@ -6,9 +6,9 @@ use super::{
     get_surge_span, set_counter_surge, set_counter_surge_once, AppContext, CounterSurgeEvent,
 };
 
-pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack: i32) -> Result<(), Fault> {
-    const SITE: &str = "surge_attack";
+const SITE: &str = "surge_attack";
 
+pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack: i32) -> Result<(), Fault> {
     let index = event_index as i64 as usize;
     let missing = Fault::IndexOutOfRange { site: SITE, index: event_index as i64, limit: ctx.surge_events.len() as i64 };
     let event = ctx.surge_events.get(index).ok_or(missing.clone())?;

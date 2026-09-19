@@ -2,6 +2,8 @@ use crate::{operation, Fault};
 
 use super::{abs_i32, get_stage_record, is_map_cleared, map_type_of_map_id, AppContext};
 
+const SITE: &str = "unlock_group_met";
+
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct UnlockGroup {
     pub conditions: Vec<i32>,
@@ -11,8 +13,6 @@ pub struct UnlockGroup {
 }
 
 pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
-    const SITE: &str = "unlock_group_met";
-
     if !ctx.unlock_groups.contains_key(&id) {
         return Ok(true);
     }

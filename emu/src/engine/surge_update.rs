@@ -2,9 +2,9 @@ use crate::{operation, Fault};
 
 use super::{base_shake_start, get_pos_x, is_touchable, play_sound_in_battle, slot_occupied, surge_attack, AppContext, Entity, SURGE_TIMING};
 
-pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
-    const SITE: &str = "surge_update";
+const SITE: &str = "surge_update";
 
+pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0i32;
 
     while (index as i64 as usize) < ctx.surge_events.len() {

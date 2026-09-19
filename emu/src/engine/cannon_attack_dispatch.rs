@@ -9,9 +9,9 @@ use super::{
     std_map_int_string_subscript, std_string_concat_cstr, std_string_from_cstr, AppContext, CannonShot, Entity,
 };
 
-pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, shot_id: i32) -> Result<(), Fault> {
-    const SITE: &str = "cannon_attack_dispatch";
+const SITE: &str = "cannon_attack_dispatch";
 
+pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, shot_id: i32) -> Result<(), Fault> {
     let other = 1i32.wrapping_sub(faction);
     let burrowed = if get_cannon_type(ctx, faction)? == 5 { get_entity_state(ctx, other, target)? == 0xc } else { false };
     let spark = if get_base_soulstrike(ctx, faction)? && get_entity_state(ctx, other, target)? == 0xe { 2 } else { 0 };

@@ -2,9 +2,9 @@ use crate::Fault;
 
 use super::{abs_i32, call_rng, get_anim_len, get_metal_killer_pct, get_pos_x, get_setting, play_sound, roll_procs, sound_manager, AppContext, SurgeEvent};
 
-pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
-    const SITE: &str = "counter_surge_update";
+const SITE: &str = "counter_surge_update";
 
+pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0i32;
 
     while (index as i64 as usize) < ctx.counter_surge_events.len() {

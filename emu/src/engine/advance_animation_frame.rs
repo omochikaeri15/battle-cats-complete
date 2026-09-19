@@ -5,9 +5,9 @@ use super::{
     get_spawn_anim_type, get_unit_anim, maanim_get_max_keyframe, set_entity_frame, std_map_int_maanim_subscript_2, AppContext,
 };
 
-pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), Fault> {
-    const SITE: &str = "advance_animation_frame";
+const SITE: &str = "advance_animation_frame";
 
+pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), Fault> {
     let button = get_entity_button(ctx, faction, slot)?;
 
     if get_entity_state(ctx, faction, slot)? == 0 {

@@ -6,9 +6,9 @@ use super::{
     get_wave_mini, has_attack_abilities, is_attack_long_range, roll_procs, AppContext, Entity, ExplosionEvent, SurgeEvent, WaveRecord,
 };
 
-pub fn enemy_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack: i32) -> Result<(), Fault> {
-    const SITE: &str = "enemy_hit_executor";
+const SITE: &str = "enemy_hit_executor";
 
+pub fn enemy_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack: i32) -> Result<(), Fault> {
     roll_procs(ctx, 1, slot, attack)?;
 
     let crit = ctx.i32_at(AppContext::PROC_ROLLS)?;

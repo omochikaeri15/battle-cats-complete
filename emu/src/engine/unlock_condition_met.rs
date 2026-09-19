@@ -2,9 +2,9 @@ use crate::{operation, Fault};
 
 use super::{get_stage_count, get_stage_record, get_user_rank, is_map_cleared, map_index_of_map_id, map_type_of_map_id, unlock_group_met, AppContext};
 
-pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
-    const SITE: &str = "unlock_condition_met";
+const SITE: &str = "unlock_condition_met";
 
+pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
     let slot = match id {
         -1 => return Ok(true),
         0 => return Ok(false),

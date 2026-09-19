@@ -5,9 +5,9 @@ use super::{
     stat_cooldown, AppContext,
 };
 
-pub fn get_unit_recharge(ctx: &mut AppContext, faction: i32, button: i32) -> Result<i32, Fault> {
-    const SITE: &str = "get_unit_recharge";
+const SITE: &str = "get_unit_recharge";
 
+pub fn get_unit_recharge(ctx: &mut AppContext, faction: i32, button: i32) -> Result<i32, Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
 
     if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 1)? {

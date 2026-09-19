@@ -2,9 +2,9 @@ use crate::{operation, Fault};
 
 use super::{explosion_attack, get_pos_x, get_setting, is_touchable, min_i32, play_sound_in_battle, slot_occupied, AppContext, Entity, EXPLOSION_DAMAGE_DEFAULTS, EXPLOSION_WIDTH_DEFAULTS};
 
-pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
-    const SITE: &str = "explosion_update";
+const SITE: &str = "explosion_update";
 
+pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut event_index = 0i32;
 
     while (event_index as i64 as usize) < ctx.explosion_events.len() {

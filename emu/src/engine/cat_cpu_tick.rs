@@ -160,7 +160,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4 {
                 let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
 
-                ctx.set_i32_at(AppContext::EFFECT_ORIGIN_Y, screen_x)?;
+                ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
 
                 if cannon_target_in_range(ctx, faction, screen_x)? && ctx.i32_at(cannon_state)? == 0 {
                     ctx.set_i32_at(cannon_state, 1)?;
@@ -175,12 +175,12 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
         while slot != 51 {
             let reach = cannon_reach_x(ctx, faction)?;
 
-            ctx.set_i32_at(AppContext::EFFECT_ORIGIN_X, reach)?;
+            ctx.set_i32_at(AppContext::SCRATCH_1, reach)?;
 
             if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 {
                 let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
 
-                ctx.set_i32_at(AppContext::EFFECT_ORIGIN_Y, screen_x)?;
+                ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
 
                 let close = match faction {
                     1 => screen_x < reach.wrapping_add(-0xc8),
@@ -226,7 +226,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4 {
                             let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
 
-                            ctx.set_i32_at(AppContext::EFFECT_ORIGIN_Y, screen_x)?;
+                            ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
 
                             if cannon_target_in_range(ctx, faction, screen_x)? {
                                 ctx.set_i32_at(action, 1)?;

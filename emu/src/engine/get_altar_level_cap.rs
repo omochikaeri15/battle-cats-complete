@@ -2,9 +2,9 @@ use crate::Fault;
 
 use super::AppContext;
 
-pub fn get_altar_level_cap(ctx: &AppContext, enemy_id: i32) -> Result<i32, Fault> {
-    const SITE: &str = "get_altar_level_cap";
+const SITE: &str = "get_altar_level_cap";
 
+pub fn get_altar_level_cap(ctx: &AppContext, enemy_id: i32) -> Result<i32, Fault> {
     if !ctx.altar_level_caps.contains_key(&enemy_id) {
         return Ok(-1);
     }

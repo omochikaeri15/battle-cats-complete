@@ -2,9 +2,9 @@ use crate::Fault;
 
 use super::{event_items_count, event_items_has, get_listed_item_count, obf_value_read, obf_value_read_2, AppContext, ItemDefinition};
 
-pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
-    const SITE: &str = "get_item_count";
+const SITE: &str = "get_item_count";
 
+pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
     let mut item = item;
     let mut definition;
 

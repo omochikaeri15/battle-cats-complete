@@ -19,6 +19,8 @@ use super::{
     Entity, WaveRecord, CANNON_SHOT_SPACING, KNOCKBACK_Y_ARC, RECOIL_Y_ARC,
 };
 
+const SITE: &str = "cat_update";
+
 #[derive(Default)]
 pub struct SurgeEvent {
     pub faction: i32,
@@ -35,8 +37,6 @@ pub struct SurgeEvent {
 }
 
 pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
-    const SITE: &str = "cat_update";
-
     ctx.metal_killer_map.clear();
 
     let knockback_step = if faction == 0 { 0x3c } else { -0x3c };

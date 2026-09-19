@@ -2,9 +2,9 @@ use crate::Fault;
 
 use super::{aku_list_key, aku_realm_final_redirect, get_aku_stage_list, get_cleared_count, get_stage_record, unlock_condition_met, AppContext};
 
-pub fn stage_condition_met(ctx: &mut AppContext, map_type: i32, map_idx: i32, stage: i32) -> Result<bool, Fault> {
-    const SITE: &str = "stage_condition_met";
+const SITE: &str = "stage_condition_met";
 
+pub fn stage_condition_met(ctx: &mut AppContext, map_type: i32, map_idx: i32, stage: i32) -> Result<bool, Fault> {
     match map_type {
         -21 => Ok(get_cleared_count(ctx, 0xad0)? <= stage),
         -19 => {

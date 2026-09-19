@@ -5,9 +5,9 @@ use super::{
     get_treasure_value, AppContext,
 };
 
-pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> {
-    const SITE: &str = "get_max_money";
+const SITE: &str = "get_max_money";
 
+pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
 
     if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 0)? {

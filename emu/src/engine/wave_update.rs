@@ -2,9 +2,9 @@ use crate::{operation, Fault};
 
 use super::{get_anim_len, get_battle_status, get_setting, play_sound, sound_manager, AppContext, WaveRecord, WaveSprite, CANNON_SHOT_SPACING};
 
-pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
-    const SITE: &str = "wave_update";
+const SITE: &str = "wave_update";
 
+pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut wave_index = 0usize;
 
     while wave_index != 200 {

@@ -8,6 +8,8 @@ use super::{
     get_wave_mini, has_attack_abilities, is_attack_long_range, roll_procs, AppContext, Entity, SurgeEvent, WaveRecord,
 };
 
+const SITE: &str = "cat_hit_executor";
+
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct ExplosionEvent {
     pub faction: i32,
@@ -21,8 +23,6 @@ pub struct ExplosionEvent {
 }
 
 pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack: i32) -> Result<(), Fault> {
-    const SITE: &str = "cat_hit_executor";
-
     roll_procs(ctx, 0, slot, attack)?;
 
     let crit = ctx.i32_at(AppContext::PROC_ROLLS)?;

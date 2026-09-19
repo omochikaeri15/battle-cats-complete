@@ -98,6 +98,14 @@ impl WaveRecord {
     pub const MINI: usize = 0x2c;
 }
 
+pub struct Pinch;
+
+impl Pinch {
+    pub const ACTIVE: usize = 0x0;
+    pub const DISTANCE: usize = 0x2c;
+    pub const PREV_DISTANCE: usize = 0x30;
+}
+
 pub struct WaveSprite;
 
 impl WaveSprite {
@@ -620,6 +628,7 @@ pub struct AppContext {
     pub altar_level_caps: BTreeMap<i32, i32>,
     pub altar_unsealed: BTreeMap<i32, bool>,
     pub screen_metrics: ScreenMetrics,
+    pub deck_bar_base_y: i32,
     pub stage_restrictions: BTreeMap<i32, StageRestriction>,
     pub cannon_type_names: BTreeMap<i32, Vec<u8>>,
     pub enemy_names: Vec<Vec<u8>>,
@@ -705,6 +714,8 @@ impl AppContext {
     pub const ITEM_COUNTS_KIND_D: usize = 0x188;
     pub const ITEM_CF_COUNT: usize = 0x450;
     pub const ITEM_COUNTS_KIND_B: usize = 0x1084;
+    pub const DECK_BUTTON_HELD: usize = 0x13dc;
+    pub const DECK_TWO_LINES: usize = 0x13dd;
     pub const ITEM_COUNTS_KIND_9: usize = 0x13e2;
     pub const ITEM_COUNTS_KIND_9_STRIDE: usize = 0x18;
     pub const ITEM_7B_COUNT: usize = 0x1cc5;
@@ -713,6 +724,7 @@ impl AppContext {
     pub const ITEM_91_COUNT: usize = 0x2630;
     pub const ITEM_9D_COUNT: usize = 0x2638;
     pub const ITEM_D4_COUNT: usize = 0x2640;
+    pub const BATTLE_ZOOM_Y: usize = 0x3474;
     pub const ITEM_COUNTS_KIND_8: usize = 0x3478;
     pub const ITEM_COUNTS_KIND_A: usize = 0x3630;
     pub const ITEM_COUNTS_KIND_C: usize = 0x3640;
@@ -759,6 +771,9 @@ impl AppContext {
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
     pub const INPUT_BLOCKED: usize = 0x3265fc;
     pub const OPTION_MENU_IS_OPEN: usize = 0x326624;
+    pub const SWIPE_DY: usize = 0x326640;
+    pub const SWIPE_ANGLE: usize = 0x32664c;
+    pub const SWIPE_VELOCITY: usize = 0x326650;
     pub const DECK_ROW_SWAP_DIRECTION: usize = 0x32665c;
     pub const CAMERA_KICK: usize = 0x326660;
     pub const SNIPER_TARGET: usize = 0x326680;
@@ -780,12 +795,19 @@ impl AppContext {
     pub const DECK_ROW_SHOWN: usize = 0x326fc0;
     pub const DECK_ROW_SWAP_TARGET: usize = 0x326fd8;
     pub const DECK_ROW_SWAPPING: usize = 0x326fdc;
+    pub const DECK_SWIPE_LATCHED: usize = 0x326fde;
+    pub const PINCH_ZOOMED: usize = 0x326fdf;
+    pub const CAMERA_DRAGGING: usize = 0x326fe0;
     pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
     pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
-    pub const SNIPER_LOCKED: usize = 0x327da4;
-    pub const EFFECT_ORIGIN_X: usize = 0x327da8;
-    pub const EFFECT_ORIGIN_Y: usize = 0x327dac;
+    pub const SCRATCH_0: usize = 0x327da4;
+    pub const SCRATCH_1: usize = 0x327da8;
+    pub const SCRATCH_2: usize = 0x327dac;
     pub const SNIPER_ALIGNED: usize = 0x327db0;
+    pub const DECK_BAR_SLIDE: usize = 0x327dcc;
+    pub const LETTERBOX_SHIFT: usize = 0x327f70;
+    pub const DECK_BACK_ROW_ENABLED: usize = 0x32b392;
+    pub const DRAG_LATCHED: usize = 0x32c8e4;
     pub const CPU_ENABLED: usize = 0x328560;
     pub const CPU_PENDING_ACTION: usize = 0x328564;
     pub const CPU_PICK: usize = 0x32856c;
@@ -795,7 +817,7 @@ impl AppContext {
     pub const CPU_CANNON_STATE: usize = 0x3285cc;
     pub const CPU_CANNON_WAIT: usize = 0x3285d4;
     pub const CPU_CANDIDATES: usize = 0x3285e4;
-    pub const DECK_SOURCE_MODE: usize = 0x3284d4;
+    pub const SCENE_0X64_PAGE: usize = 0x3284d4;
     pub const UI_TAP_LOCKOUT: usize = 0x32a474;
     pub const CAT_GOD_MENU_IS_OPEN: usize = 0x32b494;
     pub const CANNON_BLAST_ACTIVE: usize = 0x32b6ac;
@@ -816,6 +838,8 @@ impl AppContext {
     pub const CHAPTER_PROGRESS: usize = 0xc94c;
     pub const CHAPTER_PROGRESS_KEY: usize = 0xc974;
     pub const ENEMY_GUIDE_SEEN: usize = 0xd968;
+    pub const PINCH: usize = 0x33d8;
+    pub const CAMERA_ZOOM: usize = 0x340c;
     pub const TOUCH_X: usize = 0x3428;
     pub const TOUCH_START_X: usize = 0x3430;
     pub const TOUCH_PREV_X: usize = 0x3434;
@@ -840,6 +864,7 @@ impl AppContext {
     pub const AUTO_CAMERA_MODE: usize = 0x836a4;
     pub const BATTLE_STATUS: usize = 0x836ac;
     pub const WORKER_UPGRADE_FX: usize = 0x836d8;
+    pub const CAMERA_MIN_ZOOM: usize = 0x836e4;
     pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
@@ -858,6 +883,7 @@ impl AppContext {
     pub const STAGE_SCORE_TIME_LIMIT: usize = 0x9e544;
     pub const STAGE_BOSS_GUARD: usize = 0x9e548;
     pub const SCENE_0X63_STATE: usize = 0x325c2c;
+    pub const INSETS_IGNORED: usize = 0x20d8;
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
     pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
@@ -935,6 +961,7 @@ impl AppContext {
             altar_level_caps: BTreeMap::new(),
             altar_unsealed: BTreeMap::new(),
             screen_metrics: ScreenMetrics::default(),
+            deck_bar_base_y: 0x220,
             stage_restrictions: BTreeMap::new(),
             cannon_type_names: BTreeMap::new(),
             enemy_names: Vec::new(),

@@ -7,7 +7,7 @@ use super::{
 pub fn slot_deploy_permitted(ctx: &mut AppContext, faction: i32, slot: i32, in_battle: u8) -> Result<bool, Fault> {
     let mut row = get_button_unit_row(ctx, faction, slot)?;
 
-    if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 && ctx.i32_at(AppContext::DECK_SOURCE_MODE)? != 3 {
+    if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 && ctx.i32_at(AppContext::SCENE_0X64_PAGE)? != 3 {
         let stage_key = get_built_deck_stage_key(ctx)?;
         let rows = get_built_deck_rows(ctx, stage_key)?;
 

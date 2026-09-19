@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use crate::{operation, Fault};
 
+const SITE: &str = "get_cannon_effect";
+
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct CannonGrowthStep {
     pub kind: i32,
@@ -17,8 +19,6 @@ pub struct CannonPart {
 }
 
 pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Result<i32, Fault> {
-    const SITE: &str = "get_cannon_effect";
-
     let mut value = 0;
 
     if !part.growth.contains_key(&effect) {

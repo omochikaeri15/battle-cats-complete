@@ -9,9 +9,9 @@ use super::{
     slot_occupied, sound_manager, spawn_entity, stage_not_sealed, stat_conjure_unit_id, AppContext, CatStats, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE,
 };
 
-pub fn deploy_unit(ctx: &mut AppContext, faction: i32, slot: i32, fail_sound: u8) -> Result<(), Fault> {
-    const SITE: &str = "deploy_unit";
+const SITE: &str = "deploy_unit";
 
+pub fn deploy_unit(ctx: &mut AppContext, faction: i32, slot: i32, fail_sound: u8) -> Result<(), Fault> {
     'refused: {
         if !slot_deploy_permitted(ctx, faction, slot, 1)? {
             ctx.set_i32_at(AppContext::DEPLOY_NOTICE_TIMER, 0x1e)?;

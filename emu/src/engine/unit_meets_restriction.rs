@@ -6,9 +6,9 @@ use super::{
     get_built_deck_rows, get_built_deck_stage_key, get_current_stage_id, get_deploy_cost, get_special_rule_params, get_unit_form, get_unit_rarity, read_flag, AppContext,
 };
 
-pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) -> Result<bool, Fault> {
-    const SITE: &str = "unit_meets_restriction";
+const SITE: &str = "unit_meets_restriction";
 
+pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) -> Result<bool, Fault> {
     let stage_id = get_current_stage_id(ctx)?;
     let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64) * AppContext::DECK_STRIDE as i64;
     let mut pair = [0u8; 8];
@@ -19,7 +19,7 @@ pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) ->
     let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32).wrapping_add(-2);
     let mut form = get_unit_form(ctx, unit_id)?;
 
-    if ctx.i32_at(AppContext::DECK_SOURCE_MODE)? != 3 {
+    if ctx.i32_at(AppContext::SCENE_0X64_PAGE)? != 3 {
         if in_battle != 0 {
             pair[..4].copy_from_slice(&ctx.block_at::<4>(((slot as i64) * 4 + AppContext::BATTLE_DECK as i64) as usize)?);
             pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?);

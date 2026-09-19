@@ -2,9 +2,9 @@ use crate::Fault;
 
 use super::{get_button_unit_id, get_effective_deploy_cost, get_global_map_id, get_money, get_special_rule_params, get_unit_rarity, AppContext};
 
-pub fn is_deploy_blocked(ctx: &mut AppContext, slot: i32) -> Result<bool, Fault> {
-    const SITE: &str = "is_deploy_blocked";
+const SITE: &str = "is_deploy_blocked";
 
+pub fn is_deploy_blocked(ctx: &mut AppContext, slot: i32) -> Result<bool, Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
 
     if get_special_rule_params(ctx, &ctx.special_rules, map_id, 0)?.is_some() {

@@ -7,9 +7,9 @@ use super::{
     AppContext, Entity, WaveRecord, WaveSprite, CANNON_SHOT_SPACING,
 };
 
-pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
-    const SITE: &str = "wave_apply_hits";
+const SITE: &str = "wave_apply_hits";
 
+pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut blockers: BTreeMap<i32, i32> = BTreeMap::new();
     let mut hits: Vec<(i32, i32)> = Vec::new();
     let mut wave_index = 0usize;

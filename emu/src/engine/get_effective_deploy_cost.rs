@@ -2,9 +2,9 @@ use crate::{operation, Fault};
 
 use super::{get_button_unit_row, get_deploy_cost, get_global_map_id, get_special_rule_params, read_flag, AppContext};
 
-pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32) -> Result<i32, Fault> {
-    const SITE: &str = "get_effective_deploy_cost";
+const SITE: &str = "get_effective_deploy_cost";
 
+pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32) -> Result<i32, Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
         return Ok(0);
     }
