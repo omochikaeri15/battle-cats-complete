@@ -1203,6 +1203,7 @@ impl AppContext {
     pub const OUTRO_OK_PRESS: usize = 0x328334;
     pub const OUTRO_OK_RECT: usize = 0x328244;
     pub const OUTRO_OK_SLIDE: usize = 0x327dd0;
+    pub const OUTRO_BUTTON_LOCK: usize = 0x401f1c;
     pub const REWARD_POP_HOLD: usize = 0x328538;
     pub const LABYRINTH_RESULT_READY: usize = 0x1068;
     pub const LABYRINTH_RANK: usize = 0x1044;
@@ -1597,6 +1598,7 @@ impl AppContext {
     pub const BG_DRIFTERS: usize = 0x28c6dc;
     pub const BG_STARS: usize = 0x28c8bc;
     pub const BG_SPRITES: usize = 0x28cd1c;
+    pub const BG_GLINTS: usize = 0x28c6dc;
 
     pub fn new() -> Self {
         Self {
