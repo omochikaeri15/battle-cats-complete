@@ -1,6 +1,9 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{draw_context, draw_cut, draw_surface_aligned, fill_rect, get_drawable_width, glow_set, set_tint, AppContext, Surface};
+use super::{
+    AppContext, Surface, draw_context, draw_cut, draw_surface_aligned, fill_rect,
+    get_drawable_width, glow_set, set_tint,
+};
 
 const SITE: &str = "combo_banner_draw";
 
@@ -16,10 +19,18 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let step = ctx.i32_at(AppContext::COMBO_BANNER_TEXT_STEP)?;
     let sub = ctx.i32_at(AppContext::COMBO_BANNER_SUB)?;
-    let lead = operation::idiv(0x3c, step).ok_or(Fault::divide(SITE, step as i64))?.wrapping_mul(sub);
+    let lead = operation::idiv(0x3c, step)
+        .ok_or(Fault::divide(SITE, step as i64))?
+        .wrapping_mul(sub);
     let width = get_drawable_width(ctx)?;
-    let grow = operation::idiv(0x78, step).ok_or(Fault::divide(SITE, step as i64))?.wrapping_mul(sub);
-    let (top, height): (i32, i32) = if third { (-0xf, grow.wrapping_add(0x1e)) } else { (0, grow) };
+    let grow = operation::idiv(0x78, step)
+        .ok_or(Fault::divide(SITE, step as i64))?
+        .wrapping_mul(sub);
+    let (top, height): (i32, i32) = if third {
+        (-0xf, grow.wrapping_add(0x1e))
+    } else {
+        (0, grow)
+    };
     let y = top.wrapping_sub(lead).wrapping_add(0xa0);
 
     fill_rect(draw_context(&mut ctx.draw)?, 0, y, width, height);
@@ -33,13 +44,27 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
     let x = get_drawable_width(ctx)?.wrapping_add(-0x57);
 
-    draw_cut(draw_context(&mut ctx.draw)?, sheet, x, 0xc2i32.wrapping_sub(top), 8);
+    draw_cut(
+        draw_context(&mut ctx.draw)?,
+        sheet,
+        x,
+        0xc2i32.wrapping_sub(top),
+        8,
+    );
     set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
     if let Some(text) = ctx.combo_banner_texts[0] {
-        let x = ctx.i32_at(AppContext::COMBO_BANNER_X)?.wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+        let x = ctx
+            .i32_at(AppContext::COMBO_BANNER_X)?
+            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
 
-        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, top.wrapping_add(0x6e), 1);
+        draw_surface_aligned(
+            draw_context(&mut ctx.draw)?,
+            Surface::Label(&text),
+            x,
+            top.wrapping_add(0x6e),
+            1,
+        );
     }
 
     let ticks = ctx.i32_at(AppContext::COMBO_BANNER_TICKS)?;
@@ -52,17 +77,33 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     if let Some(text) = ctx.combo_banner_texts[1] {
-        let x = ctx.i32_at(AppContext::COMBO_BANNER_X)?.wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+        let x = ctx
+            .i32_at(AppContext::COMBO_BANNER_X)?
+            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
 
-        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, top.wrapping_add(0xaa), 1);
+        draw_surface_aligned(
+            draw_context(&mut ctx.draw)?,
+            Surface::Label(&text),
+            x,
+            top.wrapping_add(0xaa),
+            1,
+        );
     }
 
     if let Some(text) = ctx.combo_banner_texts[2] {
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
-        let x = ctx.i32_at(AppContext::COMBO_BANNER_X)?.wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+        let x = ctx
+            .i32_at(AppContext::COMBO_BANNER_X)?
+            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
 
-        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, top.wrapping_add(0xc8), 1);
+        draw_surface_aligned(
+            draw_context(&mut ctx.draw)?,
+            Surface::Label(&text),
+            x,
+            top.wrapping_add(0xc8),
+            1,
+        );
     }
 
     Ok(())

@@ -1,66 +1,9 @@
 use crate::{operation, Fault};
 
 use super::{
-    draw_context, fill_polygon, fill_rect, get_design_height2, get_drawable_width, get_left_inset_logical, scene_ignores_insets, set_draw_scale, set_insets_ignored,
-    set_tint, set_tint_alpha, AppContext,
+    draw_context, fill_polygon, fill_rect, get_design_height2, get_drawable_width, get_left_inset_logical, scene_ignores_insets, set_draw_scale,
+    set_insets_ignored, set_tint, set_tint_alpha, AppContext,
 };
-
-fn wipe_inset(ctx: &AppContext) -> Result<i32, Fault> {
-    if scene_ignores_insets(ctx)? != 0 {
-        return Ok(0);
-    }
-
-    Ok(0i32.wrapping_sub(get_left_inset_logical(ctx)))
-}
-
-fn wipe_origin(ctx: &AppContext) -> Result<i32, Fault> {
-    let width = get_drawable_width(ctx)?;
-    let frame = ctx.i32_at(AppContext::FADE_FRAME)?;
-    let swept = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(frame));
-
-    Ok(swept.wrapping_add(width).wrapping_add(wipe_inset(ctx)?))
-}
-
-fn unwipe_origin(ctx: &AppContext) -> Result<i32, Fault> {
-    let width = get_drawable_width(ctx)?;
-    let frame = ctx.i32_at(AppContext::FADE_FRAME)?.wrapping_add(-1);
-    let swept = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(frame));
-
-    Ok(swept.wrapping_add(width))
-}
-
-fn spike(ctx: &mut AppContext, x: [i32; 3], y: [i32; 3]) -> Result<(), Fault> {
-    ctx.set_i32_at(AppContext::POLYGON_XS, x[0])?;
-    ctx.set_i32_at(AppContext::POLYGON_YS, y[0])?;
-    ctx.set_i32_at(AppContext::POLYGON_XS + 4, x[1])?;
-    ctx.set_i32_at(AppContext::POLYGON_YS + 4, y[1])?;
-    ctx.set_i32_at(AppContext::POLYGON_XS + 8, x[2])?;
-    ctx.set_i32_at(AppContext::POLYGON_YS + 8, y[2])?;
-
-    let xs = [
-        ctx.i32_at(AppContext::POLYGON_XS)?,
-        ctx.i32_at(AppContext::POLYGON_XS + 4)?,
-        ctx.i32_at(AppContext::POLYGON_XS + 8)?,
-    ];
-    let ys = [
-        ctx.i32_at(AppContext::POLYGON_YS)?,
-        ctx.i32_at(AppContext::POLYGON_YS + 4)?,
-        ctx.i32_at(AppContext::POLYGON_YS + 8)?,
-    ];
-
-    fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);
-
-    Ok(())
-}
-
-fn curtain_fill(ctx: &mut AppContext, x: i32, width: i32) -> Result<(), Fault> {
-    let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
-    let height = get_design_height2(ctx);
-
-    fill_rect(draw_context(&mut ctx.draw)?, x, top, width, height);
-
-    Ok(())
-}
 
 pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), Fault> {
     if ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
@@ -77,12 +20,10 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
         let frame = ctx.i32_at(AppContext::FADE_FRAME)?;
         let alpha = if frame <= 0xb {
             frame.wrapping_mul(0x15)
-        } else if frame == 0xc || frame as u32 > 0x18 {
-            if frame == 0xc {
-                0xff
-            } else {
-                0
-            }
+        } else if frame == 0xc {
+            0xff
+        } else if frame as u32 > 0x18 {
+            0
         } else {
             frame.wrapping_mul(-0x15).wrapping_add(0x210)
         };
@@ -90,9 +31,11 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
         set_tint_alpha(draw_context(&mut ctx.draw)?, alpha);
         set_insets_ignored(ctx, 1)?;
 
+        let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let width = get_drawable_width(ctx)?;
+        let height = get_design_height2(ctx);
 
-        curtain_fill(ctx, 0, width)?;
+        fill_rect(draw_context(&mut ctx.draw)?, 0, top, width, height);
         set_insets_ignored(ctx, 0)?;
 
         return Ok(());
@@ -107,40 +50,51 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
     let frame = ctx.i32_at(AppContext::FADE_FRAME)?;
 
     if frame <= 0xa {
-        let mut row: i32 = -0x180;
+        for (start, limit, lift, tall) in [(-0x180i32, 0x4ac, 0x37, 0x6e), (-0x112, 0x51a, 0x18, 0x30)] {
+            let mut row = start;
 
-        while row != 0x4ac {
-            let base = wipe_origin(ctx)?;
+            while row != limit {
+                let width = get_drawable_width(ctx)?;
+                let sweep = ctx.i32_at(AppContext::FADE_FRAME)?;
+                let inset = if scene_ignores_insets(ctx)? != 0 { 0 } else { 0i32.wrapping_sub(get_left_inset_logical(ctx)) };
+                let base = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
+                let notch = if tall == 0x6e { -0x6e } else { -0x37 };
 
-            spike(
-                ctx,
-                [base.wrapping_add(-0x6e), base, base],
-                [row.wrapping_add(0x37), row, row.wrapping_add(0x6e)],
-            )?;
+                ctx.set_i32_at(AppContext::POLYGON_XS, base.wrapping_add(notch))?;
+                ctx.set_i32_at(AppContext::POLYGON_YS, row.wrapping_add(lift))?;
+                ctx.set_i32_at(AppContext::POLYGON_XS + 4, base)?;
+                ctx.set_i32_at(AppContext::POLYGON_YS + 4, row)?;
+                ctx.set_i32_at(AppContext::POLYGON_XS + 8, base)?;
+                ctx.set_i32_at(AppContext::POLYGON_YS + 8, row.wrapping_add(tall))?;
 
-            row += 0x9e;
-        }
+                let xs = [
+                    ctx.i32_at(AppContext::POLYGON_XS)?,
+                    ctx.i32_at(AppContext::POLYGON_XS + 4)?,
+                    ctx.i32_at(AppContext::POLYGON_XS + 8)?,
+                ];
+                let ys = [
+                    ctx.i32_at(AppContext::POLYGON_YS)?,
+                    ctx.i32_at(AppContext::POLYGON_YS + 4)?,
+                    ctx.i32_at(AppContext::POLYGON_YS + 8)?,
+                ];
 
-        let mut row: i32 = -0x112;
+                fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);
 
-        while row != 0x51a {
-            let base = wipe_origin(ctx)?;
-
-            spike(
-                ctx,
-                [base.wrapping_add(-0x37), base, base],
-                [row.wrapping_add(0x18), row, row.wrapping_add(0x30)],
-            )?;
-
-            row += 0x9e;
+                row += 0x9e;
+            }
         }
 
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
 
-        let x = wipe_origin(ctx)?;
-        let width = get_drawable_width(ctx)?.wrapping_mul(2);
+        let width = get_drawable_width(ctx)?;
+        let sweep = ctx.i32_at(AppContext::FADE_FRAME)?;
+        let inset = if scene_ignores_insets(ctx)? != 0 { 0 } else { 0i32.wrapping_sub(get_left_inset_logical(ctx)) };
+        let x = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
+        let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
+        let span = get_drawable_width(ctx)?.wrapping_mul(2);
+        let height = get_design_height2(ctx);
 
-        curtain_fill(ctx, x, width)?;
+        fill_rect(draw_context(&mut ctx.draw)?, x, top, span, height);
 
         return Ok(());
     }
@@ -149,50 +103,60 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
         set_insets_ignored(ctx, 1)?;
 
+        let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let width = get_drawable_width(ctx)?;
+        let height = get_design_height2(ctx);
 
-        curtain_fill(ctx, 0, width)?;
+        fill_rect(draw_context(&mut ctx.draw)?, 0, top, width, height);
         set_insets_ignored(ctx, 0)?;
 
         return Ok(());
     }
 
-    let mut row: i32 = -0x180;
+    for (start, limit, lift, tall, notch) in [(-0x180i32, 0x4ac, 0x37, 0x6e, 0xdc), (-0x112, 0x51a, 0x18, 0x30, 0xa5)] {
+        let mut row = start;
 
-    while row != 0x4ac {
-        let width = get_drawable_width(ctx)?;
-        let base = unwipe_origin(ctx)?.wrapping_add(width);
+        while row != limit {
+            let width = get_drawable_width(ctx)?;
+            let sweep = ctx.i32_at(AppContext::FADE_FRAME)?.wrapping_add(-1);
+            let base = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep))
+                .wrapping_add(width)
+                .wrapping_add(width);
 
-        spike(
-            ctx,
-            [base.wrapping_add(0xdc), base.wrapping_add(0x6e), base.wrapping_add(0x6e)],
-            [row.wrapping_add(0x37), row, row.wrapping_add(0x6e)],
-        )?;
+            ctx.set_i32_at(AppContext::POLYGON_XS, base.wrapping_add(notch))?;
+            ctx.set_i32_at(AppContext::POLYGON_YS, row.wrapping_add(lift))?;
+            ctx.set_i32_at(AppContext::POLYGON_XS + 4, base.wrapping_add(0x6e))?;
+            ctx.set_i32_at(AppContext::POLYGON_YS + 4, row)?;
+            ctx.set_i32_at(AppContext::POLYGON_XS + 8, base.wrapping_add(0x6e))?;
+            ctx.set_i32_at(AppContext::POLYGON_YS + 8, row.wrapping_add(tall))?;
 
-        row += 0x9e;
-    }
+            let xs = [
+                ctx.i32_at(AppContext::POLYGON_XS)?,
+                ctx.i32_at(AppContext::POLYGON_XS + 4)?,
+                ctx.i32_at(AppContext::POLYGON_XS + 8)?,
+            ];
+            let ys = [
+                ctx.i32_at(AppContext::POLYGON_YS)?,
+                ctx.i32_at(AppContext::POLYGON_YS + 4)?,
+                ctx.i32_at(AppContext::POLYGON_YS + 8)?,
+            ];
 
-    let mut row: i32 = -0x112;
+            fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);
 
-    while row != 0x51a {
-        let width = get_drawable_width(ctx)?;
-        let base = unwipe_origin(ctx)?.wrapping_add(width);
-
-        spike(
-            ctx,
-            [base.wrapping_add(0xa5), base.wrapping_add(0x6e), base.wrapping_add(0x6e)],
-            [row.wrapping_add(0x18), row, row.wrapping_add(0x30)],
-        )?;
-
-        row += 0x9e;
+            row += 0x9e;
+        }
     }
 
     set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
 
-    let x = unwipe_origin(ctx)?;
-    let width = get_drawable_width(ctx)?.wrapping_add(0x6e);
+    let width = get_drawable_width(ctx)?;
+    let sweep = ctx.i32_at(AppContext::FADE_FRAME)?.wrapping_add(-1);
+    let x = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width);
+    let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
+    let span = get_drawable_width(ctx)?.wrapping_add(0x6e);
+    let height = get_design_height2(ctx);
 
-    curtain_fill(ctx, x, width)?;
+    fill_rect(draw_context(&mut ctx.draw)?, x, top, span, height);
 
     Ok(())
 }

@@ -141,8 +141,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
             step = Step::Stop;
         } else {
             let blocked = get_battle_status(ctx)? != 0
-                && (get_battle_status(ctx)? != 1
-                    || ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0)
+                && (get_battle_status(ctx)? != 1 || ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0)
                 && (get_battle_status(ctx)? != 2 || ctx.i32_at(AppContext::REVIVE_REQUESTED)? != 0);
 
             if !blocked

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{draw_context, draw_deck_button, recount_deploy_rarities, set_color, AppContext};
+use super::{AppContext, draw_context, draw_deck_button, recount_deploy_rarities, set_color};
 
 pub fn draw_deck(ctx: &mut AppContext, overlay: u8) -> Result<(), Fault> {
     recount_deploy_rarities(ctx)?;

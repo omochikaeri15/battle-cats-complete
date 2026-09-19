@@ -9,235 +9,6 @@ use super::{
 const SITE: &str = "draw_outro_lose";
 const BLANK_LINE: &[u8] = "\u{ff20}".as_bytes();
 
-fn bounce(ctx: &AppContext, counter: usize) -> Result<i32, Fault> {
-    let step = ctx.i32_at(counter)?;
-
-    DECK_PRESS_SIZE_TABLE
-        .get(step as i64 as usize)
-        .copied()
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })
-}
-
-fn popup_grow(ctx: &AppContext) -> Result<i32, Fault> {
-    let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
-
-    POPUP_GROW_TABLE
-        .get(step as i64 as usize)
-        .copied()
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: POPUP_GROW_TABLE.len() as i64 })
-}
-
-fn draw_popup(ctx: &mut AppContext, top: i32) -> Result<(), Fault> {
-    let popup = ctx.scene_img005_sheet.clone();
-    let popup = popup.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let centre = operation::div_2(get_drawable_width(ctx)?);
-    let grow = popup_grow(ctx)?;
-    let span = grow.wrapping_mul(0x2b2);
-    let rise = grow.wrapping_mul(0xe5);
-    let x = operation::div_neg_200(span).wrapping_add(centre);
-    let y = operation::div_neg_200(rise).wrapping_add(top);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
-
-    Ok(())
-}
-
-fn draw_ok_button(ctx: &mut AppContext) -> Result<(), Fault> {
-    let plate = ctx.img101_sheet.clone();
-    let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
-    let y = ctx
-        .i32_at(AppContext::LETTERBOX_SHIFT)?
-        .wrapping_sub(half)
-        .wrapping_sub(get_bottom_inset_logical(ctx)?)
-        .wrapping_add(0x22e);
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, press.wrapping_add(0x17d), press.wrapping_add(0x48), 3);
-
-    let label = ctx.img006_sheet.clone();
-    let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
-    let y = ctx
-        .i32_at(AppContext::LETTERBOX_SHIFT)?
-        .wrapping_sub(half)
-        .wrapping_sub(get_bottom_inset_logical(ctx)?)
-        .wrapping_add(0x237);
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, y, press.wrapping_add(0xfe), press.wrapping_add(0x37), 1);
-
-    let rect = [
-        ctx.i32_at(AppContext::OUTRO_OK_RECT)?,
-        ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?,
-        ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?,
-        ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?,
-    ];
-
-    if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-        let plate = ctx.img101_sheet.clone();
-        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
-        let y = ctx
-            .i32_at(AppContext::LETTERBOX_SHIFT)?
-            .wrapping_sub(get_bottom_inset_logical(ctx)?)
-            .wrapping_add(0x22e);
-        let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-        let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-        let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
-
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
-    }
-
-    let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
-
-    new_button_draw(ctx, ok, 0, 0)
-}
-
-fn draw_tip_block(ctx: &mut AppContext) -> Result<(), Fault> {
-    let lines = ctx
-        .warning2_rows
-        .get(2)
-        .cloned()
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: ctx.warning2_rows.len() as i64 })?;
-    let mut shown = 0i32;
-
-    if lines[0] != BLANK_LINE && lines[1] != BLANK_LINE {
-        shown = -1;
-
-        if lines[2] != BLANK_LINE {
-            shown = i32::from(lines[3] == BLANK_LINE).wrapping_add(-3);
-        }
-    }
-
-    let mut down = shown.wrapping_mul(18).wrapping_add(0x194);
-
-    for (line, text) in lines.iter().enumerate().take(4) {
-        if text == BLANK_LINE {
-            break;
-        }
-
-        let text = ctx.label_texts.get(line).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
-        let centre = operation::div_2(get_drawable_width(ctx)?);
-
-        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
-
-        down = down.wrapping_add(0x24);
-    }
-
-    Ok(())
-}
-
-fn draw_shop_row(ctx: &mut AppContext) -> Result<(), Fault> {
-    let digits = ctx.img001_sheet.clone();
-    let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let x = (get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 825.0) as f32;
-
-    draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, 0x1e, 0, x, 306.0, -1.0, 0, 2, 0)?;
-
-    let label = ctx.img006_sheet.clone();
-    let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 642.0);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x132, 0x37, 0x2a, 0x15);
-
-    let icon = ctx.img002_sheet.clone();
-    let icon = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let x = (get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 593.0) as f32;
-
-    draw_cut_f(draw_context(&mut ctx.draw)?, icon, 0x2b, x, 320.0, 47.0, 28.0);
-
-    Ok(())
-}
-
-fn draw_choice_buttons(ctx: &mut AppContext) -> Result<(), Fault> {
-    let plate = ctx.img101_sheet.clone();
-    let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xe5);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0i32.wrapping_sub(half), press.wrapping_add(0xa8), press.wrapping_add(0x48), 0);
-
-    let press = bounce(ctx, AppContext::LOSE_NO_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(0x3d);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0i32.wrapping_sub(half), press.wrapping_add(0xa8), press.wrapping_add(0x48), 0);
-
-    let label = ctx.img006_sheet.clone();
-    let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let press = bounce(ctx, AppContext::OUTRO_OK_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xdc);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x1e8i32.wrapping_sub(half), press.wrapping_add(0x96), press.wrapping_add(0x37), 4);
-
-    let press = bounce(ctx, AppContext::LOSE_NO_PRESS)?;
-    let half = operation::div_2(press);
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(0x46);
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x1e8i32.wrapping_sub(half), press.wrapping_add(0x96), press.wrapping_add(0x37), 5);
-
-    if ctx.i32_at(AppContext::OUTRO_OK_PRESS)? | ctx.i32_at(AppContext::LOSE_NO_PRESS)? != 0 {
-        return Ok(());
-    }
-
-    if ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN)? != 0 {
-        return Ok(());
-    }
-
-    let mut shift = None;
-
-    if touch_is_down(ctx)? != 0 {
-        let rect = [
-            ctx.i32_at(AppContext::CANNON_RECT)?,
-            ctx.i32_at(AppContext::CANNON_RECT + 4)?,
-            ctx.i32_at(AppContext::CANNON_RECT + 8)?,
-            ctx.i32_at(AppContext::CANNON_RECT + 0xc)?,
-        ];
-
-        if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-            shift = Some(-0xe5);
-        }
-    }
-
-    if shift.is_none() {
-        if ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN)? != 0 || touch_is_down(ctx)? == 0 {
-            return Ok(());
-        }
-
-        let rect = [
-            ctx.i32_at(AppContext::WORKER_RECT)?,
-            ctx.i32_at(AppContext::WORKER_RECT + 4)?,
-            ctx.i32_at(AppContext::WORKER_RECT + 8)?,
-            ctx.i32_at(AppContext::WORKER_RECT + 0xc)?,
-        ];
-
-        if !hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-            return Ok(());
-        }
-
-        shift = Some(0x3d);
-    }
-
-    let offset = shift.ok_or(Fault::NullPointer { site: SITE })?;
-    let plate = ctx.img101_sheet.clone();
-    let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(offset);
-    let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
-    let beat = frame.wrapping_sub(operation::div_4(frame) * 4);
-    let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(1) as u8;
-
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0, 0xa8, 0x48, cut as i32);
-
-    Ok(())
-}
-
 pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.u8_at(AppContext::OUTRO_VIDEO_WATCHED)? != 0 {
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
@@ -282,9 +53,8 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let banner = ctx.img004_sheet.clone();
         let banner = banner.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
         let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x98);
-        let lift = LOSE_BANNER_SLIDE_TABLE
+        let lift = *LOSE_BANNER_SLIDE_TABLE
             .get(step as i64 as usize)
-            .copied()
             .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: LOSE_BANNER_SLIDE_TABLE.len() as i64 })?;
         let y = ctx.i32_at(AppContext::LOSE_BANNER_Y)?.wrapping_add(lift);
 
@@ -298,7 +68,19 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
             return Ok(());
         }
 
-        draw_popup(ctx, 0x1b8)?;
+        let popup = ctx.scene_img005_sheet.clone();
+        let popup = popup.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
+        let grow = *POPUP_GROW_TABLE
+            .get(step as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: POPUP_GROW_TABLE.len() as i64 })?;
+        let span = grow.wrapping_mul(0x2b2);
+        let rise = grow.wrapping_mul(0xe5);
+        let x = operation::div_neg_200(span).wrapping_add(centre);
+        let y = operation::div_neg_200(rise).wrapping_add(0x1b8);
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
 
         if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) >= 4 {
             set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
@@ -338,23 +120,201 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
 
-        return draw_ok_button(ctx);
+        let plate = ctx.img101_sheet.clone();
+        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let step = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
+        let press = *DECK_PRESS_SIZE_TABLE
+            .get(step as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+        let half = operation::div_2(press);
+        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
+        let y = ctx
+            .i32_at(AppContext::LETTERBOX_SHIFT)?
+            .wrapping_sub(half)
+            .wrapping_sub(get_bottom_inset_logical(ctx)?)
+            .wrapping_add(0x22e);
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, press.wrapping_add(0x17d), press.wrapping_add(0x48), 3);
+
+        let label = ctx.img006_sheet.clone();
+        let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
+        let y = ctx
+            .i32_at(AppContext::LETTERBOX_SHIFT)?
+            .wrapping_sub(half)
+            .wrapping_sub(get_bottom_inset_logical(ctx)?)
+            .wrapping_add(0x237);
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, y, press.wrapping_add(0xfe), press.wrapping_add(0x37), 1);
+
+        let rect = [
+            ctx.i32_at(AppContext::OUTRO_OK_RECT)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?,
+        ];
+
+        if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+            let plate = ctx.img101_sheet.clone();
+            let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+            let y = ctx
+                .i32_at(AppContext::LETTERBOX_SHIFT)?
+                .wrapping_sub(get_bottom_inset_logical(ctx)?)
+                .wrapping_add(0x22e);
+            let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
+            let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
+            let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
+
+            draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
+        }
+
+        let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+
+        return new_button_draw(ctx, ok, 0, 0);
     }
 
     if phase != 3 || ctx.u8_at(AppContext::CURTAIN_ACTIVE)? != 0 {
         return Ok(());
     }
 
-    draw_popup(ctx, 0x1ce)?;
+    let popup = ctx.scene_img005_sheet.clone();
+    let popup = popup.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let centre = operation::div_2(get_drawable_width(ctx)?);
+    let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
+    let grow = *POPUP_GROW_TABLE
+        .get(step as i64 as usize)
+        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: POPUP_GROW_TABLE.len() as i64 })?;
+    let span = grow.wrapping_mul(0x2b2);
+    let rise = grow.wrapping_mul(0xe5);
+    let x = operation::div_neg_200(span).wrapping_add(centre);
+    let y = operation::div_neg_200(rise).wrapping_add(0x1ce);
+
+    draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
 
     if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) < 4 {
         return Ok(());
     }
 
     set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
-    draw_tip_block(ctx)?;
-    draw_shop_row(ctx)?;
-    draw_choice_buttons(ctx)?;
+
+    let lines = ctx
+        .warning2_rows
+        .get(2)
+        .cloned()
+        .ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: ctx.warning2_rows.len() as i64 })?;
+    let mut shown = 0i32;
+
+    if lines[0] != BLANK_LINE && lines[1] != BLANK_LINE {
+        shown = -1;
+
+        if lines[2] != BLANK_LINE {
+            shown = i32::from(lines[3] == BLANK_LINE).wrapping_add(-3);
+        }
+    }
+
+    let mut down = shown.wrapping_mul(18).wrapping_add(0x194);
+
+    for (line, text) in lines.iter().enumerate().take(4) {
+        if text == BLANK_LINE {
+            break;
+        }
+
+        let text = ctx.label_texts.get(line).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+        let centre = operation::div_2(get_drawable_width(ctx)?);
+
+        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
+
+        down = down.wrapping_add(0x24);
+    }
+
+    let digits = ctx.img001_sheet.clone();
+    let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let x = (get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 825.0) as f32;
+
+    draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, 0x1e, 0, x, 306.0, -1.0, 0, 2, 0)?;
+
+    let label = ctx.img006_sheet.clone();
+    let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 642.0);
+
+    draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x132, 0x37, 0x2a, 0x15);
+
+    let icon = ctx.img002_sheet.clone();
+    let icon = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let x = (get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 593.0) as f32;
+
+    draw_cut_f(draw_context(&mut ctx.draw)?, icon, 0x2b, x, 320.0, 47.0, 28.0);
+
+    let plate = ctx.img101_sheet.clone();
+    let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+
+    for (counter, dx, cut) in [(AppContext::OUTRO_OK_PRESS, -0xe5, 0), (AppContext::LOSE_NO_PRESS, 0x3d, 0)] {
+        let step = ctx.i32_at(counter)?;
+        let press = *DECK_PRESS_SIZE_TABLE
+            .get(step as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+        let half = operation::div_2(press);
+        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0i32.wrapping_sub(half), press.wrapping_add(0xa8), press.wrapping_add(0x48), cut);
+    }
+
+    let label = ctx.img006_sheet.clone();
+    let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+
+    for (counter, dx, cut) in [(AppContext::OUTRO_OK_PRESS, -0xdc, 4), (AppContext::LOSE_NO_PRESS, 0x46, 5)] {
+        let step = ctx.i32_at(counter)?;
+        let press = *DECK_PRESS_SIZE_TABLE
+            .get(step as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+        let half = operation::div_2(press);
+        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x1e8i32.wrapping_sub(half), press.wrapping_add(0x96), press.wrapping_add(0x37), cut);
+    }
+
+    let idle = ctx.i32_at(AppContext::OUTRO_OK_PRESS)? | ctx.i32_at(AppContext::LOSE_NO_PRESS)? == 0;
+    let mut shift = None;
+
+    if idle && ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN)? == 0 {
+        if touch_is_down(ctx)? != 0 {
+            let rect = [
+                ctx.i32_at(AppContext::CANNON_RECT)?,
+                ctx.i32_at(AppContext::CANNON_RECT + 4)?,
+                ctx.i32_at(AppContext::CANNON_RECT + 8)?,
+                ctx.i32_at(AppContext::CANNON_RECT + 0xc)?,
+            ];
+
+            if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+                shift = Some(-0xe5);
+            }
+        }
+
+        if shift.is_none() && ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN)? == 0 && touch_is_down(ctx)? != 0 {
+            let rect = [
+                ctx.i32_at(AppContext::WORKER_RECT)?,
+                ctx.i32_at(AppContext::WORKER_RECT + 4)?,
+                ctx.i32_at(AppContext::WORKER_RECT + 8)?,
+                ctx.i32_at(AppContext::WORKER_RECT + 0xc)?,
+            ];
+
+            if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+                shift = Some(0x3d);
+            }
+        }
+    }
+
+    if let Some(offset) = shift {
+        let plate = ctx.img101_sheet.clone();
+        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(offset);
+        let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
+        let beat = frame.wrapping_sub(operation::div_4(frame) * 4);
+        let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(1) as u8;
+
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0, 0xa8, 0x48, cut as i32);
+    }
 
     let frame = ctx.img024_sheet.clone();
     let frame = frame.as_deref().ok_or(Fault::NullPointer { site: SITE })?;

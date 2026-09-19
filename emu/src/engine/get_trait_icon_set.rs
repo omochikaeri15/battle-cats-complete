@@ -3,11 +3,18 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    trait_aku, trait_alien, trait_angel, trait_behemoth, trait_colossus, trait_dark, trait_eva, trait_floating, trait_kaijin, trait_metal, trait_red,
-    trait_relic, trait_sage, trait_traitless, trait_witch, trait_zombie, AppContext, TALENT_TRAIT_ICONS,
+    AppContext, TALENT_TRAIT_ICONS, trait_aku, trait_alien, trait_angel, trait_behemoth,
+    trait_colossus, trait_dark, trait_eva, trait_floating, trait_kaijin, trait_metal, trait_red,
+    trait_relic, trait_sage, trait_traitless, trait_witch, trait_zombie,
 };
 
-pub fn get_trait_icon_set(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32, with_talents: u8) -> Result<BTreeMap<i32, bool>, Fault> {
+pub fn get_trait_icon_set(
+    ctx: &mut AppContext,
+    faction: i32,
+    unit_id: i32,
+    form: i32,
+    with_talents: u8,
+) -> Result<BTreeMap<i32, bool>, Fault> {
     let mut icons: BTreeMap<i32, bool> = BTreeMap::new();
     let mut enemy_side = false;
 

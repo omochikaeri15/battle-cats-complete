@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{set_draw_origin, AppContext};
+use super::{AppContext, set_draw_origin};
 
 pub fn set_insets_ignored(ctx: &mut AppContext, ignored: u8) -> Result<(), Fault> {
     ctx.set_block_at::<1>(AppContext::INSETS_IGNORED, [ignored])?;

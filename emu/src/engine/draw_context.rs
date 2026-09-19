@@ -38,7 +38,16 @@ pub trait DrawSink {
     );
     fn draw_cut_f(&mut self, sheet: &Imgcut, cut: i32, x: f32, y: f32, width: f32, height: f32);
     #[allow(clippy::too_many_arguments)]
-    fn draw_region(&mut self, sheet: &Imgcut, x: i32, y: i32, src_x: i32, src_y: i32, src_w: i32, src_h: i32);
+    fn draw_region(
+        &mut self,
+        sheet: &Imgcut,
+        x: i32,
+        y: i32,
+        src_x: i32,
+        src_y: i32,
+        src_w: i32,
+        src_h: i32,
+    );
     #[allow(clippy::too_many_arguments)]
     fn draw_region_f(
         &mut self,

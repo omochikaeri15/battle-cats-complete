@@ -794,6 +794,11 @@ pub struct AppContext {
     pub download_sheet: Option<Rc<Imgcut>>,
     pub deploy_cost_alt_sheet: Option<Rc<Imgcut>>,
     pub scene_img005_sheet: Option<Rc<Imgcut>>,
+    pub trait_icons: BTreeMap<i32, bool>,
+    pub ability_icons: BTreeMap<i32, bool>,
+    pub picture_book_abilities: Vec<Vec<i32>>,
+    pub picture_book_traits: Vec<Vec<i32>>,
+    pub picture_book_trait_order: Vec<i32>,
     pub unit_icon_textures: [Option<Rc<Imgcut>>; 10],
     pub enemy_sheets: SheetTable,
     pub unit_sheets: [SheetTable; 4],
@@ -933,6 +938,7 @@ pub struct AppContext {
     pub img002_sheet: Option<Rc<Imgcut>>,
     pub draw: Option<Box<dyn DrawSink>>,
     pub miracle_anims: [[Maanim; 2]; 4],
+    pub miracle_levels: [[u8; 8]; 4],
     pub battle_option_texts: Vec<Vec<u8>>,
     pub battle_menu_texts: Vec<Vec<u8>>,
     pub battle_texts: Vec<Vec<u8>>,
@@ -1454,6 +1460,8 @@ impl AppContext {
     pub const CAT_GOD_SHAKE_Y: usize = 0x32b58c;
     pub const CAT_GOD_SHAKE_X: usize = 0x32b53c;
     pub const CAT_GOD_FRAMES: usize = 0x32b4c0;
+    pub const CAT_GOD_STATUE_COLUMN: usize = 0x32b53c;
+    pub const CAT_GOD_STATUE_ROW: usize = 0x32b58c;
     pub const CAT_GOD_ANIM_FRAME: usize = 0x32b4bc;
     pub const CAT_GOD_HOVER: usize = 0x32a427;
     pub const CAT_GOD_BACK_RECT: usize = 0x32b64c;
@@ -1739,6 +1747,11 @@ impl AppContext {
             download_sheet: Default::default(),
             deploy_cost_alt_sheet: Default::default(),
             scene_img005_sheet: Default::default(),
+            trait_icons: Default::default(),
+            ability_icons: Default::default(),
+            picture_book_abilities: Default::default(),
+            picture_book_traits: Default::default(),
+            picture_book_trait_order: Default::default(),
             unit_icon_textures: Default::default(),
             enemy_sheets: Default::default(),
             unit_sheets: Default::default(),
@@ -1878,6 +1891,7 @@ impl AppContext {
             img002_sheet: Default::default(),
             draw: Default::default(),
             miracle_anims: Default::default(),
+            miracle_levels: Default::default(),
             battle_option_texts: vec![Vec::new(); 9],
             battle_menu_texts: vec![Vec::new(); 0x24],
             battle_texts: vec![Vec::new(); 0x35],

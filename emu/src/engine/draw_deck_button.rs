@@ -1,35 +1,27 @@
 use std::collections::BTreeMap;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    conjurer_on_field, cos_deg, draw_context, draw_cooldown_bar, draw_cut, draw_cut_scaled, draw_deck_preset_mark, draw_deploy_cost, draw_model, draw_panel,
-    fill_rect, get_button_unit_form, get_button_unit_id, get_button_unit_row, get_current_stage_id, get_deck_cooldown, get_drawable_width,
-    get_effective_deploy_cost, get_equipped_orb, get_global_map_id, get_money, get_orb_def, get_orb_slot_count, get_setting, get_special_rule, get_unit_rarity,
-    glow_set, imgcut_get_sprite_cut, is_deploy_blocked, maanim_execute, orb_ability_flag, orb_ability_repeat, orb_icon_visible, set_alpha, set_color, set_tint,
-    set_tint_alpha, slot_conjure_ready, slot_has_flagged_orb, stage_has_restriction, unit_meets_restriction, AppContext, DECK_BASE_Y,
-    DECK_PRESS_SIZE_TABLE, DECK_SLOT_X_TABLE,
+    AppContext, DECK_BASE_Y, DECK_PRESS_SIZE_TABLE, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
+    draw_context, draw_cooldown_bar, draw_cut, draw_cut_scaled, draw_deck_preset_mark,
+    draw_deploy_cost, draw_model, draw_panel, fill_rect, get_button_unit_form, get_button_unit_id,
+    get_button_unit_row, get_current_stage_id, get_deck_cooldown, get_drawable_width,
+    get_effective_deploy_cost, get_equipped_orb, get_global_map_id, get_money, get_orb_def,
+    get_orb_slot_count, get_setting, get_special_rule, get_unit_rarity, glow_set,
+    imgcut_get_sprite_cut, is_deploy_blocked, maanim_execute, orb_ability_flag, orb_ability_repeat,
+    orb_icon_visible, set_alpha, set_color, set_tint, set_tint_alpha, slot_conjure_ready,
+    slot_has_flagged_orb, stage_has_restriction, unit_meets_restriction,
 };
 
 const SITE: &str = "draw_deck_button";
 
-fn seat(index: i32) -> Result<i32, Fault> {
-    DECK_SLOT_X_TABLE
-        .get(index as i64 as usize)
-        .copied()
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: DECK_SLOT_X_TABLE.len() as i64 })
-}
-
-fn press_size(ctx: &AppContext, index: i32) -> Result<i32, Fault> {
-    let step = ctx.i32_at(AppContext::DECK_PRESS.wrapping_add(((index as i64) * 4) as usize))?;
-
-    DECK_PRESS_SIZE_TABLE
-        .get(step as i64 as usize)
-        .copied()
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })
-}
-
-pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8) -> Result<(), Fault> {
+pub fn draw_deck_button(
+    ctx: &mut AppContext,
+    slot: i32,
+    layer: i32,
+    overlay: u8,
+) -> Result<(), Fault> {
     let mut bottom = DECK_BASE_Y
         .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?)
         .wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
@@ -41,17 +33,37 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
     let origin;
 
     if layer == 3 {
-        let base = seat(column)? as f64;
+        let base = *DECK_SLOT_X_TABLE
+            .get(column as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: column as i64,
+                limit: DECK_SLOT_X_TABLE.len() as i64,
+            })? as f64;
         let mut span = get_drawable_width(ctx)?;
 
         if slot <= 4 {
-            bottom = bottom.wrapping_sub(get_setting(&ctx.settings, b"battle_slot_2lines_line", 0x5a)?);
+            bottom = bottom.wrapping_sub(get_setting(
+                &ctx.settings,
+                b"battle_slot_2lines_line",
+                0x5a,
+            )?);
         }
 
         span = span.wrapping_add(-0x3c0);
 
         let base = operation::cvttsd2si(span as f64 * 0.5 + base);
-        let size = press_size(ctx, slot)?;
+        let size = {
+            let step =
+                ctx.i32_at(AppContext::DECK_PRESS.wrapping_add(((slot as i64) * 4) as usize))?;
+            *DECK_PRESS_SIZE_TABLE
+                .get(step as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: step as i64,
+                    limit: DECK_PRESS_SIZE_TABLE.len() as i64,
+                })?
+        };
         let half = operation::div_2(size);
 
         origin = base;
@@ -60,7 +72,13 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         width = size.wrapping_add(0x6e);
         height = size.wrapping_add(0x55);
     } else {
-        let base = seat(slot)? as f64;
+        let base = *DECK_SLOT_X_TABLE
+            .get(slot as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: slot as i64,
+                limit: DECK_SLOT_X_TABLE.len() as i64,
+            })? as f64;
         let span = get_drawable_width(ctx)?.wrapping_add(-0x3c0);
         let base = span as f64 * 0.5 + base;
 
@@ -69,7 +87,8 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
 
             if shown == 1 {
                 if slot <= 4 {
-                    bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
+                    bottom =
+                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
                 } else {
                     bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS)?);
                 }
@@ -77,7 +96,8 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
                 if slot < 5 {
                     bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS)?);
                 } else {
-                    bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
+                    bottom =
+                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
                 }
             }
 
@@ -95,7 +115,17 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
             down = bottom;
         } else {
             let base = operation::cvttsd2si(base);
-            let size = press_size(ctx, column)?;
+            let size = {
+                let step = ctx
+                    .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
+                *DECK_PRESS_SIZE_TABLE
+                    .get(step as i64 as usize)
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: step as i64,
+                        limit: DECK_PRESS_SIZE_TABLE.len() as i64,
+                    })?
+            };
             let half = operation::div_2(size);
 
             origin = base;
@@ -127,7 +157,8 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         }
     } else {
         let stage = get_current_stage_id(ctx)?;
-        let restricted = stage_has_restriction(ctx, &ctx.stage_restrictions, stage)? && !unit_meets_restriction(ctx, slot, 1)?;
+        let restricted = stage_has_restriction(ctx, &ctx.stage_restrictions, stage)?
+            && !unit_meets_restriction(ctx, slot, 1)?;
 
         if restricted || is_deploy_blocked(ctx, slot)? {
             let map = get_global_map_id(ctx, 0)?;
@@ -160,11 +191,23 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
     let icon = ctx
         .unit_icon_textures
         .get(slot as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: ctx.unit_icon_textures.len() as i64 })?
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: slot as i64,
+            limit: ctx.unit_icon_textures.len() as i64,
+        })?
         .clone();
     let sheet = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
 
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, across, down, width, height, 0);
+    draw_cut_scaled(
+        draw_context(&mut ctx.draw)?,
+        sheet,
+        across,
+        down,
+        width,
+        height,
+        0,
+    );
     set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
     if state == 3 {
@@ -182,7 +225,11 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
     let wallet = AppContext::faction_flags(0);
 
     if conjure_ready && conjurer_on_field(ctx, 0, slot, 0)? {
-        let timer = ctx.i32_at(wallet.wrapping_add(AppContext::WALLET_CONJURE_TIMER).wrapping_add(((slot as i64) * 4) as usize))?;
+        let timer = ctx.i32_at(
+            wallet
+                .wrapping_add(AppContext::WALLET_CONJURE_TIMER)
+                .wrapping_add(((slot as i64) * 4) as usize),
+        )?;
 
         if timer <= 0x22 && timer.wrapping_sub(operation::div_7(timer) * 7) <= 2 {
             glow_set(draw_context(&mut ctx.draw)?, 1);
@@ -203,7 +250,8 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         let top = down.wrapping_add(-8);
 
         for entry in 0..5i64 {
-            let banner = ctx.i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add((entry * 4) as usize))?;
+            let banner =
+                ctx.i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add((entry * 4) as usize))?;
 
             if banner != get_button_unit_row(ctx, 0, slot)?.wrapping_add(-2) {
                 continue;
@@ -211,20 +259,46 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
 
             let ticks = ctx.i32_at(AppContext::COMBO_BANNER_TICKS)?;
 
-            if (ticks.wrapping_sub(operation::div_4(ticks) * 4).wrapping_add(1) as u32) > 2 {
+            if (ticks
+                .wrapping_sub(operation::div_4(ticks) * 4)
+                .wrapping_add(1) as u32)
+                > 2
+            {
                 continue;
             }
 
             let sheet = ctx.img002_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
-            let size = press_size(ctx, column)?;
+            let size = {
+                let step = ctx
+                    .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
+                *DECK_PRESS_SIZE_TABLE
+                    .get(step as i64 as usize)
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: step as i64,
+                        limit: DECK_PRESS_SIZE_TABLE.len() as i64,
+                    })?
+            };
 
-            draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, left, top, size.wrapping_add(0x7e), size.wrapping_add(0x65), 0x2c);
+            draw_cut_scaled(
+                draw_context(&mut ctx.draw)?,
+                sheet,
+                left,
+                top,
+                size.wrapping_add(0x7e),
+                size.wrapping_add(0x65),
+                0x2c,
+            );
         }
     }
 
     if state == 2 {
-        let timer = ctx.i32_at(wallet.wrapping_add(AppContext::WALLET_CONJURE_TIMER).wrapping_add(((slot as i64) * 4) as usize))?;
+        let timer = ctx.i32_at(
+            wallet
+                .wrapping_add(AppContext::WALLET_CONJURE_TIMER)
+                .wrapping_add(((slot as i64) * 4) as usize),
+        )?;
         let glow = operation::cvttss2si(cos_deg(timer.wrapping_mul(10) as f32) * 31.0 + 224.0);
 
         set_color(draw_context(&mut ctx.draw)?, glow, glow, 0xff, 0xff);
@@ -265,7 +339,9 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         let money_sheet = ctx.img001_sheet.clone();
         let alt = ctx.deploy_cost_alt_sheet.clone();
         let cost = get_effective_deploy_cost(ctx, 0, slot)?;
-        let sheet = money_sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = money_sheet
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?;
 
         draw_deploy_cost(
             draw_context(&mut ctx.draw)?,
@@ -284,13 +360,21 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
 
     if get_special_rule(ctx, &ctx.special_rules, map, 3)? {
         let money_sheet = ctx.img001_sheet.clone();
-        let sheet = money_sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = money_sheet
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?;
         let cut = imgcut_get_sprite_cut(sheet, 0x87)?;
         let x = origin.wrapping_sub(cut[2]).wrapping_add(0x73);
         let y = bottom.wrapping_add(-5);
         let rarity = get_unit_rarity(ctx, unit)?;
 
-        draw_cut(draw_context(&mut ctx.draw)?, sheet, x, y, 0x87i32.wrapping_add(rarity));
+        draw_cut(
+            draw_context(&mut ctx.draw)?,
+            sheet,
+            x,
+            y,
+            0x87i32.wrapping_add(rarity),
+        );
     }
 
     if get_button_unit_form(ctx, 0, slot)? < 2 {
@@ -305,8 +389,19 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         return Ok(());
     }
 
-    if overlay == 0 && ctx.i32_at(wallet.wrapping_add(AppContext::WALLET_SLOT_FLASH).wrapping_add(((slot as i64) * 4) as usize))? >= 0 {
-        maanim_execute(&mut ctx.invoke_equipment_model, Some(&ctx.invoke_equipment_anim), 0, 0)?;
+    if overlay == 0
+        && ctx.i32_at(
+            wallet
+                .wrapping_add(AppContext::WALLET_SLOT_FLASH)
+                .wrapping_add(((slot as i64) * 4) as usize),
+        )? >= 0
+    {
+        maanim_execute(
+            &mut ctx.invoke_equipment_model,
+            Some(&ctx.invoke_equipment_anim),
+            0,
+            0,
+        )?;
 
         let x = across.wrapping_add(operation::div_2(width));
         let y = down.wrapping_add(operation::div_2(height));
@@ -358,15 +453,29 @@ pub fn draw_deck_button(ctx: &mut AppContext, slot: i32, layer: i32, overlay: u8
         }
 
         let attribute = ctx.equipment_attribute_s_sheet.clone();
-        let attribute = attribute.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let attribute = attribute
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?;
         let step = index.wrapping_mul(27);
 
-        draw_cut(draw_context(&mut ctx.draw)?, attribute, origin.wrapping_add(-5).wrapping_add(step), upper, trait_index);
+        draw_cut(
+            draw_context(&mut ctx.draw)?,
+            attribute,
+            origin.wrapping_add(-5).wrapping_add(step),
+            upper,
+            trait_index,
+        );
 
         let effect = ctx.equipment_effect_s_sheet.clone();
         let effect = effect.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
 
-        draw_cut(draw_context(&mut ctx.draw)?, effect, step.wrapping_add(origin).wrapping_add(-2), lower, abil);
+        draw_cut(
+            draw_context(&mut ctx.draw)?,
+            effect,
+            step.wrapping_add(origin).wrapping_add(-2),
+            lower,
+            abil,
+        );
         set_alpha(draw_context(&mut ctx.draw)?, 0xff);
 
         index = index.wrapping_add(1);
