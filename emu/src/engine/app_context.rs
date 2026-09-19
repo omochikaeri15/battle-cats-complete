@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{Mamodel, CastleRow, CharaGroup, ComboStore, FixedLineupStore, MapData, OrbStore, SoundManager, SpecialRuleStore, TreasureStore};
+use super::{
+    BattleEventLatch, CastleRow, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, SoundManager,
+    SpecialRuleStore, SurgeEvent, TreasureStore,
+};
 
 pub const SIZE: usize = 0x500000;
 
@@ -69,6 +72,38 @@ impl Base {
     pub const CANNON_NONMETAL_PERMILLE: usize = 0x78;
     pub const CANNON_NONZOMBIE_PERMILLE: usize = 0x78;
     pub const CANNON_BURROWED_PERMILLE: usize = 0x7c;
+}
+
+pub struct ItemDefinition;
+
+impl ItemDefinition {
+    pub const KIND: usize = 0x0;
+    pub const INDEX: usize = 0x4;
+    pub const REDIRECT: usize = 0x8;
+}
+
+pub struct WaveRecord;
+
+impl WaveRecord {
+    pub const OWNER_SLOT: usize = 0x4;
+    pub const IN_USE: usize = 0x8;
+}
+
+pub struct CannonShot;
+
+impl CannonShot {
+    pub const TIMER: usize = 0x0;
+    pub const POS_X: usize = 0x4;
+    pub const SHOT_ID: usize = 0x8;
+}
+
+pub struct Debris;
+
+impl Debris {
+    pub const KIND: usize = 0x0;
+    pub const POS_X: usize = 0x4;
+    pub const POS_Y: usize = 0x8;
+    pub const FRAME: usize = 0xc;
 }
 
 pub struct Entity;
@@ -538,6 +573,16 @@ pub struct AppContext {
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
     pub spawn_states: Vec<[i32; 3]>,
     pub unit_models: [Vec<Mamodel>; 2],
+    pub unit_anims: [Vec<BTreeMap<i32, Maanim>>; 2],
+    pub death_surge_anims: [Maanim; 2],
+    pub wave_anim: Maanim,
+    pub effect_anims: BTreeMap<i32, Maanim>,
+    pub base_anims: [Maanim; 4],
+    pub battle_event_latch: BattleEventLatch,
+    pub event_items: Option<EventItemStore>,
+    pub listed_item_counts: Vec<[i32; 2]>,
+    pub metal_killer_map: BTreeMap<i32, Vec<i32>>,
+    pub surge_events: Vec<SurgeEvent>,
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
@@ -595,10 +640,43 @@ impl Default for AppContext {
 impl AppContext {
     pub const DECK_KEY: usize = 0x28;
     pub const DECK_STRIDE: usize = 0x2c;
+    pub const ITEM_COUNTS_KIND_D: usize = 0x188;
+    pub const ITEM_CF_COUNT: usize = 0x450;
+    pub const ITEM_COUNTS_KIND_B: usize = 0x1084;
+    pub const ITEM_COUNTS_KIND_9: usize = 0x13e2;
+    pub const ITEM_COUNTS_KIND_9_STRIDE: usize = 0x18;
+    pub const ITEM_7B_COUNT: usize = 0x1cc5;
+    pub const ITEM_69_COUNT: usize = 0x1ec2;
+    pub const ITEM_1D_COUNT: usize = 0x2628;
+    pub const ITEM_91_COUNT: usize = 0x2630;
+    pub const ITEM_9D_COUNT: usize = 0x2638;
+    pub const ITEM_D4_COUNT: usize = 0x2640;
+    pub const ITEM_COUNTS_KIND_8: usize = 0x3478;
+    pub const ITEM_COUNTS_KIND_A: usize = 0x3630;
+    pub const ITEM_COUNTS_KIND_C: usize = 0x3640;
+    pub const ITEM_16_COUNT: usize = 0xc158;
+    pub const ITEM_6_COUNT: usize = 0xc2c8;
+    pub const ITEM_7_COUNT: usize = 0xc2d0;
+    pub const ITEM_COUNTS_KIND_3: usize = 0x4a460;
+    pub const ITEM_14_COUNT: usize = 0x32cc64;
+    pub const ITEM_15_COUNT: usize = 0x32cc6c;
+    pub const ITEM_COUNTS_KIND_1: usize = 0x32cc74;
+    pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
+    pub const ITEM_DEFINITION_STRIDE: usize = 0x40;
+    pub const ITEM_5C_COUNT: usize = 0x427a58;
+    pub const ITEM_COUNTS_KIND_5: usize = 0x440314;
+    pub const ITEM_COUNTS_KIND_6: usize = 0x440344;
+    pub const ITEM_COUNTS_KIND_7: usize = 0x44035c;
+    pub const TECH_LEVELS: usize = 0x4a3ac;
+    pub const WALLET_MONEY: usize = 0x4;
+    pub const WALLET_WORKER_LEVEL: usize = 0xc;
+    pub const WALLET_CONJURE_READY: usize = 0x6c;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
+    pub const WALLET_ESCALATING_COSTS: usize = 0x130;
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
     pub const BASE_GUARD_NOTICE: usize = 0x870;
     pub const KILLS_SINCE_SPAWN_TICK: usize = 0x10f8;
+    pub const SCORE_MODE_FLAG: usize = 0x32b9;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
@@ -608,16 +686,23 @@ impl AppContext {
     pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
     pub const SEEN_ENEMIES: usize = 0xd968;
     pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
+    pub const BATTLE_FRAME_COUNTER: usize = 0x83678;
     pub const BATTLE_STATUS: usize = 0x836ac;
     pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
     pub const SPAWN_COUNTDOWN: usize = 0x838c0;
+    pub const CAT_DEBRIS: usize = 0x9c768;
+    pub const DEBRIS_STRIDE: usize = 0x10;
+    pub const CANNON_SHOTS: usize = 0x9ce68;
+    pub const CANNON_SHOTS_FACTION_STRIDE: usize = 0xb4;
+    pub const CANNON_SHOT_STRIDE: usize = 0xc;
     pub const STAGE_LENGTH: usize = 0x9e528;
     pub const STAGE_SPAWN_MIN: usize = 0x9e530;
     pub const STAGE_SPAWN_MAX: usize = 0x9e534;
     pub const STAGE_MAX_ENEMIES: usize = 0x9e53c;
     pub const CASTLE_ENEMY_ROW: usize = 0x9e540;
+    pub const STAGE_SCORE_TIME_LIMIT: usize = 0x9e544;
     pub const STAGE_BOSS_GUARD: usize = 0x9e548;
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
@@ -630,6 +715,8 @@ impl AppContext {
     pub const INVASION_STAGE: usize = 0x32c5d8;
     pub const MAP_NEG15_CLEARED: usize = 0x32c5d9;
     pub const MAP_NEG25_CLEARED: usize = 0x32c5da;
+    pub const WAVE_RECORDS: usize = 0x333d6c;
+    pub const WAVE_RECORD_STRIDE: usize = 0x30;
     pub const MAP_INDEX: usize = 0x3388b8;
     pub const STAGES_CLEARED_STORY: usize = 0x33e020;
     pub const STAGES_CLEARED_NEG6: usize = 0x340748;
@@ -657,6 +744,16 @@ impl AppContext {
             stage_enemies: Vec::new(),
             spawn_states: Vec::new(),
             unit_models: [Vec::new(), Vec::new()],
+            unit_anims: [Vec::new(), Vec::new()],
+            death_surge_anims: Default::default(),
+            wave_anim: Default::default(),
+            effect_anims: Default::default(),
+            base_anims: Default::default(),
+            battle_event_latch: Default::default(),
+            event_items: None,
+            listed_item_counts: Vec::new(),
+            metal_killer_map: Default::default(),
+            surge_events: Vec::new(),
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),

@@ -1,0 +1,1 @@
+pub const CANNON_SHOT_SPACING: i32 = 160;

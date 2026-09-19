@@ -6,11 +6,13 @@ use crate::Fault;
 pub struct MapRules {
     pub normal: BTreeMap<i32, Vec<i32>>,
     pub fever: BTreeMap<i32, Vec<i32>>,
+    pub max_money_item: i32,
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct SpecialRuleStore {
     pub maps: BTreeMap<i32, MapRules>,
+    pub item_f7_count: i32,
     pub fever_count: i32,
 }
 
