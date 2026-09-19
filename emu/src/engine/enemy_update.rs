@@ -100,7 +100,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                     let record = AppContext::ENEMY_DEBRIS.wrapping_add((ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE));
 
-                    ctx.set_i32_at(record.wrapping_add(Debris::KIND), 0xc)?;
+                    ctx.set_i32_at(record.wrapping_add(Debris::TIMER), 0xc)?;
 
                     let blast_x = ctx.i32_at(AppContext::SCRATCH_1)?;
                     let scatter = call_rng(ctx, 0xf1);
@@ -111,7 +111,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let scatter = call_rng(ctx, 0x143);
 
                     ctx.set_i32_at(record.wrapping_add(Debris::POS_Y), y.wrapping_sub(scatter.wrapping_mul(2).wrapping_mul(5)).wrapping_add(-0x24b))?;
-                    ctx.set_i32_at(record.wrapping_add(Debris::FRAME), 0)?;
+                    ctx.set_i32_at(record.wrapping_add(Debris::VARIANT), 0)?;
                 } else if ctx.i32_at(base.wrapping_add(Base::STATE))? == 1 {
                     let frame = ctx.i32_at(base.wrapping_add(Entity::FRAME))?;
 

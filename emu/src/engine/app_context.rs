@@ -4,7 +4,7 @@ use crate::Fault;
 
 use super::{
     BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, Platform, ScoredMap, SoundManager,
-    ScreenMetrics, SpecialRuleStore, UnlockGroup, StageRestriction, SurgeEvent, TreasureStore,
+    ScreenMetrics, SpecialRuleStore, EffectSprite, TextRenderer, Texture, UnlockGroup, StageRestriction, SurgeEvent, TreasureStore,
 };
 
 pub const SIZE: usize = 0x500000;
@@ -102,6 +102,13 @@ pub struct Pinch;
 
 impl Pinch {
     pub const ACTIVE: usize = 0x0;
+    pub const FIRST_DOWN: usize = 0x1;
+    pub const SECOND_DOWN: usize = 0x2;
+    pub const FIRST_X: usize = 0x4;
+    pub const SECOND_X: usize = 0x8;
+    pub const FIRST_Y: usize = 0xc;
+    pub const SECOND_Y: usize = 0x10;
+    pub const START: usize = 0x1c;
     pub const DISTANCE: usize = 0x2c;
     pub const PREV_DISTANCE: usize = 0x30;
 }
@@ -122,13 +129,23 @@ impl CannonShot {
     pub const SHOT_ID: usize = 0x8;
 }
 
-pub struct Debris;
+pub struct FxSlot;
 
-impl Debris {
-    pub const KIND: usize = 0x0;
+impl FxSlot {
+    pub const ACTIVE: usize = 0x0;
     pub const POS_X: usize = 0x4;
     pub const POS_Y: usize = 0x8;
     pub const FRAME: usize = 0xc;
+    pub const BROKEN: usize = 0x18;
+}
+
+pub struct Debris;
+
+impl Debris {
+    pub const TIMER: usize = 0x0;
+    pub const POS_X: usize = 0x4;
+    pub const POS_Y: usize = 0x8;
+    pub const VARIANT: usize = 0xc;
 }
 
 pub struct Entity;
@@ -698,7 +715,24 @@ pub struct AppContext {
     pub stage_record_neg10: Vec<i32>,
     pub stage_record_neg9: Vec<i32>,
     pub stage_record_neg4: Vec<i32>,
+    pub bgm_player_bound: bool,
+    pub demon_banner_anim: Maanim,
+    pub default_font: Vec<u8>,
+    pub combo_banner_texts: [Option<Texture>; 3],
+    pub crit_fx_anim: Maanim,
+    pub zkill_fx_anim: Maanim,
+    pub barrier_anims: [Maanim; 3],
+    pub shield_anims: [Maanim; 5],
+    pub savage_fx: Vec<EffectSprite>,
+    pub toxic_fx: Vec<EffectSprite>,
+    pub metal_killer_fx: Vec<EffectSprite>,
+    pub drain_fx: Vec<EffectSprite>,
+    pub savage_fx_anim: Maanim,
+    pub toxic_fx_anim: Maanim,
+    pub metal_killer_fx_anim: Maanim,
+    pub drain_fx_anim: Maanim,
     sound: Option<Box<dyn SoundManager>>,
+    text: Option<Box<dyn TextRenderer>>,
     platform: Option<Box<dyn Platform>>,
 }
 
@@ -924,6 +958,38 @@ impl AppContext {
     pub const STAGE_EX_STAGE_MIN: usize = 0x46a9c0;
     pub const STAGE_EX_STAGE_MAX: usize = 0x46a9c4;
     pub const STAGE_RECORD_NEG8: usize = 0x46a9c8;
+    pub const ITEM_DEFINITION_IDS: usize = 0x38a9c0;
+    pub const DECK_HOLD_FRAMES: usize = 0x13d0;
+    pub const DECK_HOLD_SLOT: usize = 0x13d4;
+    pub const DECK_HOLD_RELEASE: usize = 0x13d8;
+    pub const VIBRATION_ENABLED: usize = 0x221;
+    pub const MAP_STAGE_ROWS: usize = 0x3836b8;
+    pub const MAP_STAGE_ROW_STRIDE: usize = 0xbc;
+    pub const STAGE_ROW: usize = 0x83674;
+    pub const STAGE_MUSIC_ROW: usize = 0x3bbd58;
+    pub const BGM_SWITCH_STATE: usize = 0x29023c;
+    pub const BGM_SWITCH_FRAME: usize = 0x290240;
+    pub const BGM_SWITCH_FRAMES: usize = 0x290244;
+    pub const BGM_SWITCH_NEXT: usize = 0x290248;
+    pub const BGM_BOSS_PHASE: usize = 0x29024c;
+    pub const BGM_PENDING: usize = 0x46b958;
+    pub const BGM_DELAY_FRAME: usize = 0x46b95c;
+    pub const BGM_DELAY: usize = 0x46b960;
+    pub const ITEMS_SELECTED: usize = 0x327ed8;
+    pub const ITEMS_SELECTED_LABYRINTH: usize = 0x2374;
+    pub const ITEMS_SELECTED_SCORE_MODE: usize = 0x2367;
+    pub const DEMON_BANNER_FRAME: usize = 0x12b8;
+    pub const COMBO_BANNER_STATE: usize = 0x440bf8;
+    pub const COMBO_BANNER_UNITS: usize = 0x440c0c;
+    pub const CRIT_FX: usize = 0x9cfd0;
+    pub const CRIT_FX_STRIDE: usize = 0x10;
+    pub const ZKILL_FX: usize = 0x9dc50;
+    pub const ZKILL_FX_STRIDE: usize = 0x10;
+    pub const BARRIER_FX: usize = 0x9de30;
+    pub const BARRIER_FX_STRIDE: usize = 0x1c;
+    pub const SHIELD_FX: usize = 0x9e178;
+    pub const SHIELD_FX_STRIDE: usize = 0x1c;
+    pub const BASE_GUARD_NOTICE_FRAME: usize = 0x874;
 
     pub fn new() -> Self {
         Self {
@@ -1031,7 +1097,24 @@ impl AppContext {
             stage_record_neg10: Default::default(),
             stage_record_neg9: Default::default(),
             stage_record_neg4: Default::default(),
+            bgm_player_bound: false,
+            demon_banner_anim: Default::default(),
+            default_font: Vec::new(),
+            combo_banner_texts: [None; 3],
+            crit_fx_anim: Default::default(),
+            zkill_fx_anim: Default::default(),
+            barrier_anims: Default::default(),
+            shield_anims: Default::default(),
+            savage_fx: Vec::new(),
+            toxic_fx: Vec::new(),
+            metal_killer_fx: Vec::new(),
+            drain_fx: Vec::new(),
+            savage_fx_anim: Default::default(),
+            toxic_fx_anim: Default::default(),
+            metal_killer_fx_anim: Default::default(),
+            drain_fx_anim: Default::default(),
             sound: None,
+            text: None,
             platform: None,
         }
     }
@@ -1069,6 +1152,14 @@ impl AppContext {
 
     pub fn set_platform(&mut self, platform: Box<dyn Platform>) {
         self.platform = Some(platform);
+    }
+
+    pub fn text_renderer(&mut self) -> Option<&mut (dyn TextRenderer + 'static)> {
+        self.text.as_deref_mut()
+    }
+
+    pub fn set_text_renderer(&mut self, text: Box<dyn TextRenderer>) {
+        self.text = Some(text);
     }
 
     pub fn set_sound(&mut self, sound: Box<dyn SoundManager>) {

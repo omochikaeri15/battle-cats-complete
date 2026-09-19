@@ -6,7 +6,9 @@ use super::BATTLE_EVENT_PRIORITIES;
 pub struct BattleEventLatch {
     pub faction: i32,
     pub kind: i32,
-    pub gates: BTreeMap<i32, BTreeMap<i32, f64>>,
+    pub time: f64,
+    pub strength: f64,
+    pub gates: BTreeMap<i32, BTreeMap<i32, [f64; 3]>>,
 }
 
 pub fn latch_battle_event(latch: &mut BattleEventLatch, faction: i32, kind: i32) {
@@ -24,7 +26,7 @@ pub fn latch_battle_event(latch: &mut BattleEventLatch, faction: i32, kind: i32)
     }
 
     if (incoming as u32) >= (current as u32) {
-        let gate = *latch.gates.entry(kind).or_default().entry(faction).or_default();
+        let gate = latch.gates.entry(kind).or_default().entry(faction).or_default()[0];
 
         if gate != 0.0 || gate.is_nan() {
             latch.faction = faction;

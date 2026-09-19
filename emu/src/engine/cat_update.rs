@@ -239,7 +239,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let ring = counter.wrapping_sub((operation::div_5(counter as i64) as i32).wrapping_mul(5)).wrapping_add(0x32);
                     let record = AppContext::CAT_DEBRIS.wrapping_add((ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE));
 
-                    ctx.set_i32_at(record.wrapping_add(Debris::KIND), 0xc)?;
+                    ctx.set_i32_at(record.wrapping_add(Debris::TIMER), 0xc)?;
 
                     let x = ctx.i32_at(base.wrapping_add(Entity::POS_X))?;
                     let scatter = call_rng(ctx, 0xf1);
@@ -253,7 +253,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         record.wrapping_add(Debris::POS_Y),
                         scatter.wrapping_mul(2).wrapping_mul(5).wrapping_neg().wrapping_add(y).wrapping_add(-0x24b),
                     )?;
-                    ctx.set_i32_at(record.wrapping_add(Debris::FRAME), 0)?;
+                    ctx.set_i32_at(record.wrapping_add(Debris::VARIANT), 0)?;
                 } else if ctx.i32_at(base.wrapping_add(Base::STATE))? == 1 {
                     let frame = ctx.i32_at(base.wrapping_add(Entity::FRAME))?;
 
