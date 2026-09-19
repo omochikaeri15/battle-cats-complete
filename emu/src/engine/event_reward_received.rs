@@ -2,7 +2,14 @@ use crate::Fault;
 
 use super::AppContext;
 
-pub fn event_reward_received(ctx: &mut AppContext, event: i32, stage: i32, star: i32, kind: i32, use_cache: i32) -> Result<bool, Fault> {
+pub fn event_reward_received(
+    ctx: &mut AppContext,
+    event: i32,
+    stage: i32,
+    star: i32,
+    kind: i32,
+    use_cache: i32,
+) -> Result<bool, Fault> {
     let slot = if kind == 2 { star } else { 0 };
 
     if use_cache != 0 {
@@ -10,13 +17,30 @@ pub fn event_reward_received(ctx: &mut AppContext, event: i32, stage: i32, star:
             return Ok(false);
         }
 
-        if !ctx.event_reward_cache.entry(event).or_default().contains_key(&stage) {
+        if !ctx
+            .event_reward_cache
+            .entry(event)
+            .or_default()
+            .contains_key(&stage)
+        {
             return Ok(false);
         }
 
-        let cell = ctx.event_reward_cache.entry(event).or_default().entry(stage).or_default();
+        let cell = ctx
+            .event_reward_cache
+            .entry(event)
+            .or_default()
+            .entry(stage)
+            .or_default();
 
-        return Ok(*cell.get(slot as i64 as usize).ok_or(Fault::IndexOutOfRange { site: "event_reward_received", index: slot as i64, limit: 4 })? != 0);
+        return Ok(*cell
+            .get(slot as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: "event_reward_received",
+                index: slot as i64,
+                limit: 4,
+            })?
+            != 0);
     }
 
     let cell = if event != -2 {

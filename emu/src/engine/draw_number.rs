@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{digit_count, draw_region_f, imgcut_get_sprite_cut, DrawSink, Imgcut};
+use super::{DrawSink, Imgcut, digit_count, draw_region_f, imgcut_get_sprite_cut};
 
 const SITE: &str = "draw_number";
 
@@ -29,7 +29,11 @@ pub fn draw_number(
     flags: i32,
     digits: i32,
 ) -> Result<NumberBox, Fault> {
-    let digits = if flags & 0x10 == 0 { digit_count(value) } else { digits };
+    let digits = if flags & 0x10 == 0 {
+        digit_count(value)
+    } else {
+        digits
+    };
     let start = lead.wrapping_add(offset) as f32;
     let mut width = digits.wrapping_sub(1) as f32 * spacing + start;
 
@@ -39,7 +43,9 @@ pub fn draw_number(
         loop {
             let power = operation::cvttss2si(operation::powf(10.0, place as f32));
             let shifted = operation::idiv(value, power).ok_or(Fault::divide(SITE, power as i64))?;
-            let digit = shifted.wrapping_sub(operation::div_10(shifted).wrapping_mul(10)).wrapping_add(base);
+            let digit = shifted
+                .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
+                .wrapping_add(base);
 
             width += imgcut_get_sprite_cut(sheet, digit)?[2] as f32 * scale_x;
 
@@ -68,7 +74,13 @@ pub fn draw_number(
     }
 
     let height = imgcut_get_sprite_cut(sheet, base)?[3];
-    let area = NumberBox { left, right: width + left - start, top, bottom: height as f32 * scale_y + top, digits };
+    let area = NumberBox {
+        left,
+        right: width + left - start,
+        top,
+        bottom: height as f32 * scale_y + top,
+        digits,
+    };
 
     if digits <= 0 {
         return Ok(area);
@@ -80,12 +92,16 @@ pub fn draw_number(
     loop {
         let power = operation::cvttss2si(operation::powf(10.0, place as f32));
         let shifted = operation::idiv(value, power).ok_or(Fault::divide(SITE, power as i64))?;
-        let digit = shifted.wrapping_sub(operation::div_10(shifted).wrapping_mul(10)).wrapping_add(base);
+        let digit = shifted
+            .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
+            .wrapping_add(base);
         let cut_width = imgcut_get_sprite_cut(sheet, digit)?[2] as f32 * scale_x;
         let cut_height = imgcut_get_sprite_cut(sheet, digit)?[3] as f32 * scale_y;
         let cut = *imgcut_get_sprite_cut(sheet, digit)?;
 
-        draw_region_f(dc, sheet, cut[0], cut[1], cut[2], cut[3], cursor, top, cut_width, cut_height);
+        draw_region_f(
+            dc, sheet, cut[0], cut[1], cut[2], cut[3], cursor, top, cut_width, cut_height,
+        );
 
         cursor += imgcut_get_sprite_cut(sheet, digit)?[2] as f32 * scale_x + spacing;
 

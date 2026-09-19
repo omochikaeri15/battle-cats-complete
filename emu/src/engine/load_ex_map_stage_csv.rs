@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{load_enemy_castle_csv, open_asset_stream, read_csv_cell, read_csv_row, string_format_int, AppContext, AssetStream};
+use super::{
+    AppContext, AssetStream, load_enemy_castle_csv, open_asset_stream, read_csv_cell, read_csv_row,
+    string_format_int,
+};
 
 pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fault> {
     let loaded = ctx.u8_at(AppContext::ALL_MAPS_OPEN)? != 0 || map < 0x53;
@@ -19,7 +22,10 @@ pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fau
 
     let reward = read_csv_cell(&stm, 0) as i32;
 
-    ctx.set_i32_at(AppContext::EVENT_REWARD_ID, if reward < 0x190 { reward } else { -1 })?;
+    ctx.set_i32_at(
+        AppContext::EVENT_REWARD_ID,
+        if reward < 0x190 { reward } else { -1 },
+    )?;
     read_csv_row(&mut stm);
 
     let count = read_csv_cell(&stm, 0) as i32;

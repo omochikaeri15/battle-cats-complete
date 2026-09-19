@@ -1,34 +1,67 @@
 use std::collections::BTreeMap;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    get_built_deck_rows, get_built_deck_stage_key, get_current_stage_id, get_deploy_cost, get_special_rule_params, get_unit_form, get_unit_rarity, read_flag, AppContext,
+    AppContext, get_built_deck_rows, get_built_deck_stage_key, get_current_stage_id,
+    get_deploy_cost, get_special_rule_params, get_unit_form, get_unit_rarity, read_flag,
 };
 
 const SITE: &str = "unit_meets_restriction";
 
-pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) -> Result<bool, Fault> {
+pub fn unit_meets_restriction(
+    ctx: &mut AppContext,
+    slot: i32,
+    in_battle: u8,
+) -> Result<bool, Fault> {
     let stage_id = get_current_stage_id(ctx)?;
-    let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64) * AppContext::DECK_STRIDE as i64;
+    let preset =
+        (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64) * AppContext::DECK_STRIDE as i64;
     let mut pair = [0u8; 8];
 
-    pair[..4].copy_from_slice(&ctx.block_at::<4>((preset + (slot as i64) * 4 + AppContext::DECK_PRESETS as i64) as usize)?);
-    pair[4..].copy_from_slice(&ctx.block_at::<4>((preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize)?);
+    pair[..4].copy_from_slice(
+        &ctx.block_at::<4>(
+            (preset + (slot as i64) * 4 + AppContext::DECK_PRESETS as i64) as usize,
+        )?,
+    );
+    pair[4..].copy_from_slice(&ctx.block_at::<4>(
+        (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
+    )?);
 
-    let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32).wrapping_add(-2);
+    let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+        site: SITE,
+        index: 0,
+        limit: 1,
+    })? as i32)
+        .wrapping_add(-2);
     let mut form = get_unit_form(ctx, unit_id)?;
 
     if ctx.i32_at(AppContext::SCENE_0X64_PAGE)? != 3 {
         if in_battle != 0 {
-            pair[..4].copy_from_slice(&ctx.block_at::<4>(((slot as i64) * 4 + AppContext::BATTLE_DECK as i64) as usize)?);
-            pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?);
-            unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32).wrapping_add(-2);
-            form = ctx.i32_at(((slot as i64) * 4 + AppContext::BUTTON_UNIT_FORMS as i64) as usize)?;
+            pair[..4].copy_from_slice(
+                &ctx.block_at::<4>(((slot as i64) * 4 + AppContext::BATTLE_DECK as i64) as usize)?,
+            );
+            pair[4..].copy_from_slice(
+                &ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?,
+            );
+            unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 1,
+            })? as i32)
+                .wrapping_add(-2);
+            form =
+                ctx.i32_at(((slot as i64) * 4 + AppContext::BUTTON_UNIT_FORMS as i64) as usize)?;
         } else if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 {
             let stage_key = get_built_deck_stage_key(ctx)?;
             let rows = get_built_deck_rows(ctx, stage_key)?;
-            let row = rows.get(slot as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: 10 })?;
+            let row = rows
+                .get(slot as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: slot as i64,
+                    limit: 10,
+                })?;
 
             unit_id = (row.0 as i32).wrapping_add(-2);
             form = row.1 as i32;
@@ -43,7 +76,13 @@ pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) ->
         let Some(record) = ctx.stage_restrictions.get(&stage_id) else {
             break 'record;
         };
-        let (rarity_mask, rows, min_cost, max_cost, group_id) = (record.rarity_mask, record.rows, record.min_cost, record.max_cost, record.group_id);
+        let (rarity_mask, rows, min_cost, max_cost, group_id) = (
+            record.rarity_mask,
+            record.rows,
+            record.min_cost,
+            record.max_cost,
+            record.group_id,
+        );
         let rarity = get_unit_rarity(ctx, unit_id)?;
 
         if rarity_mask != 0 && (rarity_mask as u32 >> (rarity as u32 & 0x1f)) & 1 == 0 {
@@ -99,7 +138,9 @@ pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) ->
         }
     }
 
-    let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, operation::div_1000(stage_id), 2)? else {
+    let Some(params) =
+        get_special_rule_params(ctx, &ctx.special_rules, operation::div_1000(stage_id), 2)?
+    else {
         return Ok(true);
     };
     let mut counts: BTreeMap<i32, i32> = BTreeMap::new();
@@ -108,21 +149,42 @@ pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) ->
         let mut scan = 0i64;
 
         while scan != slot as u32 as i64 {
-            let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64) * AppContext::DECK_STRIDE as i64;
+            let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64)
+                * AppContext::DECK_STRIDE as i64;
 
-            pair[..4].copy_from_slice(&ctx.block_at::<4>((preset + scan * 4 + AppContext::DECK_PRESETS as i64) as usize)?);
-            pair[4..].copy_from_slice(&ctx.block_at::<4>((preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize)?);
+            pair[..4].copy_from_slice(
+                &ctx.block_at::<4>((preset + scan * 4 + AppContext::DECK_PRESETS as i64) as usize)?,
+            );
+            pair[4..].copy_from_slice(&ctx.block_at::<4>(
+                (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
+            )?);
 
-            if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32 <= 1 {
+            if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 1,
+            })? as i32
+                <= 1
+            {
                 break;
             }
 
-            let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64) * AppContext::DECK_STRIDE as i64;
+            let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64)
+                * AppContext::DECK_STRIDE as i64;
 
-            pair[..4].copy_from_slice(&ctx.block_at::<4>((preset + scan * 4 + AppContext::DECK_PRESETS as i64) as usize)?);
-            pair[4..].copy_from_slice(&ctx.block_at::<4>((preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize)?);
+            pair[..4].copy_from_slice(
+                &ctx.block_at::<4>((preset + scan * 4 + AppContext::DECK_PRESETS as i64) as usize)?,
+            );
+            pair[4..].copy_from_slice(&ctx.block_at::<4>(
+                (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
+            )?);
 
-            let listed = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32).wrapping_add(-2);
+            let listed = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 1,
+            })? as i32)
+                .wrapping_add(-2);
             let rarity = get_unit_rarity(ctx, listed)?;
             let count = counts.entry(rarity).or_insert(0);
 
@@ -133,7 +195,13 @@ pub fn unit_meets_restriction(ctx: &mut AppContext, slot: i32, in_battle: u8) ->
 
     let rarity = get_unit_rarity(ctx, unit_id)?;
     let have = *counts.entry(rarity).or_insert(0);
-    let cap = *params.get(rarity as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: rarity as i64, limit: params.len() as i64 })?;
+    let cap = *params
+        .get(rarity as i64 as usize)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: rarity as i64,
+            limit: params.len() as i64,
+        })?;
 
     Ok(have < cap)
 }

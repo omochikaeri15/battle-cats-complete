@@ -1,4 +1,4 @@
-use super::{pause_vibration, AppContext};
+use super::{AppContext, pause_vibration};
 
 pub fn vibration_clear(ctx: &mut AppContext) {
     pause_vibration();

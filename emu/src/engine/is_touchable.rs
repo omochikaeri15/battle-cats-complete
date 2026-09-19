@@ -2,7 +2,12 @@ use crate::Fault;
 
 use super::{AppContext, Entity};
 
-pub fn is_touchable(ctx: &AppContext, faction: i32, slot: i32, attacker: i32) -> Result<bool, Fault> {
+pub fn is_touchable(
+    ctx: &AppContext,
+    faction: i32,
+    slot: i32,
+    attacker: i32,
+) -> Result<bool, Fault> {
     if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::STATE))? == 0 {
         return Ok(true);
     }
@@ -31,7 +36,12 @@ pub fn is_touchable(ctx: &AppContext, faction: i32, slot: i32, attacker: i32) ->
         return Ok(false);
     }
 
-    if ctx.i32_at(AppContext::entity_field(1i32.wrapping_sub(faction), attacker, Entity::SOULSTRIKE))? == 0 {
+    if ctx.i32_at(AppContext::entity_field(
+        1i32.wrapping_sub(faction),
+        attacker,
+        Entity::SOULSTRIKE,
+    ))? == 0
+    {
         return Ok(false);
     }
 

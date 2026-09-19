@@ -16,7 +16,9 @@ impl Platform for InertPlatform {
     }
 
     fn system_clock_now(&mut self) -> i64 {
-        SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |since| since.as_micros() as i64)
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |since| since.as_micros() as i64)
     }
 
     fn vibrate(&mut self, _gate: f64, _duration: f64, _strength: f64) {}

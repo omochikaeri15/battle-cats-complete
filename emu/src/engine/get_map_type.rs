@@ -1,19 +1,26 @@
 use crate::Fault;
 
 use super::{
-    ex_redirect_check_a, ex_redirect_check_b, get_scene_id, is_invasion_stage, is_outbreak_stage, is_z_invasion_stage,
-    AppContext,
+    AppContext, ex_redirect_check_a, ex_redirect_check_b, get_scene_id, is_invasion_stage,
+    is_outbreak_stage, is_z_invasion_stage,
 };
 
 pub fn get_map_type(ctx: &mut AppContext, base_only: u8) -> Result<i32, Fault> {
     if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3 {
-        if (ex_redirect_check_a(ctx)? || ex_redirect_check_b(ctx)?) && get_scene_id(ctx)? != 0x12c && base_only == 0 {
+        if (ex_redirect_check_a(ctx)? || ex_redirect_check_b(ctx)?)
+            && get_scene_id(ctx)? != 0x12c
+            && base_only == 0
+        {
             return Ok(-8);
         }
 
         let saved_type = ctx.i32_at(AppContext::SAVED_MAP_TYPE)?;
 
-        return Ok(if (saved_type.wrapping_add(0x1a) as u32) < 0x1f { saved_type } else { -1 });
+        return Ok(if (saved_type.wrapping_add(0x1a) as u32) < 0x1f {
+            saved_type
+        } else {
+            -1
+        });
     }
 
     if ctx.i32_at(AppContext::CHAPTER_MODE)? >= 0 && ctx.i32_at(AppContext::CHAPTER_MODE)? <= 2 {
@@ -45,5 +52,9 @@ pub fn get_map_type(ctx: &mut AppContext, base_only: u8) -> Result<i32, Fault> {
         return Ok(if outbreak { variant } else { -7 });
     }
 
-    Ok(if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63 { -1 } else { -8 })
+    Ok(if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63 {
+        -1
+    } else {
+        -8
+    })
 }

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_drawable_width, AppContext, PageList};
+use super::{AppContext, PageList, get_drawable_width};
 
 const SITE: &str = "page_list_set_count";
 
@@ -15,7 +15,9 @@ pub fn page_list_set_count(ctx: &mut AppContext, list: usize, count: i32) -> Res
     if ctx.u8_at(list + PageList::ANIMATED)? != 0 {
         let center = (get_drawable_width(ctx)? / 2) as f32;
 
-        ctx.ui().ok_or(Fault::HostMissing { site: SITE })?.page_list_layout(list, count, 10, center, 60.0, 600.0);
+        ctx.ui()
+            .ok_or(Fault::HostMissing { site: SITE })?
+            .page_list_layout(list, count, 10, center, 60.0, 600.0);
     }
 
     Ok(())

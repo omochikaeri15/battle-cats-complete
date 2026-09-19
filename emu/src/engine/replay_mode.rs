@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, labyrinth_active, AppContext};
+use super::{AppContext, get_map_type, labyrinth_active};
 
 pub fn replay_mode(ctx: &mut AppContext) -> Result<bool, Fault> {
     if ctx.u8_at(AppContext::REPLAY_MODE)? == 0 {

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, get_stage_count, get_stage_index, get_stage_record, AppContext};
+use super::{AppContext, get_map_type, get_stage_count, get_stage_index, get_stage_record};
 
 pub fn aku_realm_final_redirect(ctx: &mut AppContext, in_stage: u8) -> Result<bool, Fault> {
     if get_map_type(ctx, 0)? != -19 {

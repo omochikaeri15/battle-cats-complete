@@ -1,7 +1,9 @@
 use crate::Fault;
 
 use super::{
-    get_treasure_value, is_alien, is_angel, is_dark, is_floating, is_metal, is_red, is_zombie, targets_alien, targets_angel, targets_dark, targets_floating, targets_metal, targets_red, targets_zombie, AppContext,
+    AppContext, get_treasure_value, is_alien, is_angel, is_dark, is_floating, is_metal, is_red,
+    is_zombie, targets_alien, targets_angel, targets_dark, targets_floating, targets_metal,
+    targets_red, targets_zombie,
 };
 
 pub fn get_best_treasure(ctx: &AppContext, attacker: i32, target: i32) -> Result<i32, Fault> {

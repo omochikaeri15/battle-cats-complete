@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{new_button_hit_test, web_view_is_open, AppContext};
+use super::{AppContext, new_button_hit_test, web_view_is_open};
 
 const SITE: &str = "button_bank_process";
 
@@ -37,7 +37,14 @@ pub fn button_bank_process(ctx: &mut AppContext) -> Result<(), Fault> {
 
         new_button_hit_test(ctx, id, busy & 1)?;
 
-        let state = ctx.buttons.buttons.entry(id).or_insert(None).as_deref().ok_or(Fault::NullPointer { site: SITE })?.state;
+        let state = ctx
+            .buttons
+            .buttons
+            .entry(id)
+            .or_insert(None)
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?
+            .state;
 
         if state == 1 {
             busy = 1;

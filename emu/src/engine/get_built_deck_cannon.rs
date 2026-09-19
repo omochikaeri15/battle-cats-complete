@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{find_built_deck_4star, has_built_deck, AppContext};
+use super::{AppContext, find_built_deck_4star, has_built_deck};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct BuiltDeckRecord {
@@ -36,7 +36,13 @@ pub fn get_built_deck_cannon(ctx: &mut AppContext, stage_key: i32) -> Result<i32
         }
     }
 
-    let record = ctx.built_deck_records.get(&(deck_id as i16)).ok_or(Fault::KeyNotFound { site: "get_built_deck_cannon", key: deck_id as i64 })?;
+    let record = ctx
+        .built_deck_records
+        .get(&(deck_id as i16))
+        .ok_or(Fault::KeyNotFound {
+            site: "get_built_deck_cannon",
+            key: deck_id as i64,
+        })?;
 
     Ok(((record.cannon_type as u32) << 0x10 | record.cannon_parts as u32) as i32)
 }

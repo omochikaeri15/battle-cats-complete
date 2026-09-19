@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_scene_id, get_special_rule, special_rules_at, AppContext, SpecialRuleStore};
+use super::{AppContext, SpecialRuleStore, get_scene_id, get_special_rule, special_rules_at};
 
 pub fn get_special_rule_params<'a>(
     ctx: &AppContext,
@@ -20,12 +20,18 @@ pub fn get_special_rule_params<'a>(
             .fever
             .get(&rule)
             .map(Some)
-            .ok_or(Fault::KeyNotFound { site: "get_special_rule_params", key: rule as i64 });
+            .ok_or(Fault::KeyNotFound {
+                site: "get_special_rule_params",
+                key: rule as i64,
+            });
     }
 
     special_rules_at(store, &map_id)?
         .normal
         .get(&rule)
         .map(Some)
-        .ok_or(Fault::KeyNotFound { site: "get_special_rule_params", key: rule as i64 })
+        .ok_or(Fault::KeyNotFound {
+            site: "get_special_rule_params",
+            key: rule as i64,
+        })
 }

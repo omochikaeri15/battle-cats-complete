@@ -1,11 +1,19 @@
 use crate::Fault;
 
-use super::{read_flag, AppContext, Entity};
+use super::{AppContext, Entity, read_flag};
 
-pub fn set_metal_killer_pct(ctx: &mut AppContext, faction: i32, slot: i32, value: i32) -> Result<(), Fault> {
+pub fn set_metal_killer_pct(
+    ctx: &mut AppContext,
+    faction: i32,
+    slot: i32,
+    value: i32,
+) -> Result<(), Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
         return Ok(());
     }
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::METAL_KILLER_PCT), value)
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::METAL_KILLER_PCT),
+        value,
+    )
 }

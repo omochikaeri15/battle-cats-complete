@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{obf_value_read, AppContext};
+use super::{AppContext, obf_value_read};
 
 pub fn get_tech_level(ctx: &AppContext, cell: usize) -> Result<i32, Fault> {
     let packed = obf_value_read(&ctx.block_at::<8>(cell)?);

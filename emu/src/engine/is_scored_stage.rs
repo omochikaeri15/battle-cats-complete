@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, labyrinth_active, AppContext};
+use super::{AppContext, get_map_type, labyrinth_active};
 
 pub fn is_scored_stage(ctx: &mut AppContext) -> Result<bool, Fault> {
     if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? == 0 {

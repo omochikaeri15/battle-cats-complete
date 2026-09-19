@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_scene_id, has_fixed_lineup, has_talent, is_trait_targeted_talent, std_map_int_int_from_list, AppContext};
+use super::{
+    AppContext, get_scene_id, has_fixed_lineup, has_talent, is_trait_targeted_talent,
+    std_map_int_int_from_list,
+};
 
 pub fn talent_targets_trait(
     ctx: &mut AppContext,

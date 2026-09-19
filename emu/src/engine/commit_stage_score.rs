@@ -1,11 +1,13 @@
 use crate::Fault;
 
-use super::{add_stage_score_to_total, set_stage_best_score, AppContext};
+use super::{AppContext, add_stage_score_to_total, set_stage_best_score};
 
 pub fn commit_stage_score(ctx: &mut AppContext) -> Result<(), Fault> {
     add_stage_score_to_total(ctx)?;
 
-    let store = ctx.event_items.as_mut().ok_or(Fault::NullPointer { site: "commit_stage_score" })?;
+    let store = ctx.event_items.as_mut().ok_or(Fault::NullPointer {
+        site: "commit_stage_score",
+    })?;
     let Some(point_id) = store.stage_points.get(&store.stage_key).copied() else {
         return Ok(());
     };

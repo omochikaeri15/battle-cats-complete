@@ -1,9 +1,18 @@
 use std::rc::Rc;
 
-use super::{make_scale9_image_sprite, ui_node_set_color, Imgcut, Sprite};
+use super::{Imgcut, Sprite, make_scale9_image_sprite, ui_node_set_color};
 
 #[allow(clippy::too_many_arguments)]
-pub fn ui_node_set_panel(sheet: &Rc<Imgcut>, x: i32, y: i32, width: i32, height: i32, border_x: i32, border_y: i32, border_scale: f32) -> Box<Sprite> {
+pub fn ui_node_set_panel(
+    sheet: &Rc<Imgcut>,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    border_x: i32,
+    border_y: i32,
+    border_scale: f32,
+) -> Box<Sprite> {
     let mut sprite = make_scale9_image_sprite();
 
     sprite.sheet = Some(Rc::clone(sheet));

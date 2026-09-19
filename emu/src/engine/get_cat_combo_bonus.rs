@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{charagroup_has_unit, AppContext};
+use super::{AppContext, charagroup_has_unit};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct NyancomboRecord {
@@ -35,7 +35,12 @@ pub struct ComboStore {
     pub unlock_notices: BTreeMap<i32, u8>,
 }
 
-pub fn get_cat_combo_bonus(ctx: &AppContext, table: &ComboStore, kind: i32, unit_id: i32) -> Result<i32, Fault> {
+pub fn get_cat_combo_bonus(
+    ctx: &AppContext,
+    table: &ComboStore,
+    kind: i32,
+    unit_id: i32,
+) -> Result<i32, Fault> {
     let mut bonus = 0i32;
 
     for record in &table.records {
@@ -62,18 +67,25 @@ pub fn get_cat_combo_bonus(ctx: &AppContext, table: &ComboStore, kind: i32, unit
             })?;
 
             if effect_kind == kind
-                && (record.charagroup_id == -1 || charagroup_has_unit(&ctx.chara_groups, record.charagroup_id, unit_id))
+                && (record.charagroup_id == -1
+                    || charagroup_has_unit(&ctx.chara_groups, record.charagroup_id, unit_id))
             {
-                let power = *effects.get((effect + 3) as usize).ok_or(Fault::IndexOutOfRange {
-                    site: "get_cat_combo_bonus",
-                    index: effect,
-                    limit: 4,
-                })?;
+                let power = *effects
+                    .get((effect + 3) as usize)
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: "get_cat_combo_bonus",
+                        index: effect,
+                        limit: 4,
+                    })?;
                 let value = table
                     .params
                     .get(kind as usize)
                     .and_then(|powers| powers.get(power as usize))
-                    .ok_or(Fault::IndexOutOfRange { site: "get_cat_combo_bonus", index: power as i64, limit: 0 })?;
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: "get_cat_combo_bonus",
+                        index: power as i64,
+                        limit: 0,
+                    })?;
 
                 bonus = bonus.wrapping_add(*value);
             }

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_entity_button, get_slot_unit_id, get_unit_rarity, slot_occupied, AppContext};
+use super::{AppContext, get_entity_button, get_slot_unit_id, get_unit_rarity, slot_occupied};
 
 pub fn recount_deploy_rarities(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.zero(AppContext::DEPLOY_LIMIT_RARITY_COUNTS, 0x18)?;

@@ -1,68 +1,82 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    call_rng, compute_attack, compute_hp, get_base_pos_x, get_castle_id, get_castle_row, get_cat_combo_bonus,
-    get_counter_surge, get_entity_base_idx, get_max_hp, get_orb_value_max, get_orb_value_sum, get_setting,
-    get_spawn_anim_flag, get_spawn_anim_type, get_stat_range, get_talent_value, has_orb, is_boss,
-    orb_deploy_condition_slot, read_flag, set_area_attack, set_attack_abilities, set_attack_cooldown,
-    set_attack_damage, set_attack_end_mode, set_attack_foreswing, set_attack_interval, set_attack_only,
-    set_attacks_remaining, set_barrier_breaker_chance, set_barrier_fx_active, set_barrier_hp, set_base_destroyer,
-    set_behemoth_dodge_chance, set_behemoth_dodge_duration, set_behemoth_dodge_timer, set_behemoth_slayer,
-    set_boss_type, set_boss_wave_immune, set_burrow_count, set_burrow_distance, set_cannon_blast_hit,
-    set_cannon_charge_orb, set_cannon_hit_stamp, set_cash_back_pct, set_colossus_orb_pcts, set_colossus_slayer,
-    set_conjure_deck_slot, set_conjure_unit_id, set_counter_surge, set_counter_surge_once, set_counter_surge_pct,
-    set_crit_fx, set_critical_chance, set_curse_chance, set_curse_duration, set_curse_immune, set_curse_length,
-    set_curse_resist_pct, set_curse_timer, set_death_surge_anchor, set_death_surge_chance, set_death_surge_level,
-    set_death_surge_mini, set_death_surge_pct, set_death_surge_span, set_death_timer, set_dodge_chance,
-    set_dodge_duration, set_dodge_timer, set_double_bounty, set_drain_chance, set_drain_immune, set_drain_pct,
-    set_drain_percent, set_entity_frame, set_entity_state, set_eva_killer, set_explosion_anchor,
-    set_explosion_chance, set_explosion_immune, set_explosion_resist_pct, set_explosion_span, set_first_bounty_pct,
-    set_frame_damage, set_freeze_chance, set_freeze_duration, set_freeze_immune, set_freeze_length,
-    set_freeze_resist_pct, set_freeze_timer, set_gudetama_soul, set_hitbox_pos, set_hitbox_width, set_hp,
-    set_insane_damage, set_insanely_tough, set_kb_proc_hit, set_kill_count, set_knockback_chance,
-    set_knockback_immune, set_knockback_resist_pct, set_knockbacks, set_ld_anchor, set_ld_flag, set_ld_span,
-    set_massive_damage, set_max_hp, set_metal, set_metal_killer_fx, set_metal_killer_pct, set_mini_surge,
-    set_no_revive, set_occupant, set_orb_dodge_chance, set_orb_dodge_duration, set_orb_dodge_timer, set_paid_cost,
-    set_pos_x, set_pos_y, set_prev_curse_timer, set_prev_freeze_timer, set_prev_slow_timer, set_prev_weaken_timer,
-    set_proc_badge, set_resist, set_revive_count, set_revive_hp, set_revive_time, set_revive_timer, set_sage_slayer,
-    set_savage_blow_boost, set_savage_blow_chance, set_savage_blow_fx, set_score_value, set_shield_fx,
-    set_shield_hp, set_shield_max, set_shield_pierce_chance, set_shield_regen, set_shockwave_counter,
-    set_slow_chance, set_slow_duration, set_slow_immune, set_slow_length, set_slow_resist_pct, set_slow_timer,
-    set_soul_anim_type, set_soulstrike, set_spawn_anim_flag, set_spawn_anim_type, set_spawn_serial, set_speed,
-    set_standing_range, set_strengthen_boost, set_strengthen_threshold, set_strong_against, set_surge_anchor,
-    set_surge_chance, set_surge_immune, set_surge_level, set_surge_resist_pct, set_surge_span, set_survive_chance,
-    set_total_damage_taken, set_toxic_chance, set_toxic_damage, set_toxic_fx, set_toxic_immune,
-    set_toxic_resist_pct, set_trait_aku, set_trait_alien, set_trait_angel, set_trait_behemoth, set_trait_colossus,
-    set_trait_dark, set_trait_dojo, set_trait_eva_angel, set_trait_floating, set_trait_kaijin, set_trait_metal,
-    set_trait_red, set_trait_relic, set_trait_sage, set_trait_starred_alien, set_trait_traitless, set_trait_witch,
-    set_trait_zombie, set_warp_anchor, set_warp_chance, set_warp_duration, set_warp_immune, set_warp_resist_pct,
-    set_warp_span, set_warp_timer, set_wave_block, set_wave_chance, set_wave_immune, set_wave_level, set_wave_mini,
-    set_wave_resist_pct, set_weaken_active, set_weaken_active_pct, set_weaken_chance, set_weaken_duration,
-    set_weaken_immune, set_weaken_pct, set_weaken_resist_pct, set_weaken_timer, set_witch_slayer, set_zkill_hit,
-    set_zombie_killer, slot_occupied, stage_entry_boss, stage_entry_col10, stat_area_attack, stat_attack_cooldown,
-    stat_attack_count_state, stat_attack_count_total, stat_attack_foreswing, stat_attack_has_abilities,
-    stat_attack_has_ld, stat_attack_ld_anchor, stat_attack_ld_span, stat_attack_only, stat_barrier_breaker_chance,
-    stat_barrier_hitpoints, stat_base_destroyer, stat_behemoth_dodge_chance, stat_behemoth_dodge_duration,
-    stat_behemoth_slayer, stat_boss_wave_immune, stat_colossus_slayer, stat_conjure_unit_id, stat_counter_surge,
-    stat_critical_chance, stat_curse_chance, stat_curse_duration, stat_curse_immune, stat_death_surge_anchor,
-    stat_death_surge_chance, stat_death_surge_level, stat_death_surge_span, stat_dodge_chance, stat_dodge_duration,
-    stat_double_bounty, stat_drain_chance, stat_drain_immune, stat_drain_percent, stat_eva_killer,
-    stat_explosion_chance, stat_explosion_immune, stat_explosion_spawn_anchor, stat_explosion_spawn_span,
-    stat_freeze_chance, stat_freeze_duration, stat_freeze_immune, stat_hitbox_position, stat_hitbox_width,
-    stat_insane_damage, stat_insanely_tough, stat_is_metal, stat_knockback_chance, stat_knockback_immune,
-    stat_knockbacks, stat_massive_damage, stat_metal_killer_percent, stat_mini_surge_flag, stat_mini_wave_flag,
-    stat_resist, stat_sage_slayer, stat_savage_blow_boost, stat_savage_blow_chance, stat_shield_hitpoints,
-    stat_shield_pierce_chance, stat_shield_regen, stat_slow_chance, stat_slow_duration, stat_slow_immune,
-    stat_soul_animation_type, stat_soulstrike, stat_spawn_animation_flag, stat_spawn_animation_type, stat_speed,
-    stat_strengthen_boost, stat_strengthen_threshold, stat_strong_against, stat_surge_chance, stat_surge_immune,
-    stat_surge_level, stat_surge_spawn_anchor, stat_surge_spawn_span, stat_survive, stat_time_before_death,
-    stat_toxic_chance, stat_toxic_damage, stat_toxic_immune, stat_use_gudetama_soul, stat_warp_chance,
-    stat_warp_dist_anchor, stat_warp_dist_span, stat_warp_duration, stat_warp_immune, stat_wave_block,
-    stat_wave_chance, stat_wave_immune, stat_wave_level, stat_weaken_chance, stat_weaken_duration,
-    stat_weaken_immune, stat_weaken_to, stat_witch_killer, stat_zombie_killer, trait_aku, trait_alien, trait_angel,
-    trait_behemoth, trait_colossus, trait_dark, trait_dojo, trait_eva, trait_floating, trait_kaijin, trait_metal,
-    trait_red, trait_relic, trait_sage, trait_starred_alien, trait_traitless, trait_witch, trait_zombie, AppContext,
-    EnemyStats, Entity, ENEMY_STATS, ENEMY_STATS_STRIDE,
+    AppContext, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, Entity, call_rng, compute_attack,
+    compute_hp, get_base_pos_x, get_castle_id, get_castle_row, get_cat_combo_bonus,
+    get_counter_surge, get_entity_base_idx, get_max_hp, get_orb_value_max, get_orb_value_sum,
+    get_setting, get_spawn_anim_flag, get_spawn_anim_type, get_stat_range, get_talent_value,
+    has_orb, is_boss, orb_deploy_condition_slot, read_flag, set_area_attack, set_attack_abilities,
+    set_attack_cooldown, set_attack_damage, set_attack_end_mode, set_attack_foreswing,
+    set_attack_interval, set_attack_only, set_attacks_remaining, set_barrier_breaker_chance,
+    set_barrier_hp, set_barrier_vfx_active, set_base_destroyer, set_behemoth_dodge_chance,
+    set_behemoth_dodge_duration, set_behemoth_dodge_timer, set_behemoth_slayer, set_boss_type,
+    set_boss_wave_immune, set_burrow_count, set_burrow_distance, set_cannon_blast_hit,
+    set_cannon_charge_orb, set_cannon_hit_stamp, set_cash_back_pct, set_colossus_orb_pcts,
+    set_colossus_slayer, set_conjure_deck_slot, set_conjure_unit_id, set_counter_surge,
+    set_counter_surge_once, set_counter_surge_pct, set_crit_vfx, set_critical_chance,
+    set_curse_chance, set_curse_duration, set_curse_immune, set_curse_length, set_curse_resist_pct,
+    set_curse_timer, set_death_surge_anchor, set_death_surge_chance, set_death_surge_level,
+    set_death_surge_mini, set_death_surge_pct, set_death_surge_span, set_death_timer,
+    set_dodge_chance, set_dodge_duration, set_dodge_timer, set_double_bounty, set_drain_chance,
+    set_drain_immune, set_drain_pct, set_drain_percent, set_entity_frame, set_entity_state,
+    set_eva_killer, set_explosion_anchor, set_explosion_chance, set_explosion_immune,
+    set_explosion_resist_pct, set_explosion_span, set_first_bounty_pct, set_frame_damage,
+    set_freeze_chance, set_freeze_duration, set_freeze_immune, set_freeze_length,
+    set_freeze_resist_pct, set_freeze_timer, set_gudetama_soul, set_hitbox_pos, set_hitbox_width,
+    set_hp, set_insane_damage, set_insanely_tough, set_kb_proc_hit, set_kill_count,
+    set_knockback_chance, set_knockback_immune, set_knockback_resist_pct, set_knockbacks,
+    set_ld_anchor, set_ld_flag, set_ld_span, set_massive_damage, set_max_hp, set_metal,
+    set_metal_killer_pct, set_metal_killer_vfx, set_mini_surge, set_no_revive, set_occupant,
+    set_orb_dodge_chance, set_orb_dodge_duration, set_orb_dodge_timer, set_paid_cost, set_pos_x,
+    set_pos_y, set_prev_curse_timer, set_prev_freeze_timer, set_prev_slow_timer,
+    set_prev_weaken_timer, set_proc_badge, set_resist, set_revive_count, set_revive_hp,
+    set_revive_time, set_revive_timer, set_sage_slayer, set_savage_blow_boost,
+    set_savage_blow_chance, set_savage_blow_vfx, set_score_value, set_shield_hp, set_shield_max,
+    set_shield_pierce_chance, set_shield_regen, set_shield_vfx, set_shockwave_counter,
+    set_slow_chance, set_slow_duration, set_slow_immune, set_slow_length, set_slow_resist_pct,
+    set_slow_timer, set_soul_anim_type, set_soulstrike, set_spawn_anim_flag, set_spawn_anim_type,
+    set_spawn_serial, set_speed, set_standing_range, set_strengthen_boost,
+    set_strengthen_threshold, set_strong_against, set_surge_anchor, set_surge_chance,
+    set_surge_immune, set_surge_level, set_surge_resist_pct, set_surge_span, set_survive_chance,
+    set_total_damage_taken, set_toxic_chance, set_toxic_damage, set_toxic_immune,
+    set_toxic_resist_pct, set_toxic_vfx, set_trait_aku, set_trait_alien, set_trait_angel,
+    set_trait_behemoth, set_trait_colossus, set_trait_dark, set_trait_dojo, set_trait_eva_angel,
+    set_trait_floating, set_trait_kaijin, set_trait_metal, set_trait_red, set_trait_relic,
+    set_trait_sage, set_trait_starred_alien, set_trait_traitless, set_trait_witch,
+    set_trait_zombie, set_warp_anchor, set_warp_chance, set_warp_duration, set_warp_immune,
+    set_warp_resist_pct, set_warp_span, set_warp_timer, set_wave_block, set_wave_chance,
+    set_wave_immune, set_wave_level, set_wave_mini, set_wave_resist_pct, set_weaken_active,
+    set_weaken_active_pct, set_weaken_chance, set_weaken_duration, set_weaken_immune,
+    set_weaken_pct, set_weaken_resist_pct, set_weaken_timer, set_witch_slayer, set_zkill_hit,
+    set_zombie_killer, slot_occupied, stage_entry_boss, stage_entry_col10, stat_area_attack,
+    stat_attack_cooldown, stat_attack_count_state, stat_attack_count_total, stat_attack_foreswing,
+    stat_attack_has_abilities, stat_attack_has_ld, stat_attack_ld_anchor, stat_attack_ld_span,
+    stat_attack_only, stat_barrier_breaker_chance, stat_barrier_hitpoints, stat_base_destroyer,
+    stat_behemoth_dodge_chance, stat_behemoth_dodge_duration, stat_behemoth_slayer,
+    stat_boss_wave_immune, stat_colossus_slayer, stat_conjure_unit_id, stat_counter_surge,
+    stat_critical_chance, stat_curse_chance, stat_curse_duration, stat_curse_immune,
+    stat_death_surge_anchor, stat_death_surge_chance, stat_death_surge_level,
+    stat_death_surge_span, stat_dodge_chance, stat_dodge_duration, stat_double_bounty,
+    stat_drain_chance, stat_drain_immune, stat_drain_percent, stat_eva_killer,
+    stat_explosion_chance, stat_explosion_immune, stat_explosion_spawn_anchor,
+    stat_explosion_spawn_span, stat_freeze_chance, stat_freeze_duration, stat_freeze_immune,
+    stat_hitbox_position, stat_hitbox_width, stat_insane_damage, stat_insanely_tough,
+    stat_is_metal, stat_knockback_chance, stat_knockback_immune, stat_knockbacks,
+    stat_massive_damage, stat_metal_killer_percent, stat_mini_surge_flag, stat_mini_wave_flag,
+    stat_resist, stat_sage_slayer, stat_savage_blow_boost, stat_savage_blow_chance,
+    stat_shield_hitpoints, stat_shield_pierce_chance, stat_shield_regen, stat_slow_chance,
+    stat_slow_duration, stat_slow_immune, stat_soul_animation_type, stat_soulstrike,
+    stat_spawn_animation_flag, stat_spawn_animation_type, stat_speed, stat_strengthen_boost,
+    stat_strengthen_threshold, stat_strong_against, stat_surge_chance, stat_surge_immune,
+    stat_surge_level, stat_surge_spawn_anchor, stat_surge_spawn_span, stat_survive,
+    stat_time_before_death, stat_toxic_chance, stat_toxic_damage, stat_toxic_immune,
+    stat_use_gudetama_soul, stat_warp_chance, stat_warp_dist_anchor, stat_warp_dist_span,
+    stat_warp_duration, stat_warp_immune, stat_wave_block, stat_wave_chance, stat_wave_immune,
+    stat_wave_level, stat_weaken_chance, stat_weaken_duration, stat_weaken_immune, stat_weaken_to,
+    stat_witch_killer, stat_zombie_killer, trait_aku, trait_alien, trait_angel, trait_behemoth,
+    trait_colossus, trait_dark, trait_dojo, trait_eva, trait_floating, trait_kaijin, trait_metal,
+    trait_red, trait_relic, trait_sage, trait_starred_alien, trait_traitless, trait_witch,
+    trait_zombie,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -103,7 +117,12 @@ pub fn spawn_entity(
     } else {
         let far_side = ctx.i32_at(AppContext::STAGE_LENGTH)?.wrapping_add(-0xaf0);
 
-        set_pos_x(ctx, faction, slot, if faction == 0 { far_side } else { 0xaf0 })?;
+        set_pos_x(
+            ctx,
+            faction,
+            slot,
+            if faction == 0 { far_side } else { 0xaf0 },
+        )?;
     }
 
     set_pos_y(ctx, faction, slot, 0x1180)?;
@@ -115,7 +134,10 @@ pub fn spawn_entity(
     let z_roll = call_rng(ctx, (if z_range > 0 { z_range } else { 0 }).wrapping_add(1));
 
     ctx.set_i32_at(z_layer, ctx.i32_at(z_layer)?.wrapping_add(z_roll))?;
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::LEVEL), level)?;
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::LEVEL),
+        level,
+    )?;
 
     set_attack_cooldown(ctx, faction, slot, 0)?;
     set_frame_damage(ctx, faction, slot, 0)?;
@@ -157,27 +179,45 @@ pub fn spawn_entity(
     let attack_end_mode = stat_attack_count_state(ctx, faction, unit_id, form)?;
     set_attack_end_mode(ctx, faction, slot, attack_end_mode)?;
 
-    let skip_mult = if faction == 1 { (slot == get_entity_base_idx(ctx)?) as u8 } else { 0 };
+    let skip_mult = if faction == 1 {
+        (slot == get_entity_base_idx(ctx)?) as u8
+    } else {
+        0
+    };
 
-    let attack_damage = compute_attack(ctx, faction, unit_id, form, level, mag_slot, 0, 0, skip_mult)?;
+    let attack_damage = compute_attack(
+        ctx, faction, unit_id, form, level, mag_slot, 0, 0, skip_mult,
+    )?;
     set_attack_damage(ctx, faction, slot, 0, attack_damage)?;
     let attack_foreswing = stat_attack_foreswing(ctx, faction, unit_id, form, 0)?;
     set_attack_foreswing(ctx, faction, slot, 0, attack_foreswing)?;
     let attack_abilities = stat_attack_has_abilities(ctx, faction, unit_id, form, 0)?;
     set_attack_abilities(ctx, faction, slot, 0, attack_abilities as i32)?;
 
-    let skip_mult = if faction == 1 { (slot == get_entity_base_idx(ctx)?) as u8 } else { 0 };
+    let skip_mult = if faction == 1 {
+        (slot == get_entity_base_idx(ctx)?) as u8
+    } else {
+        0
+    };
 
-    let attack_damage = compute_attack(ctx, faction, unit_id, form, level, mag_slot, 1, 0, skip_mult)?;
+    let attack_damage = compute_attack(
+        ctx, faction, unit_id, form, level, mag_slot, 1, 0, skip_mult,
+    )?;
     set_attack_damage(ctx, faction, slot, 1, attack_damage)?;
     let attack_foreswing = stat_attack_foreswing(ctx, faction, unit_id, form, 1)?;
     set_attack_foreswing(ctx, faction, slot, 1, attack_foreswing)?;
     let attack_abilities = stat_attack_has_abilities(ctx, faction, unit_id, form, 1)?;
     set_attack_abilities(ctx, faction, slot, 1, attack_abilities as i32)?;
 
-    let skip_mult = if faction == 1 { (slot == get_entity_base_idx(ctx)?) as u8 } else { 0 };
+    let skip_mult = if faction == 1 {
+        (slot == get_entity_base_idx(ctx)?) as u8
+    } else {
+        0
+    };
 
-    let attack_damage = compute_attack(ctx, faction, unit_id, form, level, mag_slot, 2, 0, skip_mult)?;
+    let attack_damage = compute_attack(
+        ctx, faction, unit_id, form, level, mag_slot, 2, 0, skip_mult,
+    )?;
     set_attack_damage(ctx, faction, slot, 2, attack_damage)?;
     let attack_foreswing = stat_attack_foreswing(ctx, faction, unit_id, form, 2)?;
     set_attack_foreswing(ctx, faction, slot, 2, attack_foreswing)?;
@@ -301,14 +341,15 @@ pub fn spawn_entity(
             let death_surge = get_orb_value_max(ctx, unit_id, 5, 0, 0)?;
 
             if death_surge > 0 {
-            set_death_surge_chance(ctx, 0, slot, 0x64)?;
-                let distance = get_setting(&ctx.settings, b"battle_af_death_volcano_distance", 0x258)?;
-            set_death_surge_anchor(ctx, 0, slot, distance)?;
+                set_death_surge_chance(ctx, 0, slot, 0x64)?;
+                let distance =
+                    get_setting(&ctx.settings, b"battle_af_death_volcano_distance", 0x258)?;
+                set_death_surge_anchor(ctx, 0, slot, distance)?;
                 let width = get_setting(&ctx.settings, b"battle_af_death_volcano_width", 0xfa0)?;
-            set_death_surge_span(ctx, 0, slot, width)?;
-            set_death_surge_level(ctx, 0, slot, 1)?;
-            set_death_surge_pct(ctx, 0, slot, death_surge.wrapping_mul(5))?;
-            set_death_surge_mini(ctx, 0, slot, 1)?;
+                set_death_surge_span(ctx, 0, slot, width)?;
+                set_death_surge_level(ctx, 0, slot, 1)?;
+                set_death_surge_pct(ctx, 0, slot, death_surge.wrapping_mul(5))?;
+                set_death_surge_mini(ctx, 0, slot, 1)?;
             }
         }
 
@@ -317,13 +358,15 @@ pub fn spawn_entity(
         set_counter_surge_pct(ctx, 0, slot, 0x64)?;
         set_counter_surge_once(ctx, 0, slot, 0)?;
 
-        if !get_counter_surge(ctx, 0, slot)? && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)? {
+        if !get_counter_surge(ctx, 0, slot)?
+            && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)?
+        {
             let counter = get_orb_value_max(ctx, unit_id, 0x11, 0, 0)?;
 
             if counter > 0 {
-            set_counter_surge(ctx, 0, slot, 1)?;
-            set_counter_surge_pct(ctx, 0, slot, counter)?;
-            set_counter_surge_once(ctx, 0, slot, 1)?;
+                set_counter_surge(ctx, 0, slot, 1)?;
+                set_counter_surge_pct(ctx, 0, slot, counter)?;
+                set_counter_surge_once(ctx, 0, slot, 1)?;
             }
         }
     } else {
@@ -390,12 +433,15 @@ pub fn spawn_entity(
     set_colossus_slayer(ctx, faction, slot, colossus_slayer as u8)?;
     set_colossus_orb_pcts(ctx, faction, slot, 0, 0)?;
 
-    if !colossus_slayer && !low && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)? {
+    if !colossus_slayer
+        && !low
+        && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)?
+    {
         let attack_pct = get_orb_value_max(ctx, unit_id, 0xa, 0, 0)?;
         let defense_pct = get_orb_value_max(ctx, unit_id, 0xa, 1, 0)?;
 
         if attack_pct > 0 && defense_pct > 0 {
-        set_colossus_slayer(ctx, 0, slot, 1)?;
+            set_colossus_slayer(ctx, 0, slot, 1)?;
             set_colossus_orb_pcts(ctx, 0, slot, attack_pct, defense_pct)?;
         }
     }
@@ -445,14 +491,17 @@ pub fn spawn_entity(
     set_orb_dodge_chance(ctx, faction, slot, 0)?;
     set_orb_dodge_duration(ctx, faction, slot, 0)?;
 
-    if !low && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)? && has_orb(ctx, &ctx.orb_store, unit_id, 0xd)? {
+    if !low
+        && orb_deploy_condition_slot(ctx, AppContext::faction_flags(faction), 0, slot)?
+        && has_orb(ctx, &ctx.orb_store, unit_id, 0xd)?
+    {
         let orb_dodge_chance = get_orb_value_max(ctx, unit_id, 0xd, 0, 0)?;
         set_orb_dodge_chance(ctx, 0, slot, orb_dodge_chance)?;
         let orb_dodge_duration = get_orb_value_max(ctx, unit_id, 0xd, 1, 0)?;
         set_orb_dodge_duration(ctx, 0, slot, orb_dodge_duration)?;
     }
 
-    set_crit_fx(ctx, faction, slot, 0)?;
+    set_crit_vfx(ctx, faction, slot, 0)?;
     set_kb_proc_hit(ctx, faction, slot, 0)?;
     set_freeze_timer(ctx, faction, slot, 0)?;
     set_freeze_length(ctx, faction, slot, 0)?;
@@ -460,30 +509,42 @@ pub fn spawn_entity(
     set_slow_timer(ctx, faction, slot, 0)?;
     set_slow_length(ctx, faction, slot, 0)?;
     set_prev_slow_timer(ctx, faction, slot, 0)?;
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::DOUBLE_BOUNTY_STATE), 0)?;
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::DOUBLE_BOUNTY_STATE),
+        0,
+    )?;
     set_shockwave_counter(ctx, faction, slot, 0)?;
     set_weaken_timer(ctx, faction, slot, 0)?;
     set_weaken_active(ctx, faction, slot, 0)?;
     set_prev_weaken_timer(ctx, faction, slot, 0)?;
     set_weaken_active_pct(ctx, faction, slot, 0)?;
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::SURVIVE_USED), 0)?;
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::ATTACK_UP_FX_FRAME), 0)?;
-    set_savage_blow_fx(ctx, faction, slot, 0)?;
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::SURVIVE_USED),
+        0,
+    )?;
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::ATTACK_UP_VFX_FRAME),
+        0,
+    )?;
+    set_savage_blow_vfx(ctx, faction, slot, 0)?;
     set_dodge_timer(ctx, faction, slot, 0)?;
-    set_toxic_fx(ctx, faction, slot, 0)?;
+    set_toxic_vfx(ctx, faction, slot, 0)?;
     let shield_hp = stat_shield_hitpoints(ctx, faction, unit_id, form, mag_slot)?;
     set_shield_hp(ctx, faction, slot, shield_hp)?;
-    set_shield_fx(ctx, faction, slot, 0)?;
+    set_shield_vfx(ctx, faction, slot, 0)?;
     set_behemoth_dodge_timer(ctx, faction, slot, 0)?;
-    set_metal_killer_fx(ctx, faction, slot, 0)?;
+    set_metal_killer_vfx(ctx, faction, slot, 0)?;
     set_orb_dodge_timer(ctx, faction, slot, 0)?;
     set_proc_badge(ctx, faction, slot, 0, 0)?;
     set_proc_badge(ctx, faction, slot, 1, 0)?;
     set_proc_badge(ctx, faction, slot, 2, 0)?;
     set_proc_badge(ctx, faction, slot, 3, 0)?;
     set_proc_badge(ctx, faction, slot, 4, 0)?;
-    ctx.zero(AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_FX_FRAME), 0x14)?;
-    set_barrier_fx_active(ctx, faction, slot, 0)?;
+    ctx.zero(
+        AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_VFX_FRAME),
+        0x14,
+    )?;
+    set_barrier_vfx_active(ctx, faction, slot, 0)?;
     set_warp_timer(ctx, faction, slot, 0)?;
     set_curse_timer(ctx, faction, slot, 0)?;
     set_curse_length(ctx, faction, slot, 0)?;
@@ -677,11 +738,14 @@ pub fn spawn_entity(
     }
 
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
-        let enemy_row = *ctx.stage_enemies.get(mag_slot as i64 as usize).ok_or(Fault::IndexOutOfRange {
-            site: "spawn_entity",
-            index: mag_slot as i64,
-            limit: ctx.stage_enemies.len() as i64,
-        })?;
+        let enemy_row =
+            *ctx.stage_enemies
+                .get(mag_slot as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "spawn_entity",
+                    index: mag_slot as i64,
+                    limit: ctx.stage_enemies.len() as i64,
+                })?;
 
         set_boss_type(ctx, faction, slot, stage_entry_boss(&enemy_row))?;
 
@@ -695,25 +759,61 @@ pub fn spawn_entity(
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
             let width = operation::div_10((size << 7).wrapping_sub(size) as i64) as i32;
 
-            set_pos_x(ctx, faction, slot, inset.wrapping_add(base_x).wrapping_add(width).wrapping_add(shift))?;
+            set_pos_x(
+                ctx,
+                faction,
+                slot,
+                inset
+                    .wrapping_add(base_x)
+                    .wrapping_add(width)
+                    .wrapping_add(shift),
+            )?;
         }
 
         let stats = (row as i64) * ENEMY_STATS_STRIDE as i64 + ENEMY_STATS as i64;
 
-        set_burrow_count(ctx, faction, slot, ctx.i32_at((stats + EnemyStats::BURROW_AMOUNT as i64) as usize)?)?;
-        set_revive_count(ctx, faction, slot, ctx.i32_at((stats + EnemyStats::REVIVE_COUNT as i64) as usize)?)?;
+        set_burrow_count(
+            ctx,
+            faction,
+            slot,
+            ctx.i32_at((stats + EnemyStats::BURROW_AMOUNT as i64) as usize)?,
+        )?;
+        set_revive_count(
+            ctx,
+            faction,
+            slot,
+            ctx.i32_at((stats + EnemyStats::REVIVE_COUNT as i64) as usize)?,
+        )?;
         set_revive_timer(ctx, faction, slot, 0)?;
-        set_revive_hp(ctx, faction, slot, ctx.i32_at((stats + EnemyStats::REVIVE_HP as i64) as usize)?)?;
-        set_revive_time(ctx, faction, slot, ctx.i32_at((stats + EnemyStats::REVIVE_TIME as i64) as usize)?)?;
-        set_burrow_distance(ctx, faction, slot, ctx.i32_at((stats + EnemyStats::BURROW_DISTANCE as i64) as usize)?)?;
+        set_revive_hp(
+            ctx,
+            faction,
+            slot,
+            ctx.i32_at((stats + EnemyStats::REVIVE_HP as i64) as usize)?,
+        )?;
+        set_revive_time(
+            ctx,
+            faction,
+            slot,
+            ctx.i32_at((stats + EnemyStats::REVIVE_TIME as i64) as usize)?,
+        )?;
+        set_burrow_distance(
+            ctx,
+            faction,
+            slot,
+            ctx.i32_at((stats + EnemyStats::BURROW_DISTANCE as i64) as usize)?,
+        )?;
         set_zkill_hit(ctx, faction, slot, 0)?;
         set_no_revive(ctx, faction, slot, 0)?;
 
-        let enemy_row = *ctx.stage_enemies.get(mag_slot as i64 as usize).ok_or(Fault::IndexOutOfRange {
-            site: "spawn_entity",
-            index: mag_slot as i64,
-            limit: ctx.stage_enemies.len() as i64,
-        })?;
+        let enemy_row =
+            *ctx.stage_enemies
+                .get(mag_slot as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "spawn_entity",
+                    index: mag_slot as i64,
+                    limit: ctx.stage_enemies.len() as i64,
+                })?;
 
         set_score_value(ctx, faction, slot, stage_entry_col10(&enemy_row))?;
     } else {
@@ -742,7 +842,8 @@ pub fn spawn_entity(
 
     set_first_bounty_pct(ctx, faction, slot, first_bounty)?;
 
-    let spawn_serial = AppContext::faction_flags(faction).wrapping_add(AppContext::WALLET_SPAWN_SERIAL);
+    let spawn_serial =
+        AppContext::faction_flags(faction).wrapping_add(AppContext::WALLET_SPAWN_SERIAL);
     let serial = ctx.i32_at(spawn_serial)?;
 
     ctx.set_i32_at(spawn_serial, serial.wrapping_add(1))?;

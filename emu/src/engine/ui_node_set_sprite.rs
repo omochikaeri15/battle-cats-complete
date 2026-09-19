@@ -2,9 +2,17 @@ use std::rc::Rc;
 
 use crate::Fault;
 
-use super::{imgcut_get_cut_count, imgcut_get_sprite_cut, make_image_sprite, texture_get_height, texture_get_width, ui_node_set_color, Imgcut, Sprite, Surface};
+use super::{
+    Imgcut, Sprite, Surface, imgcut_get_cut_count, imgcut_get_sprite_cut, make_image_sprite,
+    texture_get_height, texture_get_width, ui_node_set_color,
+};
 
-pub fn ui_node_set_sprite(sheet: &Rc<Imgcut>, x: i32, y: i32, cut: i32) -> Result<Box<Sprite>, Fault> {
+pub fn ui_node_set_sprite(
+    sheet: &Rc<Imgcut>,
+    x: i32,
+    y: i32,
+    cut: i32,
+) -> Result<Box<Sprite>, Fault> {
     let mut sprite = make_image_sprite();
 
     sprite.sheet = Some(Rc::clone(sheet));

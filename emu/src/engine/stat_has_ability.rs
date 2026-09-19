@@ -1,22 +1,30 @@
 use crate::Fault;
 
 use super::{
-    has_talent, stat_area_attack, stat_attack_has_ld, stat_attack_only, stat_barrier_breaker_chance,
-    stat_barrier_hitpoints, stat_base_destroyer, stat_behemoth_slayer, stat_colossus_slayer, stat_conjure_unit_id,
-    stat_counter_surge, stat_critical_chance, stat_curse_chance, stat_curse_immune, stat_death_surge_chance,
-    stat_dodge_chance, stat_double_bounty, stat_eva_killer, stat_explosion_chance, stat_explosion_immune,
-    stat_freeze_chance, stat_freeze_immune, stat_has_omni_strike, stat_insane_damage, stat_insanely_tough,
-    stat_is_metal, stat_knockback_chance, stat_knockback_immune, stat_massive_damage, stat_metal_killer_percent,
-    stat_mini_surge_flag, stat_mini_wave_flag, stat_resist, stat_sage_slayer, stat_savage_blow_chance,
-    stat_shield_pierce_chance, stat_shield_regen, stat_slow_chance, stat_slow_immune, stat_soulstrike,
-    stat_strengthen_threshold, stat_strong_against, stat_surge_chance, stat_surge_immune, stat_survive,
-    stat_toxic_chance, stat_toxic_immune, stat_warp_chance, stat_warp_immune, stat_wave_block, stat_wave_chance,
-    stat_wave_immune, stat_weaken_chance, stat_weaken_immune, stat_witch_killer, stat_zombie_killer, trait_aku,
-    trait_alien, trait_angel, trait_dark, trait_dojo, trait_floating, trait_metal, trait_red, trait_relic,
-    trait_traitless, trait_zombie, AppContext,
+    AppContext, has_talent, stat_area_attack, stat_attack_has_ld, stat_attack_only,
+    stat_barrier_breaker_chance, stat_barrier_hitpoints, stat_base_destroyer, stat_behemoth_slayer,
+    stat_colossus_slayer, stat_conjure_unit_id, stat_counter_surge, stat_critical_chance,
+    stat_curse_chance, stat_curse_immune, stat_death_surge_chance, stat_dodge_chance,
+    stat_double_bounty, stat_eva_killer, stat_explosion_chance, stat_explosion_immune,
+    stat_freeze_chance, stat_freeze_immune, stat_has_omni_strike, stat_insane_damage,
+    stat_insanely_tough, stat_is_metal, stat_knockback_chance, stat_knockback_immune,
+    stat_massive_damage, stat_metal_killer_percent, stat_mini_surge_flag, stat_mini_wave_flag,
+    stat_resist, stat_sage_slayer, stat_savage_blow_chance, stat_shield_pierce_chance,
+    stat_shield_regen, stat_slow_chance, stat_slow_immune, stat_soulstrike,
+    stat_strengthen_threshold, stat_strong_against, stat_surge_chance, stat_surge_immune,
+    stat_survive, stat_toxic_chance, stat_toxic_immune, stat_warp_chance, stat_warp_immune,
+    stat_wave_block, stat_wave_chance, stat_wave_immune, stat_weaken_chance, stat_weaken_immune,
+    stat_witch_killer, stat_zombie_killer, trait_aku, trait_alien, trait_angel, trait_dark,
+    trait_dojo, trait_floating, trait_metal, trait_red, trait_relic, trait_traitless, trait_zombie,
 };
 
-pub fn stat_has_ability(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32, ability: i32) -> Result<bool, Fault> {
+pub fn stat_has_ability(
+    ctx: &mut AppContext,
+    faction: i32,
+    unit_id: i32,
+    form: i32,
+    ability: i32,
+) -> Result<bool, Fault> {
     if ability as u32 > 0x52 {
         return Ok(false);
     }

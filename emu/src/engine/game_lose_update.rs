@@ -1,15 +1,19 @@
 use std::rc::Rc;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    ads_available, app_on_draw, back_pressed, battle_check_login_bonus, battle_continue, bc_log_defeated, button_bank_busy, button_bank_find, dialog_show_alt,
-    dialog_top, feature_enabled, game_lose_update_lambda_0, game_lose_update_lambda_1, get_auto_camera_mode, get_design_height2, get_drawable_width,
-    get_global_map_id, get_hp, get_stage_record, get_text_texture, hit_test_rect, imgcut_get_sprite_cut, is_boss, lose_exit_map_check, new_button_register,
-    new_button_set_touchable, now_seconds, obf_value_read, pick_lose_tip, play_sound, query_localizable, record_stage_played, request_save_data,
-    reward_ad_ready, server_config_int, set_bgm_duck, sound_manager, std_string_append, string_format_boss_hp, string_format_boss_hp_line,
-    text_texture_cache, touch_is_down, touch_released, ui_node_set_anchor, ui_node_set_sprite, web_popup_clear, web_popup_open, web_popup_pending, AppContext,
-    Entity,
+    AppContext, Entity, ads_available, app_on_draw, back_pressed, battle_check_login_bonus,
+    battle_continue, bc_log_defeated, button_bank_busy, button_bank_find, dialog_show_alt,
+    dialog_top, feature_enabled, game_lose_update_lambda_0, game_lose_update_lambda_1,
+    get_auto_camera_mode, get_design_height2, get_drawable_width, get_global_map_id, get_hp,
+    get_stage_record, get_text_texture, hit_test_rect, imgcut_get_sprite_cut, is_boss,
+    lose_exit_map_check, new_button_register, new_button_set_touchable, now_seconds,
+    obf_value_read, pick_lose_tip, play_sound, query_localizable, record_stage_played,
+    request_save_data, reward_ad_ready, server_config_int, set_bgm_duck, sound_manager,
+    std_string_append, string_format_boss_hp, string_format_boss_hp_line, text_texture_cache,
+    touch_is_down, touch_released, ui_node_set_anchor, ui_node_set_sprite, web_popup_clear,
+    web_popup_open, web_popup_pending,
 };
 
 const SITE: &str = "game_lose_update";
@@ -35,8 +39,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 request_save_data(ctx)?;
             }
 
-            ctx.set_i32_at(AppContext::DECK_BAR_SLIDE, ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa))?;
-            ctx.set_i32_at(AppContext::CAMERA_ZOOM, ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320))?;
+            ctx.set_i32_at(
+                AppContext::DECK_BAR_SLIDE,
+                ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa),
+            )?;
+            ctx.set_i32_at(
+                AppContext::CAMERA_ZOOM,
+                ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320),
+            )?;
 
             if get_auto_camera_mode(ctx)? != 0 {
                 return Ok(true);
@@ -67,17 +77,33 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            let continues = ctx.i32_at(AppContext::TUTORIAL_CLEARED)? != 0 && get_stage_record(ctx, -2, 0, 2, 0, 0)? != 0;
+            let continues = ctx.i32_at(AppContext::TUTORIAL_CLEARED)? != 0
+                && get_stage_record(ctx, -2, 0, 2, 0, 0)? != 0;
 
             if !continues {
                 ctx.set_i32_at(AppContext::RESULT_PHASE, 4)?;
                 ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
 
                 for label in 0..4usize {
-                    let text = ctx.warning2_rows.get(2).map(|row| row[label].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: 0 })?;
+                    let text = ctx
+                        .warning2_rows
+                        .get(2)
+                        .map(|row| row[label].clone())
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 2,
+                            limit: 0,
+                        })?;
                     let font = ctx.default_font.clone();
 
-                    ctx.label_texts[label] = Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0));
+                    ctx.label_texts[label] = Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ));
                 }
 
                 return Ok(true);
@@ -91,9 +117,15 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
 
                     web_popup_open(ctx, 4, map, stage)?;
-                    ctx.set_i32_at(AppContext::RESULT_FRAME, ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1))?;
+                    ctx.set_i32_at(
+                        AppContext::RESULT_FRAME,
+                        ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1),
+                    )?;
                 } else if ctx.i32_at(AppContext::PENDING_SCENE)? == 0x66 {
-                    ctx.set_i32_at(AppContext::RESULT_FRAME, ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1))?;
+                    ctx.set_i32_at(
+                        AppContext::RESULT_FRAME,
+                        ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1),
+                    )?;
                 }
 
                 app_on_draw(ctx)?;
@@ -139,7 +171,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let mut message = if ctx.u8_at(AppContext::LEADERSHIP_REFUND)? != 0 {
                     query_localizable(ctx, b"leadershipreturn_pop2")
                 } else {
-                    ctx.warning2_rows.get(0x62).map(|row| row[0].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0x62, limit: 0 })?
+                    ctx.warning2_rows
+                        .get(0x62)
+                        .map(|row| row[0].clone())
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 0x62,
+                            limit: 0,
+                        })?
                 };
 
                 if percent != 0 {
@@ -153,7 +192,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 let height = get_design_height2(ctx);
 
-                dialog_show_alt(ctx, &message, 0, operation::div_4(height), 0, Some(game_lose_update_lambda_0))?;
+                dialog_show_alt(
+                    ctx,
+                    &message,
+                    0,
+                    operation::div_4(height),
+                    0,
+                    Some(game_lose_update_lambda_0),
+                )?;
 
                 return Ok(true);
             }
@@ -162,15 +208,51 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let font = ctx.default_font.clone();
 
                 if found && label == 2 {
-                    let line = ctx.warning2_rows.get(2).map(|row| row[2].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: 0 })?;
+                    let line = ctx.warning2_rows.get(2).map(|row| row[2].clone()).ok_or(
+                        Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 2,
+                            limit: 0,
+                        },
+                    )?;
                     let boss = query_localizable(ctx, b"boss_hp");
-                    let text = string_format_boss_hp_line(ctx, b"%@%@%@%d%@", &line, b"(", &boss, percent, b"%)")?;
+                    let text = string_format_boss_hp_line(
+                        ctx,
+                        b"%@%@%@%d%@",
+                        &line,
+                        b"(",
+                        &boss,
+                        percent,
+                        b"%)",
+                    )?;
 
-                    ctx.label_texts[2] = Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0));
+                    ctx.label_texts[2] = Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ));
                 } else {
-                    let text = ctx.warning2_rows.get(2).map(|row| row[label].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: 0 })?;
+                    let text = ctx
+                        .warning2_rows
+                        .get(2)
+                        .map(|row| row[label].clone())
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 2,
+                            limit: 0,
+                        })?;
 
-                    ctx.label_texts[label] = Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0));
+                    ctx.label_texts[label] = Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ));
                 }
             }
 
@@ -198,17 +280,36 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [1])?;
 
-            let sheet = Rc::clone(ctx.img004_sheet.as_ref().ok_or(Fault::NullPointer { site: SITE })?);
+            let sheet = Rc::clone(
+                ctx.img004_sheet
+                    .as_ref()
+                    .ok_or(Fault::NullPointer { site: SITE })?,
+            );
             let width = imgcut_get_sprite_cut(&sheet, 0xa)?[2];
             let height = imgcut_get_sprite_cut(&sheet, 0xa)?[3];
             let left = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0));
             let top = 0x15ci32.wrapping_sub(height);
 
-            let mut node = ui_node_set_sprite(&sheet, left.wrapping_add(operation::div_2(width)).wrapping_add(0x8c), operation::div_2(height).wrapping_add(top), 0xa)?;
+            let mut node = ui_node_set_sprite(
+                &sheet,
+                left.wrapping_add(operation::div_2(width))
+                    .wrapping_add(0x8c),
+                operation::div_2(height).wrapping_add(top),
+                0xa,
+            )?;
 
             ui_node_set_anchor(&mut node, 1);
 
-            let video = new_button_register(&mut ctx.buttons, 0xcb, left.wrapping_add(0x8c), top, width, height, Some(node), Some(game_lose_update_lambda_1));
+            let video = new_button_register(
+                &mut ctx.buttons,
+                0xcb,
+                left.wrapping_add(0x8c),
+                top,
+                width,
+                height,
+                Some(node),
+                Some(game_lose_update_lambda_1),
+            );
 
             new_button_set_touchable(&mut ctx.buttons, video, 0)?;
 
@@ -250,7 +351,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
-                let video = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+                let video = button_bank_find(&ctx.buttons, 0xcb)
+                    .ok_or(Fault::NullPointer { site: SITE })?;
 
                 new_button_set_touchable(&mut ctx.buttons, video, 0)?;
             }
@@ -266,7 +368,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 ctx.set_i32_at(AppContext::RESULT_OK_PRESS, 0)?;
 
-                if obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32 > 0x1d || ctx.u8_at(AppContext::RESULT_VIDEO_WATCHED)? != 0 {
+                if obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32 > 0x1d
+                    || ctx.u8_at(AppContext::RESULT_VIDEO_WATCHED)? != 0
+                {
                     battle_continue(ctx)?;
 
                     return Ok(false);
@@ -292,7 +396,10 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::RESULT_PHASE, 4)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
 
-                if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0 && ctx.i32_at(AppContext::STAGE_ROW)? != 0 && ctx.i32_at(AppContext::LOSE_RECORDED)? == 0 {
+                if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0
+                    && ctx.i32_at(AppContext::STAGE_ROW)? != 0
+                    && ctx.i32_at(AppContext::LOSE_RECORDED)? == 0
+                {
                     ctx.set_i32_at(AppContext::LOSE_RECORDED, 1)?;
                 }
 
@@ -306,7 +413,11 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 loop {
                     let tip = ctx.i32_at(AppContext::LOSE_TIP)? as i64 as usize;
-                    let row = ctx.lose_rows.get(tip).ok_or(Fault::IndexOutOfRange { site: SITE, index: tip as i64, limit: ctx.lose_rows.len() as i64 })?;
+                    let row = ctx.lose_rows.get(tip).ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: tip as i64,
+                        limit: ctx.lose_rows.len() as i64,
+                    })?;
 
                     if line >= row.len() as i32 as i64 {
                         break;
@@ -314,10 +425,17 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     let text = row[line as usize].clone();
                     let font = ctx.default_font.clone();
-                    let texture = get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0);
+                    let texture =
+                        get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0);
                     let slot = 2 + line as usize;
 
-                    *ctx.label_texts.get_mut(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: 0x434 })? = Some(texture);
+                    *ctx.label_texts
+                        .get_mut(slot)
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: slot as i64,
+                            limit: 0x434,
+                        })? = Some(texture);
 
                     line += 1;
                 }
@@ -372,7 +490,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
-                let video = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+                let video = button_bank_find(&ctx.buttons, 0xcb)
+                    .ok_or(Fault::NullPointer { site: SITE })?;
 
                 new_button_set_touchable(&mut ctx.buttons, video, 1)?;
             }
@@ -445,7 +564,10 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             };
 
             if yes_released {
-                ctx.set_i32_at(AppContext::RESULT_OK_PRESS, ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1))?;
+                ctx.set_i32_at(
+                    AppContext::RESULT_OK_PRESS,
+                    ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1),
+                )?;
                 play_sound(sound_manager(ctx)?, 0xb, None);
             } else {
                 let no_released = touch_released(ctx)? != 0 && {
@@ -458,7 +580,10 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 };
 
                 if no_released || back_pressed(ctx)? != 0 {
-                    ctx.set_i32_at(AppContext::LOSE_NO_PRESS, ctx.i32_at(AppContext::LOSE_NO_PRESS)?.wrapping_add(1))?;
+                    ctx.set_i32_at(
+                        AppContext::LOSE_NO_PRESS,
+                        ctx.i32_at(AppContext::LOSE_NO_PRESS)?.wrapping_add(1),
+                    )?;
                     play_sound(sound_manager(ctx)?, 0xb, None);
                 }
             }
@@ -499,7 +624,10 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             play_sound(sound_manager(ctx)?, 0xb, None);
-            ctx.set_i32_at(AppContext::LOSE_SHOP_PRESS, ctx.i32_at(AppContext::LOSE_SHOP_PRESS)?.wrapping_add(1))?;
+            ctx.set_i32_at(
+                AppContext::LOSE_SHOP_PRESS,
+                ctx.i32_at(AppContext::LOSE_SHOP_PRESS)?.wrapping_add(1),
+            )?;
 
             Ok(true)
         }
@@ -525,7 +653,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let hovered = touch_is_down(ctx)? != 0
                 && hit_test_rect(ctx, x, y, width, height)?
-                && (ctx.i32_at(AppContext::RESULT_PHASE)? != 4 || ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? != 0);
+                && (ctx.i32_at(AppContext::RESULT_PHASE)? != 4
+                    || ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? != 0);
 
             if hovered {
                 if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
@@ -538,7 +667,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 4)?;
 
-            let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            let map =
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
@@ -548,7 +678,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
                 let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
 
-                hit_test_rect(ctx, x, y, width, height)? || (ctx.i32_at(AppContext::RESULT_PHASE)? == 4 && ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? == 0)
+                hit_test_rect(ctx, x, y, width, height)?
+                    || (ctx.i32_at(AppContext::RESULT_PHASE)? == 4
+                        && ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? == 0)
             };
 
             if (released || back_pressed(ctx)? != 0) && !button_bank_busy(&ctx.buttons)? {
@@ -574,7 +706,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            let map =
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 

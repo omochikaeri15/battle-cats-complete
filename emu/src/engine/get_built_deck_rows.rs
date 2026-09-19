@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{find_built_deck_4star, has_built_deck, AppContext};
+use super::{AppContext, find_built_deck_4star, has_built_deck};
 
 pub fn get_built_deck_rows(ctx: &mut AppContext, stage_key: i32) -> Result<[(i16, i8); 10], Fault> {
     if !has_built_deck(ctx, stage_key)? {
@@ -25,5 +25,12 @@ pub fn get_built_deck_rows(ctx: &mut AppContext, stage_key: i32) -> Result<[(i16
         return Ok([(-1, 0); 10]);
     }
 
-    Ok(ctx.built_deck_records.get(&(deck_id as i16)).ok_or(Fault::KeyNotFound { site: "get_built_deck_rows", key: deck_id as i64 })?.rows)
+    Ok(ctx
+        .built_deck_records
+        .get(&(deck_id as i16))
+        .ok_or(Fault::KeyNotFound {
+            site: "get_built_deck_rows",
+            key: deck_id as i64,
+        })?
+        .rows)
 }

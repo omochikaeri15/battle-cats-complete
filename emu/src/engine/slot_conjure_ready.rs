@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_button_unit_row, read_flag, stat_conjure_unit_id, AppContext};
+use super::{AppContext, get_button_unit_row, read_flag, stat_conjure_unit_id};
 
 pub fn slot_conjure_ready(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
     let unit_id = get_button_unit_row(ctx, faction, slot)?.wrapping_add(-2);
@@ -20,7 +20,9 @@ pub fn slot_conjure_ready(ctx: &mut AppContext, faction: i32, slot: i32) -> Resu
         return Ok(false);
     }
 
-    let ready = AppContext::faction_flags(faction).wrapping_add(((slot as i64) * 4) as usize).wrapping_add(AppContext::WALLET_CONJURE_READY);
+    let ready = AppContext::faction_flags(faction)
+        .wrapping_add(((slot as i64) * 4) as usize)
+        .wrapping_add(AppContext::WALLET_CONJURE_READY);
 
     Ok(ctx.i32_at(ready)? == 1)
 }

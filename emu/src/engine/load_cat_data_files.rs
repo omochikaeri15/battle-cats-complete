@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{read_csv_cell, read_csv_row, AppContext, AssetStream, UnitBuy, UNIT_BUY, UNIT_BUY_STRIDE};
+use super::{
+    AppContext, AssetStream, UNIT_BUY, UNIT_BUY_STRIDE, UnitBuy, read_csv_cell, read_csv_row,
+};
 
 const BUY_ROWS: usize = 0x36c;
 const BUY_COLUMNS: i32 = 0x3f;
@@ -24,7 +26,10 @@ pub fn load_cat_data_files(
 
         while column != BUY_COLUMNS {
             let key = ctx.i32_at((row << 8) + UNIT_BUY + UnitBuy::KEY)?;
-            ctx.set_i32_at(buy + (column as usize) * 4, read_csv_cell(unitbuy, column) as i32 ^ key)?;
+            ctx.set_i32_at(
+                buy + (column as usize) * 4,
+                read_csv_cell(unitbuy, column) as i32 ^ key,
+            )?;
             column += 1;
         }
 
@@ -39,7 +44,10 @@ pub fn load_cat_data_files(
         let mut column = 0;
 
         while column != GROWTH_COLUMNS {
-            ctx.set_i32_at(growth_at + AppContext::UNIT_LEVEL_CURVE + (column as usize) * 4, read_csv_cell(unitlevel, column) as i32)?;
+            ctx.set_i32_at(
+                growth_at + AppContext::UNIT_LEVEL_CURVE + (column as usize) * 4,
+                read_csv_cell(unitlevel, column) as i32,
+            )?;
             column += 1;
         }
 
@@ -54,7 +62,10 @@ pub fn load_cat_data_files(
         let mut column = 0;
 
         while column != GROWTH_COLUMNS {
-            ctx.set_i32_at(growth_at + AppContext::UNIT_EXP_CURVE + (column as usize) * 4, read_csv_cell(unitexp, column) as i32)?;
+            ctx.set_i32_at(
+                growth_at + AppContext::UNIT_EXP_CURVE + (column as usize) * 4,
+                read_csv_cell(unitexp, column) as i32,
+            )?;
             column += 1;
         }
 

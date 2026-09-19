@@ -8,7 +8,11 @@ pub struct WebPopupEntry {
 }
 
 pub fn web_popup_stage_match(ctx: &mut AppContext, map: i32, stage: i32) -> bool {
-    if ctx.web_popup_shown.iter().any(|shown| shown[0] == map && shown[1] == stage) {
+    if ctx
+        .web_popup_shown
+        .iter()
+        .any(|shown| shown[0] == map && shown[1] == stage)
+    {
         return false;
     }
 

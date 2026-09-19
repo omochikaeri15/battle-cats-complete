@@ -1,8 +1,10 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    bg_has_upper_layer, camera_vertical_correction, draw_context, draw_cut_scaled, fill_polygon_colored, fill_rect, get_base_shake_offset, get_bg_ground_bottom,
-    get_bg_ground_top, get_bg_sky_bottom, get_bg_sky_top, get_design_height2, get_drawable_width, imgcut_get_sprite_cut, set_tint, set_transform, AppContext,
+    AppContext, bg_has_upper_layer, camera_vertical_correction, draw_context, draw_cut_scaled,
+    fill_polygon_colored, fill_rect, get_base_shake_offset, get_bg_ground_bottom,
+    get_bg_ground_top, get_bg_sky_bottom, get_bg_sky_top, get_design_height2, get_drawable_width,
+    imgcut_get_sprite_cut, set_tint, set_transform,
 };
 
 const SITE: &str = "draw_background";
@@ -11,7 +13,13 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let horizon = camera_vertical_correction(ctx)?.wrapping_add(0x208);
     let color = get_bg_sky_bottom(ctx, AppContext::BG_SETUP)?;
 
-    set_tint(draw_context(&mut ctx.draw)?, (color >> 0x10) & 0xff, (color >> 8) & 0xff, color & 0xff, 0xff);
+    set_tint(
+        draw_context(&mut ctx.draw)?,
+        (color >> 0x10) & 0xff,
+        (color >> 8) & 0xff,
+        color & 0xff,
+        0xff,
+    );
 
     let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let width = get_drawable_width(ctx)?;
@@ -21,7 +29,13 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_base_shake_offset(ctx) > 0 {
         let color = get_bg_sky_top(ctx, AppContext::BG_SETUP)?;
 
-        set_tint(draw_context(&mut ctx.draw)?, (color >> 0x10) & 0xff, (color >> 8) & 0xff, color & 0xff, 0xff);
+        set_tint(
+            draw_context(&mut ctx.draw)?,
+            (color >> 0x10) & 0xff,
+            (color >> 8) & 0xff,
+            color & 0xff,
+            0xff,
+        );
 
         let top = (-0x28i32).wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let width = get_drawable_width(ctx)?;
@@ -32,7 +46,13 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let color = get_bg_ground_top(ctx, AppContext::BG_SETUP)?;
 
-    set_tint(draw_context(&mut ctx.draw)?, (color >> 0x10) & 0xff, (color >> 8) & 0xff, color & 0xff, 0xff);
+    set_tint(
+        draw_context(&mut ctx.draw)?,
+        (color >> 0x10) & 0xff,
+        (color >> 8) & 0xff,
+        color & 0xff,
+        0xff,
+    );
 
     let top = horizon.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let width = get_drawable_width(ctx)?;
@@ -43,9 +63,18 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_base_shake_offset(ctx) < 0 {
         let color = get_bg_ground_bottom(ctx, AppContext::BG_SETUP)?;
 
-        set_tint(draw_context(&mut ctx.draw)?, (color >> 0x10) & 0xff, (color >> 8) & 0xff, color & 0xff, 0xff);
+        set_tint(
+            draw_context(&mut ctx.draw)?,
+            (color >> 0x10) & 0xff,
+            (color >> 8) & 0xff,
+            color & 0xff,
+            0xff,
+        );
 
-        let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_add(get_base_shake_offset(ctx)).wrapping_add(0x2a8);
+        let top = ctx
+            .i32_at(AppContext::LETTERBOX_SHIFT)?
+            .wrapping_add(get_base_shake_offset(ctx))
+            .wrapping_add(0x2a8);
         let width = get_drawable_width(ctx)?;
         let height = get_base_shake_offset(ctx).wrapping_neg();
 
@@ -64,16 +93,26 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
-    let top = get_base_shake_offset(ctx).wrapping_sub(shift).wrapping_add(-0x28);
+    let top = get_base_shake_offset(ctx)
+        .wrapping_sub(shift)
+        .wrapping_add(-0x28);
 
     ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
-    let anchor = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f64;
+    let anchor = ctx
+        .i32_at(AppContext::BATTLE_ZOOM_Y)?
+        .wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f64;
     let zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)? as f64 / 100.0;
     let lift = (100.0 - zoom) * anchor / 100.0;
-    let base = if bg_has_upper_layer(ctx, AppContext::BG_SETUP)? != 0 { scenery } else { scenery.wrapping_add(-0x280) };
-    let span = base.wrapping_sub(camera_vertical_correction(ctx)?).wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
+    let base = if bg_has_upper_layer(ctx, AppContext::BG_SETUP)? != 0 {
+        scenery
+    } else {
+        scenery.wrapping_add(-0x280)
+    };
+    let span = base
+        .wrapping_sub(camera_vertical_correction(ctx)?)
+        .wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
     let lift = lift - operation::div_10000(span) as f64;
     let bottom = operation::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
@@ -111,10 +150,14 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
     ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
 
-    let anchor = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f64;
+    let anchor = ctx
+        .i32_at(AppContext::BATTLE_ZOOM_Y)?
+        .wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f64;
     let zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)? as f64 / 100.0;
     let lift = (100.0 - zoom) * anchor / 100.0;
-    let span = camera_vertical_correction(ctx)?.wrapping_add(0x280).wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
+    let span = camera_vertical_correction(ctx)?
+        .wrapping_add(0x280)
+        .wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
     let lift = operation::div_10000(span) as f64 + lift;
     let top = operation::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
@@ -122,7 +165,9 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
-    let bottom = get_base_shake_offset(ctx).wrapping_add(shift).wrapping_add(0x2a8);
+    let bottom = get_base_shake_offset(ctx)
+        .wrapping_add(shift)
+        .wrapping_add(0x2a8);
 
     ctx.set_i32_at(AppContext::BG_TINT_YS + 8, bottom)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS + 4, bottom)?;
@@ -161,17 +206,35 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let camera = operation::div_10(ctx.i32_at(AppContext::CAMERA_X)?);
     let tiles = operation::div_960(camera).wrapping_mul(0x3c0);
-    let origin = tiles.wrapping_sub(camera).wrapping_add(operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)));
+    let origin = tiles.wrapping_sub(camera).wrapping_add(operation::div_2(
+        get_drawable_width(ctx)?.wrapping_add(-0x3c0),
+    ));
     let floor = 0x280i32.wrapping_sub(scenery);
     let mut offset = -0x780i32;
 
     while offset != 0xf00 {
         let x = origin.wrapping_add(offset);
 
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, floor, 0x3c0, scenery, 0);
+        draw_cut_scaled(
+            draw_context(&mut ctx.draw)?,
+            sheet,
+            x,
+            floor,
+            0x3c0,
+            scenery,
+            0,
+        );
 
         if bg_has_upper_layer(ctx, AppContext::BG_SETUP)? != 0 {
-            draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, -0x280, 0x3c0, 0x280, 0x14);
+            draw_cut_scaled(
+                draw_context(&mut ctx.draw)?,
+                sheet,
+                x,
+                -0x280,
+                0x3c0,
+                0x280,
+                0x14,
+            );
         }
 
         offset = offset.wrapping_add(0x3c0);

@@ -2,9 +2,12 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{json_next_token, json_parse_array, json_parse_value, JsonNode, JsonParser};
+use super::{JsonNode, JsonParser, json_next_token, json_parse_array, json_parse_value};
 
-pub fn json_parse_object(parser: &mut JsonParser, members: &mut BTreeMap<Vec<u8>, JsonNode>) -> Result<bool, Fault> {
+pub fn json_parse_object(
+    parser: &mut JsonParser,
+    members: &mut BTreeMap<Vec<u8>, JsonNode>,
+) -> Result<bool, Fault> {
     let mut token = json_next_token(parser);
     let mut key: Vec<u8> = Vec::new();
 

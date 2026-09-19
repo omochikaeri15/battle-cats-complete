@@ -1,18 +1,24 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_button_unit_id, get_scene_id, load_unit_icon, load_unit_rig, query_localizable, texture_cache_load, AppContext};
+use super::{
+    AppContext, get_button_unit_id, get_scene_id, load_unit_icon, load_unit_rig, query_localizable,
+    texture_cache_load,
+};
 
 const SITE: &str = "scene_background_setup";
 
 pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
     match get_scene_id(ctx)? {
         0x61 => {
-            ctx.download_sheet = texture_cache_load(ctx, b"download.png", b"download.imgcut", 0x2601)?;
+            ctx.download_sheet =
+                texture_cache_load(ctx, b"download.png", b"download.imgcut", 0x2601)?;
 
             Ok(())
         }
         0x64 => {
-            ctx.scene_host().ok_or(Fault::HostMissing { site: SITE })?.scene_background_setup();
+            ctx.scene_host()
+                .ok_or(Fault::HostMissing { site: SITE })?
+                .scene_background_setup();
 
             Ok(())
         }
@@ -27,7 +33,13 @@ pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
                 pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK + slot * 4)?);
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32 == -1 {
+                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 1,
+                })? as i32
+                    == -1
+                {
                     let png = query_localizable(ctx, b"uni.png");
                     let cut = query_localizable(ctx, b"uni.imgcut");
 

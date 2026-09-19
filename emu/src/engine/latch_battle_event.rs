@@ -26,7 +26,12 @@ pub fn latch_battle_event(latch: &mut BattleEventLatch, faction: i32, kind: i32)
     }
 
     if (incoming as u32) >= (current as u32) {
-        let gate = latch.gates.entry(kind).or_default().entry(faction).or_default()[0];
+        let gate = latch
+            .gates
+            .entry(kind)
+            .or_default()
+            .entry(faction)
+            .or_default()[0];
 
         if gate != 0.0 || gate.is_nan() {
             latch.faction = faction;

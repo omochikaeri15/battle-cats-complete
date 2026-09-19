@@ -2,7 +2,10 @@ use std::{cell, rc::Rc};
 
 use crate::Fault;
 
-use super::{open_asset_stream, read_asset_stream_line, read_csv_cell, read_csv_row, AppContext, AssetStream, Cell, Imgcut};
+use super::{
+    AppContext, AssetStream, Cell, Imgcut, open_asset_stream, read_asset_stream_line,
+    read_csv_cell, read_csv_row,
+};
 
 pub const PART_STRIDE: usize = 0xb0;
 
@@ -19,7 +22,9 @@ pub struct MamodelPart {
 
 impl Default for MamodelPart {
     fn default() -> Self {
-        Self { raw: [0; PART_STRIDE] }
+        Self {
+            raw: [0; PART_STRIDE],
+        }
     }
 }
 
@@ -170,7 +175,9 @@ pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> R
     read_csv_row(stm);
     let anchor_count = read_csv_cell(stm, 0) as i32;
     model.anchor_count = anchor_count;
-    model.anchors.resize(anchor_count as i64 as usize, MamodelAnchor::default());
+    model
+        .anchors
+        .resize(anchor_count as i64 as usize, MamodelAnchor::default());
 
     for row in 0..model.anchors.len() {
         read_csv_row(stm);

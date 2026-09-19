@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_setting, AppContext};
+use super::{AppContext, get_setting};
 
 const SITE: &str = "camera_vertical_correction";
 
@@ -8,15 +8,21 @@ pub fn camera_vertical_correction(ctx: &AppContext) -> Result<i32, Fault> {
     let slot_y = get_setting(&ctx.settings, b"battle_zoom_slot_y", 0x208)?;
 
     let zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
-    let anchor = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
+    let anchor = ctx
+        .i32_at(AppContext::BATTLE_ZOOM_Y)?
+        .wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
     let scaled = if ctx.u8_at(AppContext::DECK_TWO_LINES)? != 0 {
-        get_setting(&ctx.settings, b"battle_slot_2lines_y", -0x28)?.wrapping_add(slot_y).wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?)
+        get_setting(&ctx.settings, b"battle_slot_2lines_y", -0x28)?
+            .wrapping_add(slot_y)
+            .wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?)
     } else {
         slot_y.wrapping_mul(zoom)
     };
 
-    let mut limit = ctx.deck_bar_base_y.wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
+    let mut limit = ctx
+        .deck_bar_base_y
+        .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
     let mut correction = 0i32;
 
     limit = limit.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
@@ -38,7 +44,9 @@ pub fn camera_vertical_correction(ctx: &AppContext) -> Result<i32, Fault> {
         let overshoot = bottom.wrapping_sub(limit).wrapping_mul(0x2710);
         let divisor = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
 
-        correction = correction.wrapping_sub(operation::idiv(overshoot, divisor).ok_or(Fault::divide(SITE, divisor as i64))?);
+        correction = correction.wrapping_sub(
+            operation::idiv(overshoot, divisor).ok_or(Fault::divide(SITE, divisor as i64))?,
+        );
     }
 
     Ok(correction)

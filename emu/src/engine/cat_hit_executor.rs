@@ -3,9 +3,11 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    abs_i32, call_rng, cat_attack_dispatch, get_entity_state, get_explosion_anchor, get_explosion_chance, get_explosion_span, get_metal_killer_pct,
-    get_mini_surge, get_pos_x, get_soulstrike, get_surge_anchor, get_surge_chance, get_surge_level, get_surge_span, get_wave_chance, get_wave_level,
-    get_wave_mini, has_attack_abilities, is_attack_long_range, roll_procs, AppContext, Entity, SurgeEvent, WaveRecord,
+    AppContext, Entity, SurgeEvent, WaveRecord, abs_i32, call_rng, cat_attack_dispatch,
+    get_entity_state, get_explosion_anchor, get_explosion_chance, get_explosion_span,
+    get_metal_killer_pct, get_mini_surge, get_pos_x, get_soulstrike, get_surge_anchor,
+    get_surge_chance, get_surge_level, get_surge_span, get_wave_chance, get_wave_level,
+    get_wave_mini, has_attack_abilities, is_attack_long_range, roll_procs,
 };
 
 const SITE: &str = "cat_hit_executor";
@@ -22,7 +24,12 @@ pub struct ExplosionEvent {
     pub hits: BTreeMap<i32, [u8; 5]>,
 }
 
-pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack: i32) -> Result<(), Fault> {
+pub fn cat_hit_executor(
+    ctx: &mut AppContext,
+    slot: i32,
+    targets: &[i32],
+    attack: i32,
+) -> Result<(), Fault> {
     roll_procs(ctx, 0, slot, attack)?;
 
     let crit = ctx.i32_at(AppContext::PROC_ROLLS)?;
@@ -41,7 +48,11 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
     let mut index = 0usize;
 
     while index < targets.len() {
-        let target = *targets.get(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: targets.len() as i64 })?;
+        let target = *targets.get(index).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: index as i64,
+            limit: targets.len() as i64,
+        })?;
 
         if cat_attack_dispatch(
             ctx,
@@ -64,11 +75,20 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
             100,
         )? {
             if get_soulstrike(ctx, 0, slot)? && get_entity_state(ctx, 1, target)? == 0xe {
-                ctx.set_i32_at(AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE), 2)?;
+                ctx.set_i32_at(
+                    AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE),
+                    2,
+                )?;
             } else if is_attack_long_range(ctx, 0, slot, attack)? {
-                ctx.set_i32_at(AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE), 1)?;
+                ctx.set_i32_at(
+                    AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE),
+                    1,
+                )?;
             } else {
-                ctx.set_i32_at(AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE), 0)?;
+                ctx.set_i32_at(
+                    AppContext::entity_field(1, target, Entity::HIT_SPARK_TYPE),
+                    0,
+                )?;
             }
         }
 
@@ -105,15 +125,20 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
             let mut pair = 0usize;
 
             loop {
-                let first = AppContext::WAVE_RECORDS.wrapping_add(pair.wrapping_mul(AppContext::WAVE_RECORD_STRIDE * 2));
+                let first = AppContext::WAVE_RECORDS
+                    .wrapping_add(pair.wrapping_mul(AppContext::WAVE_RECORD_STRIDE * 2));
                 let second = first.wrapping_add(AppContext::WAVE_RECORD_STRIDE);
                 let free;
                 let wave_index;
 
-                if ctx.i32_at(first.wrapping_add(WaveRecord::KIND))? == 0 && ctx.i32_at(first.wrapping_add(WaveRecord::IN_USE))? == 0 {
+                if ctx.i32_at(first.wrapping_add(WaveRecord::KIND))? == 0
+                    && ctx.i32_at(first.wrapping_add(WaveRecord::IN_USE))? == 0
+                {
                     free = first;
                     wave_index = pair.wrapping_mul(2);
-                } else if ctx.i32_at(second.wrapping_add(WaveRecord::KIND))? == 0 && ctx.i32_at(second.wrapping_add(WaveRecord::IN_USE))? == 0 {
+                } else if ctx.i32_at(second.wrapping_add(WaveRecord::KIND))? == 0
+                    && ctx.i32_at(second.wrapping_add(WaveRecord::IN_USE))? == 0
+                {
                     free = second;
                     wave_index = pair.wrapping_mul(2).wrapping_add(1);
                 } else {
@@ -143,12 +168,20 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
                 ctx.set_i32_at(free.wrapping_add(WaveRecord::LEVEL), level)?;
                 ctx.set_i32_at(free.wrapping_add(WaveRecord::ATTACK), attack)?;
                 ctx.set_block_at::<12>(free.wrapping_add(WaveRecord::PROC_FLAGS), proc_flags)?;
-                ctx.set_i32_at(free.wrapping_add(WaveRecord::METAL_KILLER_PCT), metal_killer_pct)?;
+                ctx.set_i32_at(
+                    free.wrapping_add(WaveRecord::METAL_KILLER_PCT),
+                    metal_killer_pct,
+                )?;
 
                 let mut victim = 0usize;
 
                 while victim != 51 {
-                    ctx.set_block_at::<1>(AppContext::WAVE_HITS.wrapping_add(victim.wrapping_mul(200)).wrapping_add(wave_index), [0])?;
+                    ctx.set_block_at::<1>(
+                        AppContext::WAVE_HITS
+                            .wrapping_add(victim.wrapping_mul(200))
+                            .wrapping_add(wave_index),
+                        [0],
+                    )?;
                     victim += 1;
                 }
 
@@ -169,10 +202,18 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
             let x = get_pos_x(ctx, 0, slot)?;
             let anchor = get_surge_anchor(ctx, 0, slot)?;
             let reach = call_rng(ctx, abs_i32(get_surge_span(ctx, 0, slot)?));
-            let offset = if get_surge_span(ctx, 0, slot)? > 0 { reach.wrapping_neg() } else { reach };
+            let offset = if get_surge_span(ctx, 0, slot)? > 0 {
+                reach.wrapping_neg()
+            } else {
+                reach
+            };
             let level = get_surge_level(ctx, 0, slot)?;
             let mini = get_mini_surge(ctx, 0, slot)? != 0;
-            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 0,
+            })?;
 
             event.faction = 0;
             event.slot = slot;
@@ -198,8 +239,19 @@ pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack
 
             let x = get_pos_x(ctx, 0, slot)?.wrapping_sub(get_explosion_anchor(ctx, 0, slot)?);
             let reach = call_rng(ctx, abs_i32(get_explosion_span(ctx, 0, slot)?));
-            let offset = if get_explosion_span(ctx, 0, slot)? > 0 { reach.wrapping_neg() } else { reach };
-            let event = ctx.explosion_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+            let offset = if get_explosion_span(ctx, 0, slot)? > 0 {
+                reach.wrapping_neg()
+            } else {
+                reach
+            };
+            let event = ctx
+                .explosion_events
+                .last_mut()
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 0,
+                })?;
 
             event.faction = 0;
             event.slot = slot;

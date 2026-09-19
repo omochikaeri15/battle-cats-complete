@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 const SITE: &str = "get_cannon_effect";
 
@@ -19,7 +19,7 @@ pub struct CannonPart {
     pub makes_wave: u8,
     pub unit_id: i32,
     pub recoil: u8,
-    pub ready_fx: u8,
+    pub ready_vfx: u8,
     pub soulstrike: u8,
     pub growth: BTreeMap<i32, Vec<CannonGrowthStep>>,
 }
@@ -46,33 +46,76 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
         let progress = level.wrapping_sub(from_level);
 
         if level >= from_level {
-            let out_of_range = Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: steps.len() as i64 };
+            let out_of_range = Fault::IndexOutOfRange {
+                site: SITE,
+                index: step as i64,
+                limit: steps.len() as i64,
+            };
 
-            if part.growth.entry(effect).or_default().get(step).ok_or(out_of_range.clone())?.lv2 >= level {
-                let easing = part.growth.entry(effect).or_default().get(step).ok_or(out_of_range.clone())?.easing;
-                let lv2 = part.growth.entry(effect).or_default().get(step).ok_or(out_of_range.clone())?.lv2;
-                let value1 = part.growth.entry(effect).or_default().get(step).ok_or(out_of_range.clone())?.value1;
-                let value2 = part.growth.entry(effect).or_default().get(step).ok_or(out_of_range)?.value2;
+            if part
+                .growth
+                .entry(effect)
+                .or_default()
+                .get(step)
+                .ok_or(out_of_range.clone())?
+                .lv2
+                >= level
+            {
+                let easing = part
+                    .growth
+                    .entry(effect)
+                    .or_default()
+                    .get(step)
+                    .ok_or(out_of_range.clone())?
+                    .easing;
+                let lv2 = part
+                    .growth
+                    .entry(effect)
+                    .or_default()
+                    .get(step)
+                    .ok_or(out_of_range.clone())?
+                    .lv2;
+                let value1 = part
+                    .growth
+                    .entry(effect)
+                    .or_default()
+                    .get(step)
+                    .ok_or(out_of_range.clone())?
+                    .value1;
+                let value2 = part
+                    .growth
+                    .entry(effect)
+                    .or_default()
+                    .get(step)
+                    .ok_or(out_of_range)?
+                    .value2;
 
                 match easing {
                     2 => {
                         let span = value2.wrapping_sub(value1) as f32;
                         let ratio = progress as f32 / lv2.wrapping_sub(from_level) as f32;
 
-                        value = operation::cvttss2si(value1 as f32 + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span);
+                        value = operation::cvttss2si(
+                            value1 as f32 + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span,
+                        );
                     }
                     1 => {
                         let span = value2.wrapping_sub(value1) as f32;
                         let ratio = progress as f32 / lv2.wrapping_sub(from_level) as f32;
 
-                        value = operation::cvttss2si(operation::powf(ratio, 3.0) * span + value1 as f32);
+                        value = operation::cvttss2si(
+                            operation::powf(ratio, 3.0) * span + value1 as f32,
+                        );
                     }
                     0 => {
                         let divisor = lv2.wrapping_sub(from_level);
 
-                        value = operation::idiv(value2.wrapping_sub(value1).wrapping_mul(progress), divisor)
-                            .ok_or(Fault::divide(SITE, divisor as i64))?
-                            .wrapping_add(value1);
+                        value = operation::idiv(
+                            value2.wrapping_sub(value1).wrapping_mul(progress),
+                            divisor,
+                        )
+                        .ok_or(Fault::divide(SITE, divisor as i64))?
+                        .wrapping_add(value1);
                     }
                     _ => value = 0,
                 }
@@ -81,7 +124,17 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
             }
         }
 
-        from_level = part.growth.entry(effect).or_default().get(step).ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: 0 })?.lv2;
+        from_level = part
+            .growth
+            .entry(effect)
+            .or_default()
+            .get(step)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: step as i64,
+                limit: 0,
+            })?
+            .lv2;
         step += 1;
     }
 

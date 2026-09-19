@@ -28,7 +28,16 @@ pub struct Button {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn new_button_init(button: &mut Button, id: i32, x: i32, y: i32, width: i32, height: i32, node: Option<Box<Sprite>>, handler: Option<ButtonHandler>) {
+pub fn new_button_init(
+    button: &mut Button,
+    id: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    node: Option<Box<Sprite>>,
+    handler: Option<ButtonHandler>,
+) {
     button.id = id;
     button.x = x;
     button.y = y;

@@ -1,11 +1,13 @@
 use crate::Fault;
 
 use super::{
-    aku_realm_final_redirect, ex_redirect_check_a, ex_redirect_check_b, ex_redirect_check_c, ex_replacement_pending, get_ex_option_target,
-    get_global_map_id, get_map_index, get_map_type, get_stage_count, get_stage_set_size, invasion_available, invasion_z_available,
-    load_enemy_castle_csv, load_ex_map_stage_csv, map_index_of_map_id, map_type_as_index, map_type_base_id, open_asset_stream,
-    pack_entry_text, read_csv_cell, read_csv_row, set_scene, string_format_int, string_format_int2, string_format_int2_text, validate_map_type,
-    AppContext, AssetStream,
+    AppContext, AssetStream, aku_realm_final_redirect, ex_redirect_check_a, ex_redirect_check_b,
+    ex_redirect_check_c, ex_replacement_pending, get_ex_option_target, get_global_map_id,
+    get_map_index, get_map_type, get_stage_count, get_stage_set_size, invasion_available,
+    invasion_z_available, load_enemy_castle_csv, load_ex_map_stage_csv, map_index_of_map_id,
+    map_type_as_index, map_type_base_id, open_asset_stream, pack_entry_text, read_csv_cell,
+    read_csv_row, set_scene, string_format_int, string_format_int2, string_format_int2_text,
+    validate_map_type,
 };
 
 const SITE: &str = "load_map_stage_csv";
@@ -37,7 +39,15 @@ const LEGEND_FILES: [&[u8]; 5] = [
     b"MapStageDataR_%03d.csv",
 ];
 
-pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack: u8, saga: u8, ex: u8, redirect: u8) -> Result<bool, Fault> {
+pub fn load_map_stage_csv(
+    ctx: &mut AppContext,
+    map: i32,
+    stage: i32,
+    check_pack: u8,
+    saga: u8,
+    ex: u8,
+    redirect: u8,
+) -> Result<bool, Fault> {
     if check_pack != 0 {
         let key = ctx.data_pack_key.clone();
         let entry = pack_entry_text(ctx, &key)?;
@@ -63,7 +73,10 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
 
             let name = string_format_int2(ctx, b"stageNormal%d_%d.csv", map, stage)?;
 
-            (open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(), false)
+            (
+                open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(),
+                false,
+            )
         } else {
             ctx.set_block_at::<0x300>(AppContext::MAP_COORDS, [0; 0x300])?;
 
@@ -76,7 +89,10 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
                     read_csv_row(&mut stm);
 
                     for col in 0..4usize {
-                        ctx.set_i32_at(AppContext::MAP_COORDS + row * 0x10 + col * 4, read_csv_cell(&stm, col as i32) as i32)?;
+                        ctx.set_i32_at(
+                            AppContext::MAP_COORDS + row * 0x10 + col * 4,
+                            read_csv_cell(&stm, col as i32) as i32,
+                        )?;
                     }
                 }
             }
@@ -87,14 +103,20 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
 
                     let name = string_format_int2(ctx, b"stageNormal%d_%d.csv", map, stage)?;
 
-                    (open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(), false)
+                    (
+                        open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(),
+                        false,
+                    )
                 }
                 0 => {
                     load_enemy_castle_csv(ctx, 0)?;
 
                     let name = string_format_int(ctx, b"stageNormal%d.csv", 0)?;
 
-                    (open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(), true)
+                    (
+                        open_asset_stream(ctx, &name, 0, 0)?.unwrap_or_default(),
+                        true,
+                    )
                 }
                 _ => (Vec::new(), false),
             }
@@ -138,7 +160,11 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
 
         ctx.set_block_at::<1>(AppContext::OUTBREAKS_ENABLED, [1])?;
 
-        let chapter = if is_saga { stage } else { map.wrapping_mul(3).wrapping_add(stage).wrapping_add(1) };
+        let chapter = if is_saga {
+            stage
+        } else {
+            map.wrapping_mul(3).wrapping_add(stage).wrapping_add(1)
+        };
 
         if !ctx.outbreak_active.is_empty() {
             let name = string_format_int2(ctx, b"stageNormal%d_%d_Z.csv", map, stage)?;
@@ -154,7 +180,12 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
                 loop {
                     read_csv_row(&mut stm);
 
-                    let active = *ctx.outbreak_active.entry(chapter).or_default().entry(row as i32).or_default();
+                    let active = *ctx
+                        .outbreak_active
+                        .entry(chapter)
+                        .or_default()
+                        .entry(row as i32)
+                        .or_default();
 
                     if active {
                         let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
@@ -182,11 +213,27 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
             }
         }
 
-        let chapter = if is_saga { stage } else { map.wrapping_mul(3).wrapping_add(stage).wrapping_add(1) };
+        let chapter = if is_saga {
+            stage
+        } else {
+            map.wrapping_mul(3).wrapping_add(stage).wrapping_add(1)
+        };
 
-        if (invasion_available(ctx, chapter)? || invasion_z_available(ctx, chapter)?) && ctx.u8_at(AppContext::INVASION_STAGE)? != 0xff {
-            let suffix: &[u8] = if invasion_available(ctx, chapter)? { b"" } else { b"_Z" };
-            let name = string_format_int2_text(ctx, b"stageNormal%d_%d_Invasion%s.csv", map, stage, suffix)?;
+        if (invasion_available(ctx, chapter)? || invasion_z_available(ctx, chapter)?)
+            && ctx.u8_at(AppContext::INVASION_STAGE)? != 0xff
+        {
+            let suffix: &[u8] = if invasion_available(ctx, chapter)? {
+                b""
+            } else {
+                b"_Z"
+            };
+            let name = string_format_int2_text(
+                ctx,
+                b"stageNormal%d_%d_Invasion%s.csv",
+                map,
+                stage,
+                suffix,
+            )?;
 
             if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
                 let mut stm = AssetStream::new(&bytes, b'\n');
@@ -199,13 +246,15 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
                     for col in 0..0x2eusize {
                         let value = read_csv_cell(&stm, col as i32) as i32;
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
-                        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                        let row_at =
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
                         let key = ctx.i32_at(row_at + 0xb8)?;
 
                         ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
-                        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                        let row_at =
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
 
                         if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
                             break;
@@ -220,7 +269,9 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
 
     let map_type = ctx.i32_at(AppContext::SAVED_MAP_TYPE)?;
     let name = if (0..=4).contains(&map_type) {
-        if ctx.u8_at(AppContext::ALL_MAPS_OPEN)? == 0 && ctx.i32_at(AppContext::STORY_MAP_COUNTS + map_type as usize * 4)? <= map {
+        if ctx.u8_at(AppContext::ALL_MAPS_OPEN)? == 0
+            && ctx.i32_at(AppContext::STORY_MAP_COUNTS + map_type as usize * 4)? <= map
+        {
             return Ok(false);
         }
 
@@ -264,14 +315,22 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
     read_csv_row(&mut stm);
     ctx.set_i32_at(AppContext::MAP_DATA_ID, read_csv_cell(&stm, 0) as i32)?;
 
-    let options = [read_csv_cell(&stm, 3) as i32, read_csv_cell(&stm, 4) as i32, read_csv_cell(&stm, 5) as i32, read_csv_cell(&stm, 6) as i32];
+    let options = [
+        read_csv_cell(&stm, 3) as i32,
+        read_csv_cell(&stm, 4) as i32,
+        read_csv_cell(&stm, 5) as i32,
+        read_csv_cell(&stm, 6) as i32,
+    ];
     let reward = read_csv_cell(&stm, 1) as i32;
     let reward = if reward < 0x190 { reward } else { -1 };
 
     ctx.set_i32_at(AppContext::EVENT_REWARD_ID, reward)?;
 
     if reward != -1 {
-        let base = map_type_base_id(validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?), map);
+        let base = map_type_base_id(
+            validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?),
+            map,
+        );
 
         *ctx.event_reward_maps.entry(base).or_default() = reward;
     }
@@ -282,7 +341,10 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
     ctx.set_i32_at(AppContext::RANKING_ID, ranking)?;
 
     if ranking != -1 {
-        let base = map_type_base_id(validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?), map);
+        let base = map_type_base_id(
+            validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?),
+            map,
+        );
 
         *ctx.ranking_maps.entry(base).or_default() = ranking;
     }
@@ -295,12 +357,28 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
         let data_id = ctx.i32_at(AppContext::MAP_DATA_ID)?;
         let kind = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
 
-        *ctx.map_data_ids.entry(kind).or_insert_with(|| vec![0; 0x1f4]).get_mut(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: map as i64, limit: 0x1f4 })? = data_id;
+        *ctx.map_data_ids
+            .entry(kind)
+            .or_insert_with(|| vec![0; 0x1f4])
+            .get_mut(slot)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: map as i64,
+                limit: 0x1f4,
+            })? = data_id;
 
         let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
         let kind = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
 
-        *ctx.map_stage_sets.entry(kind).or_insert_with(|| vec![0; 0x1f4]).get_mut(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: map as i64, limit: 0x1f4 })? = set;
+        *ctx.map_stage_sets
+            .entry(kind)
+            .or_insert_with(|| vec![0; 0x1f4])
+            .get_mut(slot)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: map as i64,
+                limit: 0x1f4,
+            })? = set;
 
         for (column, value) in options.into_iter().enumerate() {
             let kind = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
@@ -309,7 +387,11 @@ pub fn load_map_stage_csv(ctx: &mut AppContext, map: i32, stage: i32, check_pack
                 .entry(kind)
                 .or_insert_with(|| vec![[0; 4]; 0x1f4])
                 .get_mut(slot)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: map as i64, limit: 0x1f4 })?;
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: map as i64,
+                    limit: 0x1f4,
+                })?;
 
             row[column] = value;
         }

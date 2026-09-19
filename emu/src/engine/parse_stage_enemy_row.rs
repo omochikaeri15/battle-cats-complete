@@ -1,4 +1,4 @@
-use super::{get_column_count, read_csv_cell, AssetStream, STAGE_ENEMY_COLUMNS};
+use super::{AssetStream, STAGE_ENEMY_COLUMNS, get_column_count, read_csv_cell};
 
 pub fn parse_stage_enemy_row(entry: &mut [i32; STAGE_ENEMY_COLUMNS], stm: &AssetStream<'_>) -> i64 {
     *entry = [0; STAGE_ENEMY_COLUMNS];

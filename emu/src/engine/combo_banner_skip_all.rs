@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{combo_banner_pending, set_combo_banner_pending, AppContext};
+use super::{AppContext, combo_banner_pending, set_combo_banner_pending};
 
 pub fn combo_banner_skip_all(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_block_at::<16>(AppContext::COMBO_BANNER_STATE, [0; 16])?;

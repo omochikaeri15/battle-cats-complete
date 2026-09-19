@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 pub fn std_stoi(text: &[u8], idx: Option<&mut usize>, base: i32) -> Result<i32, Fault> {
     let parsed = operation::strtol(text, base);

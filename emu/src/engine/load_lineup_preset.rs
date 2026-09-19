@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{json_parse_object_document, json_source_from_string, open_asset_stream, parse_lineup_preset, AppContext};
+use super::{
+    AppContext, json_parse_object_document, json_source_from_string, open_asset_stream,
+    parse_lineup_preset,
+};
 
 pub fn load_lineup_preset(ctx: &mut AppContext, name: &[u8]) -> Result<(), Fault> {
     ctx.fixed_lineup_store.units.clear();

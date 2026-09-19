@@ -1,10 +1,17 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_button_unit_row, get_deploy_cost, get_global_map_id, get_special_rule_params, read_flag, AppContext};
+use super::{
+    AppContext, get_button_unit_row, get_deploy_cost, get_global_map_id, get_special_rule_params,
+    read_flag,
+};
 
 const SITE: &str = "get_effective_deploy_cost";
 
-pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32) -> Result<i32, Fault> {
+pub fn get_effective_deploy_cost(
+    ctx: &mut AppContext,
+    faction: i32,
+    button: i32,
+) -> Result<i32, Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
         return Ok(0);
     }
@@ -19,7 +26,11 @@ pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32
         && ctx.i32_at(escalating)? != 0
     {
         let params = params.to_vec();
-        let mode = *params.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+        let mode = *params.first().ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: 0,
+            limit: 0,
+        })?;
         let mut total = ctx.i32_at(escalating)?;
         let scaled;
 
@@ -31,22 +42,33 @@ pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32
                 if read_flag(ctx, AppContext::faction_flags(1))? & 1 != 0 {
                     let row = get_button_unit_row(ctx, 1, button)?;
 
-                    rule_form = ctx.i32_at(((row as i64) * 4 + AppContext::FACTION_1_UNIT_FORMS as i64) as usize)?;
+                    rule_form = ctx.i32_at(
+                        ((row as i64) * 4 + AppContext::FACTION_1_UNIT_FORMS as i64) as usize,
+                    )?;
                 }
             } else if faction == 0 && button as u32 <= 9 {
-                rule_form = ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + (button as u32 as usize) * 4)?;
+                rule_form =
+                    ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + (button as u32 as usize) * 4)?;
             }
 
             let cost = get_deploy_cost(ctx, unit_id, rule_form, 1, button)?;
 
             if params.len() <= 1 {
-                return Err(Fault::IndexOutOfRange { site: SITE, index: 1, limit: params.len() as i64 });
+                return Err(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 1,
+                    limit: params.len() as i64,
+                });
             }
 
             scaled = Some(cost as i64);
         } else if mode == 1 {
             if params.len() <= 1 {
-                return Err(Fault::IndexOutOfRange { site: SITE, index: 1, limit: params.len() as i64 });
+                return Err(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 1,
+                    limit: params.len() as i64,
+                });
             }
 
             scaled = Some(ctx.i32_at(escalating)? as i64);
@@ -63,7 +85,11 @@ pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32
         }
 
         if params.len() <= 2 {
-            return Err(Fault::IndexOutOfRange { site: SITE, index: 2, limit: params.len() as i64 });
+            return Err(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 2,
+                limit: params.len() as i64,
+            });
         }
 
         let cap = params[2].wrapping_mul(0x64);
@@ -77,7 +103,8 @@ pub fn get_effective_deploy_cost(ctx: &mut AppContext, faction: i32, button: i32
         if read_flag(ctx, AppContext::faction_flags(1))? & 1 != 0 {
             let row = get_button_unit_row(ctx, 1, button)?;
 
-            form = ctx.i32_at(((row as i64) * 4 + AppContext::FACTION_1_UNIT_FORMS as i64) as usize)?;
+            form =
+                ctx.i32_at(((row as i64) * 4 + AppContext::FACTION_1_UNIT_FORMS as i64) as usize)?;
         }
     } else if faction == 0 && button as u32 <= 9 {
         form = ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + (button as u32 as usize) * 4)?;

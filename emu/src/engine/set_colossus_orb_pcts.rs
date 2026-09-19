@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{read_flag, AppContext, Entity};
+use super::{AppContext, Entity, read_flag};
 
 pub fn set_colossus_orb_pcts(
     ctx: &mut AppContext,
@@ -13,6 +13,12 @@ pub fn set_colossus_orb_pcts(
         return Ok(());
     }
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::COLOSSUS_ORB_ATK_PCT), attack_pct)?;
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::COLOSSUS_ORB_DEF_PCT), defense_pct)
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::COLOSSUS_ORB_ATK_PCT),
+        attack_pct,
+    )?;
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::COLOSSUS_ORB_DEF_PCT),
+        defense_pct,
+    )
 }

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_scene_id, AppContext, SpecialRuleStore};
+use super::{AppContext, SpecialRuleStore, get_scene_id};
 
 pub fn is_fever_active(ctx: &AppContext, store: &SpecialRuleStore) -> Result<bool, Fault> {
     let battle = get_scene_id(ctx)? == 0x12c;

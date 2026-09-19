@@ -7,7 +7,7 @@ mod xor_row_decode;
 
 pub use strtod::strtod;
 pub use strtof::strtof;
-pub use strtol::{strtol, Strtol};
+pub use strtol::{Strtol, strtol};
 pub use strtoull::strtoull;
 pub use xor_cell_decode::xor_cell_decode;
 pub use xor_row_decode::xor_row_decode;
@@ -30,7 +30,8 @@ pub fn slli_epi32(lanes: [u8; 16], count: u32) -> [u8; 16] {
     for dword in 0..4 {
         let mut word = [0u8; 4];
         word.copy_from_slice(&lanes[dword * 4..dword * 4 + 4]);
-        out[dword * 4..dword * 4 + 4].copy_from_slice(&(i32::from_le_bytes(word) << count).to_le_bytes());
+        out[dword * 4..dword * 4 + 4]
+            .copy_from_slice(&(i32::from_le_bytes(word) << count).to_le_bytes());
     }
 
     out
@@ -53,12 +54,20 @@ pub fn div_2<T: Truncating>(x: T) -> T {
     x / T::from(2)
 }
 
+pub fn div_3<T: Truncating>(x: T) -> T {
+    x / T::from(3)
+}
+
 pub fn div_4<T: Truncating>(x: T) -> T {
     x / T::from(4)
 }
 
 pub fn div_5<T: Truncating>(x: T) -> T {
     x / T::from(5)
+}
+
+pub fn div_7<T: Truncating>(x: T) -> T {
+    x / T::from(7)
 }
 
 pub fn div_10<T: Truncating>(x: T) -> T {
@@ -195,6 +204,10 @@ pub fn div_neg_100<T: Truncating>(x: T) -> T {
 
 pub fn div_neg_200<T: Truncating>(x: T) -> T {
     x / T::from(-200)
+}
+
+pub fn div_neg_30<T: Truncating>(x: T) -> T {
+    x / T::from(-30)
 }
 
 pub fn div_neg_20<T: Truncating>(x: T) -> T {

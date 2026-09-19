@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, AppContext};
+use super::{AppContext, get_map_type};
 
 pub fn get_map_index(ctx: &mut AppContext, base_only: u8) -> Result<i32, Fault> {
     if get_map_type(ctx, 0)? == -2 || get_map_type(ctx, 0)? == -0xc {

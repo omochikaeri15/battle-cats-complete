@@ -3,5 +3,8 @@ use crate::Fault;
 use super::{AppContext, Base};
 
 pub fn set_cannon_base_damage(ctx: &mut AppContext, faction: i32, value: i32) -> Result<(), Fault> {
-    ctx.set_i32_at(AppContext::entity_field(faction, 0, Base::CANNON_BASE_DAMAGE), value)
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, 0, Base::CANNON_BASE_DAMAGE),
+        value,
+    )
 }

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{medal_awarded, AppContext};
+use super::{AppContext, medal_awarded};
 
 #[derive(Clone, Default)]
 pub struct EnigmaGroup {
@@ -62,7 +62,11 @@ pub fn enigma_add_stamina(ctx: &mut AppContext, amount: i32) -> Result<(), Fault
     let mut index = 0usize;
 
     while index < ctx.enigma.medals.len() {
-        let medal = *ctx.enigma.medals.get(index).ok_or(Fault::IndexOutOfRange { site: "enigma_add_stamina", index: index as i64, limit: 0 })?;
+        let medal = *ctx.enigma.medals.get(index).ok_or(Fault::IndexOutOfRange {
+            site: "enigma_add_stamina",
+            index: index as i64,
+            limit: 0,
+        })?;
 
         owned = owned.wrapping_add(medal_awarded(ctx, medal) as i32);
         index += 1;

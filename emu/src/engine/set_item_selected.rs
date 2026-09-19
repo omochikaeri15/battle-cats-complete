@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, labyrinth_active, AppContext};
+use super::{AppContext, get_map_type, labyrinth_active};
 
 pub fn set_item_selected(ctx: &mut AppContext, item: i32, value: u8) -> Result<(), Fault> {
     if get_map_type(ctx, 0)? != -6 {
@@ -20,7 +20,11 @@ pub fn set_item_selected(ctx: &mut AppContext, item: i32, value: u8) -> Result<(
         3 if value == 0 => AppContext::POWERUP_CLEARED,
         _ => return Ok(()),
     };
-    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 { labyrinth_active(ctx)? as usize + 1 } else { 0 };
+    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 {
+        labyrinth_active(ctx)? as usize + 1
+    } else {
+        0
+    };
 
     ctx.set_block_at::<1>(slot + mode, [0])
 }

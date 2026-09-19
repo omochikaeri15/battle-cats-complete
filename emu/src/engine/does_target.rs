@@ -1,10 +1,14 @@
 use crate::Fault;
 
-use super::{is_aku, is_relic, read_flag, AppContext, Entity};
+use super::{AppContext, Entity, is_aku, is_relic, read_flag};
 
 pub fn does_target(ctx: &AppContext, faction: i32, slot: i32, target: i32) -> Result<bool, Fault> {
     if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::CURSE_TIMER))? > 0
-        && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::CURSE_LENGTH))? > 0
+        && ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::CURSE_LENGTH,
+        ))? > 0
     {
         return Ok(false);
     }
@@ -20,9 +24,17 @@ pub fn does_target(ctx: &AppContext, faction: i32, slot: i32, target: i32) -> Re
     }
 
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0
-        && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::TRAIT_FLOATING))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::TRAIT_FLOATING,
+        ))? != 0
         && read_flag(ctx, AppContext::faction_flags(other))? & 1 == 0
-        && ctx.i32_at(AppContext::entity_field(other, target, Entity::TRAIT_FLOATING))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            other,
+            target,
+            Entity::TRAIT_FLOATING,
+        ))? != 0
     {
         return Ok(true);
     }
@@ -50,13 +62,22 @@ pub fn does_target(ctx: &AppContext, faction: i32, slot: i32, target: i32) -> Re
     }
 
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0
-        || ctx.i32_at(AppContext::entity_field(faction, slot, Entity::TRAIT_TRAITLESS))? != 0
+        || ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::TRAIT_TRAITLESS,
+        ))? != 0
     {
         if read_flag(ctx, AppContext::faction_flags(other))? & 1 != 0 {
             return Ok(true);
         }
 
-        if ctx.i32_at(AppContext::entity_field(other, target, Entity::TRAIT_TRAITLESS))? != 0 {
+        if ctx.i32_at(AppContext::entity_field(
+            other,
+            target,
+            Entity::TRAIT_TRAITLESS,
+        ))? != 0
+        {
             return Ok(true);
         }
     }
@@ -78,9 +99,17 @@ pub fn does_target(ctx: &AppContext, faction: i32, slot: i32, target: i32) -> Re
     }
 
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0
-        && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::TRAIT_ZOMBIE))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::TRAIT_ZOMBIE,
+        ))? != 0
         && read_flag(ctx, AppContext::faction_flags(other))? & 1 == 0
-        && ctx.i32_at(AppContext::entity_field(other, target, Entity::TRAIT_ZOMBIE))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            other,
+            target,
+            Entity::TRAIT_ZOMBIE,
+        ))? != 0
     {
         return Ok(true);
     }
@@ -94,9 +123,17 @@ pub fn does_target(ctx: &AppContext, faction: i32, slot: i32, target: i32) -> Re
     }
 
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0
-        && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::TRAIT_EVA_ANGEL))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::TRAIT_EVA_ANGEL,
+        ))? != 0
         && read_flag(ctx, AppContext::faction_flags(other))? & 1 == 0
-        && ctx.i32_at(AppContext::entity_field(other, target, Entity::TRAIT_EVA_ANGEL))? != 0
+        && ctx.i32_at(AppContext::entity_field(
+            other,
+            target,
+            Entity::TRAIT_EVA_ANGEL,
+        ))? != 0
     {
         return Ok(true);
     }

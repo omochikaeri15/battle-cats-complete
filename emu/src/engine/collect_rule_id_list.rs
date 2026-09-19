@@ -5,7 +5,12 @@ pub fn collect_rule_id_list(store: &mut SpecialRuleStore, map_id: i32) -> Vec<i3
     let Some(rules) = store.maps.get(&map_id) else {
         return ids;
     };
-    let groups: Vec<i32> = rules.normal.keys().chain(rules.fever.keys()).copied().collect();
+    let groups: Vec<i32> = rules
+        .normal
+        .keys()
+        .chain(rules.fever.keys())
+        .copied()
+        .collect();
 
     for group in groups {
         if !store.rule_units.contains_key(&group) {

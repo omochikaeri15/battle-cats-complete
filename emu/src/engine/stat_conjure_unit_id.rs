@@ -1,8 +1,15 @@
 use crate::Fault;
 
-use super::{read_flag, AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats};
+use super::{
+    AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats, read_flag,
+};
 
-pub fn stat_conjure_unit_id(ctx: &AppContext, faction: i32, unit_id: i32, form: i32) -> Result<i32, Fault> {
+pub fn stat_conjure_unit_id(
+    ctx: &AppContext,
+    faction: i32,
+    unit_id: i32,
+    form: i32,
+) -> Result<i32, Fault> {
     if unit_id < -2 {
         return Ok(-1);
     }

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{get_global_map_id, get_stage_index, get_star_level, AppContext};
+use super::{AppContext, get_global_map_id, get_stage_index, get_star_level};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct FixedLineupRow {
@@ -29,7 +29,12 @@ pub struct FixedLineupStore {
     pub treasure_flags: BTreeMap<i32, bool>,
 }
 
-pub fn has_fixed_lineup(ctx: &mut AppContext, mut map_id: i32, mut stage: i32, mut level: i32) -> Result<bool, Fault> {
+pub fn has_fixed_lineup(
+    ctx: &mut AppContext,
+    mut map_id: i32,
+    mut stage: i32,
+    mut level: i32,
+) -> Result<bool, Fault> {
     if map_id == -1 {
         map_id = get_global_map_id(ctx, 0)?;
         stage = get_stage_index(ctx)?;

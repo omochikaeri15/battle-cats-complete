@@ -1,10 +1,13 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    app_on_draw, back_pressed, button_bank_busy, button_bank_find, connecting_indicator_show, dialog_close, dialog_show_alt, dialog_top, get_auto_camera_mode,
-    get_drawable_width, get_map_type, handle_battle_swipe_pinch, has_inquiry_code, hit_test_rect, labyrinth_active, new_button_set_touchable, play_sound,
-    query_localizable, ranking_name_by_id, ranking_rank_by_id, ranking_status_by_id, ranking_submit_score, sound_manager, string_format_rank_comment,
-    texture_cache_load, touch_is_down, touch_released, trial_win_update_lambda_1, AppContext,
+    AppContext, app_on_draw, back_pressed, button_bank_busy, button_bank_find,
+    connecting_indicator_show, dialog_close, dialog_show_alt, dialog_top, get_auto_camera_mode,
+    get_drawable_width, get_map_type, handle_battle_swipe_pinch, has_inquiry_code, hit_test_rect,
+    labyrinth_active, new_button_set_touchable, play_sound, query_localizable, ranking_name_by_id,
+    ranking_rank_by_id, ranking_status_by_id, ranking_submit_score, sound_manager,
+    string_format_rank_comment, texture_cache_load, touch_is_down, touch_released,
+    trial_win_update_lambda_1,
 };
 
 const SITE: &str = "trial_win_update";
@@ -24,11 +27,20 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     let frame = ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_add(1);
 
     ctx.set_i32_at(AppContext::RESULT_FRAME, frame)?;
-    ctx.set_i32_at(AppContext::RESULT_TICKS, ctx.i32_at(AppContext::RESULT_TICKS)?.wrapping_add(1))?;
+    ctx.set_i32_at(
+        AppContext::RESULT_TICKS,
+        ctx.i32_at(AppContext::RESULT_TICKS)?.wrapping_add(1),
+    )?;
 
     if phase == 0 {
-        ctx.set_i32_at(AppContext::CAMERA_ZOOM, ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320))?;
-        ctx.set_i32_at(AppContext::DECK_BAR_SLIDE, ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa))?;
+        ctx.set_i32_at(
+            AppContext::CAMERA_ZOOM,
+            ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320),
+        )?;
+        ctx.set_i32_at(
+            AppContext::DECK_BAR_SLIDE,
+            ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa),
+        )?;
 
         if get_auto_camera_mode(ctx)? != 0 {
             return Ok(true);
@@ -58,7 +70,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     if phase == 7 {
         if touch_is_down(ctx)? != 0 {
-            if ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? | ctx.u8_at(AppContext::CAMERA_DRAGGING)? != 0 {
+            if ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? | ctx.u8_at(AppContext::CAMERA_DRAGGING)?
+                != 0
+            {
                 ctx.set_block_at::<1>(AppContext::TOUCH_CAPTURED, [1])?;
             }
         } else if touch_released(ctx)? == 0 {
@@ -76,10 +90,14 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             ctx.set_i32_at(AppContext::RESULT_OK_PRESS, 0)?;
 
-            let status = ranking_status_by_id(&ctx.ranking_entries, ctx.i32_at(AppContext::MAP_INDEX)?);
+            let status =
+                ranking_status_by_id(&ctx.ranking_entries, ctx.i32_at(AppContext::MAP_INDEX)?);
 
             if get_map_type(ctx, 0)? == 4 && (status.wrapping_sub(1) as u32) <= 1 {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, ctx.i32_at(AppContext::RESULT_PHASE)?.wrapping_add(1))?;
+                ctx.set_i32_at(
+                    AppContext::RESULT_PHASE,
+                    ctx.i32_at(AppContext::RESULT_PHASE)?.wrapping_add(1),
+                )?;
             } else {
                 ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
                 ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
@@ -90,7 +108,8 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(false);
         }
 
-        if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)? | ctx.i32_at(AppContext::SWIPE_VELOCITY)? != 0 {
+        if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)? | ctx.i32_at(AppContext::SWIPE_VELOCITY)? != 0
+        {
             return Ok(true);
         }
 
@@ -98,12 +117,14 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
-        let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+        let share =
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 0)?;
 
         if labyrinth_active(ctx)? {
-            let labyrinth = button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+            let labyrinth =
+                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, labyrinth, 0)?;
         }
@@ -138,7 +159,10 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             && !button_bank_busy(&ctx.buttons)?;
 
         if released || back_pressed(ctx)? != 0 {
-            ctx.set_i32_at(AppContext::RESULT_OK_PRESS, ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1))?;
+            ctx.set_i32_at(
+                AppContext::RESULT_OK_PRESS,
+                ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1),
+            )?;
             play_sound(sound_manager(ctx)?, 0xb, None);
 
             return Ok(true);
@@ -164,12 +188,14 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 
-        let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+        let share =
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
         if labyrinth_active(ctx)? {
-            let labyrinth = button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+            let labyrinth =
+                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, labyrinth, 1)?;
         }
@@ -178,7 +204,10 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     if phase == 3 {
-        ctx.set_i32_at(AppContext::RESULT_OK_RECT, operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe))?;
+        ctx.set_i32_at(
+            AppContext::RESULT_OK_RECT,
+            operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
+        )?;
         ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, 0x280)?;
         ctx.set_i32_at(AppContext::RESULT_OK_RECT + 8, 0x17d)?;
         ctx.set_i32_at(AppContext::RESULT_OK_RECT + 0xc, 0x58)?;
@@ -195,7 +224,12 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             slide = limit;
         }
 
-        ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(slide).wrapping_add(0x278))?;
+        ctx.set_i32_at(
+            AppContext::RESULT_OK_RECT + 4,
+            ctx.i32_at(AppContext::LETTERBOX_SHIFT)?
+                .wrapping_sub(slide)
+                .wrapping_add(0x278),
+        )?;
 
         return Ok(true);
     }
@@ -212,8 +246,18 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let text = query_localizable(ctx, b"connecting");
 
         connecting_indicator_show(ctx, &text)?;
-        ctx.result_event_sheets[0] = texture_cache_load(ctx, b"img009_nekoDojo_001.png", b"img009_nekoDojo_001.imgcut", 0x2601)?;
-        ctx.result_event_sheets[1] = texture_cache_load(ctx, b"img009_nekoDojo_result.png", b"img009_nekoDojo_result.imgcut", 0x2601)?;
+        ctx.result_event_sheets[0] = texture_cache_load(
+            ctx,
+            b"img009_nekoDojo_001.png",
+            b"img009_nekoDojo_001.imgcut",
+            0x2601,
+        )?;
+        ctx.result_event_sheets[1] = texture_cache_load(
+            ctx,
+            b"img009_nekoDojo_result.png",
+            b"img009_nekoDojo_result.imgcut",
+            0x2601,
+        )?;
 
         if has_inquiry_code(ctx)? {
             let id = ctx.i32_at(AppContext::MAP_INDEX)?;
@@ -238,7 +282,8 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 
-        let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+        let share =
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
@@ -248,7 +293,14 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let name = query_localizable(ctx, &name);
         let message = string_format_rank_comment(ctx, &pattern, rank, &name)?;
 
-        dialog_show_alt(ctx, &message, 0, 0x6e, 0x140, Some(trial_win_update_lambda_1))?;
+        dialog_show_alt(
+            ctx,
+            &message,
+            0,
+            0x6e,
+            0x140,
+            Some(trial_win_update_lambda_1),
+        )?;
 
         return Ok(true);
     }

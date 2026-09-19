@@ -2,12 +2,31 @@ use crate::Fault;
 
 use super::AppContext;
 
-pub fn event_reward_set(ctx: &mut AppContext, event: i32, stage: i32, star: i32, kind: i32, value: u8, use_cache: i32) -> Result<(), Fault> {
+pub fn event_reward_set(
+    ctx: &mut AppContext,
+    event: i32,
+    stage: i32,
+    star: i32,
+    kind: i32,
+    value: u8,
+    use_cache: i32,
+) -> Result<(), Fault> {
     let slot = if kind == 2 { star } else { 0 };
 
     if use_cache != 0 {
-        let cell = ctx.event_reward_cache.entry(event).or_default().entry(stage).or_default();
-        let byte = cell.get_mut(slot as i64 as usize).ok_or(Fault::IndexOutOfRange { site: "event_reward_set", index: slot as i64, limit: 4 })?;
+        let cell = ctx
+            .event_reward_cache
+            .entry(event)
+            .or_default()
+            .entry(stage)
+            .or_default();
+        let byte = cell
+            .get_mut(slot as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: "event_reward_set",
+                index: slot as i64,
+                limit: 4,
+            })?;
 
         *byte = value;
 

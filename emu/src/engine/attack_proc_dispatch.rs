@@ -1,14 +1,19 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    add_drain_pct, add_score_hit_mask, battle_not_finishing, call_rng, count_target_traits, get_cannon_effect, get_cat_combo_bonus, get_curse_duration,
-    get_curse_immune, get_curse_resist_pct, get_drain_immune, get_drain_percent, get_freeze_duration, get_freeze_immune, get_freeze_resist_pct,
-    get_knockback_immune, get_resist_part_rec, get_score_bonus, get_setting, get_slot_unit_id, get_slow_duration, get_slow_immune, get_slow_resist_pct,
-    get_style_part_id, get_style_part_level, get_treasure_capped, get_warp_anchor, get_warp_distance, get_warp_duration, get_warp_immune,
-    get_warp_resist_pct, get_warp_span, get_weaken_duration, get_weaken_immune, get_weaken_pct, get_weaken_resist_pct, has_fixed_lineup, has_sage_slayer,
-    is_sage, read_flag, scored_map_pays_money, set_curse_length, set_curse_timer, set_freeze_length, set_freeze_timer, set_kb_proc_hit,
-    set_sage_kb_resist_pct, set_slow_length, set_slow_timer, set_warp_distance, set_warp_timer, set_weaken_active, set_weaken_active_pct,
-    set_weaken_timer, slot_occupied, start_immune_fx, turn_on_proc_badge, AppContext,
+    AppContext, add_drain_pct, add_score_hit_mask, battle_not_finishing, call_rng,
+    count_target_traits, get_cannon_effect, get_cat_combo_bonus, get_curse_duration,
+    get_curse_immune, get_curse_resist_pct, get_drain_immune, get_drain_percent,
+    get_freeze_duration, get_freeze_immune, get_freeze_resist_pct, get_knockback_immune,
+    get_resist_part_rec, get_score_bonus, get_setting, get_slot_unit_id, get_slow_duration,
+    get_slow_immune, get_slow_resist_pct, get_style_part_id, get_style_part_level,
+    get_treasure_capped, get_warp_anchor, get_warp_distance, get_warp_duration, get_warp_immune,
+    get_warp_resist_pct, get_warp_span, get_weaken_duration, get_weaken_immune, get_weaken_pct,
+    get_weaken_resist_pct, has_fixed_lineup, has_sage_slayer, is_sage, read_flag,
+    scored_map_pays_money, set_curse_length, set_curse_timer, set_freeze_length, set_freeze_timer,
+    set_kb_proc_hit, set_sage_kb_resist_pct, set_slow_length, set_slow_timer, set_warp_distance,
+    set_warp_timer, set_weaken_active, set_weaken_active_pct, set_weaken_timer, slot_occupied,
+    start_immune_vfx, turn_on_proc_badge,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -43,7 +48,7 @@ pub fn attack_proc_dispatch(
 
     if p_knockback == 1 {
         if get_knockback_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -57,7 +62,8 @@ pub fn attack_proc_dispatch(
 
             if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_knockback", 0x32)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_knockback", 0x32)?;
 
                     set_sage_kb_resist_pct(ctx, other, target, resist)?;
                 } else {
@@ -86,7 +92,7 @@ pub fn attack_proc_dispatch(
 
     if p_freeze == 1 {
         if get_freeze_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -103,31 +109,41 @@ pub fn attack_proc_dispatch(
                     let resist = get_freeze_resist_pct(ctx, other, target)?;
 
                     get_freeze_resist_pct(ctx, other, target)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xca, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(10000i32.wrapping_sub(reduction).wrapping_mul(duration));
+                    duration = operation::div_10000(
+                        10000i32.wrapping_sub(reduction).wrapping_mul(duration),
+                    );
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_freeze", 0x32)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_freeze", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_freeze", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
                 duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(get_cat_combo_bonus(ctx, &ctx.combo_store, 0x13, unit_id)?.wrapping_add(100).wrapping_mul(duration));
+                duration = operation::div_100(
+                    get_cat_combo_bonus(ctx, &ctx.combo_store, 0x13, unit_id)?
+                        .wrapping_add(100)
+                        .wrapping_mul(duration),
+                );
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0x13, unit_id)?;
 
                 if !has_sage_slayer(ctx, faction, attacker)? && is_sage(ctx, other, target)? {
                     let resist = get_setting(&ctx.settings, b"battle_super_sage_freeze", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_freeze", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
@@ -146,7 +162,7 @@ pub fn attack_proc_dispatch(
 
     if p_slow == 1 {
         if get_slow_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -163,31 +179,41 @@ pub fn attack_proc_dispatch(
                     let resist = get_slow_resist_pct(ctx, other, target)?;
 
                     get_slow_resist_pct(ctx, other, target)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xc8, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(10000i32.wrapping_sub(reduction).wrapping_mul(duration));
+                    duration = operation::div_10000(
+                        10000i32.wrapping_sub(reduction).wrapping_mul(duration),
+                    );
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_slow", 0x32)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_slow", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_slow", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
                 duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(get_cat_combo_bonus(ctx, &ctx.combo_store, 0x12, unit_id)?.wrapping_add(100).wrapping_mul(duration));
+                duration = operation::div_100(
+                    get_cat_combo_bonus(ctx, &ctx.combo_store, 0x12, unit_id)?
+                        .wrapping_add(100)
+                        .wrapping_mul(duration),
+                );
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0x12, unit_id)?;
 
                 if !has_sage_slayer(ctx, faction, attacker)? && is_sage(ctx, other, target)? {
                     let resist = get_setting(&ctx.settings, b"battle_super_sage_slow", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_slow", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
@@ -206,7 +232,7 @@ pub fn attack_proc_dispatch(
 
     if p_weaken == 1 {
         if get_weaken_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -223,31 +249,41 @@ pub fn attack_proc_dispatch(
                     let resist = get_weaken_resist_pct(ctx, other, target)?;
 
                     get_weaken_resist_pct(ctx, other, target)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xcc, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(10000i32.wrapping_sub(reduction).wrapping_mul(duration));
+                    duration = operation::div_10000(
+                        10000i32.wrapping_sub(reduction).wrapping_mul(duration),
+                    );
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_weaken", 0x32)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_weaken", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_weaken", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
                 duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(get_cat_combo_bonus(ctx, &ctx.combo_store, 0x14, unit_id)?.wrapping_add(100).wrapping_mul(duration));
+                duration = operation::div_100(
+                    get_cat_combo_bonus(ctx, &ctx.combo_store, 0x14, unit_id)?
+                        .wrapping_add(100)
+                        .wrapping_mul(duration),
+                );
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0x14, unit_id)?;
 
                 if !has_sage_slayer(ctx, faction, attacker)? && is_sage(ctx, other, target)? {
                     let resist = get_setting(&ctx.settings, b"battle_super_sage_weaken", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_weaken", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && scored_map_pays_money(ctx)? {
@@ -260,9 +296,9 @@ pub fn attack_proc_dispatch(
 
             set_weaken_timer(ctx, other, target, duration)?;
             set_weaken_active(ctx, other, target, duration)?;
-            
+
             let weaken_pct = get_weaken_pct(ctx, faction, attacker)?;
-            
+
             set_weaken_active_pct(ctx, other, target, weaken_pct)?;
             turn_on_proc_badge(ctx, other, target, 2)?;
         }
@@ -270,7 +306,7 @@ pub fn attack_proc_dispatch(
 
     if p_warp != 0 {
         if get_warp_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
         } else {
             let mut duration = get_warp_duration(ctx, faction, attacker)?;
 
@@ -279,24 +315,29 @@ pub fn attack_proc_dispatch(
                     let resist = get_warp_resist_pct(ctx, other, target)?;
 
                     get_warp_resist_pct(ctx, other, target)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_warp", 0x46)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_warp", 0x46)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_warp", 0x46)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             }
 
             set_warp_timer(ctx, other, target, duration)?;
-            
+
             let anchor = get_warp_anchor(ctx, faction, attacker)?;
             let span = get_warp_span(ctx, faction, attacker)?;
-            let bound = span.wrapping_sub(get_warp_anchor(ctx, faction, attacker)?).wrapping_add(1);
+            let bound = span
+                .wrapping_sub(get_warp_anchor(ctx, faction, attacker)?)
+                .wrapping_add(1);
             let distance = anchor.wrapping_add(call_rng(ctx, bound));
-            
+
             set_warp_distance(ctx, other, target, distance)?;
             get_warp_distance(ctx, other, target)?;
         }
@@ -304,7 +345,7 @@ pub fn attack_proc_dispatch(
 
     if p_curse != 0 {
         if get_curse_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -321,20 +362,25 @@ pub fn attack_proc_dispatch(
                     let resist = get_curse_resist_pct(ctx, other, target)?;
 
                     get_curse_resist_pct(ctx, other, target)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xce, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(10000i32.wrapping_sub(reduction).wrapping_mul(duration));
+                    duration = operation::div_10000(
+                        10000i32.wrapping_sub(reduction).wrapping_mul(duration),
+                    );
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                    let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_curse", 0x32)?;
+                    let resist =
+                        get_setting(&ctx.settings, b"battle_super_sage_hunter_curse", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_curse", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
                 duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
@@ -343,7 +389,8 @@ pub fn attack_proc_dispatch(
                     let resist = get_setting(&ctx.settings, b"battle_super_sage_curse", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_curse", 0x32)?;
-                    duration = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                    duration =
+                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && scored_map_pays_money(ctx)? {
@@ -362,7 +409,7 @@ pub fn attack_proc_dispatch(
 
     if target != 0 && p_drain != 0 {
         if get_drain_immune(ctx, other, target)? {
-            start_immune_fx(ctx, other, target)?;
+            start_immune_vfx(ctx, other, target)?;
 
             let scoring = battle_not_finishing(ctx)?;
 
@@ -375,7 +422,8 @@ pub fn attack_proc_dispatch(
             let mut percent = get_drain_percent(ctx, faction, attacker)?;
 
             if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
-                let resist = get_setting(&ctx.settings, b"battle_super_sage_hunter_knockback", 0x32)?;
+                let resist =
+                    get_setting(&ctx.settings, b"battle_super_sage_hunter_knockback", 0x32)?;
 
                 percent = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(percent));
             }

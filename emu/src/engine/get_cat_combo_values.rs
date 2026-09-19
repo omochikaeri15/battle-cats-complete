@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{charagroup_has_unit, AppContext, ComboStore};
+use super::{AppContext, ComboStore, charagroup_has_unit};
 
-pub fn get_cat_combo_values(ctx: &AppContext, table: &ComboStore, kind: i32, unit_id: i32) -> Result<Vec<i32>, Fault> {
+pub fn get_cat_combo_values(
+    ctx: &AppContext,
+    table: &ComboStore,
+    kind: i32,
+    unit_id: i32,
+) -> Result<Vec<i32>, Fault> {
     let mut out = Vec::new();
 
     for record in &table.records {
@@ -29,18 +34,25 @@ pub fn get_cat_combo_values(ctx: &AppContext, table: &ComboStore, kind: i32, uni
             })?;
 
             if effect_kind == kind
-                && (record.charagroup_id == -1 || charagroup_has_unit(&ctx.chara_groups, record.charagroup_id, unit_id))
+                && (record.charagroup_id == -1
+                    || charagroup_has_unit(&ctx.chara_groups, record.charagroup_id, unit_id))
             {
-                let power = *effects.get((effect + 3) as usize).ok_or(Fault::IndexOutOfRange {
-                    site: "get_cat_combo_values",
-                    index: effect,
-                    limit: 4,
-                })?;
+                let power = *effects
+                    .get((effect + 3) as usize)
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: "get_cat_combo_values",
+                        index: effect,
+                        limit: 4,
+                    })?;
                 let value = table
                     .params
                     .get(kind as usize)
                     .and_then(|powers| powers.get(power as usize))
-                    .ok_or(Fault::IndexOutOfRange { site: "get_cat_combo_values", index: power as i64, limit: 0 })?;
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: "get_cat_combo_values",
+                        index: power as i64,
+                        limit: 0,
+                    })?;
 
                 out.push(*value);
             }

@@ -1,4 +1,4 @@
-use super::{matrix_identity, rect_zero, Sprite, SpriteKind};
+use super::{Sprite, SpriteKind, matrix_identity, rect_zero};
 
 pub fn make_scale9_image_sprite() -> Box<Sprite> {
     let mut sprite = Box::new(Sprite::default());

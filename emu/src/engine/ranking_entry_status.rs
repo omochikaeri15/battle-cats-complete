@@ -1,4 +1,4 @@
-use super::{ranking_record_status, RankingRecord};
+use super::{RankingRecord, ranking_record_status};
 
 pub fn ranking_entry_status(entry: &Option<RankingRecord>) -> i32 {
     entry.as_ref().map_or(0, ranking_record_status)

@@ -1,12 +1,18 @@
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::collections::{BTreeMap, btree_map::Entry};
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{bg_param_resolve_int, call_rng, max_i32, min_i32, AppContext, BgParamSpec};
+use super::{AppContext, BgParamSpec, bg_param_resolve_int, call_rng, max_i32, min_i32};
 
 const SITE: &str = "bg_param_roll_int";
 
-pub fn bg_param_roll_int(ctx: &mut AppContext, spec: &BgParamSpec<i32>, groups: &mut BTreeMap<i32, i32>, reference: i32, fallback: i32) -> Result<i32, Fault> {
+pub fn bg_param_roll_int(
+    ctx: &mut AppContext,
+    spec: &BgParamSpec<i32>,
+    groups: &mut BTreeMap<i32, i32>,
+    reference: i32,
+    fallback: i32,
+) -> Result<i32, Fault> {
     if spec.enabled == 0 {
         return Ok(fallback);
     }
@@ -17,7 +23,14 @@ pub fn bg_param_roll_int(ctx: &mut AppContext, spec: &BgParamSpec<i32>, groups: 
         } else {
             let pick = call_rng(ctx, (spec.values.len() as u64) as i32);
 
-            *spec.values.get(pick as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: pick as i64, limit: spec.values.len() as i64 })?
+            *spec
+                .values
+                .get(pick as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: pick as i64,
+                    limit: spec.values.len() as i64,
+                })?
         };
 
         return bg_param_resolve_int(ctx, reference, value, spec.base);
@@ -42,8 +55,16 @@ pub fn bg_param_roll_int(ctx: &mut AppContext, spec: &BgParamSpec<i32>, groups: 
 
     let low = bg_param_resolve_int(ctx, reference, spec.min, spec.min_base)?;
     let high = bg_param_resolve_int(ctx, reference, spec.max, spec.max_base)?;
-    let span = high.wrapping_sub(bg_param_resolve_int(ctx, reference, spec.min, spec.min_base)?);
-    let draw = *groups.get(&spec.rand_group).ok_or(Fault::KeyNotFound { site: SITE, key: spec.rand_group as i64 })?;
+    let span = high.wrapping_sub(bg_param_resolve_int(
+        ctx,
+        reference,
+        spec.min,
+        spec.min_base,
+    )?);
+    let draw = *groups.get(&spec.rand_group).ok_or(Fault::KeyNotFound {
+        site: SITE,
+        key: spec.rand_group as i64,
+    })?;
 
     Ok(operation::div_10000(span.wrapping_mul(draw)).wrapping_add(low))
 }

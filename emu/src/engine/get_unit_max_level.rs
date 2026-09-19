@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{AppContext, UnitBuy, UNIT_BUY};
+use super::{AppContext, UNIT_BUY, UnitBuy};
 
 pub fn get_unit_max_level(ctx: &AppContext, unit_id: i32) -> Result<i32, Fault> {
     let row = (unit_id as i64) << 8;
@@ -11,5 +11,11 @@ pub fn get_unit_max_level(ctx: &AppContext, unit_id: i32) -> Result<i32, Fault> 
     pair[..4].copy_from_slice(&value);
     pair[4..].copy_from_slice(&key);
 
-    Ok(operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: "get_unit_max_level", index: 0, limit: 1 })? as i32)
+    Ok(
+        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+            site: "get_unit_max_level",
+            index: 0,
+            limit: 1,
+        })? as i32,
+    )
 }

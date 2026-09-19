@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{combo_list_rebuild, get_built_deck_rows, get_built_deck_stage_key, get_button_unit_id, get_button_unit_row, get_scene_id, has_built_deck, AppContext};
+use super::{
+    AppContext, combo_list_rebuild, get_built_deck_rows, get_built_deck_stage_key,
+    get_button_unit_id, get_button_unit_row, get_scene_id, has_built_deck,
+};
 
 pub fn evaluate_active_combos(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.i32_at(AppContext::SCENE_0X64_PAGE)? != 0xa {
@@ -33,10 +36,16 @@ pub fn evaluate_active_combos(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let unit = get_button_unit_id(ctx, 0, slot as i32)?;
 
-        *form = ctx.i32_at(AppContext::UNIT_FORMS.wrapping_add((unit as i64 as usize).wrapping_mul(4)))?;
+        *form = ctx
+            .i32_at(AppContext::UNIT_FORMS.wrapping_add((unit as i64 as usize).wrapping_mul(4)))?;
     }
 
-    for record in ctx.combo_store.records.iter_mut().chain(ctx.combo_store.secondary_records.iter_mut()) {
+    for record in ctx
+        .combo_store
+        .records
+        .iter_mut()
+        .chain(ctx.combo_store.secondary_records.iter_mut())
+    {
         let mut enabled = 0u8;
 
         if record.availability != -1 && record.state != 2 {

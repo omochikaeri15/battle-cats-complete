@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{obfuscate_value, AppContext};
+use super::{AppContext, obfuscate_value};
 
 pub fn upgrade_worker(ctx: &mut AppContext, wallet: usize) -> Result<(), Fault> {
     let mut cell = ctx.block_at::<8>(wallet.wrapping_add(AppContext::WALLET_WORKER_LEVEL))?;

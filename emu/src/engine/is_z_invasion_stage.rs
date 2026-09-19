@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_scene_id, invasion_z_available, AppContext};
+use super::{AppContext, get_scene_id, invasion_z_available};
 
 pub fn is_z_invasion_stage(ctx: &mut AppContext) -> Result<bool, Fault> {
     if get_scene_id(ctx)? == 0x12c {

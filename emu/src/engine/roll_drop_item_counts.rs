@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{call_rng, AppContext};
+use super::{AppContext, call_rng};
 
 const SITE: &str = "roll_drop_item_counts";
 
@@ -13,19 +13,46 @@ pub struct DropRecord {
     pub weights: Vec<i32>,
 }
 
-pub fn roll_drop_item_counts(ctx: &mut AppContext, map: i32, stage: i32, star: i32) -> Result<Vec<i32>, Fault> {
+pub fn roll_drop_item_counts(
+    ctx: &mut AppContext,
+    map: i32,
+    stage: i32,
+    star: i32,
+) -> Result<Vec<i32>, Fault> {
     let mut counts = [0i32; 0x10];
-    let record = ctx.drop_items.values().find(|record| record.map_id == map).cloned();
+    let record = ctx
+        .drop_items
+        .values()
+        .find(|record| record.map_id == map)
+        .cloned();
 
     if let Some(record) = record {
-        let mult = *record.star_mults.get(star as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: star as i64, limit: record.star_mults.len() as i64 })?;
-        let count = *record.stage_counts.get(stage as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: stage as i64, limit: record.stage_counts.len() as i64 })?;
+        let mult = *record
+            .star_mults
+            .get(star as i64 as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: star as i64,
+                limit: record.star_mults.len() as i64,
+            })?;
+        let count =
+            *record
+                .stage_counts
+                .get(stage as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: stage as i64,
+                    limit: record.stage_counts.len() as i64,
+                })?;
         let rolls = operation::cvttsd2si((mult * count) as f64 + 0.5);
         let mut roll = 0;
 
         while roll < rolls {
             if call_rng(ctx, 0x64) >= record.miss {
-                let total = record.weights.iter().fold(0i32, |sum, weight| sum.wrapping_add(*weight));
+                let total = record
+                    .weights
+                    .iter()
+                    .fold(0i32, |sum, weight| sum.wrapping_add(*weight));
                 let pick = call_rng(ctx, total);
                 let mut sum = 0i32;
 
@@ -33,7 +60,11 @@ pub fn roll_drop_item_counts(ctx: &mut AppContext, map: i32, stage: i32, star: i
                     sum = sum.wrapping_add(*weight);
 
                     if pick < sum {
-                        let slot = counts.get_mut(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0x10 })?;
+                        let slot = counts.get_mut(index).ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: index as i64,
+                            limit: 0x10,
+                        })?;
 
                         *slot = slot.wrapping_add(1);
 

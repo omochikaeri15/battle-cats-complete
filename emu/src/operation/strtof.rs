@@ -1,7 +1,10 @@
 pub fn strtof(text: &[u8]) -> Option<(f32, bool)> {
     let mut at = 0;
 
-    while text.get(at).is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')) {
+    while text
+        .get(at)
+        .is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r'))
+    {
         at += 1;
     }
 
@@ -50,7 +53,9 @@ pub fn strtof(text: &[u8]) -> Option<(f32, bool)> {
         }
     }
 
-    let value = String::from_utf8_lossy(&text[start..at]).parse::<f32>().ok()?;
+    let value = String::from_utf8_lossy(&text[start..at])
+        .parse::<f32>()
+        .ok()?;
     let range = value.is_infinite() || (nonzero && (value == 0.0 || value.is_subnormal()));
 
     Some((value, range))

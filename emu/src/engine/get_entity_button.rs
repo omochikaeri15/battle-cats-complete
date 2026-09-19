@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_button_unit_row, AppContext, Entity};
+use super::{AppContext, Entity, get_button_unit_row};
 
 pub fn get_entity_button(ctx: &AppContext, faction: i32, slot: i32) -> Result<i32, Fault> {
     let buttons = if faction == 0 { 0x15 } else { 0xa };

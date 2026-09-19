@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{bgm_player_pick, play_sound, sound_manager, AppContext};
+use super::{AppContext, bgm_player_pick, play_sound, sound_manager};
 
 pub fn bgm_player_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     if !ctx.bgm_player_bound {

@@ -13,6 +13,12 @@ pub struct AssetStream<'a> {
 
 impl<'a> AssetStream<'a> {
     pub fn new(bytes: &'a [u8], line_delimiter: u8) -> Self {
-        Self { bytes, cells: Vec::new(), cursor: 0, end: bytes.len(), line_delimiter }
+        Self {
+            bytes,
+            cells: Vec::new(),
+            cursor: 0,
+            end: bytes.len(),
+            line_delimiter,
+        }
     }
 }

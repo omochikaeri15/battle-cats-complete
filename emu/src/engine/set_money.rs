@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_max_money, obfuscate_value, AppContext};
+use super::{AppContext, get_max_money, obfuscate_value};
 
 pub fn set_money(ctx: &mut AppContext, wallet: usize, amount: i32) -> Result<(), Fault> {
     let mut cell = [0u8; 8];

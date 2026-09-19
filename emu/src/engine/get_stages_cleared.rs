@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_cleared_count, get_stage_count, map_type_base_id, xor_row_get, AppContext};
+use super::{AppContext, get_cleared_count, get_stage_count, map_type_base_id, xor_row_get};
 
 pub fn get_stages_cleared(
     ctx: &mut AppContext,
@@ -22,7 +22,11 @@ pub fn get_stages_cleared(
             .or_default()
             .get(star as usize)
             .map(|cleared| *cleared as i32)
-            .ok_or(Fault::IndexOutOfRange { site: "get_stages_cleared", index: star as i64, limit: 4 });
+            .ok_or(Fault::IndexOutOfRange {
+                site: "get_stages_cleared",
+                index: star as i64,
+                limit: 4,
+            });
     }
 
     let map_id = map_type_base_id(map_type, map_idx);
@@ -32,7 +36,10 @@ pub fn get_stages_cleared(
     }
 
     if map_type as u32 <= 4 {
-        let cell = (map_type as u32 as i64) * 0x7d0 + (map_idx as i64) * 4 + star as i64 + AppContext::STAGES_CLEARED_STORY as i64;
+        let cell = (map_type as u32 as i64) * 0x7d0
+            + (map_idx as i64) * 4
+            + star as i64
+            + AppContext::STAGES_CLEARED_STORY as i64;
 
         return Ok(ctx.i8_at(cell as usize)? as i32);
     }
@@ -60,18 +67,32 @@ pub fn get_stages_cleared(
         0x05 => Ok(0x31),
         0x04 | 0x06..=0x08 | 0x0d => {
             let (maps, cell) = match case {
-                0x04 => (&ctx.stages_cleared_neg20, (map_idx as i64) * 4 + star as i64),
-                0x06 => (&ctx.stages_cleared_neg18, (map_idx as i64) * 4 + star as i64),
+                0x04 => (
+                    &ctx.stages_cleared_neg20,
+                    (map_idx as i64) * 4 + star as i64,
+                ),
+                0x06 => (
+                    &ctx.stages_cleared_neg18,
+                    (map_idx as i64) * 4 + star as i64,
+                ),
                 0x07 => (&ctx.stages_cleared_neg17, map_idx as i64 + star as i64),
-                0x08 => (&ctx.stages_cleared_neg16, (map_idx as i64) * 4 + star as i64),
-                _ => (&ctx.stages_cleared_neg11, (map_idx as i64) * 4 + star as i64),
+                0x08 => (
+                    &ctx.stages_cleared_neg16,
+                    (map_idx as i64) * 4 + star as i64,
+                ),
+                _ => (
+                    &ctx.stages_cleared_neg11,
+                    (map_idx as i64) * 4 + star as i64,
+                ),
             };
 
-            maps.get(cell as usize).map(|cleared| *cleared as i32).ok_or(Fault::IndexOutOfRange {
-                site: "get_stages_cleared",
-                index: cell,
-                limit: maps.len() as i64,
-            })
+            maps.get(cell as usize)
+                .map(|cleared| *cleared as i32)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stages_cleared",
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x0e | 0x0f | 0x14 => {
             let maps = match case {
@@ -81,14 +102,18 @@ pub fn get_stages_cleared(
             };
             let cell = (map_idx as i64) * 4 + star as i64;
 
-            maps.get(cell as usize).copied().ok_or(Fault::IndexOutOfRange {
-                site: "get_stages_cleared",
-                index: cell,
-                limit: maps.len() as i64,
-            })
+            maps.get(cell as usize)
+                .copied()
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stages_cleared",
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x12 => {
-            let cell = (map_idx as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGES_CLEARED_NEG6 as i64;
+            let cell = (map_idx as i64) * 0x10
+                + (star as i64) * 4
+                + AppContext::STAGES_CLEARED_NEG6 as i64;
 
             ctx.i32_at(cell as usize)
         }
@@ -99,9 +124,16 @@ pub fn get_stages_cleared(
                 _ => map_idx,
             };
 
-            xor_row_get(ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?, chapter as i64 as usize)
-                .map(|cleared| cleared as i32)
-                .ok_or(Fault::IndexOutOfRange { site: "get_stages_cleared", index: chapter as i64, limit: 10 })
+            xor_row_get(
+                ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?,
+                chapter as i64 as usize,
+            )
+            .map(|cleared| cleared as i32)
+            .ok_or(Fault::IndexOutOfRange {
+                site: "get_stages_cleared",
+                index: chapter as i64,
+                limit: 10,
+            })
         }
         _ => Ok(0),
     }

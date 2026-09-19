@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_current_stage_id, get_scene_id, slot_occupied, stage_has_restriction, AppContext};
+use super::{AppContext, get_current_stage_id, get_scene_id, slot_occupied, stage_has_restriction};
 
 pub fn deploy_limit_reached(ctx: &mut AppContext) -> Result<bool, Fault> {
     let stage_id = get_current_stage_id(ctx)?;
@@ -30,7 +30,14 @@ pub fn deploy_limit_reached(ctx: &mut AppContext) -> Result<bool, Fault> {
         slot += 1;
     }
 
-    let limit = ctx.stage_restrictions.get(&stage_id).ok_or(Fault::KeyNotFound { site: "deploy_limit_reached", key: stage_id as i64 })?.deploy_limit;
+    let limit = ctx
+        .stage_restrictions
+        .get(&stage_id)
+        .ok_or(Fault::KeyNotFound {
+            site: "deploy_limit_reached",
+            key: stage_id as i64,
+        })?
+        .deploy_limit;
 
     Ok(limit != 0 && deployed >= limit)
 }

@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_map_count, get_map_index, get_map_type, get_stage_index, get_stage_record, get_star_level, is_map_cleared, AppContext};
+use super::{
+    AppContext, get_map_count, get_map_index, get_map_type, get_stage_index, get_stage_record,
+    get_star_level, is_map_cleared,
+};
 
 pub fn ex_redirect_check_c(ctx: &mut AppContext, in_stage: u8) -> Result<bool, Fault> {
     if get_map_type(ctx, 0)? != -9 {

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_battle_status, set_keep_awake, AppContext};
+use super::{AppContext, get_battle_status, set_keep_awake};
 
 #[allow(clippy::if_same_then_else)]
 pub fn update_keep_awake(ctx: &mut AppContext, enable: u8) -> Result<(), Fault> {

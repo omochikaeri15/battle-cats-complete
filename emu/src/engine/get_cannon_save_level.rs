@@ -7,5 +7,9 @@ pub fn get_cannon_save_level(ctx: &AppContext, part_id: i32) -> Result<i32, Faul
         return Ok(0);
     };
 
-    row.get(1).copied().ok_or(Fault::IndexOutOfRange { site: "get_cannon_save_level", index: 1, limit: row.len() as i64 })
+    row.get(1).copied().ok_or(Fault::IndexOutOfRange {
+        site: "get_cannon_save_level",
+        index: 1,
+        limit: row.len() as i64,
+    })
 }

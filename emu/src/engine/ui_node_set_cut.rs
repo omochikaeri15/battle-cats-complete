@@ -1,11 +1,17 @@
 use crate::Fault;
 
-use super::{imgcut_get_cut_count, imgcut_get_sprite_cut, texture_get_height, texture_get_width, Sprite, Surface};
+use super::{
+    Sprite, Surface, imgcut_get_cut_count, imgcut_get_sprite_cut, texture_get_height,
+    texture_get_width,
+};
 
 const SITE: &str = "ui_node_set_cut";
 
 pub fn ui_node_set_cut(sprite: &mut Sprite, cut: i32) -> Result<(), Fault> {
-    let sheet = sprite.sheet.clone().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = sprite
+        .sheet
+        .clone()
+        .ok_or(Fault::NullPointer { site: SITE })?;
 
     if cut == -1 {
         sprite.cut[0] = 0;

@@ -1,12 +1,18 @@
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::collections::{BTreeMap, btree_map::Entry};
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{bg_param_resolve_float, call_rng, max_f32, min_f32, AppContext, BgParamSpec};
+use super::{AppContext, BgParamSpec, bg_param_resolve_float, call_rng, max_f32, min_f32};
 
 const SITE: &str = "bg_param_roll_float";
 
-pub fn bg_param_roll_float(ctx: &mut AppContext, spec: &BgParamSpec<f32>, groups: &mut BTreeMap<i32, i32>, reference: i32, fallback: f32) -> Result<f32, Fault> {
+pub fn bg_param_roll_float(
+    ctx: &mut AppContext,
+    spec: &BgParamSpec<f32>,
+    groups: &mut BTreeMap<i32, i32>,
+    reference: i32,
+    fallback: f32,
+) -> Result<f32, Fault> {
     if spec.enabled == 0 {
         return Ok(fallback);
     }
@@ -17,7 +23,14 @@ pub fn bg_param_roll_float(ctx: &mut AppContext, spec: &BgParamSpec<f32>, groups
         } else {
             let pick = call_rng(ctx, (spec.values.len() as u64) as i32);
 
-            *spec.values.get(pick as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: pick as i64, limit: spec.values.len() as i64 })?
+            *spec
+                .values
+                .get(pick as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: pick as i64,
+                    limit: spec.values.len() as i64,
+                })?
         };
 
         return bg_param_resolve_float(ctx, reference, value, spec.base);
@@ -44,7 +57,10 @@ pub fn bg_param_roll_float(ctx: &mut AppContext, spec: &BgParamSpec<f32>, groups
     let low = bg_param_resolve_float(ctx, reference, spec.min, spec.min_base)?;
     let high = bg_param_resolve_float(ctx, reference, spec.max, spec.max_base)?;
     let span = high - bg_param_resolve_float(ctx, reference, spec.min, spec.min_base)?;
-    let draw = *groups.get(&spec.rand_group).ok_or(Fault::KeyNotFound { site: SITE, key: spec.rand_group as i64 })?;
+    let draw = *groups.get(&spec.rand_group).ok_or(Fault::KeyNotFound {
+        site: SITE,
+        key: spec.rand_group as i64,
+    })?;
 
     Ok(low + span * draw as f32 / 10000.0)
 }

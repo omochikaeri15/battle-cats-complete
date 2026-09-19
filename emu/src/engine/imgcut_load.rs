@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{open_asset_stream, load_sheet_png, query_localizable, read_asset_stream_line, read_csv_cell, read_csv_row, texture_clear, AppContext, AssetStream, Cell};
+use super::{
+    AppContext, AssetStream, Cell, load_sheet_png, open_asset_stream, query_localizable,
+    read_asset_stream_line, read_csv_cell, read_csv_row, texture_clear,
+};
 
 pub const CUT_CELLS: usize = 4;
 
@@ -16,7 +19,13 @@ pub struct Imgcut {
     pub whole: u8,
 }
 
-pub fn imgcut_load(ctx: &mut AppContext, sheet: &mut Imgcut, png: &[u8], cut: &[u8], flag: i32) -> Result<bool, Fault> {
+pub fn imgcut_load(
+    ctx: &mut AppContext,
+    sheet: &mut Imgcut,
+    png: &[u8],
+    cut: &[u8],
+    flag: i32,
+) -> Result<bool, Fault> {
     texture_clear(sheet);
     sheet.png = query_localizable(ctx, png);
     sheet.cut = query_localizable(ctx, cut);

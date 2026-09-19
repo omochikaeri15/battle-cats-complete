@@ -1,8 +1,14 @@
 use crate::Fault;
 
-use super::{read_flag, talent_targets_trait, AppContext, CatStats, EnemyStats};
+use super::{AppContext, CatStats, EnemyStats, read_flag, talent_targets_trait};
 
-pub fn trait_aku(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32, allow_talent: u8) -> Result<bool, Fault> {
+pub fn trait_aku(
+    ctx: &mut AppContext,
+    faction: i32,
+    unit_id: i32,
+    form: i32,
+    allow_talent: u8,
+) -> Result<bool, Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
         return Ok(ctx.i32_at(AppContext::enemy_stat(unit_id, EnemyStats::TRAIT_AKU))? != 0);
     }

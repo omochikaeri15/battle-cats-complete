@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{get_proc_badge, set_proc_badge, AppContext};
+use super::{AppContext, get_proc_badge, set_proc_badge};
 
-pub fn turn_off_proc_badge(ctx: &mut AppContext, faction: i32, slot: i32, badge: i32) -> Result<(), Fault> {
+pub fn turn_off_proc_badge(
+    ctx: &mut AppContext,
+    faction: i32,
+    slot: i32,
+    badge: i32,
+) -> Result<(), Fault> {
     if get_proc_badge(ctx, faction, slot, 0)? == badge {
         set_proc_badge(ctx, faction, slot, 0, 0)?;
     }

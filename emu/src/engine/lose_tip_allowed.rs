@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{lose_exit_map_check, AppContext};
+use super::{AppContext, lose_exit_map_check};
 
 const SITE: &str = "lose_tip_allowed";
 
@@ -15,7 +15,9 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
             break;
         }
 
-        let first = *ctx.lose_text_settings[row as usize].first().ok_or(Fault::NullPointer { site: SITE })?;
+        let first = *ctx.lose_text_settings[row as usize]
+            .first()
+            .ok_or(Fault::NullPointer { site: SITE })?;
 
         if first == id {
             cells = ctx.lose_text_settings[row as usize].clone();
@@ -31,7 +33,11 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
         let cell = *cells.get(column).ok_or(if cells.is_empty() {
             Fault::NullPointer { site: SITE }
         } else {
-            Fault::IndexOutOfRange { site: SITE, index: column as i64, limit: cells.len() as i64 }
+            Fault::IndexOutOfRange {
+                site: SITE,
+                index: column as i64,
+                limit: cells.len() as i64,
+            }
         })?;
 
         if cell == 0 && (column as u32).wrapping_sub(1) <= 0x19 {
@@ -58,11 +64,31 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                 18 => mode == 9 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? == 0,
                 19 => mode == 9 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0,
                 20 => mode == 9 && ctx.u8_at(AppContext::BATTLE_IS_INVASION)? != 0,
-                21 => mode == 3 && ctx.i32_at(AppContext::STAR_LEVEL)? == 0 && !lose_exit_map_check(ctx)?,
-                22 => mode == 3 && ctx.i32_at(AppContext::STAR_LEVEL)? == 1 && !lose_exit_map_check(ctx)?,
-                23 => mode == 3 && ctx.i32_at(AppContext::STAR_LEVEL)? == 2 && !lose_exit_map_check(ctx)?,
-                24 => mode == 3 && ctx.i32_at(AppContext::STAR_LEVEL)? == 3 && !lose_exit_map_check(ctx)?,
-                25 => mode == 3 && ctx.i32_at(AppContext::STAR_LEVEL)? == 4 && !lose_exit_map_check(ctx)?,
+                21 => {
+                    mode == 3
+                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 0
+                        && !lose_exit_map_check(ctx)?
+                }
+                22 => {
+                    mode == 3
+                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 1
+                        && !lose_exit_map_check(ctx)?
+                }
+                23 => {
+                    mode == 3
+                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 2
+                        && !lose_exit_map_check(ctx)?
+                }
+                24 => {
+                    mode == 3
+                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 3
+                        && !lose_exit_map_check(ctx)?
+                }
+                25 => {
+                    mode == 3
+                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 4
+                        && !lose_exit_map_check(ctx)?
+                }
                 _ => mode == 0x63 && !lose_exit_map_check(ctx)?,
             };
 

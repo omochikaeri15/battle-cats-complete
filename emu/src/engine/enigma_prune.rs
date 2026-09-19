@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{map_one_time, map_one_time_limit, map_type_base_id, now_seconds, AppContext};
+use super::{AppContext, map_one_time, map_one_time_limit, map_type_base_id, now_seconds};
 
 const SITE: &str = "enigma_prune";
 
@@ -10,7 +10,11 @@ pub fn enigma_prune(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0usize;
 
     while index < ctx.enigma.active.len() {
-        let active = *ctx.enigma.active.get(index).ok_or(Fault::OutOfRange { site: SITE })?;
+        let active = *ctx
+            .enigma
+            .active
+            .get(index)
+            .ok_or(Fault::OutOfRange { site: SITE })?;
 
         if active.state == 2 {
             let expire = 'check: {
@@ -19,13 +23,25 @@ pub fn enigma_prune(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
 
                 let slot = active.map as i64 - map_type_base_id(-0x11, 0) as i64;
-                let minutes = *ctx.enigma_durations.get(slot as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot, limit: ctx.enigma_durations.len() as i64 })?;
+                let minutes =
+                    *ctx.enigma_durations
+                        .get(slot as usize)
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: slot,
+                            limit: ctx.enigma_durations.len() as i64,
+                        })?;
 
                 if now >= active.time + minutes.wrapping_mul(0x3c) as f64 {
                     break 'check true;
                 }
 
-                let map = ctx.enigma.active.get(index).ok_or(Fault::OutOfRange { site: SITE })?.map;
+                let map = ctx
+                    .enigma
+                    .active
+                    .get(index)
+                    .ok_or(Fault::OutOfRange { site: SITE })?
+                    .map;
 
                 if !map_one_time(ctx, map) {
                     break 'check false;
@@ -63,7 +79,14 @@ pub fn enigma_prune(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let slot = pending.map as i64 - map_type_base_id(-0x11, 0) as i64;
-    let minutes = *ctx.enigma_durations.get(slot as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot, limit: ctx.enigma_durations.len() as i64 })?;
+    let minutes = *ctx
+        .enigma_durations
+        .get(slot as usize)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: slot,
+            limit: ctx.enigma_durations.len() as i64,
+        })?;
 
     if now >= pending.time + minutes.wrapping_mul(0x3c) as f64 {
         ctx.enigma.pending_set = 0;
@@ -75,7 +98,8 @@ pub fn enigma_prune(ctx: &mut AppContext) -> Result<(), Fault> {
         return Ok(());
     }
 
-    if *ctx.map_clear_counts.entry(pending.map).or_insert(0) < map_one_time_limit(ctx, pending.map) {
+    if *ctx.map_clear_counts.entry(pending.map).or_insert(0) < map_one_time_limit(ctx, pending.map)
+    {
         return Ok(());
     }
 

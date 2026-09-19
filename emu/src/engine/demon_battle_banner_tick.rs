@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_anim_len, AppContext};
+use super::{AppContext, get_anim_len};
 
 pub fn demon_battle_banner_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let frame = ctx.i32_at(AppContext::DEMON_BANNER_FRAME)?;

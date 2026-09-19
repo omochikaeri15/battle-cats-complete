@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_stage_record, get_star_level, is_map_cleared, validate_map_type, AppContext};
+use super::{AppContext, get_stage_record, get_star_level, is_map_cleared, validate_map_type};
 
 pub fn ex_redirect_check_b(ctx: &mut AppContext) -> Result<bool, Fault> {
     if validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?) != -9 {

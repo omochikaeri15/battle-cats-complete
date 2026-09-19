@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{obfuscate_value, AppContext};
+use super::{AppContext, obfuscate_value};
 
 pub fn set_worker_level(ctx: &mut AppContext, wallet: usize, level: i32) -> Result<(), Fault> {
     let mut cell = [0u8; 8];

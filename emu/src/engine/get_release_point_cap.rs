@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_condition_flag, max_i32, AppContext};
+use super::{AppContext, get_condition_flag, max_i32};
 
 const SITE: &str = "get_release_point_cap";
 
@@ -18,10 +18,24 @@ pub fn get_release_point_cap(ctx: &AppContext, point_id: i32) -> Result<i32, Fau
     let mut index = 0usize;
 
     while index < release.conditions.len() {
-        let condition = *release.conditions.get(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: release.conditions.len() as i64 })?;
+        let condition = *release
+            .conditions
+            .get(index)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: index as i64,
+                limit: release.conditions.len() as i64,
+            })?;
 
         if get_condition_flag(&ctx.server_flags, condition).is_some_and(|flag| flag) {
-            cap = max_i32(cap, *release.caps.get(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: release.caps.len() as i64 })?);
+            cap = max_i32(
+                cap,
+                *release.caps.get(index).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: index as i64,
+                    limit: release.caps.len() as i64,
+                })?,
+            );
         }
 
         index += 1;

@@ -1,39 +1,56 @@
 use std::{
-    collections::{hash_map::RandomState, BTreeMap},
+    collections::{BTreeMap, hash_map::RandomState},
     hash::{BuildHasher, Hasher},
 };
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    aku_realm_final_redirect, altar_recompute, analytics_params_send, background_particles_init, base_shake_reset, bg_effect_spawn_all,
-    bgm_player_bind, bgm_player_switch, breadcrumb_with, calculate_treasure_percentages, call_rng, cannon_start_countdown, clear_barrier_fx,
-    clear_base_guard_notice, clear_cannon_shot, clear_crit_fx, clear_debris, clear_effect_slot, clear_shield_fx, clear_wave_sprite, clear_zkill_fx,
-    collect_rule_id_list, combo_banner_pending, compute_base_health, compute_base_level, deploy_limit_reset, evaluate_active_combos,
-    ex_redirect_check_a, ex_redirect_check_b, ex_redirect_check_c, ex_replacement_pending, fever_clear_gauge, fever_clear_state, find_fixed_lineup,
-    get_background_id, get_base_max_hp, get_battle_status, get_bg_model_id, get_bottom_inset_logical, get_built_deck_rows, get_built_deck_stage_key,
-    get_button_unit_id, get_button_unit_row, get_cannon_base_damage, get_cannon_charge_frames, get_cannon_decor_id, get_cannon_effect,
-    get_cannon_foundation_id, get_cannon_id, get_cannon_part_id, get_cannon_part_rec, get_cannon_power, get_cannon_recharge, get_castle_enemy_row,
-    get_cat_combo_bonus, get_drawable_width, get_effect_part_level, get_ex_option_target, get_foundation_part_id, get_global_map_id,
-    get_item_selected, get_left_inset_logical, get_map_index, get_map_rules, get_map_type, get_max_money, get_max_zoom, get_powerup,
-    get_powerup_available, get_right_inset_logical, get_setting, get_special_rule, get_special_rule_params, get_stage_index, get_stage_record,
-    get_star_level, get_style_part_id, get_text_texture, get_top_inset_offset, get_unit_guide_order, get_unit_recharge, has_built_deck,
-    has_castle_enemy, has_fixed_lineup, invasion_available, invasion_z_available, is_aku_final_map, is_ex_map_68, is_ex_option_target,
-    is_score_stage, item_pass_active, labyrinth_active, labyrinth_roll_floor, load_base_models, load_battle_assets, load_battle_snapshot,
-    load_lineup_preset, load_map_stage_csv, load_stage_csv, log_analytics_event, maanim_load, mamodel_load, mamodel_set_single_sheet,
-    map_index_of_map_id, map_records_entry, min_i32, obf_value_add, open_asset_stream, option_window_init, play_sound, powerup_available,
-    powerup_disabled, powerup_granted, query_localizable, read_csv_cell, read_csv_row, replay_mode, reset_point_state, save_battle_snapshot,
-    scene_background_setup, select_point_map, set_auto_camera_mode, set_base_curse_chance, set_base_curse_duration, set_base_entity_frame,
-    set_base_freeze_chance, set_base_freeze_duration, set_base_hitbox_pos, set_base_hitbox_width, set_base_hp, set_base_level, set_base_max_hp,
-    set_base_occupant, set_base_pos_x, set_base_pos_y, set_base_slow_chance, set_base_slow_duration, set_base_soulstrike, set_base_state,
-    set_battle_status, set_bgm_duck, set_cannon_base_damage, set_cannon_burrowed_permille, set_cannon_countdown, set_cannon_damage,
-    set_cannon_hp_mode, set_cannon_makes_wave, set_cannon_metal_permille, set_cannon_nonmetal_permille, set_cannon_nonzombie_permille,
-    set_cannon_parts, set_cannon_ready_fx, set_cannon_recharge, set_cannon_recoil, set_cannon_shot_id, set_cannon_strike_width, set_cannon_type,
-    set_cannon_unit_id, set_cannon_wall_hp_pct, set_cannon_wall_lifetime, set_cannon_wall_offset, set_cannon_zombie_permille, set_castle_anim_frame,
-    set_castle_anim_state, set_combo_banner_pending, set_deck_cooldown, set_item_selected, set_money, set_point_stage, set_powerup, set_stage_unlock,
-    set_worker_level, setup_bg_color, sound_manager, sound_set_channel, spawn_entity, spawn_state_init, stage_entry_row, stage_entry_start_frame,
-    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr, string_format_int, string_format_int2, string_format_int2_text,
-    text_texture_cache, validate_map_type, vibration_clear, AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER,
+    AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER, aku_realm_final_redirect,
+    altar_recompute, analytics_params_send, background_particles_init, base_shake_reset,
+    bg_effect_spawn_all, bgm_player_bind, bgm_player_switch, breadcrumb_with,
+    calculate_treasure_percentages, call_rng, cannon_start_countdown, clear_barrier_vfx,
+    clear_base_guard_notice, clear_cannon_shot, clear_crit_vfx, clear_debris, clear_effect_slot,
+    clear_shield_vfx, clear_wave_sprite, clear_zkill_vfx, collect_rule_id_list,
+    combo_banner_pending, compute_base_health, compute_base_level, deploy_limit_reset,
+    evaluate_active_combos, ex_redirect_check_a, ex_redirect_check_b, ex_redirect_check_c,
+    ex_replacement_pending, fever_clear_gauge, fever_clear_state, find_fixed_lineup,
+    get_background_id, get_base_max_hp, get_battle_status, get_bg_model_id,
+    get_bottom_inset_logical, get_built_deck_rows, get_built_deck_stage_key, get_button_unit_id,
+    get_button_unit_row, get_cannon_base_damage, get_cannon_charge_frames, get_cannon_decor_id,
+    get_cannon_effect, get_cannon_foundation_id, get_cannon_id, get_cannon_part_id,
+    get_cannon_part_rec, get_cannon_power, get_cannon_recharge, get_castle_enemy_row,
+    get_cat_combo_bonus, get_drawable_width, get_effect_part_level, get_ex_option_target,
+    get_foundation_part_id, get_global_map_id, get_item_selected, get_left_inset_logical,
+    get_map_index, get_map_rules, get_map_type, get_max_money, get_max_zoom, get_powerup,
+    get_powerup_available, get_right_inset_logical, get_setting, get_special_rule,
+    get_special_rule_params, get_stage_index, get_stage_record, get_star_level, get_style_part_id,
+    get_text_texture, get_top_inset_offset, get_unit_guide_order, get_unit_recharge,
+    has_built_deck, has_castle_enemy, has_fixed_lineup, invasion_available, invasion_z_available,
+    is_aku_final_map, is_ex_map_68, is_ex_option_target, is_score_stage, item_pass_active,
+    labyrinth_active, labyrinth_roll_floor, load_base_models, load_battle_assets,
+    load_battle_snapshot, load_lineup_preset, load_map_stage_csv, load_stage_csv,
+    log_analytics_event, maanim_load, mamodel_load, mamodel_set_single_sheet, map_index_of_map_id,
+    map_records_entry, min_i32, obf_value_add, open_asset_stream, option_window_init, play_sound,
+    powerup_available, powerup_disabled, powerup_granted, query_localizable, read_csv_cell,
+    read_csv_row, replay_mode, reset_point_state, save_battle_snapshot, scene_background_setup,
+    select_point_map, set_auto_camera_mode, set_base_curse_chance, set_base_curse_duration,
+    set_base_entity_frame, set_base_freeze_chance, set_base_freeze_duration, set_base_hitbox_pos,
+    set_base_hitbox_width, set_base_hp, set_base_level, set_base_max_hp, set_base_occupant,
+    set_base_pos_x, set_base_pos_y, set_base_slow_chance, set_base_slow_duration,
+    set_base_soulstrike, set_base_state, set_battle_status, set_bgm_duck, set_cannon_base_damage,
+    set_cannon_burrowed_permille, set_cannon_countdown, set_cannon_damage, set_cannon_hp_mode,
+    set_cannon_makes_wave, set_cannon_metal_permille, set_cannon_nonmetal_permille,
+    set_cannon_nonzombie_permille, set_cannon_parts, set_cannon_ready_vfx, set_cannon_recharge,
+    set_cannon_recoil, set_cannon_shot_id, set_cannon_strike_width, set_cannon_type,
+    set_cannon_unit_id, set_cannon_wall_hp_pct, set_cannon_wall_lifetime, set_cannon_wall_offset,
+    set_cannon_zombie_permille, set_castle_anim_frame, set_castle_anim_state,
+    set_combo_banner_pending, set_deck_cooldown, set_item_selected, set_money, set_point_stage,
+    set_powerup, set_stage_unlock, set_worker_level, setup_bg_color, sound_manager,
+    sound_set_channel, spawn_entity, spawn_state_init, stage_entry_row, stage_entry_start_frame,
+    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr,
+    string_format_int, string_format_int2, string_format_int2_text, text_texture_cache,
+    validate_map_type, vibration_clear,
 };
 
 const SITE: &str = "stage_initialize";
@@ -61,15 +78,27 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     };
 
     if let Some(ex_map) = ex_map {
-        ctx.set_i32_at(AppContext::RESULT_CHAPTER_MODE, ctx.i32_at(AppContext::CHAPTER_MODE)?)?;
-        ctx.set_i32_at(AppContext::RESULT_ENTRY_STAGE, ctx.i32_at(AppContext::ENTRY_STAGE)?)?;
+        ctx.set_i32_at(
+            AppContext::RESULT_CHAPTER_MODE,
+            ctx.i32_at(AppContext::CHAPTER_MODE)?,
+        )?;
+        ctx.set_i32_at(
+            AppContext::RESULT_ENTRY_STAGE,
+            ctx.i32_at(AppContext::ENTRY_STAGE)?,
+        )?;
         ctx.set_i32_at(AppContext::EX_MAP, ex_map)?;
         ctx.set_i32_at(AppContext::EX_STAGE, 0)?;
         ctx.set_i32_at(AppContext::CHAPTER_MODE, 0x63)?;
         ctx.set_i32_at(AppContext::ENTRY_STAGE, 0)?;
     } else if ex_replacement_pending(ctx, -1, -1)? {
-        ctx.set_i32_at(AppContext::RESULT_CHAPTER_MODE, ctx.i32_at(AppContext::CHAPTER_MODE)?)?;
-        ctx.set_i32_at(AppContext::RESULT_ENTRY_STAGE, ctx.i32_at(AppContext::ENTRY_STAGE)?)?;
+        ctx.set_i32_at(
+            AppContext::RESULT_CHAPTER_MODE,
+            ctx.i32_at(AppContext::CHAPTER_MODE)?,
+        )?;
+        ctx.set_i32_at(
+            AppContext::RESULT_ENTRY_STAGE,
+            ctx.i32_at(AppContext::ENTRY_STAGE)?,
+        )?;
 
         let map_id = get_global_map_id(ctx, 0)?;
         let target = get_ex_option_target(ctx, map_id);
@@ -110,7 +139,9 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_map_type(ctx, 0)? == -11 {
         let stage = get_stage_index(ctx)?;
-        let group = operation::div_100(ctx.i32_at(AppContext::DROP_MAP_STAGES + stage as i64 as usize * 4)?);
+        let group = operation::div_100(
+            ctx.i32_at(AppContext::DROP_MAP_STAGES + stage as i64 as usize * 4)?,
+        );
         let name = string_format_int(ctx, b"MapStageDataN_%03d.csv", group)?;
 
         if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
@@ -136,7 +167,8 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             for col in 2..5usize {
                 let stage = get_stage_index(ctx)?;
                 let value = read_csv_cell(&stm, col as i32) as i32;
-                let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add((stage as i64 as usize).wrapping_mul(0xbc));
+                let row_at = AppContext::MAP_STAGE_ROWS
+                    .wrapping_add((stage as i64 as usize).wrapping_mul(0xbc));
                 let key = ctx.i32_at(row_at + 0xb8)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
@@ -151,7 +183,14 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         if ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-            let (saga, map) = if mode < 3 { (0, mode) } else { ((mode >= 7) as i32 + 1, (mode - 1) - ((mode - 1) as u32 / 3 * 3) as i32) };
+            let (saga, map) = if mode < 3 {
+                (0, mode)
+            } else {
+                (
+                    (mode >= 7) as i32 + 1,
+                    (mode - 1) - ((mode - 1) as u32 / 3 * 3) as i32,
+                )
+            };
             let name = string_format_int2(ctx, b"stageNormal%d_%d_Z.csv", saga, map)?;
 
             if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
@@ -200,9 +239,22 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         if invasion != 0 || ctx.u8_at(AppContext::BATTLE_IS_Z_INVASION)? != 0 {
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-            let (saga, map) = if mode < 3 { (0, mode) } else { ((mode >= 7) as i32 + 1, (mode - 1) - ((mode - 1) as u32 / 3 * 3) as i32) };
+            let (saga, map) = if mode < 3 {
+                (0, mode)
+            } else {
+                (
+                    (mode >= 7) as i32 + 1,
+                    (mode - 1) - ((mode - 1) as u32 / 3 * 3) as i32,
+                )
+            };
             let suffix: &[u8] = if invasion == 0 { b"_Z" } else { b"" };
-            let name = string_format_int2_text(ctx, b"stageNormal%d_%d_Invasion%s.csv", saga, map, suffix)?;
+            let name = string_format_int2_text(
+                ctx,
+                b"stageNormal%d_%d_Invasion%s.csv",
+                saga,
+                map,
+                suffix,
+            )?;
 
             if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
                 let mut stm = AssetStream::new(&bytes, b'\n');
@@ -215,13 +267,15 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     for col in 0..0x2eusize {
                         let value = read_csv_cell(&stm, col as i32) as i32;
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
-                        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                        let row_at =
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
                         let key = ctx.i32_at(row_at + 0xb8)?;
 
                         ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
-                        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                        let row_at =
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
 
                         if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
                             break;
@@ -238,7 +292,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         if ctx.u8_at(AppContext::OUTBREAKS_ENABLED)? != 0 {
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let stage = ctx.i32_at(AppContext::ENTRY_STAGE)?;
-            let active = *ctx.outbreak_active.entry(mode).or_default().entry(stage).or_default();
+            let active = *ctx
+                .outbreak_active
+                .entry(mode)
+                .or_default()
+                .entry(stage)
+                .or_default();
 
             if active {
                 ctx.set_block_at::<1>(AppContext::BATTLE_IS_OUTBREAK, [1])?;
@@ -249,7 +308,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-        if invasion_available(ctx, mode)? && ctx.i32_at(AppContext::ENTRY_STAGE)? == ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as i32 {
+        if invasion_available(ctx, mode)?
+            && ctx.i32_at(AppContext::ENTRY_STAGE)?
+                == ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as i32
+        {
             ctx.set_block_at::<1>(AppContext::BATTLE_IS_INVASION, [1])?;
         }
 
@@ -257,7 +319,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-        if invasion_z_available(ctx, mode)? && ctx.i32_at(AppContext::ENTRY_STAGE)? == ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as i32 {
+        if invasion_z_available(ctx, mode)?
+            && ctx.i32_at(AppContext::ENTRY_STAGE)?
+                == ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as i32
+        {
             ctx.set_block_at::<1>(AppContext::BATTLE_IS_Z_INVASION, [1])?;
         }
 
@@ -266,7 +331,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     ctx.set_i32_at(AppContext::EX_MAP_INDEX, ctx.i32_at(AppContext::EX_MAP)?)?;
-    ctx.set_i32_at(AppContext::EX_STAGE_INDEX, ctx.i32_at(AppContext::EX_STAGE)?)?;
+    ctx.set_i32_at(
+        AppContext::EX_STAGE_INDEX,
+        ctx.i32_at(AppContext::EX_STAGE)?,
+    )?;
 
     if ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0 {
         let amount = ctx.i32_at(AppContext::RESUMED_MONEY)?;
@@ -280,14 +348,27 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     let star_text = string_format_int(ctx, b"%d", star)?;
     let stage = get_stage_index(ctx)?;
     let stage_text = string_format_int(ctx, b"%d", stage)?;
-    let adoption: &[u8] = if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 { b"true" } else { b"false" };
-    let mut params: Vec<(Vec<u8>, Vec<u8>)> =
-        vec![(b"MapID".to_vec(), map_text), (b"Level".to_vec(), star_text), (b"StageIndex".to_vec(), stage_text), (b"useClearedAdoption".to_vec(), adoption.to_vec())];
+    let adoption: &[u8] = if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 {
+        b"true"
+    } else {
+        b"false"
+    };
+    let mut params: Vec<(Vec<u8>, Vec<u8>)> = vec![
+        (b"MapID".to_vec(), map_text),
+        (b"Level".to_vec(), star_text),
+        (b"StageIndex".to_vec(), stage_text),
+        (b"useClearedAdoption".to_vec(), adoption.to_vec()),
+    ];
 
     for slot in 0..10usize {
         let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
-        let row = ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: 10 })? as i32;
+        let row =
+            ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
+        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: slot as i64,
+            limit: 10,
+        })? as i32;
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::UNIT_FORMS + unit as u32 as usize * 4)?;
@@ -304,7 +385,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     params.sort();
 
-    let pairs: Vec<(&[u8], &[u8])> = params.iter().map(|(name, value)| (name.as_slice(), value.as_slice())).collect();
+    let pairs: Vec<(&[u8], &[u8])> = params
+        .iter()
+        .map(|(name, value)| (name.as_slice(), value.as_slice()))
+        .collect();
 
     breadcrumb_with(ctx, 0x45, &pairs)?;
 
@@ -317,12 +401,20 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::BATTLE_DECK + slot * 4, !key)?;
         }
 
-        let units: Vec<i32> = ctx.fixed_lineup_store.units.iter().map(|unit| unit.unit_id).collect();
+        let units: Vec<i32> = ctx
+            .fixed_lineup_store
+            .units
+            .iter()
+            .map(|unit| unit.unit_id)
+            .collect();
 
         for (slot, unit) in units.iter().enumerate() {
             let key = ctx.i32_at(AppContext::BATTLE_DECK_KEY)?;
 
-            ctx.set_i32_at(AppContext::BATTLE_DECK + slot * 4, unit.wrapping_add(2) ^ key)?;
+            ctx.set_i32_at(
+                AppContext::BATTLE_DECK + slot * 4,
+                unit.wrapping_add(2) ^ key,
+            )?;
         }
     } else {
         let stage_key = get_built_deck_stage_key(ctx)?;
@@ -346,9 +438,15 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     row.0 as i32
                 } else {
                     let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
-                    let row = ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
+                    let row = ctx.bytes_from(
+                        AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)),
+                    )?;
 
-                    operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: 10 })? as i32
+                    operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: slot as i64,
+                        limit: 10,
+                    })? as i32
                 };
                 let key = ctx.i32_at(AppContext::BATTLE_DECK_KEY)?;
 
@@ -372,10 +470,24 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get(map_index as i64 as usize)
                 .and_then(|map| map.get(stage as i64 as usize))
                 .and_then(|stage| stage.get(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: map_index as i64, limit: ctx.dungeon_clear_counts.len() as i64 })?;
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: map_index as i64,
+                    limit: ctx.dungeon_clear_counts.len() as i64,
+                })?;
             let pick = min_i32(last, clears as i32);
-            let weights = *ctx.random_dungeon_rows.get(pick as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: pick as i64, limit: ctx.random_dungeon_rows.len() as i64 })?;
-            let total = weights[..8].iter().fold(0i32, |sum, weight| sum.wrapping_add(*weight)).wrapping_add(weights[8]).wrapping_add(weights[9].wrapping_add(weights[10]));
+            let weights = *ctx.random_dungeon_rows.get(pick as i64 as usize).ok_or(
+                Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: pick as i64,
+                    limit: ctx.random_dungeon_rows.len() as i64,
+                },
+            )?;
+            let total = weights[..8]
+                .iter()
+                .fold(0i32, |sum, weight| sum.wrapping_add(*weight))
+                .wrapping_add(weights[8])
+                .wrapping_add(weights[9].wrapping_add(weights[10]));
             let roll = call_rng(ctx, total);
             let mut bound = weights[0];
             let mut locks = 10;
@@ -386,11 +498,19 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
 
                 bound = bound.wrapping_add(*weight);
-                locks = if index == 9 { (roll < bound) as i32 } else { 10 - index as i32 };
+                locks = if index == 9 {
+                    (roll < bound) as i32
+                } else {
+                    10 - index as i32
+                };
             }
 
             let chosen = locks;
-            let locked = if deck_count < chosen { deck_count } else { chosen };
+            let locked = if deck_count < chosen {
+                deck_count
+            } else {
+                chosen
+            };
             let mut picks: BTreeMap<i32, bool> = BTreeMap::new();
 
             for _ in 0..locked.max(0) {
@@ -404,7 +524,8 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let mut tries = 0;
 
                 loop {
-                    slot = operation::irem(slot.wrapping_add(1), deck_count).ok_or(Fault::divide(SITE, deck_count as i64))?;
+                    slot = operation::irem(slot.wrapping_add(1), deck_count)
+                        .ok_or(Fault::divide(SITE, deck_count as i64))?;
 
                     if !*picks.entry(slot).or_default() {
                         *picks.entry(slot).or_default() = true;
@@ -428,10 +549,17 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 let mut pair = [0u8; 8];
 
-                pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED + unit as usize * 4)?);
+                pair[..4].copy_from_slice(
+                    &ctx.block_at::<4>(AppContext::UNITS_OWNED + unit as usize * 4)?,
+                );
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? == 0 {
+                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 1,
+                })? == 0
+                {
                     continue;
                 }
 
@@ -471,7 +599,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 if *picks.entry(slot).or_default() {
                     let key = ctx.i32_at(AppContext::BATTLE_DECK_KEY)?;
 
-                    ctx.set_i32_at(AppContext::BATTLE_DECK + slot as usize * 4, owned[taken].wrapping_add(2) ^ key)?;
+                    ctx.set_i32_at(
+                        AppContext::BATTLE_DECK + slot as usize * 4,
+                        owned[taken].wrapping_add(2) ^ key,
+                    )?;
                     taken += 1;
                 }
             }
@@ -484,19 +615,33 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get_mut(map_index as i64 as usize)
                 .and_then(|map| map.get_mut(stage as i64 as usize))
                 .and_then(|stage| stage.get_mut(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: map_index as i64, limit: 0 })?;
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: map_index as i64,
+                    limit: 0,
+                })?;
 
             if *cell <= 0x270e {
                 *cell = cell.wrapping_add(1);
             }
 
-            ctx.set_i32_at(AppContext::DEPLOY_FULL_FLASH, if chosen == 0 { -1 } else { 0 })?;
+            ctx.set_i32_at(
+                AppContext::DEPLOY_FULL_FLASH,
+                if chosen == 0 { -1 } else { 0 },
+            )?;
         }
     }
 
     evaluate_active_combos(ctx)?;
     ctx.set_block_at::<0x14>(AppContext::COMBO_BANNER_UNITS, [0xff; 0x14])?;
-    ctx.set_i32_at(AppContext::COMBO_BANNER_STATE, if ctx.i32_at(AppContext::DEPLOY_FULL_FLASH)? == -1 { 0 } else { -0xf })?;
+    ctx.set_i32_at(
+        AppContext::COMBO_BANNER_STATE,
+        if ctx.i32_at(AppContext::DEPLOY_FULL_FLASH)? == -1 {
+            0
+        } else {
+            -0xf
+        },
+    )?;
     ctx.set_block_at::<0x10>(AppContext::COMBO_BANNER_PHASE, [0; 0x10])?;
 
     let map_id = get_global_map_id(ctx, 0)?;
@@ -509,8 +654,20 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             for index in 0..record.effect_count as usize {
-                let effects = [record.kind[0], record.kind[1], record.kind[2], record.power[0], record.power[1], record.power[2], record.effect_count];
-                let kind = *effects.get(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 7 })?;
+                let effects = [
+                    record.kind[0],
+                    record.kind[1],
+                    record.kind[2],
+                    record.power[0],
+                    record.power[1],
+                    record.power[2],
+                    record.effect_count,
+                ];
+                let kind = *effects.get(index).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: index as i64,
+                    limit: 7,
+                })?;
 
                 if banned.contains(&kind) {
                     record.banner_pending = 0;
@@ -537,9 +694,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-    ctx.set_i32_at(AppContext::CHAPTER_COST_TIER, if mode < 3 { mode } else { 1 })?;
+    ctx.set_i32_at(
+        AppContext::CHAPTER_COST_TIER,
+        if mode < 3 { mode } else { 1 },
+    )?;
     ctx.set_i32_at(AppContext::MAP_RETURN_FLAG, 0)?;
-    ctx.set_block_at::<0x28>(AppContext::SCRATCH_0, [0; 0x28])?;
+    ctx.set_block_at::<0x28>(AppContext::DRAW_TEMP_0, [0; 0x28])?;
 
     let resumed = ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0;
 
@@ -587,7 +747,9 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 continue;
             }
 
-            let granted = ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 || item_pass_active(ctx, powerup)? || powerup_granted(ctx, powerup)?;
+            let granted = ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0
+                || item_pass_active(ctx, powerup)?
+                || powerup_granted(ctx, powerup)?;
             let consume = !granted || (powerup == 0 && get_powerup_available(ctx)? != 0);
 
             if consume {
@@ -622,7 +784,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let rows = get_built_deck_rows(ctx, stage_key)?;
 
         if has_fixed_lineup(ctx, -1, -1, -1)? {
-            let forms: Vec<i32> = ctx.fixed_lineup_store.units.iter().map(|unit| unit.form).collect();
+            let forms: Vec<i32> = ctx
+                .fixed_lineup_store
+                .units
+                .iter()
+                .map(|unit| unit.form)
+                .collect();
 
             for (slot, form) in forms.iter().enumerate() {
                 ctx.set_i32_at(AppContext::BUTTON_UNIT_FORMS + slot * 4, *form)?;
@@ -640,7 +807,9 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 } else {
                     let unit = get_button_unit_id(ctx, 0, slot)?;
 
-                    ctx.i32_at(AppContext::UNIT_FORMS.wrapping_add((unit as i64 as usize).wrapping_mul(4)))?
+                    ctx.i32_at(
+                        AppContext::UNIT_FORMS.wrapping_add((unit as i64 as usize).wrapping_mul(4)),
+                    )?
                 };
 
                 ctx.set_i32_at(AppContext::BUTTON_UNIT_FORMS + slot as usize * 4, form)?;
@@ -670,7 +839,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         calculate_treasure_percentages(ctx)?;
 
         if has_fixed_lineup(ctx, -1, -1, -1)? {
-            let flags: Vec<(i32, bool)> = ctx.fixed_lineup_store.treasure_flags.iter().map(|(chapter, flag)| (*chapter, *flag)).collect();
+            let flags: Vec<(i32, bool)> = ctx
+                .fixed_lineup_store
+                .treasure_flags
+                .iter()
+                .map(|(chapter, flag)| (*chapter, *flag))
+                .collect();
 
             for (chapter, flag) in flags {
                 let value = if flag { 100 } else { 0 };
@@ -680,14 +854,32 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         continue;
                     }
 
-                    let groups = ctx.treasure_store.get(chapter as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: chapter as i64, limit: 10 })?;
-                    let effect = groups.get(group).ok_or(Fault::IndexOutOfRange { site: SITE, index: group as i64, limit: groups.len() as i64 })?.effect;
+                    let groups = ctx.treasure_store.get(chapter as i64 as usize).ok_or(
+                        Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: chapter as i64,
+                            limit: 10,
+                        },
+                    )?;
+                    let effect = groups
+                        .get(group)
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: group as i64,
+                            limit: groups.len() as i64,
+                        })?
+                        .effect;
 
                     if (effect.wrapping_sub(7) as u32) < 2 {
                         continue;
                     }
 
-                    ctx.set_i32_at(AppContext::TREASURE_PROGRESS.wrapping_add((chapter as i64 as usize).wrapping_mul(0x2c)).wrapping_add(group * 4), value)?;
+                    ctx.set_i32_at(
+                        AppContext::TREASURE_PROGRESS
+                            .wrapping_add((chapter as i64 as usize).wrapping_mul(0x2c))
+                            .wrapping_add(group * 4),
+                        value,
+                    )?;
                 }
             }
         }
@@ -717,7 +909,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let stage = ctx.i32_at(AppContext::ENTRY_STAGE)?;
 
             if stage.wrapping_sub(0x30) as u32 >= 3 {
-                ctx.set_i32_at(AppContext::STAGE_UNLOCK_CHAPTERS.wrapping_add((mode as i64 as usize).wrapping_mul(4)), stage)?;
+                ctx.set_i32_at(
+                    AppContext::STAGE_UNLOCK_CHAPTERS
+                        .wrapping_add((mode as i64 as usize).wrapping_mul(4)),
+                    stage,
+                )?;
             }
         }
 
@@ -748,7 +944,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let display = if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3 {
             row
         } else {
-            *STAGE_DISPLAY_ORDER.get(row as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: row as i64, limit: 0x33 })?
+            *STAGE_DISPLAY_ORDER
+                .get(row as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: row as i64,
+                    limit: 0x33,
+                })?
         };
 
         ctx.set_i32_at(AppContext::CASTLE_ID, display)?;
@@ -761,14 +963,22 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let zoom = get_max_zoom(ctx)? as f32 / 100.0 / 100.0;
             let length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
 
-            ctx.set_i32_at(AppContext::CAMERA_X, operation::cvttss2si((-9600.0f32 / zoom + length as f32) * 0.5))?;
+            ctx.set_i32_at(
+                AppContext::CAMERA_X,
+                operation::cvttss2si((-9600.0f32 / zoom + length as f32) * 0.5),
+            )?;
         }
 
         ctx.set_i32_at(AppContext::RESULT_PHASE, 0)?;
 
         let length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
 
-        ctx.set_i32_at(AppContext::CAMERA_MIN_ZOOM, operation::idiv(0xea600, length).ok_or(Fault::divide(SITE, length as i64))?.wrapping_add(1))?;
+        ctx.set_i32_at(
+            AppContext::CAMERA_MIN_ZOOM,
+            operation::idiv(0xea600, length)
+                .ok_or(Fault::divide(SITE, length as i64))?
+                .wrapping_add(1),
+        )?;
 
         let zoom = get_max_zoom(ctx)?;
 
@@ -797,36 +1007,66 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 set_deck_cooldown(ctx, wallet, slot, 0, 1)?;
             } else {
                 let map_id = get_global_map_id(ctx, 0)?;
-                let item = get_map_rules(&ctx.special_rules, map_id)?.ok_or(Fault::NullPointer { site: SITE })?.max_money_item;
+                let item = get_map_rules(&ctx.special_rules, map_id)?
+                    .ok_or(Fault::NullPointer { site: SITE })?
+                    .max_money_item;
 
                 if item == 2 {
                     let recharge = get_unit_recharge(ctx, 0, slot)?;
                     let cut = get_setting(&ctx.settings, b"battle_sentai_recast", 0x32)?;
-                    let value = operation::div_100(100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64) as i32;
+                    let value =
+                        operation::div_100(100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64)
+                            as i32;
 
                     set_deck_cooldown(ctx, wallet, slot, value, 1)?;
                 } else {
                     let map_id = get_global_map_id(ctx, 0)?;
-                    let params = get_special_rule_params(ctx, &ctx.special_rules, map_id, 0)?.cloned().unwrap_or_default();
+                    let params = get_special_rule_params(ctx, &ctx.special_rules, map_id, 0)?
+                        .cloned()
+                        .unwrap_or_default();
                     let recharge = get_unit_recharge(ctx, 0, slot)?;
 
                     if params.len() * 4 < 5 {
                         set_deck_cooldown(ctx, wallet, slot, recharge, 1)?;
                     } else {
-                        let cut = *params.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: params.len() as i64 })?;
-                        let value = operation::div_100(100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64) as i32;
+                        let cut = *params.get(1).ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 1,
+                            limit: params.len() as i64,
+                        })?;
+                        let value = operation::div_100(
+                            100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64,
+                        ) as i32;
 
                         set_deck_cooldown(ctx, wallet, slot, value, 1)?;
                     }
                 }
             }
 
-            ctx.set_i32_at(wallet + AppContext::WALLET_RED_GAUGE_FRAMES + slot as usize * 4, 0)?;
-            ctx.set_i32_at(wallet + AppContext::WALLET_CONJURE_READY + slot as usize * 4, 0)?;
-            ctx.set_i32_at(wallet + AppContext::WALLET_DEPLOY_COUNTS + slot as usize * 4, 0)?;
-            ctx.set_i32_at(wallet + AppContext::WALLET_ORB_DEPLOYS_SEEN + slot as usize * 4, 0)?;
-            ctx.set_i32_at(wallet + AppContext::WALLET_ESCALATING_COSTS + slot as usize * 4, 0)?;
-            ctx.set_i32_at(wallet + AppContext::WALLET_SLOT_FLASH + slot as usize * 4, -1)?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_RED_GAUGE_FRAMES + slot as usize * 4,
+                0,
+            )?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_CONJURE_READY + slot as usize * 4,
+                0,
+            )?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_DEPLOY_COUNTS + slot as usize * 4,
+                0,
+            )?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_ORB_DEPLOYS_SEEN + slot as usize * 4,
+                0,
+            )?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_ESCALATING_COSTS + slot as usize * 4,
+                0,
+            )?;
+            ctx.set_i32_at(
+                wallet + AppContext::WALLET_SLOT_FLASH + slot as usize * 4,
+                -1,
+            )?;
             ctx.set_block_at::<1>(wallet + AppContext::WALLET_CANNON_FIRED, [0])?;
         }
 
@@ -864,7 +1104,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         for slot in 0..10i32 {
             set_deck_cooldown(ctx, enemy_wallet, slot, 0, 1)?;
-            ctx.set_i32_at(enemy_wallet + AppContext::WALLET_CONJURE_READY + slot as usize * 4, 0)?;
+            ctx.set_i32_at(
+                enemy_wallet + AppContext::WALLET_CONJURE_READY + slot as usize * 4,
+                0,
+            )?;
         }
 
         set_worker_level(ctx, enemy_wallet, 0)?;
@@ -917,7 +1160,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let saved = get_effect_part_level(ctx, part)?;
         let fixed = has_fixed_lineup(ctx, -1, -1, -1)?;
         let preset = ctx.i32_at(AppContext::LINEUP_CANNON_LEVEL)?;
-        let level = if preset == -1 || !fixed { saved } else { preset }.wrapping_add(1);
+        let level = if preset == -1 || !fixed {
+            saved
+        } else {
+            preset
+        }
+        .wrapping_add(1);
         let cannon_id = get_cannon_part_id(ctx)?;
         let style_id = get_style_part_id(ctx)?;
         let foundation_id = get_foundation_part_id(ctx)?;
@@ -935,16 +1183,20 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let base_damage = get_cannon_base_damage(ctx, 0)?;
         let scale = get_cannon_effect(get_cannon_part_rec(ctx)?, 0, level)?;
 
-        set_cannon_damage(ctx, 0, operation::div_100(scale.wrapping_mul(base_damage) as i64) as i32)?;
+        set_cannon_damage(
+            ctx,
+            0,
+            operation::div_100(scale.wrapping_mul(base_damage) as i64) as i32,
+        )?;
 
         let recoil = get_cannon_part_rec(ctx)?.recoil;
 
         set_cannon_recoil(ctx, 0, recoil as i32)?;
         set_cannon_unit_id(ctx, 0, -3)?;
 
-        let ready = get_cannon_part_rec(ctx)?.ready_fx;
+        let ready = get_cannon_part_rec(ctx)?.ready_vfx;
 
-        set_cannon_ready_fx(ctx, 0, ready as i32)?;
+        set_cannon_ready_vfx(ctx, 0, ready as i32)?;
         set_cannon_hp_mode(ctx, 0, 0)?;
 
         let soulstrike = get_cannon_part_rec(ctx)?.soulstrike;
@@ -1004,7 +1256,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
 
-        if get_cannon_part_rec(ctx)?.kind == 3 || get_cannon_part_rec(ctx)?.kind == 4 || get_cannon_part_rec(ctx)?.kind == 6 {
+        if get_cannon_part_rec(ctx)?.kind == 3
+            || get_cannon_part_rec(ctx)?.kind == 4
+            || get_cannon_part_rec(ctx)?.kind == 6
+        {
             let value = get_cannon_effect(get_cannon_part_rec(ctx)?, 5, level)?;
 
             set_cannon_strike_width(ctx, 0, value)?;
@@ -1046,7 +1301,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         set_base_pos_y(ctx, 1, 0x1130)?;
 
         let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-        let multiplier = if mode >= 3 || ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 { 1 } else { mode.wrapping_add(1) };
+        let multiplier = if mode >= 3 || ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
+            1
+        } else {
+            mode.wrapping_add(1)
+        };
         let health = multiplier.wrapping_mul(ctx.i32_at(AppContext::STAGE_BASE_HP)?);
 
         set_base_max_hp(ctx, 1, health)?;
@@ -1058,7 +1317,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         set_base_hitbox_width(ctx, 1, 0x708)?;
 
         let low = ctx.i32_at(AppContext::STAGE_SPAWN_MIN)?;
-        let span = ctx.i32_at(AppContext::STAGE_SPAWN_MAX)?.wrapping_sub(low).wrapping_add(1);
+        let span = ctx
+            .i32_at(AppContext::STAGE_SPAWN_MAX)?
+            .wrapping_sub(low)
+            .wrapping_add(1);
         let countdown = call_rng(ctx, span).wrapping_add(ctx.i32_at(AppContext::STAGE_SPAWN_MIN)?);
 
         ctx.set_i32_at(AppContext::SPAWN_COUNTDOWN, countdown)?;
@@ -1070,9 +1332,21 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             spawn_state_init(&mut state);
             ctx.spawn_states.push(state);
 
-            let start = stage_entry_start_frame(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?);
+            let start = stage_entry_start_frame(ctx.stage_enemies.get(entry).ok_or(
+                Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: entry as i64,
+                    limit: 0,
+                },
+            )?);
 
-            ctx.spawn_states.get_mut(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?[0] = start;
+            ctx.spawn_states
+                .get_mut(entry)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: entry as i64,
+                    limit: 0,
+                })?[0] = start;
         }
 
         for slot in (0..0x380usize).step_by(0x10) {
@@ -1088,25 +1362,25 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         for slot in (0..0xc80usize).step_by(0x10) {
-            clear_crit_fx(ctx, AppContext::CRIT_FX + slot)?;
+            clear_crit_vfx(ctx, AppContext::CRIT_VFX + slot)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_zkill_fx(ctx, AppContext::ZKILL_FX + slot * 0x10)?;
+            clear_zkill_vfx(ctx, AppContext::ZKILL_VFX + slot * 0x10)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_barrier_fx(ctx, AppContext::BARRIER_FX + slot * 0x1c)?;
+            clear_barrier_vfx(ctx, AppContext::BARRIER_VFX + slot * 0x1c)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_shield_fx(ctx, AppContext::SHIELD_FX + slot * 0x1c)?;
+            clear_shield_vfx(ctx, AppContext::SHIELD_VFX + slot * 0x1c)?;
         }
 
-        ctx.savage_fx.clear();
-        ctx.toxic_fx.clear();
-        ctx.metal_killer_fx.clear();
-        ctx.drain_fx.clear();
+        ctx.savage_vfx.clear();
+        ctx.toxic_vfx.clear();
+        ctx.metal_killer_vfx.clear();
+        ctx.drain_vfx.clear();
         clear_base_guard_notice(ctx)?;
         ctx.set_block_at::<8>(AppContext::BATTLE_CLOCK, [0; 8])?;
     }
@@ -1114,9 +1388,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     altar_recompute(ctx)?;
 
     let row = get_castle_enemy_row(ctx)?;
-    let sealed = stage_not_sealed(ctx, row.wrapping_sub(2))? || ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0;
+    let sealed =
+        stage_not_sealed(ctx, row.wrapping_sub(2))? || ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0;
 
-    ctx.set_i32_at(AppContext::DEMON_BANNER_FRAME, (sealed as i32).wrapping_neg())?;
+    ctx.set_i32_at(
+        AppContext::DEMON_BANNER_FRAME,
+        (sealed as i32).wrapping_neg(),
+    )?;
 
     if is_aku_final_map(ctx)? || is_ex_map_68(ctx)? || is_ex_option_target(ctx)? {
         let ex_map = ctx.i32_at(AppContext::EX_MAP)?;
@@ -1132,17 +1410,25 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    let cleared = if ctx.i32_at(AppContext::CASTLE_ID)? == 0x2d {
-        let row = ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize;
-        let mut pair = [0u8; 8];
+    let cleared =
+        if ctx.i32_at(AppContext::CASTLE_ID)? == 0x2d {
+            let row = ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize;
+            let mut pair = [0u8; 8];
 
-        pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGE_RECORD_CHAPTERS.wrapping_add(row.wrapping_mul(4)))?);
-        pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGE_RECORD_CHAPTERS_KEY)?);
+            pair[..4].copy_from_slice(&ctx.block_at::<4>(
+                AppContext::STAGE_RECORD_CHAPTERS.wrapping_add(row.wrapping_mul(4)),
+            )?);
+            pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGE_RECORD_CHAPTERS_KEY)?);
 
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 1 })? as i32 > 0
-    } else {
-        false
-    };
+            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 1,
+            })? as i32
+                > 0
+        } else {
+            false
+        };
 
     ctx.set_block_at::<1>(AppContext::STAGE_CLEAR_FLAG, [cleared as u8])?;
 
@@ -1164,7 +1450,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_block_at::<0x28>(AppContext::FACTION_1_BUTTON_ROWS, [0xff; 0x28])?;
 
         for entry in 0..ctx.stage_enemies.len() {
-            let row = stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?);
+            let row =
+                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: entry as i64,
+                    limit: 0,
+                })?);
 
             for slot in 0..10usize {
                 let current = ctx.i32_at(AppContext::FACTION_1_BUTTON_ROWS + slot * 4)?;
@@ -1251,65 +1542,143 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_block_at::<0x18>(AppContext::TOOLTIP_PAGE, [0; 0x18])?;
     ctx.restriction_warning_texts[0] = {
         let font = ctx.default_font.clone();
-        let text = ctx.battle_texts.get(5).cloned().ok_or(Fault::IndexOutOfRange { site: SITE, index: 5, limit: 0x35 })?;
+        let text = ctx
+            .battle_texts
+            .get(5)
+            .cloned()
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 5,
+                limit: 0x35,
+            })?;
 
-        Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+        Some(get_text_texture(
+            text_texture_cache(ctx)?,
+            &text,
+            &font,
+            0x1e,
+            1,
+            0,
+        ))
     };
     ctx.restriction_warning_texts[1] = {
         let key = std_string_from_cstr(b"stage_restriction_warning");
         let text = query_localizable(ctx, &key);
         let font = ctx.default_font.clone();
 
-        Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+        Some(get_text_texture(
+            text_texture_cache(ctx)?,
+            &text,
+            &font,
+            0x1e,
+            1,
+            0,
+        ))
     };
     ctx.restriction_warning_texts[2] = {
         let key = std_string_from_cstr(b"stage_SPChara_warning");
         let text = query_localizable(ctx, &key);
         let font = ctx.default_font.clone();
 
-        Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+        Some(get_text_texture(
+            text_texture_cache(ctx)?,
+            &text,
+            &font,
+            0x1e,
+            1,
+            0,
+        ))
     };
 
     for label in 0..4usize {
-        ctx.label_texts[1 + label] = {
-            let font = ctx.default_font.clone();
-            let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(Fault::IndexOutOfRange { site: SITE, index: (4 + label) as i64, limit: 0x24 })?;
+        ctx.label_texts[1 + label] =
+            {
+                let font = ctx.default_font.clone();
+                let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(
+                    Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: (4 + label) as i64,
+                        limit: 0x24,
+                    },
+                )?;
 
-            Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
-        };
+                Some(get_text_texture(
+                    text_texture_cache(ctx)?,
+                    &text,
+                    &font,
+                    0x1e,
+                    1,
+                    0,
+                ))
+            };
     }
 
     for label in 0..3usize {
-        ctx.label_texts[10 + label] = {
-            let font = ctx.default_font.clone();
-            let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(Fault::IndexOutOfRange { site: SITE, index: (3 + label) as i64, limit: 9 })?;
+        ctx.label_texts[10 + label] =
+            {
+                let font = ctx.default_font.clone();
+                let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
+                    Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: (3 + label) as i64,
+                        limit: 9,
+                    },
+                )?;
 
-            Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
-        };
+                Some(get_text_texture(
+                    text_texture_cache(ctx)?,
+                    &text,
+                    &font,
+                    0x1e,
+                    1,
+                    0,
+                ))
+            };
     }
 
-    let x = get_drawable_width(ctx)?.wrapping_sub(get_right_inset_logical(ctx)?).wrapping_add(-0x92);
+    let x = get_drawable_width(ctx)?
+        .wrapping_sub(get_right_inset_logical(ctx)?)
+        .wrapping_add(-0x92);
 
     ctx.set_i32_at(AppContext::CANNON_RECT, x)?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
-    ctx.set_i32_at(AppContext::CANNON_RECT + 4, get_top_inset_offset(ctx).wrapping_add(shift).wrapping_add(0x1fe))?;
+    ctx.set_i32_at(
+        AppContext::CANNON_RECT + 4,
+        get_top_inset_offset(ctx)
+            .wrapping_add(shift)
+            .wrapping_add(0x1fe),
+    )?;
     ctx.set_i32_at(AppContext::CANNON_RECT + 8, 0xc2)?;
     ctx.set_i32_at(AppContext::CANNON_RECT + 0xc, 0x82)?;
-    ctx.set_i32_at(AppContext::WORKER_RECT, get_left_inset_logical(ctx).wrapping_add(-0x30))?;
+    ctx.set_i32_at(
+        AppContext::WORKER_RECT,
+        get_left_inset_logical(ctx).wrapping_add(-0x30),
+    )?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
-    ctx.set_i32_at(AppContext::WORKER_RECT + 4, get_top_inset_offset(ctx).wrapping_add(shift).wrapping_add(0x207))?;
+    ctx.set_i32_at(
+        AppContext::WORKER_RECT + 4,
+        get_top_inset_offset(ctx)
+            .wrapping_add(shift)
+            .wrapping_add(0x207),
+    )?;
     ctx.set_i32_at(AppContext::WORKER_RECT + 8, 0xc2)?;
     ctx.set_i32_at(AppContext::WORKER_RECT + 0xc, 0x7d)?;
-    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT, get_drawable_width(ctx)?.wrapping_add(-0x5c))?;
+    ctx.set_i32_at(
+        AppContext::COMBO_SKIP_RECT,
+        get_drawable_width(ctx)?.wrapping_add(-0x5c),
+    )?;
     ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 4, 0xa3)?;
     ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 8, 0x58)?;
     ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 0xc, 0x4e)?;
     ctx.set_i32_at(AppContext::PAUSE_RECT, get_left_inset_logical(ctx))?;
-    ctx.set_i32_at(AppContext::PAUSE_RECT + 4, ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg())?;
+    ctx.set_i32_at(
+        AppContext::PAUSE_RECT + 4,
+        ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg(),
+    )?;
     ctx.set_i32_at(AppContext::PAUSE_RECT + 8, 0x58)?;
     ctx.set_i32_at(AppContext::PAUSE_RECT + 0xc, 0x58)?;
 
@@ -1321,10 +1690,16 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         let rect = AppContext::ITEM_RECTS + powerup as usize * 0x10;
-        let x = get_drawable_width(ctx)?.wrapping_add(column.wrapping_mul(0x58)).wrapping_sub(get_right_inset_logical(ctx)?).wrapping_add(-0x210);
+        let x = get_drawable_width(ctx)?
+            .wrapping_add(column.wrapping_mul(0x58))
+            .wrapping_sub(get_right_inset_logical(ctx)?)
+            .wrapping_add(-0x210);
 
         ctx.set_i32_at(rect, x)?;
-        ctx.set_i32_at(rect + 4, 0x2bi32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?))?;
+        ctx.set_i32_at(
+            rect + 4,
+            0x2bi32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?),
+        )?;
         ctx.set_i32_at(rect + 8, 0x58)?;
         ctx.set_i32_at(rect + 0xc, 0x58)?;
         column -= 1;
@@ -1348,7 +1723,8 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     sound_manager(ctx)?.stop_audio(-1);
 
     if ctx.i32_at(AppContext::REVIVE_REQUESTED)? == 0 {
-        let keep = ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0 || ctx.u8_at(AppContext::EX_OFFERED)? != 0;
+        let keep =
+            ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0 || ctx.u8_at(AppContext::EX_OFFERED)? != 0;
 
         bgm_player_switch(ctx, 0, keep as u8)?;
     }
@@ -1360,7 +1736,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let state = ctx.i32_at(AppContext::BGM_SWITCH_STATE)?;
 
             if state == 0 {
-                ctx.set_block_at::<0x10>(AppContext::BGM_SWITCH_STATE, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff])?;
+                ctx.set_block_at::<0x10>(
+                    AppContext::BGM_SWITCH_STATE,
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff],
+                )?;
             } else if state == 1 {
                 let frame = ctx.i32_at(AppContext::BGM_SWITCH_FRAME)?.wrapping_add(1);
                 let frames = ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)?;
@@ -1370,12 +1749,14 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let left = frames.wrapping_sub(frame);
 
                 if left != 0 {
-                    let duck = operation::idiv(left.wrapping_mul(100), frames).ok_or(Fault::divide(SITE, frames as i64))?;
+                    let duck = operation::idiv(left.wrapping_mul(100), frames)
+                        .ok_or(Fault::divide(SITE, frames as i64))?;
 
                     if duck > 0 {
                         let frames = ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)?;
                         let left = frames.wrapping_sub(ctx.i32_at(AppContext::BGM_SWITCH_FRAME)?);
-                        let duck = operation::idiv(left.wrapping_mul(100), frames).ok_or(Fault::divide(SITE, frames as i64))?;
+                        let duck = operation::idiv(left.wrapping_mul(100), frames)
+                            .ok_or(Fault::divide(SITE, frames as i64))?;
 
                         set_bgm_duck(sound_manager(ctx)?, duck);
                     } else {
@@ -1390,7 +1771,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         play_sound(sound_manager(ctx)?, next, None);
                     }
 
-                    ctx.set_block_at::<0x10>(AppContext::BGM_SWITCH_STATE, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff])?;
+                    ctx.set_block_at::<0x10>(
+                        AppContext::BGM_SWITCH_STATE,
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff],
+                    )?;
                 }
             }
         }
@@ -1401,7 +1785,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     if ctx.i32_at(AppContext::BATTLE_RESUMED)? == 0 {
-        ctx.set_i32_at(AppContext::SCRATCH_0, 0)?;
+        ctx.set_i32_at(AppContext::DRAW_TEMP_0, 0)?;
         ctx.set_block_at::<8>(AppContext::CAT_GOD_SPIN, [0; 8])?;
         ctx.set_i32_at(AppContext::CAT_GOD_GLOW, 0)?;
         ctx.set_block_at::<0x30>(AppContext::SETUP_FRAMES, [0; 0x30])?;
@@ -1433,7 +1817,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     for (index, (offset, shift, rest)) in rects.iter().enumerate() {
         let rect = AppContext::HUD_RECTS + offset;
 
-        ctx.set_i32_at(rect, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(*shift))?;
+        ctx.set_i32_at(
+            rect,
+            operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(*shift),
+        )?;
         ctx.set_i32_at(rect + 4, rest[0])?;
         ctx.set_i32_at(rect + 8, rest[1])?;
         ctx.set_i32_at(rect + 0xc, rest[2])?;
@@ -1443,23 +1830,39 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xf6))?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + 4, ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg())?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_BUTTON_RECT,
+        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xf6),
+    )?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_BUTTON_RECT + 4,
+        ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg(),
+    )?;
     ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + 8, 0x83)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + 0xc, 0x6b)?;
 
-    let menu: [(usize, i32, [i32; 3]); 3] = [(0, 0xf6, [0x159, 0x60, 0x60]), (0x10, 0x1aa, [0x14f, 0x60, 0x60]), (0x20, 0x25e, [0x159, 0x60, 0x60])];
+    let menu: [(usize, i32, [i32; 3]); 3] = [
+        (0, 0xf6, [0x159, 0x60, 0x60]),
+        (0x10, 0x1aa, [0x14f, 0x60, 0x60]),
+        (0x20, 0x25e, [0x159, 0x60, 0x60]),
+    ];
 
     for (offset, shift, rest) in menu {
         let rect = AppContext::CAT_GOD_MIRACLE_RECTS + offset;
 
-        ctx.set_i32_at(rect, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(shift))?;
+        ctx.set_i32_at(
+            rect,
+            operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(shift),
+        )?;
         ctx.set_i32_at(rect + 4, rest[0])?;
         ctx.set_i32_at(rect + 8, rest[1])?;
         ctx.set_i32_at(rect + 0xc, rest[2])?;
     }
 
-    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x30, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312))?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_MIRACLE_RECTS + 0x30,
+        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312),
+    )?;
     ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x34, 0x14f)?;
     ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x38, 0x60)?;
     ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x3c, 0x60)?;
@@ -1467,41 +1870,65 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 4, 0x21d)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 8, 0x5f)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 0xc, 0x5f)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6))?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_CONFIRM_RECT,
+        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6),
+    )?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 4, 0x139)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 8, 0x17d)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 0xc, 0x58)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT, operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323))?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_BACK_RECT,
+        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323),
+    )?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 4, 0xad)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 8, 0x5f)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0xc, 0x5f)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x10, get_drawable_width(ctx)?.wrapping_add(-0x17c))?;
+    ctx.set_i32_at(
+        AppContext::CAT_GOD_BACK_RECT + 0x10,
+        get_drawable_width(ctx)?.wrapping_add(-0x17c),
+    )?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x14, 0x223)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x18, 0x58)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x1c, 0x58)?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS, get_drawable_width(ctx)?.wrapping_add(-0x103))?;
+    ctx.set_i32_at(
+        AppContext::OPTION_RECTS,
+        get_drawable_width(ctx)?.wrapping_add(-0x103),
+    )?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     let inset = get_bottom_inset_logical(ctx)?;
 
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 4, shift.wrapping_sub(inset).wrapping_add(0x22e))?;
+    ctx.set_i32_at(
+        AppContext::OPTION_RECTS + 4,
+        shift.wrapping_sub(inset).wrapping_add(0x22e),
+    )?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 8, 0x58)?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 0xc, 0x58)?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 0x10, get_drawable_width(ctx)?.wrapping_add(-0xa1))?;
+    ctx.set_i32_at(
+        AppContext::OPTION_RECTS + 0x10,
+        get_drawable_width(ctx)?.wrapping_add(-0xa1),
+    )?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     let inset = get_bottom_inset_logical(ctx)?;
 
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 0x14, shift.wrapping_sub(inset).wrapping_add(0x22e))?;
+    ctx.set_i32_at(
+        AppContext::OPTION_RECTS + 0x14,
+        shift.wrapping_sub(inset).wrapping_add(0x22e),
+    )?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 0x18, 0x58)?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 0x1c, 0x58)?;
     ctx.set_i32_at(AppContext::RESULT_RECTS, 0xc5)?;
     ctx.set_i32_at(AppContext::RESULT_RECTS + 4, 0x228)?;
     ctx.set_i32_at(AppContext::RESULT_RECTS + 8, 0xd6)?;
     ctx.set_i32_at(AppContext::RESULT_RECTS + 0xc, 0x58)?;
-    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT, get_drawable_width(ctx)?.wrapping_add(-0x118))?;
+    ctx.set_i32_at(
+        AppContext::LOSE_SHOP_RECT,
+        get_drawable_width(ctx)?.wrapping_add(-0x118),
+    )?;
     ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 4, 0x228)?;
     ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 8, 0x58)?;
     ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 0xc, 0x58)?;
@@ -1512,10 +1939,25 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         if get_battle_status(ctx)? == 2 {
             for label in 0..4usize {
                 ctx.label_texts[label] = {
-                    let text = ctx.warning2_rows.get(2).map(|row| row[label].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: 0 })?;
+                    let text = ctx
+                        .warning2_rows
+                        .get(2)
+                        .map(|row| row[label].clone())
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 2,
+                            limit: 0,
+                        })?;
                     let font = ctx.default_font.clone();
 
-                    Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                    Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ))
                 };
             }
         } else if ctx.u8_at(AppContext::CAT_GOD_MENU_IS_OPEN)? != 0 {
@@ -1526,21 +1968,58 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::CAT_GOD_CHATTER_TIMER, 0x12c)?;
             ctx.label_texts[0] = {
                 let font = ctx.default_font.clone();
-                let text = ctx.god_intro_texts.first().map(|row| row[0].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                let text = ctx
+                    .god_intro_texts
+                    .first()
+                    .map(|row| row[0].clone())
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: 0,
+                        limit: 0,
+                    })?;
 
-                Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                Some(get_text_texture(
+                    text_texture_cache(ctx)?,
+                    &text,
+                    &font,
+                    0x1e,
+                    1,
+                    0,
+                ))
             };
             ctx.label_texts[1] = {
                 let font = ctx.default_font.clone();
-                let text = ctx.god_intro_texts.first().map(|row| row[1].clone()).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                let text = ctx
+                    .god_intro_texts
+                    .first()
+                    .map(|row| row[1].clone())
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: 0,
+                        limit: 0,
+                    })?;
 
-                Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                Some(get_text_texture(
+                    text_texture_cache(ctx)?,
+                    &text,
+                    &font,
+                    0x1e,
+                    1,
+                    0,
+                ))
             };
             ctx.label_texts[2] = {
                 let font = ctx.default_font.clone();
                 let text = ctx.god_name_text.clone();
 
-                Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                Some(get_text_texture(
+                    text_texture_cache(ctx)?,
+                    &text,
+                    &font,
+                    0x1e,
+                    1,
+                    0,
+                ))
             };
 
             if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 4 {
@@ -1548,13 +2027,27 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     let font = ctx.default_font.clone();
                     let text = ctx.god_bought_texts[0].clone();
 
-                    Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                    Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ))
                 };
                 ctx.label_texts[1] = {
                     let font = ctx.default_font.clone();
                     let text = ctx.god_bought_texts[1].clone();
 
-                    Some(get_text_texture(text_texture_cache(ctx)?, &text, &font, 0x1e, 1, 0))
+                    Some(get_text_texture(
+                        text_texture_cache(ctx)?,
+                        &text,
+                        &font,
+                        0x1e,
+                        1,
+                        0,
+                    ))
                 };
             }
         }
@@ -1562,20 +2055,36 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if ctx.i32_at(AppContext::BATTLE_RESUMED)? == 0 && has_castle_enemy(ctx)? {
         for entry in 0..ctx.stage_enemies.len() {
-            let row = stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?);
+            let row =
+                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: entry as i64,
+                    limit: 0,
+                })?);
 
             if row != get_castle_enemy_row(ctx)? {
                 continue;
             }
 
-            let enemy = ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?;
+            let enemy = ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: entry as i64,
+                limit: 0,
+            })?;
             let row = stage_entry_row(enemy);
             let z_min = stage_entry_z_min(enemy);
             let z_max = stage_entry_z_max(enemy);
 
             spawn_entity(ctx, 1, row, 0, z_min, z_max, 0, entry as i32)?;
 
-            let state = ctx.spawn_states.get_mut(entry).ok_or(Fault::IndexOutOfRange { site: SITE, index: entry as i64, limit: 0 })?;
+            let state = ctx
+                .spawn_states
+                .get_mut(entry)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: entry as i64,
+                    limit: 0,
+                })?;
 
             state[0] = 1;
             state[1] = state[1].wrapping_add(1);
@@ -1620,7 +2129,9 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    if get_stage_record(ctx, -2, 0, 3, 0, 0)? > 0 && ctx.i32_at(AppContext::STAGE_NO_CONTINUES)? == 0 {
+    if get_stage_record(ctx, -2, 0, 3, 0, 0)? > 0
+        && ctx.i32_at(AppContext::STAGE_NO_CONTINUES)? == 0
+    {
         let eligible = ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63 || is_ex_option_target(ctx)?;
 
         if eligible && ctx.u8_at(AppContext::SCORE_MODE_FLAG)? == 0 && get_map_type(ctx, 0)? != -6 {
@@ -1635,7 +2146,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     for slot in 0..10usize {
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let row = ctx.bytes_from(AppContext::BATTLE_DECK)?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: 10 })? as i32;
+        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: slot as i64,
+            limit: 10,
+        })? as i32;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + slot * 4)?;
 
@@ -1651,7 +2166,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     units.sort();
 
-    let pairs: Vec<(&[u8], &[u8])> = units.iter().map(|(name, value)| (name.as_slice(), value.as_slice())).collect();
+    let pairs: Vec<(&[u8], &[u8])> = units
+        .iter()
+        .map(|(name, value)| (name.as_slice(), value.as_slice()))
+        .collect();
 
     breadcrumb_with(ctx, 0x46, &pairs)
 }

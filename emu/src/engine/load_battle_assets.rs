@@ -3,10 +3,16 @@ use std::{cell, collections::BTreeMap, rc::Rc};
 use crate::Fault;
 
 use super::{
-    deck_slot_filled, format_localized, get_altar_level_cap, get_background_id, get_bg_image_id, get_bg_model_id, get_button_unit_form, get_button_unit_id, get_castle_enemy_row, get_map_type, get_text_texture,
-    imgcut_get_width, is_scored_stage, is_space_map, maanim_initialize, maanim_load, mamodel_get_part, mamodel_load, mamodel_set_sheet, mamodel_set_sheet_table, mamodel_set_single_sheet, map_type_code, query_localizable,
-    stat_soul_animation_type, stat_spawn_animation_type, std_map_int_maanim_subscript, string_format_int, string_format_int2, string_format_int2_text2, string_format_int2_text_copy, string_format_int3,
-    string_format_rank_comment, string_split, text_texture_cache, texture_cache_load, texture_context_init, validate_map_type, AppContext, Imgcut, Maanim, Mamodel,
+    AppContext, Imgcut, Maanim, Mamodel, deck_slot_filled, format_localized, get_altar_level_cap,
+    get_background_id, get_bg_image_id, get_bg_model_id, get_button_unit_form, get_button_unit_id,
+    get_castle_enemy_row, get_map_type, get_text_texture, imgcut_get_width, is_scored_stage,
+    is_space_map, maanim_initialize, maanim_load, mamodel_get_part, mamodel_load,
+    mamodel_set_sheet, mamodel_set_sheet_table, mamodel_set_single_sheet, map_type_code,
+    query_localizable, stat_soul_animation_type, stat_spawn_animation_type,
+    std_map_int_maanim_subscript, string_format_int, string_format_int2,
+    string_format_int2_text_copy, string_format_int2_text2, string_format_int3,
+    string_format_rank_comment, string_split, text_texture_cache, texture_cache_load,
+    texture_context_init, validate_map_type,
 };
 
 const SITE: &str = "load_battle_assets";
@@ -39,9 +45,9 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.castle_anims = Default::default();
     ctx.effect_a_sheet = None;
     ctx.boss_welcome_model = Mamodel::default();
-    ctx.crit_fx_model = Mamodel::default();
+    ctx.crit_vfx_model = Mamodel::default();
     ctx.boss_shockwave_anim = Maanim::default();
-    ctx.crit_fx_anim = Maanim::default();
+    ctx.crit_vfx_anim = Maanim::default();
     ctx.zombie_sheets = [None, None];
     ctx.zombie_model = Mamodel::default();
     ctx.zombie_down_anim = Maanim::default();
@@ -79,7 +85,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.skill_effect_invalid_model = Mamodel::default();
     ctx.skill_effect_invalid_anim = Maanim::default();
     ctx.skill_zombie_strong_model = Mamodel::default();
-    ctx.zkill_fx_anim = Maanim::default();
+    ctx.zkill_vfx_anim = Maanim::default();
     ctx.barrier_model = Mamodel::default();
     ctx.barrier_anims = Default::default();
     ctx.demonshield_model = Mamodel::default();
@@ -118,9 +124,9 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.strong_attack_model = Mamodel::default();
     ctx.attack_invalid_model = Mamodel::default();
     ctx.percentage_attack_model = Mamodel::default();
-    ctx.savage_fx_anim = Maanim::default();
+    ctx.savage_vfx_anim = Maanim::default();
     ctx.attack_invalid_anim = Maanim::default();
-    ctx.toxic_fx_anim = Maanim::default();
+    ctx.toxic_vfx_anim = Maanim::default();
     ctx.volcano_model = Mamodel::default();
     ctx.volcano_e_model = Mamodel::default();
     ctx.smallvolcano_model = Mamodel::default();
@@ -153,14 +159,18 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.demonbattle_model = Mamodel::default();
     ctx.demon_banner_anim = Maanim::default();
     ctx.metal_strong_model = Mamodel::default();
-    ctx.metal_killer_fx_anim = Maanim::default();
+    ctx.metal_killer_vfx_anim = Maanim::default();
     ctx.recast_decrease_e_model = Mamodel::default();
-    ctx.drain_fx_anim = Maanim::default();
+    ctx.drain_vfx_anim = Maanim::default();
     ctx.fever_sheet = None;
     ctx.fever_model = Mamodel::default();
     ctx.fever_anim = Maanim::default();
 
-    let image = if get_bg_image_id(ctx)? != -1 { get_bg_image_id(ctx)? } else { ctx.i32_at(AppContext::STAGE_BACKGROUND_ID)? };
+    let image = if get_bg_image_id(ctx)? != -1 {
+        get_bg_image_id(ctx)?
+    } else {
+        ctx.i32_at(AppContext::STAGE_BACKGROUND_ID)?
+    };
     let name = string_format_int(ctx, b"bg%03d.png", image)?;
     let png = query_localizable(ctx, &name);
     let model = get_bg_model_id(ctx)?;
@@ -185,12 +195,20 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         let map = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage = ctx.i32_at(AppContext::CASTLE_ID)?;
         let lang = query_localizable(ctx, b"lang");
-        let name = string_format_int2_text2(ctx, b"mapsn%03d_%02d_%@_%@.png", map, stage, &code, &lang)?;
+        let name =
+            string_format_int2_text2(ctx, b"mapsn%03d_%02d_%@_%@.png", map, stage, &code, &lang)?;
         let png = query_localizable(ctx, &name);
         let map = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage = ctx.i32_at(AppContext::CASTLE_ID)?;
         let lang = query_localizable(ctx, b"lang");
-        let name = string_format_int2_text2(ctx, b"mapsn%03d_%02d_%@_%@.imgcut", map, stage, &code, &lang)?;
+        let name = string_format_int2_text2(
+            ctx,
+            b"mapsn%03d_%02d_%@_%@.imgcut",
+            map,
+            stage,
+            &code,
+            &lang,
+        )?;
         let cut = query_localizable(ctx, &name);
 
         ctx.stage_name_sheet = texture_cache_load(ctx, &png, &cut, 0x2601)?;
@@ -198,7 +216,8 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         let map = ctx.i32_at(AppContext::EX_MAP_INDEX)?;
         let stage = ctx.i32_at(AppContext::EX_STAGE_INDEX)?;
         let lang = query_localizable(ctx, b"lang");
-        let name = string_format_int2_text_copy(ctx, b"mapsn%03d_%02d_ex_%@.png", map, stage, &lang)?;
+        let name =
+            string_format_int2_text_copy(ctx, b"mapsn%03d_%02d_ex_%@.png", map, stage, &lang)?;
         let png = query_localizable(ctx, &name);
         let lang = query_localizable(ctx, b"lang");
         let name = string_format_int2_text_copy(ctx, b"mapsnALL_all.imgcut", 0, 0, &lang)?;
@@ -262,8 +281,17 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.img100_sheet = texture_cache_load(ctx, b"img100.png", b"img100.imgcut", 0x2601)?;
 
     if ctx.i32_at(AppContext::SCENE_0X64_PAGE)? == 5 && is_scored_stage(ctx)? {
-        ctx.img101_sheet = texture_cache_load(ctx, b"img101_nekoDojo.png", b"img101_nekoDojo.imgcut", 0x2601)?;
-    } else if ctx.img101_sheet.as_ref().is_none_or(|sheet| sheet.png.as_slice() != b"img101_nekoDojo.png") {
+        ctx.img101_sheet = texture_cache_load(
+            ctx,
+            b"img101_nekoDojo.png",
+            b"img101_nekoDojo.imgcut",
+            0x2601,
+        )?;
+    } else if ctx
+        .img101_sheet
+        .as_ref()
+        .is_none_or(|sheet| sheet.png.as_slice() != b"img101_nekoDojo.png")
+    {
         ctx.img101_sheet = texture_cache_load(ctx, b"img101.png", b"img101.imgcut", 0x2601)?;
     }
 
@@ -294,7 +322,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.castle_sheet = texture_cache_load(ctx, &png, &cut, 0x2601)?;
 
-    for (index, (part, variant)) in [(0, 1), (0, 2), (1, 1), (1, 2), (2, 1), (2, 2)].into_iter().enumerate() {
+    for (index, (part, variant)) in [(0, 1), (0, 2), (1, 1), (1, 2), (2, 1), (2, 2)]
+        .into_iter()
+        .enumerate()
+    {
         let name = string_format_int3(ctx, b"%03d_g%02d_%d.mamodel", 0, part, variant)?;
         let path = query_localizable(ctx, &name);
         let mut model = std::mem::take(&mut ctx.castle_models[index]);
@@ -307,7 +338,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
         maanim_load(ctx, &mut anim, &path)?;
         ctx.castle_anims[index] = anim;
-        mamodel_set_sheet_table(&mut model, &Rc::from([cell::Cell::new(ctx.castle_sheet.clone())]));
+        mamodel_set_sheet_table(
+            &mut model,
+            &Rc::from([cell::Cell::new(ctx.castle_sheet.clone())]),
+        );
         maanim_initialize(&mut model, 0)?;
         ctx.castle_models[index] = model;
     }
@@ -324,7 +358,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     maanim_load(ctx, &mut anim, &path)?;
     ctx.castle_anims[6] = anim;
-    mamodel_set_sheet_table(&mut model, &Rc::from([cell::Cell::new(ctx.castle_sheet.clone())]));
+    mamodel_set_sheet_table(
+        &mut model,
+        &Rc::from([cell::Cell::new(ctx.castle_sheet.clone())]),
+    );
     maanim_initialize(&mut model, 0)?;
     ctx.castle_models[6] = model;
     ctx.effect_a_sheet = texture_cache_load(ctx, b"000_a.png", b"000_a.imgcut", 0x2601)?;
@@ -341,27 +378,44 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.boss_shockwave_anim = anim;
 
     let path = query_localizable(ctx, b"critical.mamodel");
-    let mut crit_model = std::mem::take(&mut ctx.crit_fx_model);
+    let mut crit_model = std::mem::take(&mut ctx.crit_vfx_model);
 
     mamodel_load(ctx, &mut crit_model, &path)?;
 
     let path = query_localizable(ctx, b"critical.maanim");
-    let mut anim = std::mem::take(&mut ctx.crit_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.crit_vfx_anim);
 
     maanim_load(ctx, &mut anim, &path)?;
-    ctx.crit_fx_anim = anim;
-    mamodel_set_sheet_table(&mut boss_model, &Rc::from([cell::Cell::new(ctx.effect_a_sheet.clone())]));
+    ctx.crit_vfx_anim = anim;
+    mamodel_set_sheet_table(
+        &mut boss_model,
+        &Rc::from([cell::Cell::new(ctx.effect_a_sheet.clone())]),
+    );
     maanim_initialize(&mut boss_model, 0)?;
-    mamodel_set_sheet_table(&mut crit_model, &Rc::from([cell::Cell::new(ctx.effect_a_sheet.clone())]));
+    mamodel_set_sheet_table(
+        &mut crit_model,
+        &Rc::from([cell::Cell::new(ctx.effect_a_sheet.clone())]),
+    );
     maanim_initialize(&mut crit_model, 0)?;
     ctx.boss_welcome_model = boss_model;
-    ctx.crit_fx_model = crit_model;
-    ctx.zombie_sheets[1] = texture_cache_load(ctx, b"set_enemy001_zombie.png", b"set_enemy001_zombie.imgcut", 0x2601)?;
+    ctx.crit_vfx_model = crit_model;
+    ctx.zombie_sheets[1] = texture_cache_load(
+        ctx,
+        b"set_enemy001_zombie.png",
+        b"set_enemy001_zombie.imgcut",
+        0x2601,
+    )?;
 
     let mut model = std::mem::take(&mut ctx.zombie_model);
 
     mamodel_load(ctx, &mut model, b"set_enemy001_zombie.mamodel")?;
-    mamodel_set_sheet_table(&mut model, &Rc::from([cell::Cell::new(ctx.zombie_sheets[0].clone()), cell::Cell::new(ctx.zombie_sheets[1].clone())]));
+    mamodel_set_sheet_table(
+        &mut model,
+        &Rc::from([
+            cell::Cell::new(ctx.zombie_sheets[0].clone()),
+            cell::Cell::new(ctx.zombie_sheets[1].clone()),
+        ]),
+    );
     ctx.zombie_model = model;
 
     let mut anim = std::mem::take(&mut ctx.zombie_down_anim);
@@ -387,7 +441,14 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let sheet = texture_cache_load(ctx, &png, &cut, 0x2601)?;
 
-        ctx.skill_sheets.get(skill as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: skill as i64, limit: ctx.skill_sheets.len() as i64 })?.set(sheet);
+        ctx.skill_sheets
+            .get(skill as usize)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: skill as i64,
+                limit: ctx.skill_sheets.len() as i64,
+            })?
+            .set(sheet);
     }
 
     let path = query_localizable(ctx, b"skill_up.mamodel");
@@ -602,10 +663,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     mamodel_load(ctx, &mut model, b"skill_zombie_strong.mamodel")?;
 
-    let mut anim = std::mem::take(&mut ctx.zkill_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.zkill_vfx_anim);
 
     maanim_load(ctx, &mut anim, b"skill_zombie_strong.maanim")?;
-    ctx.zkill_fx_anim = anim;
+    ctx.zkill_vfx_anim = anim;
     mamodel_set_sheet_table(&mut model, &Rc::clone(&ctx.skill_sheets));
     maanim_initialize(&mut model, 0)?;
     ctx.skill_zombie_strong_model = model;
@@ -763,7 +824,12 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     maanim_load(ctx, &mut anim, b"battle_demonsoul_00.maanim")?;
     ctx.death_surge_anims[1] = anim;
-    ctx.demonsoul_sheets[1] = texture_cache_load(ctx, b"battle_demonsoul_00.png", b"battle_demonsoul_00.imgcut", 0x2601)?;
+    ctx.demonsoul_sheets[1] = texture_cache_load(
+        ctx,
+        b"battle_demonsoul_00.png",
+        b"battle_demonsoul_00.imgcut",
+        0x2601,
+    )?;
     mamodel_set_sheet(&mut model, ctx.demonsoul_sheets[1].clone());
     mamodel_set_single_sheet(&mut model, 1);
     maanim_initialize(&mut model, 0)?;
@@ -777,7 +843,12 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     maanim_load(ctx, &mut anim, b"battle_demonsoul_01.maanim")?;
     ctx.death_surge_anims[0] = anim;
-    ctx.demonsoul_sheets[0] = texture_cache_load(ctx, b"battle_demonsoul_01.png", b"battle_demonsoul_01.imgcut", 0x2601)?;
+    ctx.demonsoul_sheets[0] = texture_cache_load(
+        ctx,
+        b"battle_demonsoul_01.png",
+        b"battle_demonsoul_01.imgcut",
+        0x2601,
+    )?;
     mamodel_set_sheet(&mut model, ctx.demonsoul_sheets[0].clone());
     mamodel_set_single_sheet(&mut model, 1);
     maanim_initialize(&mut model, 0)?;
@@ -835,10 +906,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     mamodel_load(ctx, &mut model, b"skill_strong_attack.mamodel")?;
 
-    let mut anim = std::mem::take(&mut ctx.savage_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.savage_vfx_anim);
 
     maanim_load(ctx, &mut anim, b"skill_strong_attack.maanim")?;
-    ctx.savage_fx_anim = anim;
+    ctx.savage_vfx_anim = anim;
     mamodel_set_sheet_table(&mut model, &Rc::clone(&ctx.skill_sheets));
     ctx.strong_attack_model = model;
 
@@ -857,10 +928,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     mamodel_load(ctx, &mut model, b"skill_percentage_attack.mamodel")?;
 
-    let mut anim = std::mem::take(&mut ctx.toxic_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.toxic_vfx_anim);
 
     maanim_load(ctx, &mut anim, b"skill_percentage_attack.maanim")?;
-    ctx.toxic_fx_anim = anim;
+    ctx.toxic_vfx_anim = anim;
     mamodel_set_sheet_table(&mut model, &Rc::clone(&ctx.skill_sheets));
     ctx.percentage_attack_model = model;
 
@@ -907,10 +978,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     mamodel_load(ctx, &mut model, b"skill_metal_strong.mamodel")?;
 
-    let mut anim = std::mem::take(&mut ctx.metal_killer_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.metal_killer_vfx_anim);
 
     maanim_load(ctx, &mut anim, b"skill_metal_strong.maanim")?;
-    ctx.metal_killer_fx_anim = anim;
+    ctx.metal_killer_vfx_anim = anim;
     mamodel_set_sheet_table(&mut model, &Rc::clone(&ctx.skill_sheets));
     ctx.metal_strong_model = model;
 
@@ -918,10 +989,10 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     mamodel_load(ctx, &mut model, b"skill_recast_decrease_e.mamodel")?;
 
-    let mut anim = std::mem::take(&mut ctx.drain_fx_anim);
+    let mut anim = std::mem::take(&mut ctx.drain_vfx_anim);
 
     maanim_load(ctx, &mut anim, b"skill_recast_decrease_e.maanim")?;
-    ctx.drain_fx_anim = anim;
+    ctx.drain_vfx_anim = anim;
     mamodel_set_sheet_table(&mut model, &Rc::clone(&ctx.skill_sheets));
     ctx.recast_decrease_e_model = model;
     ctx.fever_sheet = texture_cache_load(ctx, b"FeverEffect.png", b"FeverEffect.imgcut", 0x2601)?;
@@ -967,12 +1038,15 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
                 ctx.effect_models.insert(entry, model);
 
                 let path = string_format_int(ctx, b"battle_entry_%03d.maanim", entry)?;
-                let mut anim = std::mem::take(std_map_int_maanim_subscript(&mut ctx.effect_anims, &entry));
+                let mut anim =
+                    std::mem::take(std_map_int_maanim_subscript(&mut ctx.effect_anims, &entry));
 
                 maanim_load(ctx, &mut anim, &path)?;
                 *std_map_int_maanim_subscript(&mut ctx.effect_anims, &entry) = anim;
 
-                let table = Rc::from([cell::Cell::new(ctx.effect_sheets.entry(entry).or_default().clone())]);
+                let table = Rc::from([cell::Cell::new(
+                    ctx.effect_sheets.entry(entry).or_default().clone(),
+                )]);
                 let model = ctx.effect_models.entry(entry).or_default();
 
                 mamodel_set_sheet_table(model, &table);
@@ -999,12 +1073,15 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.effect_models.insert(key, model);
 
             let path = string_format_int(ctx, b"battle_soul_%03d.maanim", soul)?;
-            let mut anim = std::mem::take(std_map_int_maanim_subscript(&mut ctx.effect_anims, &key));
+            let mut anim =
+                std::mem::take(std_map_int_maanim_subscript(&mut ctx.effect_anims, &key));
 
             maanim_load(ctx, &mut anim, &path)?;
             *std_map_int_maanim_subscript(&mut ctx.effect_anims, &key) = anim;
 
-            let table = Rc::from([cell::Cell::new(ctx.effect_sheets.entry(key).or_default().clone())]);
+            let table = Rc::from([cell::Cell::new(
+                ctx.effect_sheets.entry(key).or_default().clone(),
+            )]);
             let model = ctx.effect_models.entry(key).or_default();
 
             mamodel_set_sheet_table(model, &table);
@@ -1020,12 +1097,42 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     ctx.img015_sheet = texture_cache_load(ctx, b"img015.png", b"img015.imgcut", 0x2601)?;
-    ctx.equipment_attribute_sheet = texture_cache_load(ctx, b"equipment_attribute.png", b"equipment_attribute.imgcut", 0x2601)?;
-    ctx.equipment_effect_sheet = texture_cache_load(ctx, b"equipment_effect.png", b"equipment_effect.imgcut", 0x2601)?;
-    ctx.equipment_grade_sheet = texture_cache_load(ctx, b"equipment_grade.png", b"equipment_grade.imgcut", 0x2601)?;
-    ctx.equipment_shadow_sheet = texture_cache_load(ctx, b"equipment_shadow.png", b"equipment_shadow.imgcut", 0x2601)?;
-    ctx.equipment_attribute_s_sheet = texture_cache_load(ctx, b"equipment_attribute_s.png", b"equipment_attribute_s.imgcut", 0x2601)?;
-    ctx.equipment_effect_s_sheet = texture_cache_load(ctx, b"equipment_effect_s.png", b"equipment_effect_s.imgcut", 0x2601)?;
+    ctx.equipment_attribute_sheet = texture_cache_load(
+        ctx,
+        b"equipment_attribute.png",
+        b"equipment_attribute.imgcut",
+        0x2601,
+    )?;
+    ctx.equipment_effect_sheet = texture_cache_load(
+        ctx,
+        b"equipment_effect.png",
+        b"equipment_effect.imgcut",
+        0x2601,
+    )?;
+    ctx.equipment_grade_sheet = texture_cache_load(
+        ctx,
+        b"equipment_grade.png",
+        b"equipment_grade.imgcut",
+        0x2601,
+    )?;
+    ctx.equipment_shadow_sheet = texture_cache_load(
+        ctx,
+        b"equipment_shadow.png",
+        b"equipment_shadow.imgcut",
+        0x2601,
+    )?;
+    ctx.equipment_attribute_s_sheet = texture_cache_load(
+        ctx,
+        b"equipment_attribute_s.png",
+        b"equipment_attribute_s.imgcut",
+        0x2601,
+    )?;
+    ctx.equipment_effect_s_sheet = texture_cache_load(
+        ctx,
+        b"equipment_effect_s.png",
+        b"equipment_effect_s.imgcut",
+        0x2601,
+    )?;
 
     let mut model = std::mem::take(&mut ctx.invoke_equipment_model);
 
@@ -1053,35 +1160,96 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     let first = lines.first().ok_or(Fault::NullPointer { site: SITE })?;
     let label = get_text_texture(text_texture_cache(ctx)?, first, &font, 0x1e, 0, 0);
 
-    ctx.sealed_announce_sheets[0] = Some(Rc::new(Imgcut { label: label.id, width: label.width, height: label.height, whole: 1, ..Default::default() }));
+    ctx.sealed_announce_sheets[0] = Some(Rc::new(Imgcut {
+        label: label.id,
+        width: label.width,
+        height: label.height,
+        whole: 1,
+        ..Default::default()
+    }));
 
     let enemy = get_castle_enemy_row(ctx)?.wrapping_add(-2);
     let cap = get_altar_level_cap(ctx, enemy)?.wrapping_add(1);
-    let second = lines.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: lines.len() as i64 })?;
+    let second = lines.get(1).ok_or(Fault::IndexOutOfRange {
+        site: SITE,
+        index: 1,
+        limit: lines.len() as i64,
+    })?;
     let line = string_format_int(ctx, second, cap)?;
     let label = get_text_texture(text_texture_cache(ctx)?, &line, &font, 0x1e, 0, 0);
 
-    ctx.sealed_announce_sheets[1] = Some(Rc::new(Imgcut { label: label.id, width: label.width, height: label.height, whole: 1, ..Default::default() }));
+    ctx.sealed_announce_sheets[1] = Some(Rc::new(Imgcut {
+        label: label.id,
+        width: label.width,
+        height: label.height,
+        whole: 1,
+        ..Default::default()
+    }));
     ctx.sealed_announce_sheets[2] = ctx.img002_sheet.clone();
-    mamodel_set_sheet_table(&mut model, &Rc::from([cell::Cell::new(ctx.sealed_announce_sheets[0].clone()), cell::Cell::new(ctx.sealed_announce_sheets[1].clone()), cell::Cell::new(ctx.sealed_announce_sheets[2].clone())]));
+    mamodel_set_sheet_table(
+        &mut model,
+        &Rc::from([
+            cell::Cell::new(ctx.sealed_announce_sheets[0].clone()),
+            cell::Cell::new(ctx.sealed_announce_sheets[1].clone()),
+            cell::Cell::new(ctx.sealed_announce_sheets[2].clone()),
+        ]),
+    );
 
     let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
 
-    model.parts.get_mut(part + 7).ok_or(Fault::IndexOutOfRange { site: SITE, index: (part + 7) as i64, limit: 0 })?.set_i32_at(0x24, 0);
+    model
+        .parts
+        .get_mut(part + 7)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: (part + 7) as i64,
+            limit: 0,
+        })?
+        .set_i32_at(0x24, 0);
 
     let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
 
-    model.parts.get_mut(part + 8).ok_or(Fault::IndexOutOfRange { site: SITE, index: (part + 8) as i64, limit: 0 })?.set_i32_at(0x24, 1);
+    model
+        .parts
+        .get_mut(part + 8)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: (part + 8) as i64,
+            limit: 0,
+        })?
+        .set_i32_at(0x24, 1);
 
-    let width = imgcut_get_width(ctx.sealed_announce_sheets[0].as_deref().ok_or(Fault::NullPointer { site: SITE })?);
+    let width = imgcut_get_width(
+        ctx.sealed_announce_sheets[0]
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?,
+    );
     let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
-    let target = model.parts.get_mut(part + 7).ok_or(Fault::IndexOutOfRange { site: SITE, index: (part + 7) as i64, limit: 0 })?;
+    let target = model
+        .parts
+        .get_mut(part + 7)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: (part + 7) as i64,
+            limit: 0,
+        })?;
 
     target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
 
-    let width = imgcut_get_width(ctx.sealed_announce_sheets[1].as_deref().ok_or(Fault::NullPointer { site: SITE })?);
+    let width = imgcut_get_width(
+        ctx.sealed_announce_sheets[1]
+            .as_deref()
+            .ok_or(Fault::NullPointer { site: SITE })?,
+    );
     let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
-    let target = model.parts.get_mut(part + 8).ok_or(Fault::IndexOutOfRange { site: SITE, index: (part + 8) as i64, limit: 0 })?;
+    let target = model
+        .parts
+        .get_mut(part + 8)
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: (part + 8) as i64,
+            limit: 0,
+        })?;
 
     target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
     ctx.demonbattle_model = model;

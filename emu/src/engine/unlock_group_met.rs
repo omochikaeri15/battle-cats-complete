@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{abs_i32, get_stage_record, is_map_cleared, map_type_of_map_id, AppContext};
+use super::{AppContext, abs_i32, get_stage_record, is_map_cleared, map_type_of_map_id};
 
 const SITE: &str = "unlock_group_met";
 
@@ -29,7 +29,13 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
         return Ok(*ctx.unlock_flags.entry(flag_id).or_insert(false));
     }
 
-    if ctx.unlock_groups.entry(id).or_default().conditions.is_empty() {
+    if ctx
+        .unlock_groups
+        .entry(id)
+        .or_default()
+        .conditions
+        .is_empty()
+    {
         return Ok(true);
     }
 
@@ -37,13 +43,32 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
     let mut listed = 0usize;
 
     while listed < ctx.unlock_groups.entry(id).or_default().conditions.len() {
-        let missing = Fault::IndexOutOfRange { site: SITE, index: listed as i64, limit: 0 };
+        let missing = Fault::IndexOutOfRange {
+            site: SITE,
+            index: listed as i64,
+            limit: 0,
+        };
 
-        if *ctx.unlock_groups.entry(id).or_default().conditions.get(listed).ok_or(missing.clone())? >= 0 {
+        if *ctx
+            .unlock_groups
+            .entry(id)
+            .or_default()
+            .conditions
+            .get(listed)
+            .ok_or(missing.clone())?
+            >= 0
+        {
             groups.push(Vec::new());
         }
 
-        let condition = abs_i32(*ctx.unlock_groups.entry(id).or_default().conditions.get(listed).ok_or(missing.clone())?);
+        let condition = abs_i32(
+            *ctx.unlock_groups
+                .entry(id)
+                .or_default()
+                .conditions
+                .get(listed)
+                .ok_or(missing.clone())?,
+        );
 
         groups.last_mut().ok_or(missing)?.push(condition);
         listed += 1;
@@ -56,10 +81,29 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
         let mut element = 0usize;
         let mut satisfied = false;
 
-        while element < groups.get(group).ok_or(Fault::IndexOutOfRange { site: SITE, index: group as i64, limit: groups.len() as i64 })?.len() {
-            let members = groups.get(group).ok_or(Fault::IndexOutOfRange { site: SITE, index: group as i64, limit: groups.len() as i64 })?;
-            let condition = *members.get(element).ok_or(Fault::IndexOutOfRange { site: SITE, index: element as i64, limit: members.len() as i64 })?;
-            let map_id = condition.wrapping_sub((operation::div_100000(condition as i64) as i32).wrapping_mul(0x186a0));
+        while element
+            < groups
+                .get(group)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: group as i64,
+                    limit: groups.len() as i64,
+                })?
+                .len()
+        {
+            let members = groups.get(group).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: group as i64,
+                limit: groups.len() as i64,
+            })?;
+            let condition = *members.get(element).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: element as i64,
+                limit: members.len() as i64,
+            })?;
+            let map_id = condition.wrapping_sub(
+                (operation::div_100000(condition as i64) as i32).wrapping_mul(0x186a0),
+            );
             let map_type = map_type_of_map_id(map_id);
             let mut map_idx = map_id.wrapping_sub(0xbb8);
 
@@ -70,13 +114,16 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                     map_idx = map_id.wrapping_sub(0xbbe);
 
                     if map_idx as u32 >= 3 {
-                        map_idx = map_id.wrapping_sub(operation::div_1000(map_id).wrapping_mul(0x3e8));
+                        map_idx =
+                            map_id.wrapping_sub(operation::div_1000(map_id).wrapping_mul(0x3e8));
                     }
                 }
             }
 
             if (condition.wrapping_sub(0x186a0) as u32) <= 0x1869f {
-                if ctx.unlock_groups.entry(id).or_default().stage == -1 && is_map_cleared(ctx, map_type, map_idx, 0, 0)? {
+                if ctx.unlock_groups.entry(id).or_default().stage == -1
+                    && is_map_cleared(ctx, map_type, map_idx, 0, 0)?
+                {
                     satisfied = true;
 
                     break;
@@ -93,7 +140,9 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                 }
             }
 
-            if (condition.wrapping_sub(0x30d40) as u32) <= 0x1869f && ctx.condition_list_200k.contains(&map_id) {
+            if (condition.wrapping_sub(0x30d40) as u32) <= 0x1869f
+                && ctx.condition_list_200k.contains(&map_id)
+            {
                 satisfied = true;
 
                 break;

@@ -1,10 +1,13 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    add_cannon_shot_id, get_button_unit_form, get_button_unit_id, get_button_unit_row, get_cannon_countdown, get_cannon_recharge, get_cannon_strike_width, get_cannon_type,
-    get_cannon_wall_hp_pct, get_cannon_wall_lifetime, get_cannon_wall_offset, get_castle_anim_state, get_max_hp, get_pos_x, get_tech_level, is_cannon_target, play_sound,
-    set_cannon_countdown, set_cannon_strike_x, set_castle_anim_frame, set_castle_anim_state, set_death_timer, set_hp, set_max_hp, set_pos_x, slot_occupied, sound_manager,
-    spawn_entity, AppContext, CatStats, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE,
+    AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats,
+    add_cannon_shot_id, get_button_unit_form, get_button_unit_id, get_button_unit_row,
+    get_cannon_countdown, get_cannon_recharge, get_cannon_strike_width, get_cannon_type,
+    get_cannon_wall_hp_pct, get_cannon_wall_lifetime, get_cannon_wall_offset,
+    get_castle_anim_state, get_max_hp, get_pos_x, get_tech_level, is_cannon_target, play_sound,
+    set_cannon_countdown, set_cannon_strike_x, set_castle_anim_frame, set_castle_anim_state,
+    set_death_timer, set_hp, set_max_hp, set_pos_x, slot_occupied, sound_manager, spawn_entity,
 };
 
 pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
@@ -13,7 +16,10 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
             break 'refused;
         }
 
-        ctx.set_block_at::<1>(AppContext::faction_flags(0).wrapping_add(AppContext::WALLET_CANNON_FIRED), [1])?;
+        ctx.set_block_at::<1>(
+            AppContext::faction_flags(0).wrapping_add(AppContext::WALLET_CANNON_FIRED),
+            [1],
+        )?;
 
         'fired: {
             let sound_id;
@@ -33,13 +39,26 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
             } else if get_cannon_type(ctx, 0)? == 2 {
                 let row = get_button_unit_row(ctx, 0, 0xa)?;
                 let unit_id = get_button_unit_id(ctx, 0, 0xa)?;
-                let level = get_tech_level(ctx, ((unit_id as i64) * 8 + AppContext::UNIT_LEVELS as i64) as usize)?;
+                let level = get_tech_level(
+                    ctx,
+                    ((unit_id as i64) * 8 + AppContext::UNIT_LEVELS as i64) as usize,
+                )?;
                 let z_min_row = get_button_unit_row(ctx, 0, 0xa)? as i64;
                 let z_min_form = get_button_unit_form(ctx, 0, 0xa)? as i64;
-                let z_min = ctx.i32_at((z_min_row * CAT_STATS_UNIT_STRIDE as i64 + CAT_STATS as i64 + z_min_form * CAT_STATS_FORM_STRIDE as i64 + CatStats::MINIMUM_Z_LAYER as i64) as usize)?;
+                let z_min = ctx.i32_at(
+                    (z_min_row * CAT_STATS_UNIT_STRIDE as i64
+                        + CAT_STATS as i64
+                        + z_min_form * CAT_STATS_FORM_STRIDE as i64
+                        + CatStats::MINIMUM_Z_LAYER as i64) as usize,
+                )?;
                 let z_max_row = get_button_unit_row(ctx, 0, 0xa)? as i64;
                 let z_max_form = get_button_unit_form(ctx, 0, 0xa)? as i64;
-                let z_max = ctx.i32_at((z_max_row * CAT_STATS_UNIT_STRIDE as i64 + CAT_STATS as i64 + z_max_form * CAT_STATS_FORM_STRIDE as i64 + CatStats::MAXIMUM_Z_LAYER as i64) as usize)?;
+                let z_max = ctx.i32_at(
+                    (z_max_row * CAT_STATS_UNIT_STRIDE as i64
+                        + CAT_STATS as i64
+                        + z_max_form * CAT_STATS_FORM_STRIDE as i64
+                        + CatStats::MAXIMUM_Z_LAYER as i64) as usize,
+                )?;
                 let form = get_button_unit_form(ctx, 0, 0xa)?;
                 let wall = spawn_entity(ctx, 0, row, level, z_min, z_max, form, 0)?;
 
@@ -82,7 +101,10 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 let mut slot = 0i32;
 
                 while slot != 51 {
-                    if slot_occupied(ctx, 0, slot)? == 2 && get_pos_x(ctx, 0, slot)? < front && is_cannon_target(ctx, 0, slot)? {
+                    if slot_occupied(ctx, 0, slot)? == 2
+                        && get_pos_x(ctx, 0, slot)? < front
+                        && is_cannon_target(ctx, 0, slot)?
+                    {
                         front = get_pos_x(ctx, 0, slot)?;
                     }
 
@@ -92,7 +114,8 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 set_castle_anim_state(ctx, 0, 4)?;
                 set_castle_anim_frame(ctx, 0, 0)?;
 
-                let strike_x = front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                let strike_x =
+                    front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
 
                 set_cannon_strike_x(ctx, 0, strike_x)?;
                 sound_id = 0x25;
@@ -101,7 +124,10 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 let mut slot = 0i32;
 
                 while slot != 51 {
-                    if slot_occupied(ctx, 0, slot)? == 2 && get_pos_x(ctx, 0, slot)? < front && is_cannon_target(ctx, 0, slot)? {
+                    if slot_occupied(ctx, 0, slot)? == 2
+                        && get_pos_x(ctx, 0, slot)? < front
+                        && is_cannon_target(ctx, 0, slot)?
+                    {
                         front = get_pos_x(ctx, 0, slot)?;
                     }
 
@@ -111,7 +137,8 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 set_castle_anim_state(ctx, 0, 7)?;
                 set_castle_anim_frame(ctx, 0, 0)?;
 
-                let strike_x = front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                let strike_x =
+                    front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
 
                 set_cannon_strike_x(ctx, 0, strike_x)?;
                 sound_id = 0x41;

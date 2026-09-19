@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{open_asset_stream, read_asset_stream_line, read_csv_cell, read_csv_row, AppContext, AssetStream, Cell};
+use super::{
+    AppContext, AssetStream, Cell, open_asset_stream, read_asset_stream_line, read_csv_cell,
+    read_csv_row,
+};
 
 pub const TRACK_HEADER_CELLS: usize = 3;
 pub const KEYFRAME_CELLS: usize = 4;
@@ -41,7 +44,8 @@ pub fn maanim_load(ctx: &mut AppContext, anim: &mut Maanim, path: &[u8]) -> Resu
     read_csv_row(stm);
     let track_count = read_csv_cell(stm, 0) as i32;
     anim.track_count = track_count;
-    anim.tracks.resize(track_count as i64 as usize, MaanimTrack::default());
+    anim.tracks
+        .resize(track_count as i64 as usize, MaanimTrack::default());
 
     let mut track = 0;
 
@@ -65,9 +69,12 @@ pub fn maanim_load(ctx: &mut AppContext, anim: &mut Maanim, path: &[u8]) -> Resu
         while keyframe < anim.tracks[track as usize].keyframe_count as i64 {
             read_csv_row(stm);
 
-            anim.tracks[track as usize].keyframes[keyframe as usize][0] = read_csv_cell(stm, 0) as i32;
-            anim.tracks[track as usize].keyframes[keyframe as usize][1] = read_csv_cell(stm, 1) as i32;
-            anim.tracks[track as usize].keyframes[keyframe as usize][2] = read_csv_cell(stm, 2) as i32;
+            anim.tracks[track as usize].keyframes[keyframe as usize][0] =
+                read_csv_cell(stm, 0) as i32;
+            anim.tracks[track as usize].keyframes[keyframe as usize][1] =
+                read_csv_cell(stm, 1) as i32;
+            anim.tracks[track as usize].keyframes[keyframe as usize][2] =
+                read_csv_cell(stm, 2) as i32;
 
             let mut eased = 0;
 

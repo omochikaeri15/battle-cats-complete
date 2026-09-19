@@ -1,8 +1,8 @@
 use crate::Fault;
 
 use super::{
-    get_cleared_count, map_type_as_index, map_type_base_id, std_map_int_bool_subscript, std_map_int_map_subscript,
-    std_map_int_map_subscript_2, xor_row51_get, AppContext,
+    AppContext, get_cleared_count, map_type_as_index, map_type_base_id, std_map_int_bool_subscript,
+    std_map_int_map_subscript, std_map_int_map_subscript_2, xor_row51_get,
 };
 
 pub fn get_stage_record(
@@ -24,7 +24,11 @@ pub fn get_stage_record(
             .or_default()
             .get(star as usize)
             .map(|record| *record as i32)
-            .ok_or(Fault::IndexOutOfRange { site: "get_stage_record", index: star as i64, limit: 4 });
+            .ok_or(Fault::IndexOutOfRange {
+                site: "get_stage_record",
+                index: star as i64,
+                limit: 4,
+            });
     }
 
     if map_type as u32 <= 4 {
@@ -72,37 +76,64 @@ pub fn get_stage_record(
             }
 
             if stage as u32 >= 0x31 || star != 0 {
-                return Err(Fault::IndexOutOfRange { site: "get_stage_record", index: stage as i64, limit: 0x31 });
+                return Err(Fault::IndexOutOfRange {
+                    site: "get_stage_record",
+                    index: stage as i64,
+                    limit: 0x31,
+                });
             }
 
             let cell = (map_idx as i64) * 0x31 + stage as u32 as i64;
 
-            maps.get(cell as usize).map(|record| *record as i32).ok_or(Fault::IndexOutOfRange {
-                site: "get_stage_record",
-                index: cell,
-                limit: maps.len() as i64,
-            })
+            maps.get(cell as usize)
+                .map(|record| *record as i32)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stage_record",
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x06 | 0x08..=0x0a | 0x0f => {
             let (maps, cell) = match case {
-                0x06 => (&ctx.stage_record_neg20, (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64),
-                0x08 => (&ctx.stage_record_neg18, (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64),
-                0x09 => (&ctx.stage_record_neg17, (map_idx as i64) * 8 + stage as i64 + star as i64),
-                0x0a => (&ctx.stage_record_neg16, (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64),
-                _ => (&ctx.stage_record_neg11, (map_idx as i64) * 0xc0 + (stage as i64) * 4 + star as i64),
+                0x06 => (
+                    &ctx.stage_record_neg20,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                ),
+                0x08 => (
+                    &ctx.stage_record_neg18,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                ),
+                0x09 => (
+                    &ctx.stage_record_neg17,
+                    (map_idx as i64) * 8 + stage as i64 + star as i64,
+                ),
+                0x0a => (
+                    &ctx.stage_record_neg16,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                ),
+                _ => (
+                    &ctx.stage_record_neg11,
+                    (map_idx as i64) * 0xc0 + (stage as i64) * 4 + star as i64,
+                ),
             };
 
-            maps.get(cell as usize).map(|record| *record as i32).ok_or(Fault::IndexOutOfRange {
-                site: "get_stage_record",
-                index: cell,
-                limit: maps.len() as i64,
-            })
+            maps.get(cell as usize)
+                .map(|record| *record as i32)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stage_record",
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x0b => Ok(ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? as i32),
         0x0c..=0x0e => {
             let stages = match case {
-                0x0c => std_map_int_map_subscript(&mut ctx.outbreak_cleared, &map_idx.wrapping_add(7)),
-                0x0d => std_map_int_map_subscript(&mut ctx.outbreak_cleared, &map_idx.wrapping_add(4)),
+                0x0c => {
+                    std_map_int_map_subscript(&mut ctx.outbreak_cleared, &map_idx.wrapping_add(7))
+                }
+                0x0d => {
+                    std_map_int_map_subscript(&mut ctx.outbreak_cleared, &map_idx.wrapping_add(4))
+                }
                 _ => std_map_int_map_subscript_2(&mut ctx.outbreak_cleared, &map_idx),
             };
 
@@ -110,19 +141,31 @@ pub fn get_stage_record(
         }
         0x10 | 0x11 | 0x16 => {
             let (maps, cell) = match case {
-                0x10 => (&ctx.stage_record_neg10, (map_idx as i64) * 0x3c + (stage as i64) * 4 + star as i64),
-                0x11 => (&ctx.stage_record_neg9, (map_idx as i64) * 0x30 + (stage as i64) * 4 + star as i64),
-                _ => (&ctx.stage_record_neg4, (map_idx as i64) * 0xc8 + (stage as i64) * 4 + star as i64),
+                0x10 => (
+                    &ctx.stage_record_neg10,
+                    (map_idx as i64) * 0x3c + (stage as i64) * 4 + star as i64,
+                ),
+                0x11 => (
+                    &ctx.stage_record_neg9,
+                    (map_idx as i64) * 0x30 + (stage as i64) * 4 + star as i64,
+                ),
+                _ => (
+                    &ctx.stage_record_neg4,
+                    (map_idx as i64) * 0xc8 + (stage as i64) * 4 + star as i64,
+                ),
             };
 
-            maps.get(cell as usize).copied().ok_or(Fault::IndexOutOfRange {
-                site: "get_stage_record",
-                index: cell,
-                limit: maps.len() as i64,
-            })
+            maps.get(cell as usize)
+                .copied()
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stage_record",
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x12 => {
-            let cell = (map_idx as i64) * 0x30 + (stage as i64) * 4 + AppContext::STAGE_RECORD_NEG8 as i64;
+            let cell =
+                (map_idx as i64) * 0x30 + (stage as i64) * 4 + AppContext::STAGE_RECORD_NEG8 as i64;
 
             ctx.i32_at(cell as usize)
         }
@@ -136,10 +179,17 @@ pub fn get_stage_record(
 
             xor_row51_get(ctx.bytes_from(row as usize)?, stage as i64 as usize)
                 .map(|record| record as i32)
-                .ok_or(Fault::IndexOutOfRange { site: "get_stage_record", index: stage as i64, limit: 0x33 })
+                .ok_or(Fault::IndexOutOfRange {
+                    site: "get_stage_record",
+                    index: stage as i64,
+                    limit: 0x33,
+                })
         }
         0x14 => {
-            let cell = (map_idx as i64) * 0x320 + (stage as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGE_RECORD_NEG6 as i64;
+            let cell = (map_idx as i64) * 0x320
+                + (stage as i64) * 0x10
+                + (star as i64) * 4
+                + AppContext::STAGE_RECORD_NEG6 as i64;
 
             ctx.i32_at(cell as usize)
         }

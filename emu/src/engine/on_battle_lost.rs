@@ -1,12 +1,16 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    ad_prepare, add_resource, add_stage_record, breadcrumb, call_rng, check_medals, commit_stage_score, defeat_counter_bump, entry_find_by_id,
-    event_unit_slot, get_bottom_inset_logical, get_drawable_width, get_global_map_id, get_map_index, get_map_type, get_point_cap, get_point_id,
-    get_point_rewards, get_point_total, get_release_point_cap, get_stage_best_score, get_stage_index, get_stage_record, get_stage_score,
-    is_reward_claimed, is_score_stage, labyrinth_active, log_analytics_event, map_type_base_id, mission_progress, play_sound, point_reward_analytics,
-    record_stage_played, scored_map_pays_money, set_auto_camera_mode, set_battle_status, set_fever_fade_out, set_reward_claimed, set_stage_record,
-    sound_manager, validate_map_type, vibration_reset, web_popup_request, AppContext, Entity, ENTITY_BASE, ENTITY_STRIDE,
+    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, ad_prepare, add_resource, add_stage_record,
+    breadcrumb, call_rng, check_medals, commit_stage_score, defeat_counter_bump, entry_find_by_id,
+    event_unit_slot, get_bottom_inset_logical, get_drawable_width, get_global_map_id,
+    get_map_index, get_map_type, get_point_cap, get_point_id, get_point_rewards, get_point_total,
+    get_release_point_cap, get_stage_best_score, get_stage_index, get_stage_record,
+    get_stage_score, is_reward_claimed, is_score_stage, labyrinth_active, log_analytics_event,
+    map_type_base_id, mission_progress, play_sound, point_reward_analytics, record_stage_played,
+    scored_map_pays_money, set_auto_camera_mode, set_battle_status, set_fever_fade_out,
+    set_reward_claimed, set_stage_record, sound_manager, validate_map_type, vibration_reset,
+    web_popup_request,
 };
 
 const SITE: &str = "on_battle_lost";
@@ -24,14 +28,29 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::LOST_STAGE, stage)?;
 
     if is_score_stage(ctx.event_items.as_ref()) {
-        let store = ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?;
+        let store = ctx
+            .event_items
+            .as_ref()
+            .ok_or(Fault::NullPointer { site: SITE })?;
         let total = get_point_total(store);
 
-        ctx.set_block_at::<1>(AppContext::POINT_LIMIT_PENDING, [(get_stage_score(store).wrapping_add(total) > get_point_cap(store)) as u8])?;
+        ctx.set_block_at::<1>(
+            AppContext::POINT_LIMIT_PENDING,
+            [(get_stage_score(store).wrapping_add(total) > get_point_cap(store)) as u8],
+        )?;
 
-        let score = get_stage_score(ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?);
+        let score = get_stage_score(
+            ctx.event_items
+                .as_ref()
+                .ok_or(Fault::NullPointer { site: SITE })?,
+        );
         let stage = get_stage_index(ctx)?;
-        let best = get_stage_best_score(ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?, stage);
+        let best = get_stage_best_score(
+            ctx.event_items
+                .as_ref()
+                .ok_or(Fault::NullPointer { site: SITE })?,
+            stage,
+        );
 
         ctx.set_i32_at(AppContext::NEW_BEST_SCORE, (score > best) as i32)?;
         commit_stage_score(ctx)?;
@@ -42,8 +61,15 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     sound_manager(ctx)?.stop_audio(-1);
     vibration_reset(ctx)?;
 
-    if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 && !labyrinth_active(ctx)? && get_map_type(ctx, 0)? != -24 {
-        let sound = if scored_map_pays_money(ctx)? { 0xbd } else { 0x39 };
+    if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0
+        && !labyrinth_active(ctx)?
+        && get_map_type(ctx, 0)? != -24
+    {
+        let sound = if scored_map_pays_money(ctx)? {
+            0xbd
+        } else {
+            0x39
+        };
 
         play_sound(sound_manager(ctx)?, sound, None);
     } else {
@@ -54,7 +80,13 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         if ctx.map_records.contains_key(&map_id) {
             let map_id = get_global_map_id(ctx, 0)?;
 
-            if !ctx.map_records.entry(map_id).or_default().defeat_voices.is_empty() {
+            if !ctx
+                .map_records
+                .entry(map_id)
+                .or_default()
+                .defeat_voices
+                .is_empty()
+            {
                 let map_id = get_global_map_id(ctx, 0)?;
                 let mode = ctx.map_records.entry(map_id).or_default().defeat_voice_mode;
                 let map_id = get_global_map_id(ctx, 0)?;
@@ -63,8 +95,25 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                     let map_id = get_global_map_id(ctx, 0)?;
                     let mut index = 0usize;
 
-                    while index < ctx.map_records.entry(map_id).or_default().defeat_voices.len() {
-                        let voice = *ctx.map_records.entry(map_id).or_default().defeat_voices.get(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0 })?;
+                    while index
+                        < ctx
+                            .map_records
+                            .entry(map_id)
+                            .or_default()
+                            .defeat_voices
+                            .len()
+                    {
+                        let voice = *ctx
+                            .map_records
+                            .entry(map_id)
+                            .or_default()
+                            .defeat_voices
+                            .get(index)
+                            .ok_or(Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: index as i64,
+                                limit: 0,
+                            })?;
 
                         if voice != -1 {
                             play_sound(sound_manager(ctx)?, voice, None);
@@ -75,13 +124,22 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
 
                     silent = true;
                 } else {
-                    let count = ctx.map_records.entry(map_id).or_default().defeat_voices.len() as u32;
+                    let count = ctx
+                        .map_records
+                        .entry(map_id)
+                        .or_default()
+                        .defeat_voices
+                        .len() as u32;
                     let map_id = get_global_map_id(ctx, 0)?;
                     let pick = call_rng(ctx, count as i32) as i64;
                     let voices = &ctx.map_records.entry(map_id).or_default().defeat_voices;
 
                     if (voices.len() as u64) > pick as u64 {
-                        sound = *voices.get(pick as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: pick, limit: voices.len() as i64 })?;
+                        sound = *voices.get(pick as usize).ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: pick,
+                            limit: voices.len() as i64,
+                        })?;
                         silent = sound == -1;
                     }
                 }
@@ -132,7 +190,10 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.deploy_queue.clear();
     ctx.set_i32_at(AppContext::LOSE_TIP_SHOWN, 0)?;
 
-    if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 && !labyrinth_active(ctx)? && get_map_type(ctx, 0)? != -24 {
+    if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0
+        && !labyrinth_active(ctx)?
+        && get_map_type(ctx, 0)? != -24
+    {
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
@@ -181,25 +242,38 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         mission_progress(ctx, 0x15, row, total, 0, 0)?;
 
         if get_map_type(ctx, 0)? == 4 {
-            let row = map_type_base_id(4, ctx.i32_at(AppContext::MAP_INDEX)?).wrapping_mul(0x64).wrapping_add(ctx.i32_at(AppContext::STAGE_ROW)?);
+            let row = map_type_base_id(4, ctx.i32_at(AppContext::MAP_INDEX)?)
+                .wrapping_mul(0x64)
+                .wrapping_add(ctx.i32_at(AppContext::STAGE_ROW)?);
             let total = ctx.i32_at(AppContext::SCORE_TOTAL)?;
 
             mission_progress(ctx, 0x15, row, total, 0, 0)?;
 
-            if entry_find_by_id(&ctx.ranking_entries, ctx.i32_at(AppContext::MAP_INDEX)?) < ctx.i32_at(AppContext::SCORE_TOTAL)? {
+            if entry_find_by_id(&ctx.ranking_entries, ctx.i32_at(AppContext::MAP_INDEX)?)
+                < ctx.i32_at(AppContext::SCORE_TOTAL)?
+            {
                 ctx.set_i32_at(AppContext::NEW_BEST_SCORE, 1)?;
             }
         } else {
             let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
             let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-            let best = *ctx.best_scores.entry(map_index).or_default().entry(stage_row).or_insert(0);
+            let best = *ctx
+                .best_scores
+                .entry(map_index)
+                .or_default()
+                .entry(stage_row)
+                .or_insert(0);
             let total = ctx.i32_at(AppContext::SCORE_TOTAL)?;
 
             if best < total {
                 let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                 let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
 
-                *ctx.best_scores.entry(map_index).or_default().entry(stage_row).or_insert(0) = total;
+                *ctx.best_scores
+                    .entry(map_index)
+                    .or_default()
+                    .entry(stage_row)
+                    .or_insert(0) = total;
                 ctx.set_i32_at(AppContext::NEW_BEST_SCORE, 1)?;
             }
         }
@@ -207,11 +281,26 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         set_battle_status(ctx, 7)?;
         record_stage_played(ctx)?;
 
-        let store = ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?;
+        let store = ctx
+            .event_items
+            .as_ref()
+            .ok_or(Fault::NullPointer { site: SITE })?;
         let point_id = get_point_id(store);
         let total = get_point_total(store);
         let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.reward_defs, point_id)
-            .map(|list| list.iter().map(|reward| (reward.id, reward.threshold, reward.kind, reward.target, reward.amount)).collect())
+            .map(|list| {
+                list.iter()
+                    .map(|reward| {
+                        (
+                            reward.id,
+                            reward.threshold,
+                            reward.kind,
+                            reward.target,
+                            reward.amount,
+                        )
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
         let cap = get_release_point_cap(ctx, point_id)?;
 
@@ -227,7 +316,10 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                 1 if event_unit_slot(&ctx.event_unit_rows, target)? != -1 => {
                     let slot = event_unit_slot(&ctx.event_unit_rows, target)?;
 
-                    ctx.set_i32_at(AppContext::EVENT_UNIT_OWNED.wrapping_add((slot as i64 * 4) as usize), 1)?;
+                    ctx.set_i32_at(
+                        AppContext::EVENT_UNIT_OWNED.wrapping_add((slot as i64 * 4) as usize),
+                        1,
+                    )?;
                 }
                 0 => add_resource(ctx, target, amount, 0)?,
                 _ => {}
@@ -237,16 +329,25 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    ctx.set_block_at::<1>(AppContext::EX_OFFERED, [(ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63) as u8])?;
+    ctx.set_block_at::<1>(
+        AppContext::EX_OFFERED,
+        [(ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63) as u8],
+    )?;
 
     let width = get_drawable_width(ctx)?;
 
-    ctx.set_i32_at(AppContext::RESULT_OK_RECT, operation::div_2(width).wrapping_sub(0xbe))?;
+    ctx.set_i32_at(
+        AppContext::RESULT_OK_RECT,
+        operation::div_2(width).wrapping_sub(0xbe),
+    )?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
     let inset = get_bottom_inset_logical(ctx)?;
 
-    ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, shift.wrapping_sub(inset).wrapping_add(0x226))?;
+    ctx.set_i32_at(
+        AppContext::RESULT_OK_RECT + 4,
+        shift.wrapping_sub(inset).wrapping_add(0x226),
+    )?;
     ctx.set_i32_at(AppContext::RESULT_OK_RECT + 8, 0x17d)?;
     ctx.set_i32_at(AppContext::RESULT_OK_RECT + 0xc, 0x58)?;
     web_popup_request(ctx, 4);

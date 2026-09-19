@@ -1,10 +1,16 @@
 use crate::Fault;
 
-use super::{transform_point, Mamodel, MamodelPart};
+use super::{Mamodel, MamodelPart, transform_point};
 
 const SITE: &str = "transform_anchor";
 
-pub fn transform_anchor(part: &MamodelPart, model: &Mamodel, x: i32, y: i32, out: &mut i64) -> Result<(), Fault> {
+pub fn transform_anchor(
+    part: &MamodelPart,
+    model: &Mamodel,
+    x: i32,
+    y: i32,
+    out: &mut i64,
+) -> Result<(), Fault> {
     let scale_unit = model.scale_unit;
 
     let spread_x = x

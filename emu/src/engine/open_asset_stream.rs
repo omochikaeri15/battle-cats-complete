@@ -16,6 +16,16 @@ pub trait AssetSource {
     fn pack_entry(&mut self, name: &[u8]) -> Vec<u8>;
 }
 
-pub fn open_asset_stream(ctx: &mut AppContext, name: &[u8], packed: u8, encrypted: u8) -> Result<Option<Vec<u8>>, Fault> {
-    Ok(ctx.assets().ok_or(Fault::HostMissing { site: "open_asset_stream" })?.open(name, packed, encrypted))
+pub fn open_asset_stream(
+    ctx: &mut AppContext,
+    name: &[u8],
+    packed: u8,
+    encrypted: u8,
+) -> Result<Option<Vec<u8>>, Fault> {
+    Ok(ctx
+        .assets()
+        .ok_or(Fault::HostMissing {
+            site: "open_asset_stream",
+        })?
+        .open(name, packed, encrypted))
 }

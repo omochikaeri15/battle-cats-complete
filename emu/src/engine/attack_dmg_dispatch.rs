@@ -1,8 +1,16 @@
 use crate::Fault;
 
-use super::{get_entity_base_idx, has_castle_enemy, is_boss_guarding_base, set_base_guard_notice, AppContext, Entity};
+use super::{
+    AppContext, Entity, get_entity_base_idx, has_castle_enemy, is_boss_guarding_base,
+    set_base_guard_notice,
+};
 
-pub fn attack_dmg_dispatch(ctx: &mut AppContext, faction: i32, slot: i32, damage: i32) -> Result<(), Fault> {
+pub fn attack_dmg_dispatch(
+    ctx: &mut AppContext,
+    faction: i32,
+    slot: i32,
+    damage: i32,
+) -> Result<(), Fault> {
     if faction == 1 {
         let mut base_idx = 0i32;
 
@@ -23,10 +31,20 @@ pub fn attack_dmg_dispatch(ctx: &mut AppContext, faction: i32, slot: i32, damage
 
     if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::BARRIER_HP))? > 0
         && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::BARRIER_HP))? < damage
-        && ctx.i32_at(AppContext::entity_field(faction, slot, Entity::BARRIER_STATE))? == 0
+        && ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::BARRIER_STATE,
+        ))? == 0
     {
-        ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::BARRIER_STATE), 1)?;
+        ctx.set_i32_at(
+            AppContext::entity_field(faction, slot, Entity::BARRIER_STATE),
+            1,
+        )?;
     }
 
-    ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::TOOK_DAMAGE), 1)
+    ctx.set_i32_at(
+        AppContext::entity_field(faction, slot, Entity::TOOK_DAMAGE),
+        1,
+    )
 }

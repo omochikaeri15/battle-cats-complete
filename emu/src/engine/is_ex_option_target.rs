@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_global_map_id, AppContext};
+use super::{AppContext, get_global_map_id};
 
 pub fn is_ex_option_target(ctx: &mut AppContext) -> Result<bool, Fault> {
     let mut found = false;

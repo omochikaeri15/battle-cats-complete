@@ -1,10 +1,16 @@
 use crate::Fault;
 
-use super::{get_cleared_count, get_stage_count, map_type_base_id, min_i32, AppContext};
+use super::{AppContext, get_cleared_count, get_stage_count, map_type_base_id, min_i32};
 
 const SITE: &str = "get_stage_unlock";
 
-pub fn get_stage_unlock(ctx: &mut AppContext, map_type: i32, map_idx: i32, star: i32, use_cache: i32) -> Result<i32, Fault> {
+pub fn get_stage_unlock(
+    ctx: &mut AppContext,
+    map_type: i32,
+    map_idx: i32,
+    star: i32,
+    use_cache: i32,
+) -> Result<i32, Fault> {
     if use_cache != 0 {
         let map_id = map_type_base_id(map_type, map_idx);
 
@@ -18,11 +24,18 @@ pub fn get_stage_unlock(ctx: &mut AppContext, map_type: i32, map_idx: i32, star:
             .or_default()
             .get(star as i64 as usize)
             .map(|cell| *cell as i32)
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: star as i64, limit: 4 });
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: star as i64,
+                limit: 4,
+            });
     }
 
     if map_type as u32 <= 4 {
-        let cell = (map_type as u32 as i64) * 0x7d0 + (map_idx as i64) * 4 + star as i64 + AppContext::STAGE_UNLOCK_STORY as i64;
+        let cell = (map_type as u32 as i64) * 0x7d0
+            + (map_idx as i64) * 4
+            + star as i64
+            + AppContext::STAGE_UNLOCK_STORY as i64;
 
         return Ok(ctx.i8_at(cell as usize)? as i32);
     }
@@ -41,7 +54,11 @@ pub fn get_stage_unlock(ctx: &mut AppContext, map_type: i32, map_idx: i32, star:
             maps.get(map_idx as i64 as usize)
                 .and_then(|stars| stars.get(star as i64 as usize))
                 .map(|cell| *cell as i32)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: map_idx as i64, limit: maps.len() as i64 })
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: map_idx as i64,
+                    limit: maps.len() as i64,
+                })
         }
         0x05 => {
             let cleared = get_cleared_count(ctx, AppContext::LABYRINTH)?;
@@ -59,7 +76,13 @@ pub fn get_stage_unlock(ctx: &mut AppContext, map_type: i32, map_idx: i32, star:
                 _ => (&ctx.stage_unlock_neg11, (map_idx as i64) * 4 + star as i64),
             };
 
-            maps.get(cell as usize).map(|value| *value as i32).ok_or(Fault::IndexOutOfRange { site: SITE, index: cell, limit: maps.len() as i64 })
+            maps.get(cell as usize)
+                .map(|value| *value as i32)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x10 | 0x11 | 0x16 => {
             let maps = match case {
@@ -69,10 +92,17 @@ pub fn get_stage_unlock(ctx: &mut AppContext, map_type: i32, map_idx: i32, star:
             };
             let cell = (map_idx as i64) * 4 + star as i64;
 
-            maps.get(cell as usize).copied().ok_or(Fault::IndexOutOfRange { site: SITE, index: cell, limit: maps.len() as i64 })
+            maps.get(cell as usize)
+                .copied()
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: cell,
+                    limit: maps.len() as i64,
+                })
         }
         0x14 => {
-            let cell = (map_idx as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGE_UNLOCK_NEG6 as i64;
+            let cell =
+                (map_idx as i64) * 0x10 + (star as i64) * 4 + AppContext::STAGE_UNLOCK_NEG6 as i64;
 
             ctx.i32_at(cell as usize)
         }

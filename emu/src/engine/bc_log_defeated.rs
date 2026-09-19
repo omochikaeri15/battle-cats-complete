@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{bc_log, AppContext};
+use super::{AppContext, bc_log};
 
 pub fn bc_log_defeated(ctx: &mut AppContext, skip: i32) -> Result<(), Fault> {
     if skip != 0 {

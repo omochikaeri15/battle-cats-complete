@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::{new_button_init, Button, ButtonHandler, Sprite};
+use super::{Button, ButtonHandler, Sprite, new_button_init};
 
 #[derive(Clone, Default)]
 pub struct ButtonBank {
@@ -9,7 +9,16 @@ pub struct ButtonBank {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn new_button_register(bank: &mut ButtonBank, id: i32, x: i32, y: i32, width: i32, height: i32, node: Option<Box<Sprite>>, handler: Option<ButtonHandler>) -> i32 {
+pub fn new_button_register(
+    bank: &mut ButtonBank,
+    id: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    node: Option<Box<Sprite>>,
+    handler: Option<ButtonHandler>,
+) -> i32 {
     let slot = bank.buttons.entry(id).or_insert(None);
 
     *slot = Some(Box::default());

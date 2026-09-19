@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_button_unit_form, get_button_unit_id, get_cat_name, get_text_texture, load_conjure_desc_textures, text_texture_cache, AppContext};
+use super::{
+    AppContext, get_button_unit_form, get_button_unit_id, get_cat_name, get_text_texture,
+    load_conjure_desc_textures, text_texture_cache,
+};
 
 pub fn unit_info_select(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     let unit_id = get_button_unit_id(ctx, 0, slot)?;

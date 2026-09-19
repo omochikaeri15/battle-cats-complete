@@ -1,14 +1,23 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_button_unit_form, get_entity_button, get_setting, has_orb, AppContext, Entity};
+use super::{AppContext, Entity, get_button_unit_form, get_entity_button, get_setting, has_orb};
 
 pub fn get_status_bits(ctx: &AppContext, faction: i32, slot: i32) -> Result<i32, Fault> {
     let mut bits = 0i32;
 
-    if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::STRENGTHEN_THRESHOLD))? != 0 {
+    if ctx.i32_at(AppContext::entity_field(
+        faction,
+        slot,
+        Entity::STRENGTHEN_THRESHOLD,
+    ))? != 0
+    {
         let hp = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::HP))?;
         let max_hp = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::MAX_HP))?;
-        let scaled = max_hp.wrapping_mul(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::STRENGTHEN_THRESHOLD))?);
+        let scaled = max_hp.wrapping_mul(ctx.i32_at(AppContext::entity_field(
+            faction,
+            slot,
+            Entity::STRENGTHEN_THRESHOLD,
+        ))?);
 
         bits = (hp <= operation::div_100(scaled as i64) as i32) as i32;
     }

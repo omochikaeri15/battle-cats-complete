@@ -25,7 +25,13 @@ pub struct BaseShake {
 
 impl Default for BaseShake {
     fn default() -> Self {
-        Self { records: BTreeMap::new(), id: -1, frame: 0, unknown_2: 0, offset: 0 }
+        Self {
+            records: BTreeMap::new(),
+            id: -1,
+            frame: 0,
+            unknown_2: 0,
+            offset: 0,
+        }
     }
 }
 

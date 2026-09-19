@@ -1,22 +1,25 @@
 use std::collections::BTreeMap;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    abs_i32, add_castle_anim_frame, add_money, add_pos_x, advance_animation_frame, call_rng, can_push_back,
-    cannon_shot_origin_x, check_collision, get_anim_len, get_attacks_remaining, get_base_hp, get_base_level,
-    get_battle_status, get_cannon_charge_orb, get_cannon_recharge, get_cannon_shot_id, get_cannon_type,
-    get_cash_back_pct, get_castle_anim_frame, get_castle_anim_state, get_conjure_unit_id, get_curse_timer,
-    get_death_surge_anchor, get_death_surge_level, get_death_surge_mini, get_death_surge_span,
-    get_effective_deploy_cost, get_entity_button, get_entity_frame, get_entity_state, get_freeze_timer,
-    get_gudetama_soul, get_knockback_resist_pct, get_metal_killer_pct, get_paid_cost, get_pos_x,
-    get_sage_kb_resist_pct, get_setting, get_slot_unit_id, get_slow_timer, get_soul_anim_type, get_speed,
-    get_unit_anim, get_weaken_timer, keep_in_bound, latch_battle_event, max_i32, min_i32, no_more_attacks, play_sound,
-    roll_procs, set_castle_anim_frame, set_castle_anim_state, set_crit_fx, set_drain_pct, set_entity_frame,
-    set_entity_state, set_frame_damage, set_metal_killer_fx, set_prev_curse_timer, set_prev_freeze_timer,
-    set_prev_slow_timer, set_prev_weaken_timer, set_proc_badge, set_savage_blow_fx, set_score_hit_mask, set_toxic_fx,
-    slot_occupied, sound_manager, spawn_warp_tick, std_map_int_maanim_subscript_2, AppContext, Base, CannonShot, Debris,
-    Entity, WaveRecord, CANNON_SHOT_SPACING, KNOCKBACK_Y_ARC, RECOIL_Y_ARC,
+    AppContext, Base, CANNON_SHOT_SPACING, CannonShot, Debris, Entity, KNOCKBACK_Y_ARC,
+    RECOIL_Y_ARC, WaveRecord, abs_i32, add_castle_anim_frame, add_money, add_pos_x,
+    advance_animation_frame, call_rng, can_push_back, cannon_shot_origin_x, check_collision,
+    get_anim_len, get_attacks_remaining, get_base_hp, get_base_level, get_battle_status,
+    get_cannon_charge_orb, get_cannon_recharge, get_cannon_shot_id, get_cannon_type,
+    get_cash_back_pct, get_castle_anim_frame, get_castle_anim_state, get_conjure_unit_id,
+    get_curse_timer, get_death_surge_anchor, get_death_surge_level, get_death_surge_mini,
+    get_death_surge_span, get_effective_deploy_cost, get_entity_button, get_entity_frame,
+    get_entity_state, get_freeze_timer, get_gudetama_soul, get_knockback_resist_pct,
+    get_metal_killer_pct, get_paid_cost, get_pos_x, get_sage_kb_resist_pct, get_setting,
+    get_slot_unit_id, get_slow_timer, get_soul_anim_type, get_speed, get_unit_anim,
+    get_weaken_timer, keep_in_bound, latch_battle_event, max_i32, min_i32, no_more_attacks,
+    play_sound, roll_procs, set_castle_anim_frame, set_castle_anim_state, set_crit_vfx,
+    set_drain_pct, set_entity_frame, set_entity_state, set_frame_damage, set_metal_killer_vfx,
+    set_prev_curse_timer, set_prev_freeze_timer, set_prev_slow_timer, set_prev_weaken_timer,
+    set_proc_badge, set_savage_blow_vfx, set_score_hit_mask, set_toxic_vfx, slot_occupied,
+    sound_manager, spawn_warp_tick, std_map_int_maanim_subscript_2,
 };
 
 const SITE: &str = "cat_update";
@@ -43,7 +46,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
     let recoil_step = if faction == 0 { 0x14 } else { -0x14 };
     let shot_offset = if faction == 0 { faction } else { -0x73a };
     let wallet = AppContext::faction_flags(faction);
-    let shots = AppContext::CANNON_SHOTS.wrapping_add((faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE));
+    let shots = AppContext::CANNON_SHOTS.wrapping_add(
+        (faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE),
+    );
     let base = AppContext::entity_field(faction, 0, 0);
 
     let mut slot = 0i64;
@@ -70,10 +75,10 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             set_prev_curse_timer(ctx, faction, slot as i32, curse_timer)?;
 
             set_score_hit_mask(ctx, faction, slot as i32, 0)?;
-            set_crit_fx(ctx, faction, slot as i32, 0)?;
-            set_savage_blow_fx(ctx, faction, slot as i32, 0)?;
-            set_toxic_fx(ctx, faction, slot as i32, 0)?;
-            set_metal_killer_fx(ctx, faction, slot as i32, 0)?;
+            set_crit_vfx(ctx, faction, slot as i32, 0)?;
+            set_savage_blow_vfx(ctx, faction, slot as i32, 0)?;
+            set_toxic_vfx(ctx, faction, slot as i32, 0)?;
+            set_metal_killer_vfx(ctx, faction, slot as i32, 0)?;
 
             if slot == 0 {
                 'castle: {
@@ -89,7 +94,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         }
 
                         break 'castle;
-                    } else if get_castle_anim_state(ctx, faction)? == 2 || get_castle_anim_state(ctx, faction)? == 0xa {
+                    } else if get_castle_anim_state(ctx, faction)? == 2
+                        || get_castle_anim_state(ctx, faction)? == 0xa
+                    {
                         add_castle_anim_frame(ctx, faction, 1)?;
 
                         if get_castle_anim_frame(ctx, faction)? & 3 != 0 {
@@ -99,7 +106,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         let mut shot = 0i64;
 
                         loop {
-                            let timer = shots.wrapping_add((shot as usize).wrapping_mul(AppContext::CANNON_SHOT_STRIDE));
+                            let timer = shots.wrapping_add(
+                                (shot as usize).wrapping_mul(AppContext::CANNON_SHOT_STRIDE),
+                            );
 
                             if ctx.i32_at(timer.wrapping_add(CannonShot::TIMER))? == 0 {
                                 break;
@@ -112,7 +121,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             }
                         }
 
-                        let record = shots.wrapping_add((shot as usize).wrapping_mul(AppContext::CANNON_SHOT_STRIDE));
+                        let record = shots.wrapping_add(
+                            (shot as usize).wrapping_mul(AppContext::CANNON_SHOT_STRIDE),
+                        );
 
                         if get_battle_status(ctx)? == 0 {
                             let mut sound_id = 0x1a;
@@ -140,9 +151,20 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                         let origin = cannon_shot_origin_x(ctx, faction)?;
                         let frame = get_castle_anim_frame(ctx, faction)?;
-                        let volley = (if frame >= 0 { frame } else { frame.wrapping_add(3) }) >> 2;
-                        let spread = volley.wrapping_mul(CANNON_SHOT_SPACING).wrapping_mul(2).wrapping_mul(5);
-                        let offset = if faction != 0 { spread } else { spread.wrapping_neg() };
+                        let volley = (if frame >= 0 {
+                            frame
+                        } else {
+                            frame.wrapping_add(3)
+                        }) >> 2;
+                        let spread = volley
+                            .wrapping_mul(CANNON_SHOT_SPACING)
+                            .wrapping_mul(2)
+                            .wrapping_mul(5);
+                        let offset = if faction != 0 {
+                            spread
+                        } else {
+                            spread.wrapping_neg()
+                        };
                         let x = origin.wrapping_add(shot_offset).wrapping_add(offset);
 
                         ctx.set_i32_at(record.wrapping_add(CannonShot::POS_X), x)?;
@@ -152,7 +174,11 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         ctx.set_i32_at(record.wrapping_add(CannonShot::SHOT_ID), shot_id)?;
 
                         let frame = get_castle_anim_frame(ctx, faction)?;
-                        let volley = (if frame >= 0 { frame } else { frame.wrapping_add(3) }) >> 2;
+                        let volley = (if frame >= 0 {
+                            frame
+                        } else {
+                            frame.wrapping_add(3)
+                        }) >> 2;
 
                         if volley >= get_base_level(ctx, faction)? {
                             set_castle_anim_state(ctx, faction, 0)?;
@@ -160,7 +186,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         }
 
                         break 'castle;
-                    } else if get_castle_anim_state(ctx, faction)? == 3 || get_castle_anim_state(ctx, faction)? == 0xc {
+                    } else if get_castle_anim_state(ctx, faction)? == 3
+                        || get_castle_anim_state(ctx, faction)? == 0xc
+                    {
                         add_castle_anim_frame(ctx, faction, 1)?;
 
                         reset_to_idle = get_castle_anim_frame(ctx, faction)? >= 0x21;
@@ -188,7 +216,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         }
 
                         break 'castle;
-                    } else if get_castle_anim_state(ctx, faction)? == 5 || get_castle_anim_state(ctx, faction)? == 8 {
+                    } else if get_castle_anim_state(ctx, faction)? == 5
+                        || get_castle_anim_state(ctx, faction)? == 8
+                    {
                         add_castle_anim_frame(ctx, faction, 1)?;
 
                         let frame = get_castle_anim_frame(ctx, faction)?;
@@ -236,22 +266,35 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     ctx.set_i32_at(base.wrapping_add(Base::STATE), 2)?;
 
                     let counter = ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?;
-                    let ring = counter.wrapping_sub((operation::div_5(counter as i64) as i32).wrapping_mul(5)).wrapping_add(0x32);
-                    let record = AppContext::CAT_DEBRIS.wrapping_add((ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE));
+                    let ring = counter
+                        .wrapping_sub((operation::div_5(counter as i64) as i32).wrapping_mul(5))
+                        .wrapping_add(0x32);
+                    let record = AppContext::CAT_DEBRIS.wrapping_add(
+                        (ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE),
+                    );
 
                     ctx.set_i32_at(record.wrapping_add(Debris::TIMER), 0xc)?;
 
                     let x = ctx.i32_at(base.wrapping_add(Entity::POS_X))?;
                     let scatter = call_rng(ctx, 0xf1);
 
-                    ctx.set_i32_at(record.wrapping_add(Debris::POS_X), x.wrapping_add(scatter.wrapping_mul(5).wrapping_mul(2)).wrapping_add(-0x43f))?;
+                    ctx.set_i32_at(
+                        record.wrapping_add(Debris::POS_X),
+                        x.wrapping_add(scatter.wrapping_mul(5).wrapping_mul(2))
+                            .wrapping_add(-0x43f),
+                    )?;
 
                     let y = ctx.i32_at(base.wrapping_add(Entity::POS_Y))?;
                     let scatter = call_rng(ctx, 0x143);
 
                     ctx.set_i32_at(
                         record.wrapping_add(Debris::POS_Y),
-                        scatter.wrapping_mul(2).wrapping_mul(5).wrapping_neg().wrapping_add(y).wrapping_add(-0x24b),
+                        scatter
+                            .wrapping_mul(2)
+                            .wrapping_mul(5)
+                            .wrapping_neg()
+                            .wrapping_add(y)
+                            .wrapping_add(-0x24b),
                     )?;
                     ctx.set_i32_at(record.wrapping_add(Debris::VARIANT), 0)?;
                 } else if ctx.i32_at(base.wrapping_add(Base::STATE))? == 1 {
@@ -271,7 +314,10 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let cooldown = ctx.i32_at(entity.wrapping_add(Entity::ATTACK_COOLDOWN))?;
 
             if cooldown > 0 {
-                ctx.set_i32_at(entity.wrapping_add(Entity::ATTACK_COOLDOWN), cooldown.wrapping_sub(1))?;
+                ctx.set_i32_at(
+                    entity.wrapping_add(Entity::ATTACK_COOLDOWN),
+                    cooldown.wrapping_sub(1),
+                )?;
             }
 
             ctx.set_i32_at(entity.wrapping_add(Entity::CANNON_BLAST_HIT), 0)?;
@@ -303,7 +349,11 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     speed = min_i32(speed, 1);
                 }
 
-                let step = if faction != 0 { speed } else { speed.wrapping_neg() };
+                let step = if faction != 0 {
+                    speed
+                } else {
+                    speed.wrapping_neg()
+                };
 
                 add_pos_x(ctx, faction, slot as i32, step)?;
                 advance_animation_frame(ctx, faction, slot as i32)?;
@@ -316,12 +366,22 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if can_push_back(ctx, faction, slot as i32)? {
                         let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
 
-                        ctx.set_i32_at(entity.wrapping_add(Entity::POS_X), x.wrapping_add(knockback_step))?;
+                        ctx.set_i32_at(
+                            entity.wrapping_add(Entity::POS_X),
+                            x.wrapping_add(knockback_step),
+                        )?;
                         keep_in_bound(ctx, faction, slot as i32)?;
                     }
 
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))? as i64;
-                    let lift = *KNOCKBACK_Y_ARC.get(frame as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: frame, limit: 24 })?;
+                    let lift =
+                        *KNOCKBACK_Y_ARC
+                            .get(frame as usize)
+                            .ok_or(Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: frame,
+                                limit: 24,
+                            })?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -340,16 +400,20 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 }
 
                 refund_on_death = true;
-            } else if get_entity_state(ctx, faction, slot as i32)? == 4 || get_entity_state(ctx, faction, slot as i32)? == 0x15 {
+            } else if get_entity_state(ctx, faction, slot as i32)? == 4
+                || get_entity_state(ctx, faction, slot as i32)? == 0x15
+            {
                 let mut finished;
                 let mut pair = 0usize;
 
                 'pending: {
                     loop {
-                        let first = AppContext::WAVE_RECORDS.wrapping_add(pair.wrapping_mul(AppContext::WAVE_RECORD_STRIDE * 2));
+                        let first = AppContext::WAVE_RECORDS
+                            .wrapping_add(pair.wrapping_mul(AppContext::WAVE_RECORD_STRIDE * 2));
                         let second = first.wrapping_add(AppContext::WAVE_RECORD_STRIDE);
 
-                        if slot == ctx.i32_at(first.wrapping_add(WaveRecord::OWNER_SLOT))? as u32 as i64
+                        if slot
+                            == ctx.i32_at(first.wrapping_add(WaveRecord::OWNER_SLOT))? as u32 as i64
                             && ctx.i32_at(first.wrapping_add(WaveRecord::IN_USE))? == 1
                         {
                             finished = false;
@@ -357,7 +421,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             break 'pending;
                         }
 
-                        if slot == ctx.i32_at(second.wrapping_add(WaveRecord::OWNER_SLOT))? as u32 as i64
+                        if slot
+                            == ctx.i32_at(second.wrapping_add(WaveRecord::OWNER_SLOT))? as u32
+                                as i64
                             && ctx.i32_at(second.wrapping_add(WaveRecord::IN_USE))? == 1
                         {
                             finished = false;
@@ -400,15 +466,20 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                     if get_gudetama_soul(ctx, faction, slot as i32)? {
                         let button = get_entity_button(ctx, faction, slot as i32)?;
-                        let anim = get_unit_anim(ctx, faction, button, 8)?.ok_or(Fault::NullPointer { site: SITE })?;
+                        let anim = get_unit_anim(ctx, faction, button, 8)?
+                            .ok_or(Fault::NullPointer { site: SITE })?;
                         let length = get_anim_len(anim)?;
 
                         limit = if length < 2 { 1 } else { length };
                     }
 
                     if get_soul_anim_type(ctx, faction, slot as i32)? >= 0 {
-                        let key = get_soul_anim_type(ctx, faction, slot as i32)?.wrapping_add(0x3e8);
-                        let length = get_anim_len(std_map_int_maanim_subscript_2(&mut ctx.effect_anims, &key))?;
+                        let key =
+                            get_soul_anim_type(ctx, faction, slot as i32)?.wrapping_add(0x3e8);
+                        let length = get_anim_len(std_map_int_maanim_subscript_2(
+                            &mut ctx.effect_anims,
+                            &key,
+                        ))?;
 
                         if length > limit {
                             limit = length;
@@ -419,11 +490,13 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                     if get_entity_state(ctx, faction, slot as i32)? == 0x15 {
                         let delay = get_setting(&ctx.settings, b"battle_death_volcano_time", 0x1e)?;
-                        let anim = ctx.death_surge_anims.get(faction as i64 as usize).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: faction as i64,
-                            limit: 2,
-                        })?;
+                        let anim = ctx.death_surge_anims.get(faction as i64 as usize).ok_or(
+                            Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: faction as i64,
+                                limit: 2,
+                            },
+                        )?;
 
                         limit = max_i32(delay, get_anim_len(anim)?);
 
@@ -447,7 +520,12 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                             ctx.surge_events.push(SurgeEvent::default());
 
-                            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                            let event =
+                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
+                                    site: SITE,
+                                    index: 0,
+                                    limit: 0,
+                                })?;
 
                             event.faction = faction;
                             event.slot = slot as i32;
@@ -458,13 +536,27 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             let reach = abs_i32(get_death_surge_span(ctx, faction, slot as i32)?);
                             let drawn = call_rng(ctx, reach);
                             let span = get_death_surge_span(ctx, faction, slot as i32)?;
-                            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-                            let spread = if span <= 0 { drawn } else { drawn.wrapping_neg() };
+                            let event =
+                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
+                                    site: SITE,
+                                    index: 0,
+                                    limit: 0,
+                                })?;
+                            let spread = if span <= 0 {
+                                drawn
+                            } else {
+                                drawn.wrapping_neg()
+                            };
 
                             event.x = x.wrapping_sub(anchor).wrapping_add(spread);
 
                             let level = get_death_surge_level(ctx, faction, slot as i32)?;
-                            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                            let event =
+                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
+                                    site: SITE,
+                                    index: 0,
+                                    limit: 0,
+                                })?;
 
                             event.level = level;
                             event.attack = 0;
@@ -485,7 +577,12 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             event.metal_killer_pct = metal_killer_pct;
 
                             let mini = get_death_surge_mini(ctx, faction, slot as i32)?;
-                            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                            let event =
+                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
+                                    site: SITE,
+                                    index: 0,
+                                    limit: 0,
+                                })?;
 
                             event.mini = mini != 0;
                             event.kind = 2;
@@ -510,7 +607,8 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         loop {
                             if slot != other
                                 && slot_occupied(ctx, faction, other as i32)? != 0
-                                && get_slot_unit_id(ctx, faction, other as i32)? == get_slot_unit_id(ctx, faction, slot as i32)?
+                                && get_slot_unit_id(ctx, faction, other as i32)?
+                                    == get_slot_unit_id(ctx, faction, slot as i32)?
                                 && get_entity_state(ctx, faction, other as i32)? != 4
                             {
                                 break 'conjure;
@@ -525,19 +623,35 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                         let button = get_entity_button(ctx, faction, slot as i32)? as i64;
 
-                        ctx.set_i32_at(wallet.wrapping_add(AppContext::WALLET_CONJURE_READY).wrapping_add((button * 4) as usize), 0)?;
+                        ctx.set_i32_at(
+                            wallet
+                                .wrapping_add(AppContext::WALLET_CONJURE_READY)
+                                .wrapping_add((button * 4) as usize),
+                            0,
+                        )?;
                     }
                 }
 
-                if faction == 0 && get_cannon_charge_orb(ctx, 0, slot as i32)? > 0 && ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))? > 0 {
+                if faction == 0
+                    && get_cannon_charge_orb(ctx, 0, slot as i32)? > 0
+                    && ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))? > 0
+                {
                     let recharge = get_cannon_recharge(ctx, 0)?;
-                    let cut = operation::div_1000(get_cannon_charge_orb(ctx, 0, slot as i32)?.wrapping_mul(recharge) as i64) as i32;
+                    let cut = operation::div_1000(
+                        get_cannon_charge_orb(ctx, 0, slot as i32)?.wrapping_mul(recharge) as i64,
+                    ) as i32;
 
                     get_cannon_recharge(ctx, 0)?;
                     get_cannon_charge_orb(ctx, 0, slot as i32)?;
-                    max_i32(ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))?.wrapping_sub(cut), 1);
+                    max_i32(
+                        ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))?
+                            .wrapping_sub(cut),
+                        1,
+                    );
 
-                    let mut countdown = ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))?.wrapping_sub(cut);
+                    let mut countdown = ctx
+                        .i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))?
+                        .wrapping_sub(cut);
 
                     if countdown < 2 {
                         countdown = 1;
@@ -548,7 +662,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                 ctx.set_i32_at(entity.wrapping_add(Entity::OCCUPANT), 0)?;
                 ctx.set_block_at(entity.wrapping_add(Base::CANNON_WALL_OFFSET), [0u8; 8])?;
-                ctx.set_i32_at(entity.wrapping_add(Base::CANNON_READY_FX), 0)?;
+                ctx.set_i32_at(entity.wrapping_add(Base::CANNON_READY_VFX), 0)?;
 
                 break 'slot;
             } else if get_entity_state(ctx, faction, slot as i32)? == 5 {
@@ -558,12 +672,21 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if can_push_back(ctx, faction, slot as i32)? {
                         let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
 
-                        ctx.set_i32_at(entity.wrapping_add(Entity::POS_X), x.wrapping_add(recoil_step))?;
+                        ctx.set_i32_at(
+                            entity.wrapping_add(Entity::POS_X),
+                            x.wrapping_add(recoil_step),
+                        )?;
                         keep_in_bound(ctx, faction, slot as i32)?;
                     }
 
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))? as i64;
-                    let lift = *RECOIL_Y_ARC.get(frame as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: frame, limit: 12 })?;
+                    let lift = *RECOIL_Y_ARC
+                        .get(frame as usize)
+                        .ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: frame,
+                            limit: 12,
+                        })?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -595,13 +718,25 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     break 'slot;
                 }
 
-                let remaining = 0xci32.wrapping_sub(ctx.i32_at(entity.wrapping_add(Entity::FRAME))?);
+                let remaining =
+                    0xci32.wrapping_sub(ctx.i32_at(entity.wrapping_add(Entity::FRAME))?);
                 let cycles = operation::div_12(remaining as i64) as i32;
-                let phase = remaining.wrapping_sub(cycles.wrapping_shl(2).wrapping_mul(3)).wrapping_mul(2).wrapping_mul(5);
-                let push = if faction == 0 { phase } else { phase.wrapping_neg() };
-                let resisted = 0x64i32.wrapping_sub(get_knockback_resist_pct(ctx, faction, slot as i32)?).wrapping_mul(push);
+                let phase = remaining
+                    .wrapping_sub(cycles.wrapping_shl(2).wrapping_mul(3))
+                    .wrapping_mul(2)
+                    .wrapping_mul(5);
+                let push = if faction == 0 {
+                    phase
+                } else {
+                    phase.wrapping_neg()
+                };
+                let resisted = 0x64i32
+                    .wrapping_sub(get_knockback_resist_pct(ctx, faction, slot as i32)?)
+                    .wrapping_mul(push);
                 let push = operation::div_100(resisted as i64) as i32;
-                let resisted = 0x64i32.wrapping_sub(get_sage_kb_resist_pct(ctx, faction, slot as i32)?).wrapping_mul(push);
+                let resisted = 0x64i32
+                    .wrapping_sub(get_sage_kb_resist_pct(ctx, faction, slot as i32)?)
+                    .wrapping_mul(push);
                 let push = operation::div_100(resisted as i64) as i32;
                 let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
 
@@ -618,13 +753,22 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if can_push_back(ctx, faction, slot as i32)? {
                         let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
 
-                        ctx.set_i32_at(entity.wrapping_add(Entity::POS_X), x.wrapping_add(knockback_step))?;
+                        ctx.set_i32_at(
+                            entity.wrapping_add(Entity::POS_X),
+                            x.wrapping_add(knockback_step),
+                        )?;
                         keep_in_bound(ctx, faction, slot as i32)?;
                     }
 
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))?;
                     let half = (((frame as u32) >> 0x1f) as i32).wrapping_add(frame) >> 1;
-                    let lift = *KNOCKBACK_Y_ARC.get(half as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: half as i64, limit: 24 })?;
+                    let lift = *KNOCKBACK_Y_ARC.get(half as i64 as usize).ok_or(
+                        Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: half as i64,
+                            limit: 24,
+                        },
+                    )?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -665,7 +809,9 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     cost = get_effective_deploy_cost(ctx, faction, button)?;
                 }
 
-                let refund = operation::div_100(get_cash_back_pct(ctx, faction, slot as i32)?.wrapping_mul(cost) as i64) as i32;
+                let refund = operation::div_100(
+                    get_cash_back_pct(ctx, faction, slot as i32)?.wrapping_mul(cost) as i64,
+                ) as i32;
 
                 add_money(ctx, wallet, max_i32(refund, 1))?;
                 get_cash_back_pct(ctx, faction, slot as i32)?;

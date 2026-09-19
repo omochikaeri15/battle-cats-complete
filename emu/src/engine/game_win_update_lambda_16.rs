@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{dialog_close, mission_tracker_refresh, play_sound, sound_manager, AppContext};
+use super::{AppContext, dialog_close, mission_tracker_refresh, play_sound, sound_manager};
 
-pub fn game_win_update_lambda_16(ctx: &mut AppContext, dialog: u64, event: i32, button: i32) -> Result<(), Fault> {
+pub fn game_win_update_lambda_16(
+    ctx: &mut AppContext,
+    dialog: u64,
+    event: i32,
+    button: i32,
+) -> Result<(), Fault> {
     if event != 2 || button == -1 {
         return Ok(());
     }

@@ -7,8 +7,14 @@ use std::{
 use crate::Fault;
 
 use super::{
-    SheetTable, CannonGrowthStep, TextBlock, DrawSink, WebPopupEntry, LineupRecord, LabyrinthFloor, DropRecord, Enigma, AssetSource, MetaHost, SceneHost, RankingRecord, ReleasePoint, BattleEffects, DialogManager, UiHost, BgEffects, BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, Imgcut, RewardDef, ExGroup, StagePairRecord, AltarReward, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, MapRecord, OrbStore, Platform, ScoredMap, SoundManager,
-    ButtonBank, ScreenMetrics, SpecialRuleStore, EffectSprite, TextRenderer, Texture, UnlockGroup, StageRestriction, SurgeEvent, TreasureStore,
+    AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
+    BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRow, CharaGroup, ComboStore,
+    CounterSurgeEvent, DialogManager, DrawSink, DropRecord, EffectSprite, Enigma, EventItemStore,
+    ExGroup, ExplosionEvent, FixedLineupStore, Imgcut, LabyrinthFloor, LineupRecord, Maanim,
+    Mamodel, MapData, MapRecord, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
+    RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SpecialRuleStore,
+    StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureStore,
+    UiHost, UnlockGroup, WebPopupEntry,
 };
 
 pub const SIZE: usize = 0x500000;
@@ -91,7 +97,7 @@ impl Base {
     pub const CANNON_METAL_PERMILLE: usize = 0x6c;
     pub const CANNON_ZOMBIE_PERMILLE: usize = 0x6c;
     pub const CANNON_RECOIL: usize = 0x70;
-    pub const CANNON_READY_FX: usize = 0x74;
+    pub const CANNON_READY_VFX: usize = 0x74;
     pub const CANNON_NONMETAL_PERMILLE: usize = 0x78;
     pub const CANNON_NONZOMBIE_PERMILLE: usize = 0x78;
     pub const CANNON_BURROWED_PERMILLE: usize = 0x7c;
@@ -103,6 +109,7 @@ impl ItemDefinition {
     pub const KIND: usize = 0x0;
     pub const INDEX: usize = 0x4;
     pub const REDIRECT: usize = 0x8;
+    pub const ICON: usize = 0x14;
 }
 
 pub struct WaveRecord;
@@ -151,9 +158,9 @@ impl CannonShot {
     pub const SHOT_ID: usize = 0x8;
 }
 
-pub struct FxSlot;
+pub struct VfxSlot;
 
-impl FxSlot {
+impl VfxSlot {
     pub const ACTIVE: usize = 0x0;
     pub const POS_X: usize = 0x4;
     pub const POS_Y: usize = 0x8;
@@ -206,7 +213,7 @@ impl Entity {
     pub const GOD_PUSH_FRAME: usize = 0x7c;
     pub const GOD_PUSH_STEP: usize = 0x80;
     pub const GOD_PUSH_DELAY: usize = 0x84;
-    pub const CRIT_FX: usize = 0x98;
+    pub const CRIT_VFX: usize = 0x98;
     pub const WAVE_CHANCE: usize = 0x9c;
     pub const WAVE_LEVEL: usize = 0xa0;
     pub const TRAIT_FLOATING: usize = 0xa4;
@@ -246,9 +253,9 @@ impl Entity {
     pub const WEAKEN_TIMER: usize = 0x12c;
     pub const WEAKEN_ACTIVE: usize = 0x130;
     pub const SURVIVE_USED: usize = 0x134;
-    pub const SURVIVE_FX_FRAME: usize = 0x138;
+    pub const SURVIVE_VFX_FRAME: usize = 0x138;
     pub const WEAKEN_ACTIVE_PCT: usize = 0x13c;
-    pub const ATTACK_UP_FX_FRAME: usize = 0x140;
+    pub const ATTACK_UP_VFX_FRAME: usize = 0x140;
     pub const ATTACK_1_LD_ANCHOR: usize = 0x150;
     pub const WAVE_IMMUNE: usize = 0x158;
     pub const WAVE_BLOCK: usize = 0x15c;
@@ -256,15 +263,15 @@ impl Entity {
     pub const FREEZE_IMMUNE: usize = 0x164;
     pub const SLOW_IMMUNE: usize = 0x168;
     pub const WEAKEN_IMMUNE: usize = 0x16c;
-    pub const WAVE_IMMUNE_FX_FRAME: usize = 0x170;
-    pub const WAVE_IMMUNE_FX_ACTIVE: usize = 0x174;
-    pub const WAVE_BLOCK_FX_FRAME: usize = 0x178;
-    pub const WAVE_BLOCK_FX_ACTIVE: usize = 0x17c;
+    pub const WAVE_IMMUNE_VFX_FRAME: usize = 0x170;
+    pub const WAVE_IMMUNE_VFX_ACTIVE: usize = 0x174;
+    pub const WAVE_BLOCK_VFX_FRAME: usize = 0x178;
+    pub const WAVE_BLOCK_VFX_ACTIVE: usize = 0x17c;
     pub const HIT_SPARK_TYPE: usize = 0x180;
     pub const BURROW_COUNT: usize = 0x184;
     pub const BURROW_START_X: usize = 0x188;
-    pub const IMMUNE_FX_FRAME: usize = 0x194;
-    pub const IMMUNE_FX_ACTIVE: usize = 0x198;
+    pub const IMMUNE_VFX_FRAME: usize = 0x194;
+    pub const IMMUNE_VFX_ACTIVE: usize = 0x198;
     pub const REVIVE_COUNT: usize = 0x19c;
     pub const REVIVE_HP: usize = 0x1a0;
     pub const REVIVE_TIME: usize = 0x1a4;
@@ -290,8 +297,8 @@ impl Entity {
     pub const BARRIER_HP: usize = 0x208;
     pub const BARRIER_STATE: usize = 0x20c;
     pub const BARRIER_BREAKER_CHANCE: usize = 0x210;
-    pub const BARRIER_FX_ACTIVE: usize = 0x214;
-    pub const BARRIER_FX_FRAME: usize = 0x218;
+    pub const BARRIER_VFX_ACTIVE: usize = 0x214;
+    pub const BARRIER_VFX_FRAME: usize = 0x218;
     pub const WARP_CHANCE: usize = 0x21c;
     pub const WARP_DURATION: usize = 0x220;
     pub const WARP_ANCHOR: usize = 0x224;
@@ -321,13 +328,13 @@ impl Entity {
     pub const SAVAGE_BLOW_CHANCE: usize = 0x28c;
     pub const SAVAGE_BLOW_BOOST: usize = 0x290;
     pub const DODGE_CHANCE: usize = 0x294;
-    pub const SAVAGE_BLOW_FX: usize = 0x298;
+    pub const SAVAGE_BLOW_VFX: usize = 0x298;
     pub const DODGE_TIMER: usize = 0x29c;
     pub const DODGE_DURATION: usize = 0x2a0;
-    pub const DODGE_FX_FRAME: usize = 0x2a4;
+    pub const DODGE_VFX_FRAME: usize = 0x2a4;
     pub const TOXIC_CHANCE: usize = 0x2ac;
     pub const TOXIC_DAMAGE: usize = 0x2b0;
-    pub const TOXIC_FX: usize = 0x2b4;
+    pub const TOXIC_VFX: usize = 0x2b4;
     pub const SURGE_CHANCE: usize = 0x2b8;
     pub const SURGE_ANCHOR: usize = 0x2bc;
     pub const SURGE_SPAN: usize = 0x2c0;
@@ -346,8 +353,8 @@ impl Entity {
     pub const DEATH_SURGE_LEVEL: usize = 0x2f4;
     pub const SHIELD_HP: usize = 0x2f8;
     pub const SHIELD_STATE: usize = 0x2fc;
-    pub const SHIELD_FX: usize = 0x300;
-    pub const SHIELD_FX_FRAME: usize = 0x304;
+    pub const SHIELD_VFX: usize = 0x300;
+    pub const SHIELD_VFX_FRAME: usize = 0x304;
     pub const TRAIT_AKU: usize = 0x308;
     pub const HIT_FLASH_TIMER: usize = 0x30c;
     pub const TRAIT_COLOSSUS: usize = 0x310;
@@ -367,7 +374,7 @@ impl Entity {
     pub const SAGE_SLAYER: usize = 0x360;
     pub const SAGE_KB_RESIST_PCT: usize = 0x364;
     pub const METAL_KILLER_PCT: usize = 0x368;
-    pub const METAL_KILLER_FX: usize = 0x36c;
+    pub const METAL_KILLER_VFX: usize = 0x36c;
     pub const PREV_FREEZE_TIMER: usize = 0x370;
     pub const PREV_SLOW_TIMER: usize = 0x374;
     pub const PREV_WEAKEN_TIMER: usize = 0x378;
@@ -785,6 +792,7 @@ pub struct AppContext {
     pub stages_cleared_neg4: Vec<i32>,
     pub stage_record_cache: BTreeMap<i32, BTreeMap<i32, [i16; 4]>>,
     pub download_sheet: Option<Rc<Imgcut>>,
+    pub deploy_cost_alt_sheet: Option<Rc<Imgcut>>,
     pub unit_icon_textures: [Option<Rc<Imgcut>>; 10],
     pub enemy_sheets: SheetTable,
     pub unit_sheets: [SheetTable; 4],
@@ -874,7 +882,7 @@ pub struct AppContext {
     pub skill_curse_model: Mamodel,
     pub skill_zombie_strong_model: Mamodel,
     pub zombie_model: Mamodel,
-    pub crit_fx_model: Mamodel,
+    pub crit_vfx_model: Mamodel,
     pub boss_welcome_model: Mamodel,
     pub sealed_announce_sheets: [Option<Rc<Imgcut>>; 3],
     pub demonsoul_sheets: [Option<Rc<Imgcut>>; 2],
@@ -938,6 +946,7 @@ pub struct AppContext {
     pub map_ui_sheet: Option<Rc<Imgcut>>,
     pub map_reopen_times: BTreeMap<i32, f64>,
     pub item_drop_queue: Vec<Vec<i32>>,
+    pub drop_icons: BTreeMap<i32, Option<Rc<Imgcut>>>,
     pub web_popup_entries: Vec<WebPopupEntry>,
     pub web_popup_shown: Vec<[i32; 2]>,
     pub item_snapshot: BTreeMap<i32, i32>,
@@ -1009,18 +1018,18 @@ pub struct AppContext {
     pub demon_banner_anim: Maanim,
     pub default_font: Vec<u8>,
     pub combo_banner_texts: [Option<Texture>; 3],
-    pub crit_fx_anim: Maanim,
-    pub zkill_fx_anim: Maanim,
+    pub crit_vfx_anim: Maanim,
+    pub zkill_vfx_anim: Maanim,
     pub barrier_anims: [Maanim; 3],
     pub shield_anims: [Maanim; 5],
-    pub savage_fx: Vec<EffectSprite>,
-    pub toxic_fx: Vec<EffectSprite>,
-    pub metal_killer_fx: Vec<EffectSprite>,
-    pub drain_fx: Vec<EffectSprite>,
-    pub savage_fx_anim: Maanim,
-    pub toxic_fx_anim: Maanim,
-    pub metal_killer_fx_anim: Maanim,
-    pub drain_fx_anim: Maanim,
+    pub savage_vfx: Vec<EffectSprite>,
+    pub toxic_vfx: Vec<EffectSprite>,
+    pub metal_killer_vfx: Vec<EffectSprite>,
+    pub drain_vfx: Vec<EffectSprite>,
+    pub savage_vfx_anim: Maanim,
+    pub toxic_vfx_anim: Maanim,
+    pub metal_killer_vfx_anim: Maanim,
+    pub drain_vfx_anim: Maanim,
     sound: Option<Box<dyn SoundManager>>,
     text: Option<Box<dyn TextRenderer>>,
     platform: Option<Box<dyn Platform>>,
@@ -1067,9 +1076,9 @@ impl AppContext {
     pub const DEPLOY_NOTICE_KIND: usize = 0x290554;
     pub const BABY_BOOM_ACTIVE: usize = 0x32b6b4;
     pub const EVENT_POINT_BOOST: usize = 0x388028;
-    pub const MEDAL_MONEY_SPENT: usize = 0x19d0;
-    pub const MEDAL_KIND_1: usize = 0x19d4;
-    pub const MEDAL_KIND_4: usize = 0x19d8;
+    pub const MEDAL_MONEY_0: usize = 0x19d0;
+    pub const MEDAL_MONEY_1: usize = 0x19d4;
+    pub const MEDAL_MONEY_4: usize = 0x19d8;
     pub const DEPLOY_LIMIT_RARITY_COUNTS: usize = 0x33b7f0;
     pub const DEPLOY_LIMIT_TOTAL: usize = 0x33b808;
     pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
@@ -1132,11 +1141,14 @@ impl AppContext {
     pub const CAMERA_DRAGGING: usize = 0x326fe0;
     pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
     pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
-    pub const SCRATCH_0: usize = 0x327da4;
-    pub const SCRATCH_1: usize = 0x327da8;
-    pub const SCRATCH_2: usize = 0x327dac;
-    pub const SCRATCH_3: usize = 0x327db0;
-    pub const SCRATCH_4: usize = 0x327db4;
+    pub const DRAW_TEMP_0: usize = 0x327da4;
+    pub const DRAW_TEMP_1: usize = 0x327da8;
+    pub const DRAW_TEMP_2: usize = 0x327dac;
+    pub const DRAW_TEMP_3: usize = 0x327db0;
+    pub const DRAW_TEMP_4: usize = 0x327db4;
+    pub const DRAW_TEMP_5: usize = 0x327db8;
+    pub const DRAW_TEMP_6: usize = 0x327dbc;
+    pub const DRAW_TEMP_7: usize = 0x327dc0;
     pub const ANCHOR_OUT: usize = 0x33d0;
     pub const DRAW_LIST: usize = 0x4a598;
     pub const DRAW_SWAP: usize = 0x4aef8;
@@ -1209,6 +1221,10 @@ impl AppContext {
     pub const SCORE_TOTAL: usize = 0x32bc;
     pub const SCORE_ELAPSED: usize = 0x32c0;
     pub const SCORE_CHANGED: usize = 0x32e0;
+    pub const SCORE_ANIM_TICK: usize = 0x32e4;
+    pub const SCORE_SHOWN: usize = 0x32e8;
+    pub const SCORE_FROM: usize = 0x32ec;
+    pub const SCORE_ZOOM: usize = 0x32f0;
     pub const LINEUP_CANNON_TYPE: usize = 0x4b0;
     pub const LINEUP_CANNON_LEVEL: usize = 0x4b4;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
@@ -1233,6 +1249,8 @@ impl AppContext {
     pub const BACK_PRESSED: usize = 0x344e;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
+    pub const DECK_PRESET_STRIDE: usize = 0x2c;
+    pub const DECK_PRESET_KEY: usize = 0xc338;
     pub const FACTION_1_DECK: usize = 0xc33c;
     pub const BATTLE_DECK: usize = 0xc6ac;
     pub const STAGES_CLEARED_CHAPTERS: usize = 0xc94c;
@@ -1244,7 +1262,7 @@ impl AppContext {
     pub const CAMERA_X: usize = 0x83688;
     pub const AUTO_CAMERA_MODE: usize = 0x836a4;
     pub const BATTLE_STATUS: usize = 0x836ac;
-    pub const WORKER_UPGRADE_FX: usize = 0x836d8;
+    pub const WORKER_UPGRADE_VFX: usize = 0x836d8;
     pub const CAMERA_MIN_ZOOM: usize = 0x836e4;
     pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
@@ -1338,14 +1356,14 @@ impl AppContext {
     pub const COMBO_BANNER_TICKS: usize = 0x440c08;
     pub const COMBO_SKIP_RECT: usize = 0x328224;
     pub const COMBO_BANNER_UNITS: usize = 0x440c0c;
-    pub const CRIT_FX: usize = 0x9cfd0;
-    pub const CRIT_FX_STRIDE: usize = 0x10;
-    pub const ZKILL_FX: usize = 0x9dc50;
-    pub const ZKILL_FX_STRIDE: usize = 0x10;
-    pub const BARRIER_FX: usize = 0x9de30;
-    pub const BARRIER_FX_STRIDE: usize = 0x1c;
-    pub const SHIELD_FX: usize = 0x9e178;
-    pub const SHIELD_FX_STRIDE: usize = 0x1c;
+    pub const CRIT_VFX: usize = 0x9cfd0;
+    pub const CRIT_VFX_STRIDE: usize = 0x10;
+    pub const ZKILL_VFX: usize = 0x9dc50;
+    pub const ZKILL_VFX_STRIDE: usize = 0x10;
+    pub const BARRIER_VFX: usize = 0x9de30;
+    pub const BARRIER_VFX_STRIDE: usize = 0x1c;
+    pub const SHIELD_VFX: usize = 0x9e178;
+    pub const SHIELD_VFX_STRIDE: usize = 0x1c;
     pub const BASE_GUARD_NOTICE_FRAME: usize = 0x874;
     pub const TUTORIAL_POPUP_OPEN: usize = 0x32b44c;
     pub const OPTION_WINDOW: usize = 0x469928;
@@ -1449,7 +1467,7 @@ impl AppContext {
     pub const CAT_GOD_CHATTER_TIMER: usize = 0x32b4b0;
     pub const CAT_GOD_SPIN_SPEED: usize = 0x32b49c;
     pub const CAT_GOD_STATE: usize = 0x32b4a8;
-    pub const DECK_COOLDOWN_FX: usize = 0x2778;
+    pub const DECK_COOLDOWN_VFX: usize = 0x2778;
     pub const EFFECT_SLOTS: usize = 0x33356c;
     pub const BGM_PLAYER: usize = 0x46b948;
     pub const LEADERSHIP_TOTAL: usize = 0x3f4;
@@ -1652,7 +1670,9 @@ impl AppContext {
             drop_chara_max_1000: -1,
             drop_chara_max_1100: -1,
             img039_sheet: None,
-            deck_button_x: [0x9f, 0x121, 0x1a3, 0x225, 0x2a7, 0xab, 0x12d, 0x1af, 0x231, 0x2b3],
+            deck_button_x: [
+                0x9f, 0x121, 0x1a3, 0x225, 0x2a7, 0xab, 0x12d, 0x1af, 0x231, 0x2b3,
+            ],
             tooltip_texts: [None; 16],
             enemy_kill_counts: BTreeMap::new(),
             best_scores: BTreeMap::new(),
@@ -1712,6 +1732,7 @@ impl AppContext {
             stages_cleared_neg4: Default::default(),
             stage_record_cache: Default::default(),
             download_sheet: Default::default(),
+            deploy_cost_alt_sheet: Default::default(),
             unit_icon_textures: Default::default(),
             enemy_sheets: Default::default(),
             unit_sheets: Default::default(),
@@ -1801,7 +1822,7 @@ impl AppContext {
             skill_curse_model: Default::default(),
             skill_zombie_strong_model: Default::default(),
             zombie_model: Default::default(),
-            crit_fx_model: Default::default(),
+            crit_vfx_model: Default::default(),
             boss_welcome_model: Default::default(),
             sealed_announce_sheets: Default::default(),
             demonsoul_sheets: Default::default(),
@@ -1865,6 +1886,7 @@ impl AppContext {
             map_ui_sheet: Default::default(),
             map_reopen_times: Default::default(),
             item_drop_queue: Default::default(),
+            drop_icons: BTreeMap::new(),
             web_popup_entries: Default::default(),
             web_popup_shown: Default::default(),
             item_snapshot: Default::default(),
@@ -1936,18 +1958,18 @@ impl AppContext {
             demon_banner_anim: Default::default(),
             default_font: Vec::new(),
             combo_banner_texts: [None; 3],
-            crit_fx_anim: Default::default(),
-            zkill_fx_anim: Default::default(),
+            crit_vfx_anim: Default::default(),
+            zkill_vfx_anim: Default::default(),
             barrier_anims: Default::default(),
             shield_anims: Default::default(),
-            savage_fx: Vec::new(),
-            toxic_fx: Vec::new(),
-            metal_killer_fx: Vec::new(),
-            drain_fx: Vec::new(),
-            savage_fx_anim: Default::default(),
-            toxic_fx_anim: Default::default(),
-            metal_killer_fx_anim: Default::default(),
-            drain_fx_anim: Default::default(),
+            savage_vfx: Vec::new(),
+            toxic_vfx: Vec::new(),
+            metal_killer_vfx: Vec::new(),
+            drain_vfx: Vec::new(),
+            savage_vfx_anim: Default::default(),
+            toxic_vfx_anim: Default::default(),
+            metal_killer_vfx_anim: Default::default(),
+            drain_vfx_anim: Default::default(),
             sound: None,
             text: None,
             platform: None,
@@ -1974,11 +1996,15 @@ impl AppContext {
     }
 
     pub fn enemy_stat(unit_id: i32, column: usize) -> usize {
-        ((unit_id.wrapping_add(2) as i64) * ENEMY_STATS_STRIDE as i64 + ENEMY_STATS as i64 + column as i64) as usize
+        ((unit_id.wrapping_add(2) as i64) * ENEMY_STATS_STRIDE as i64
+            + ENEMY_STATS as i64
+            + column as i64) as usize
     }
 
     pub fn faction_flags(faction: i32) -> usize {
-        (faction as usize).wrapping_mul(FACTION_FLAGS_STRIDE).wrapping_add(FACTION_FLAGS)
+        (faction as usize)
+            .wrapping_mul(FACTION_FLAGS_STRIDE)
+            .wrapping_add(FACTION_FLAGS)
     }
 
     pub fn sound(&mut self) -> Option<&mut (dyn SoundManager + 'static)> {
@@ -2053,7 +2079,11 @@ impl AppContext {
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..len))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: off as i64,
+                limit: SIZE as i64,
+            })?;
 
         bytes.fill(0);
 
@@ -2061,11 +2091,15 @@ impl AppContext {
     }
 
     pub fn block_at<const N: usize>(&self, off: usize) -> Result<[u8; N], Fault> {
-        let bytes = self
-            .raw
-            .get(off..)
-            .and_then(|rest| rest.get(..N))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+        let bytes =
+            self.raw
+                .get(off..)
+                .and_then(|rest| rest.get(..N))
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: off as i64,
+                    limit: SIZE as i64,
+                })?;
 
         let mut block = [0u8; N];
         block.copy_from_slice(bytes);
@@ -2073,12 +2107,20 @@ impl AppContext {
         Ok(block)
     }
 
-    pub fn set_block_at<const N: usize>(&mut self, off: usize, value: [u8; N]) -> Result<(), Fault> {
+    pub fn set_block_at<const N: usize>(
+        &mut self,
+        off: usize,
+        value: [u8; N],
+    ) -> Result<(), Fault> {
         let bytes = self
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..N))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: off as i64,
+                limit: SIZE as i64,
+            })?;
 
         bytes.copy_from_slice(&value);
 
@@ -2086,7 +2128,11 @@ impl AppContext {
     }
 
     pub fn bytes_from(&self, off: usize) -> Result<&[u8], Fault> {
-        self.raw.get(off..).ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })
+        self.raw.get(off..).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: off as i64,
+            limit: SIZE as i64,
+        })
     }
 
     pub fn f32_at(&self, off: usize) -> Result<f32, Fault> {
@@ -2098,25 +2144,34 @@ impl AppContext {
     }
 
     pub fn u8_at(&self, off: usize) -> Result<u8, Fault> {
-        self.raw
-            .get(off)
-            .copied()
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })
+        self.raw.get(off).copied().ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: off as i64,
+            limit: SIZE as i64,
+        })
     }
 
     pub fn i8_at(&self, off: usize) -> Result<i8, Fault> {
         self.raw
             .get(off)
             .map(|byte| *byte as i8)
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: off as i64,
+                limit: SIZE as i64,
+            })
     }
 
     pub fn i16_at(&self, off: usize) -> Result<i16, Fault> {
-        let bytes = self
-            .raw
-            .get(off..)
-            .and_then(|rest| rest.get(..2))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+        let bytes =
+            self.raw
+                .get(off..)
+                .and_then(|rest| rest.get(..2))
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: off as i64,
+                    limit: SIZE as i64,
+                })?;
 
         let mut word = [0u8; 2];
         word.copy_from_slice(bytes);
@@ -2125,11 +2180,15 @@ impl AppContext {
     }
 
     pub fn i32_at(&self, off: usize) -> Result<i32, Fault> {
-        let bytes = self
-            .raw
-            .get(off..)
-            .and_then(|rest| rest.get(..4))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+        let bytes =
+            self.raw
+                .get(off..)
+                .and_then(|rest| rest.get(..4))
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: off as i64,
+                    limit: SIZE as i64,
+                })?;
 
         let mut word = [0u8; 4];
         word.copy_from_slice(bytes);
@@ -2142,7 +2201,11 @@ impl AppContext {
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..4))
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })?;
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: off as i64,
+                limit: SIZE as i64,
+            })?;
 
         bytes.copy_from_slice(&value.to_le_bytes());
 

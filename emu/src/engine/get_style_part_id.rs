@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_built_deck_cannon, get_built_deck_stage_key, get_preset_style_part, has_built_deck, has_fixed_lineup, AppContext};
+use super::{
+    AppContext, get_built_deck_cannon, get_built_deck_stage_key, get_preset_style_part,
+    has_built_deck, has_fixed_lineup,
+};
 
 pub fn get_style_part_id(ctx: &mut AppContext) -> Result<i32, Fault> {
     if has_fixed_lineup(ctx, -1, -1, -1)? && ctx.i32_at(AppContext::LINEUP_CANNON_TYPE)? != -1 {

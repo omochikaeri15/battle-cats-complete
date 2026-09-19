@@ -1,10 +1,14 @@
 use crate::Fault;
 
-use super::{treasure_group_at, AppContext};
+use super::{AppContext, treasure_group_at};
 
 const SITE: &str = "treasure_group_cleared";
 
-pub fn treasure_group_cleared(ctx: &mut AppContext, chapter: i32, group: i32) -> Result<bool, Fault> {
+pub fn treasure_group_cleared(
+    ctx: &mut AppContext,
+    chapter: i32,
+    group: i32,
+) -> Result<bool, Fault> {
     if chapter == 3 {
         return Ok(false);
     }
@@ -19,10 +23,20 @@ pub fn treasure_group_cleared(ctx: &mut AppContext, chapter: i32, group: i32) ->
         }
 
         let castles = treasure_group_at(&ctx.treasure_store, chapter, group)?.castles;
-        let castle = *castles.get(index as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index, limit: castles.len() as i64 })?;
+        let castle = *castles.get(index as usize).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index,
+            limit: castles.len() as i64,
+        })?;
         let stage = if castle > 0x2d { castle } else { 0x2d - castle };
 
-        if !*ctx.outbreak_cleared.entry(chapter).or_default().entry(stage).or_insert(false) {
+        if !*ctx
+            .outbreak_cleared
+            .entry(chapter)
+            .or_default()
+            .entry(stage)
+            .or_insert(false)
+        {
             return Ok(false);
         }
 

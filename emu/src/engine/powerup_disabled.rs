@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{get_global_map_id, get_map_type, get_special_rule, is_score_stage, powerups_cleared, AppContext};
+use super::{
+    AppContext, get_global_map_id, get_map_type, get_special_rule, is_score_stage, powerups_cleared,
+};
 
 pub fn powerup_disabled(ctx: &mut AppContext, powerup: i32) -> Result<bool, Fault> {
     if powerup == 2 {

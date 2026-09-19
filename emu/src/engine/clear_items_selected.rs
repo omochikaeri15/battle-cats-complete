@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{labyrinth_active, AppContext};
+use super::{AppContext, labyrinth_active};
 
 pub fn clear_items_selected(ctx: &mut AppContext) -> Result<(), Fault> {
     for item in 0..10usize {
@@ -27,11 +27,19 @@ pub fn clear_items_selected(ctx: &mut AppContext) -> Result<(), Fault> {
         return Ok(());
     }
 
-    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 { labyrinth_active(ctx)? as usize + 1 } else { 0 };
+    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 {
+        labyrinth_active(ctx)? as usize + 1
+    } else {
+        0
+    };
 
     ctx.set_block_at::<1>(AppContext::POWERUP_AVAILABLE + mode, [0])?;
 
-    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 { labyrinth_active(ctx)? as usize + 1 } else { 0 };
+    let mode = if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 {
+        labyrinth_active(ctx)? as usize + 1
+    } else {
+        0
+    };
 
     ctx.set_block_at::<1>(AppContext::POWERUP_CLEARED + mode, [0])
 }

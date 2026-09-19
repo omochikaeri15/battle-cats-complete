@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_special_rule, AppContext};
+use super::{AppContext, get_special_rule};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct StageRestriction {
@@ -15,7 +15,11 @@ pub struct StageRestriction {
     pub group_id: i32,
 }
 
-pub fn stage_has_restriction(ctx: &AppContext, store: &BTreeMap<i32, StageRestriction>, stage_id: i32) -> Result<bool, Fault> {
+pub fn stage_has_restriction(
+    ctx: &AppContext,
+    store: &BTreeMap<i32, StageRestriction>,
+    stage_id: i32,
+) -> Result<bool, Fault> {
     let map_id = operation::div_1000(stage_id);
 
     if get_special_rule(ctx, &ctx.special_rules, map_id, 2)? {

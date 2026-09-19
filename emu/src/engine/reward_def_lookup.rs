@@ -10,7 +10,11 @@ pub struct RewardDef {
     pub message: Vec<u8>,
 }
 
-pub fn reward_def_lookup(defs: &BTreeMap<i32, Vec<RewardDef>>, group: i32, id: i32) -> Option<&RewardDef> {
+pub fn reward_def_lookup(
+    defs: &BTreeMap<i32, Vec<RewardDef>>,
+    group: i32,
+    id: i32,
+) -> Option<&RewardDef> {
     defs.get(&group)?;
 
     let mut index = 0usize;

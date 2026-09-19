@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{option_window_build, option_window_build_alt, vibration_clear, AppContext};
+use super::{AppContext, option_window_build, option_window_build_alt, vibration_clear};
 
 pub fn option_menu_open(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_block_at::<1>(AppContext::OPTION_WINDOW, [1])?;

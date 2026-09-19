@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{treasure_group_at, AppContext};
+use super::{AppContext, treasure_group_at};
 
 const SITE: &str = "calculate_treasure_percentages";
 
@@ -17,22 +17,46 @@ pub fn calculate_treasure_percentages(ctx: &mut AppContext) -> Result<(), Fault>
             let summed = 'sum: loop {
                 if chapter != 3 {
                     let castles = treasure_group_at(&ctx.treasure_store, chapter, group)?.castles;
-                    let castle = *castles.get(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: castles.len() as i64 })?;
+                    let castle = *castles.get(slot).ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: slot as i64,
+                        limit: castles.len() as i64,
+                    })?;
 
                     if castle == -1 {
                         break 'sum true;
                     }
 
-                    let row = ctx.bytes_from(AppContext::TREASURE_LEVELS + chapter as usize * AppContext::TREASURE_LEVELS_STRIDE)?;
-                    let level = operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: castle as i64, limit: 0x31 })? as i32;
+                    let row = ctx.bytes_from(
+                        AppContext::TREASURE_LEVELS
+                            + chapter as usize * AppContext::TREASURE_LEVELS_STRIDE,
+                    )?;
+                    let level = operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
+                        Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: castle as i64,
+                            limit: 0x31,
+                        },
+                    )? as i32;
 
                     if level <= 0 {
                         break 'sum false;
                     }
 
-                    let row = ctx.bytes_from(AppContext::TREASURE_LEVELS + chapter as usize * AppContext::TREASURE_LEVELS_STRIDE)?;
+                    let row = ctx.bytes_from(
+                        AppContext::TREASURE_LEVELS
+                            + chapter as usize * AppContext::TREASURE_LEVELS_STRIDE,
+                    )?;
 
-                    sum = sum.wrapping_add(operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: castle as i64, limit: 0x31 })? as i32);
+                    sum = sum.wrapping_add(
+                        operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
+                            Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: castle as i64,
+                                limit: 0x31,
+                            },
+                        )? as i32,
+                    );
                 }
 
                 slot += 1;
@@ -49,7 +73,8 @@ pub fn calculate_treasure_percentages(ctx: &mut AppContext) -> Result<(), Fault>
             if sum != 0 {
                 let count = treasure_group_at(&ctx.treasure_store, chapter, group)?.count;
                 let divisor = count.wrapping_mul(3);
-                let percent = operation::idiv(sum.wrapping_mul(100), divisor).ok_or(Fault::divide(SITE, divisor as i64))?;
+                let percent = operation::idiv(sum.wrapping_mul(100), divisor)
+                    .ok_or(Fault::divide(SITE, divisor as i64))?;
 
                 ctx.set_i32_at(cell, percent)?;
             }

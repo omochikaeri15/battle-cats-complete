@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{JsonNode, JsonParser};
 
@@ -9,7 +9,8 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     let mut stop = start;
     let mut fraction = false;
 
-    if start < parser.end && (parser.source[start] == b'-' || parser.source[start].is_ascii_digit()) {
+    if start < parser.end && (parser.source[start] == b'-' || parser.source[start].is_ascii_digit())
+    {
         let mut at = start + 1;
 
         parser.cursor = at;
@@ -42,7 +43,8 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     }
 
     if fraction {
-        let (value, range) = operation::strtof(&text).ok_or(Fault::InvalidArgument { site: SITE })?;
+        let (value, range) =
+            operation::strtof(&text).ok_or(Fault::InvalidArgument { site: SITE })?;
 
         if range {
             return Err(Fault::OutOfRange { site: SITE });
@@ -65,7 +67,8 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
         return Ok(Some(JsonNode::Int(parsed.value)));
     }
 
-    let (value, overflow) = operation::strtoull(&text, 10).ok_or(Fault::InvalidArgument { site: SITE })?;
+    let (value, overflow) =
+        operation::strtoull(&text, 10).ok_or(Fault::InvalidArgument { site: SITE })?;
 
     if overflow {
         return Err(Fault::OutOfRange { site: SITE });

@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{deploy_part, std_vector_int_assign, Maanim, Mamodel};
+use super::{Maanim, Mamodel, deploy_part, std_vector_int_assign};
 
 const SITE: &str = "maanim_animate";
 
@@ -39,11 +39,14 @@ pub fn maanim_animate(
         let mut track_index = 0i64;
 
         while track_index < anim.track_count as i64 {
-            let track = anim.tracks.get(track_index as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: track_index,
-                limit: anim.tracks.len() as i64,
-            })?;
+            let track = anim
+                .tracks
+                .get(track_index as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: track_index,
+                    limit: anim.tracks.len() as i64,
+                })?;
 
             track_index += 1;
 
@@ -54,11 +57,14 @@ pub fn maanim_animate(
             }
 
             let keyframe = |index: i64| {
-                track.keyframes.get(index as usize).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index,
-                    limit: track.keyframes.len() as i64,
-                })
+                track
+                    .keyframes
+                    .get(index as usize)
+                    .ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index,
+                        limit: track.keyframes.len() as i64,
+                    })
             };
 
             let first = keyframe(0)?[0];
@@ -76,16 +82,21 @@ pub fn maanim_animate(
                 let repeats = track.header[2];
 
                 if repeats == -1 {
-                    time = operation::irem(frame.wrapping_sub(first), span).ok_or(Fault::divide(SITE, span as i64))?.wrapping_add(first);
+                    time = operation::irem(frame.wrapping_sub(first), span)
+                        .ok_or(Fault::divide(SITE, span as i64))?
+                        .wrapping_add(first);
                 } else {
                     time = last;
 
                     if repeats > 0 {
                         let elapsed = frame.wrapping_sub(first);
-                        let lap = operation::idiv(elapsed, span).ok_or(Fault::divide(SITE, span as i64))?;
+                        let lap = operation::idiv(elapsed, span)
+                            .ok_or(Fault::divide(SITE, span as i64))?;
 
                         if lap < repeats {
-                            time = operation::irem(elapsed, span).ok_or(Fault::divide(SITE, span as i64))?.wrapping_add(first);
+                            time = operation::irem(elapsed, span)
+                                .ok_or(Fault::divide(SITE, span as i64))?
+                                .wrapping_add(first);
                         }
                     }
                 }
@@ -98,7 +109,11 @@ pub fn maanim_animate(
             } else if time == last {
                 value = keyframe(last_index)?[1];
             } else {
-                let segments = if (last_index as i32) > 0 { last_index as i32 as u32 as i64 } else { 0 };
+                let segments = if (last_index as i32) > 0 {
+                    last_index as i32 as u32 as i64
+                } else {
+                    0
+                };
                 let mut index = 0i64;
                 let mut found = 0i32;
 
@@ -123,10 +138,15 @@ pub fn maanim_animate(
                     match from[2] as u32 {
                         0 => {
                             let change = keyframe(index)?[1].wrapping_sub(from[1]);
-                            let top = elapsed.wrapping_mul(steps).wrapping_add(step).wrapping_mul(change);
+                            let top = elapsed
+                                .wrapping_mul(steps)
+                                .wrapping_add(step)
+                                .wrapping_mul(change);
                             let bottom = to_frame.wrapping_sub(from_frame).wrapping_mul(steps);
 
-                            found = operation::idiv(top, bottom).ok_or(Fault::divide(SITE, bottom as i64))?.wrapping_add(from[1]);
+                            found = operation::idiv(top, bottom)
+                                .ok_or(Fault::divide(SITE, bottom as i64))?
+                                .wrapping_add(from[1]);
                         }
                         1 => {
                             found = from[1];
@@ -141,7 +161,9 @@ pub fn maanim_animate(
                             let progress = (top as f64) / (bottom as f64);
 
                             if power < 0 {
-                                let eased = (1.0 - (1.0 - progress).powf(power.wrapping_neg() as f64)).sqrt();
+                                let eased = (1.0
+                                    - (1.0 - progress).powf(power.wrapping_neg() as f64))
+                                .sqrt();
 
                                 found = operation::cvttsd2si(change * eased + start);
                             } else {
@@ -174,7 +196,9 @@ pub fn maanim_animate(
                                 let mut probe = index;
 
                                 loop {
-                                    if (last_index as u32 as i64) == probe || keyframe(probe)?[2] != 3 {
+                                    if (last_index as u32 as i64) == probe
+                                        || keyframe(probe)?[2] != 3
+                                    {
                                         run_end = probe;
                                         break;
                                     }
@@ -202,13 +226,17 @@ pub fn maanim_animate(
 
                                     loop {
                                         if node_term != other {
-                                            let other_frame = keyframe(run_start as i64 + other)?[0] as i64;
+                                            let other_frame =
+                                                keyframe(run_start as i64 + other)?[0] as i64;
 
-                                            weight = weight.wrapping_mul((time as i64).wrapping_sub(other_frame));
+                                            weight = weight.wrapping_mul(
+                                                (time as i64).wrapping_sub(other_frame),
+                                            );
 
                                             let gap = node_frame.wrapping_sub(other_frame);
 
-                                            weight = operation::div_wide(weight, gap).ok_or(Fault::divide(SITE, gap))?;
+                                            weight = operation::div_wide(weight, gap)
+                                                .ok_or(Fault::divide(SITE, gap))?;
                                         }
 
                                         other += 1;
@@ -228,7 +256,11 @@ pub fn maanim_animate(
                                 }
                             }
 
-                            let rounded = if total < 0 { total.wrapping_add(0xfff) } else { total };
+                            let rounded = if total < 0 {
+                                total.wrapping_add(0xfff)
+                            } else {
+                                total
+                            };
 
                             found = (rounded as u64 >> 0xc) as i32;
                         }
@@ -247,11 +279,14 @@ pub fn maanim_animate(
                 continue;
             }
 
-            let part = model.parts.get_mut(target as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: target,
-                limit: part_count as i64,
-            })?;
+            let part = model
+                .parts
+                .get_mut(target as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: target,
+                    limit: part_count as i64,
+                })?;
 
             match track.header[1] as u32 {
                 0x0 => part.set_i32_at(0x20, value.wrapping_sub(part.i32_at(0x1c))),
@@ -333,8 +368,19 @@ pub fn maanim_animate(
         let part = &model.parts[index];
         let depth = part.i32_at(0x38).wrapping_add(part.i32_at(0x34));
 
-        *model.draw_order.get_mut(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0 })? = index as i32;
-        *model.draw_z.get_mut(index).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0 })? = depth;
+        *model
+            .draw_order
+            .get_mut(index)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: index as i64,
+                limit: 0,
+            })? = index as i32;
+        *model.draw_z.get_mut(index).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: index as i64,
+            limit: 0,
+        })? = depth;
     }
 
     if part_count > 1 {

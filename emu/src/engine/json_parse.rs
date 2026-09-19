@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{json_next_token, json_parse_array, json_parse_object, JsonNode, JsonParser};
+use super::{JsonNode, JsonParser, json_next_token, json_parse_array, json_parse_object};
 
 pub fn json_parse(parser: &mut JsonParser) -> Result<bool, Fault> {
     parser.cursor = parser.begin;

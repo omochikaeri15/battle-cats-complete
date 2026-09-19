@@ -1,11 +1,14 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    app_on_draw, back_pressed, button_bank_busy, button_bank_find, check_medals, dialog_set_back_button, dialog_set_on_update, dialog_show, dialog_show_alt,
-    dialog_top, get_auto_camera_mode, get_bottom_inset_logical, get_cat_name, get_drawable_width, get_item_name, handle_battle_swipe_pinch, hit_test_rect,
-    is_score_stage, labyrinth_active, labyrinth_result_ready, new_button_set_touchable, play_sound, point_lose_update_lambda_0,
-    point_lose_update_lambda_1, point_lose_update_lambda_2, query_localizable, record_stage_played, request_save_data, reward_def_lookup, sound_manager,
-    substitute_tokens, touch_is_down, touch_released, xor_row46_get, AppContext,
+    AppContext, app_on_draw, back_pressed, button_bank_busy, button_bank_find, check_medals,
+    dialog_set_back_button, dialog_set_on_update, dialog_show, dialog_show_alt, dialog_top,
+    get_auto_camera_mode, get_bottom_inset_logical, get_cat_name, get_drawable_width,
+    get_item_name, handle_battle_swipe_pinch, hit_test_rect, is_score_stage, labyrinth_active,
+    labyrinth_result_ready, new_button_set_touchable, play_sound, point_lose_update_lambda_0,
+    point_lose_update_lambda_1, point_lose_update_lambda_2, query_localizable, record_stage_played,
+    request_save_data, reward_def_lookup, sound_manager, substitute_tokens, touch_is_down,
+    touch_released, xor_row46_get,
 };
 
 const SITE: &str = "point_lose_update";
@@ -26,7 +29,10 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     let next = frame.wrapping_add(1);
 
     ctx.set_i32_at(AppContext::RESULT_FRAME, next)?;
-    ctx.set_i32_at(AppContext::RESULT_TICKS, ctx.i32_at(AppContext::RESULT_TICKS)?.wrapping_add(1))?;
+    ctx.set_i32_at(
+        AppContext::RESULT_TICKS,
+        ctx.i32_at(AppContext::RESULT_TICKS)?.wrapping_add(1),
+    )?;
 
     if phase == 0 {
         if frame <= 0 {
@@ -36,8 +42,14 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             request_save_data(ctx)?;
         }
 
-        ctx.set_i32_at(AppContext::CAMERA_ZOOM, ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320))?;
-        ctx.set_i32_at(AppContext::DECK_BAR_SLIDE, ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa))?;
+        ctx.set_i32_at(
+            AppContext::CAMERA_ZOOM,
+            ctx.i32_at(AppContext::CAMERA_ZOOM)?.wrapping_add(0x320),
+        )?;
+        ctx.set_i32_at(
+            AppContext::DECK_BAR_SLIDE,
+            ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(0xa),
+        )?;
 
         if get_auto_camera_mode(ctx)? != 0 {
             return Ok(true);
@@ -104,7 +116,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let head = match ctx.reward_queue.first() {
-                Some(entry) => Some(*entry.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?),
+                Some(entry) => Some(*entry.first().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 0,
+                })?),
                 None => None,
             };
 
@@ -122,10 +138,24 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             play_sound(sound_manager(ctx)?, 0x1d, None);
 
             let mut message = Vec::new();
-            let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-            let group = *entry.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: entry.len() as i64 })?;
-            let id = *entry.get(2).ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: entry.len() as i64 })?;
-            let reward = reward_def_lookup(&ctx.reward_defs, group, id).ok_or(Fault::NullPointer { site: SITE })?.clone();
+            let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 0,
+            })?;
+            let group = *entry.get(1).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 1,
+                limit: entry.len() as i64,
+            })?;
+            let id = *entry.get(2).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 2,
+                limit: entry.len() as i64,
+            })?;
+            let reward = reward_def_lookup(&ctx.reward_defs, group, id)
+                .ok_or(Fault::NullPointer { site: SITE })?
+                .clone();
 
             match reward.kind {
                 1 => {
@@ -139,7 +169,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let name = get_item_name(ctx, reward.target);
                     let amount = reward.amount.to_string().into_bytes();
 
-                    message = substitute_tokens(ctx, &text, &[(b"itemName", &name), (b"itemNum", &amount)])?;
+                    message = substitute_tokens(
+                        ctx,
+                        &text,
+                        &[(b"itemName", &name), (b"itemNum", &amount)],
+                    )?;
                 }
                 _ => {}
             }
@@ -147,35 +181,105 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             dialog_show_alt(ctx, &message, 0, 0x191, 1, Some(point_lose_update_lambda_2))?;
 
             let low = {
-                    let row = AppContext::MAP_STAGE_ROWS.wrapping_add((ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize).wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE));
-                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: entry.len() as i64 })?;
+                let row = AppContext::MAP_STAGE_ROWS.wrapping_add(
+                    (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
+                        .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
+                );
+                let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 0,
+                })?;
+                let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 1,
+                    limit: entry.len() as i64,
+                })?;
 
-                    xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0x2f })? as i32
-                };
+                xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
+                    Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: index as i64,
+                        limit: 0x2f,
+                    },
+                )? as i32
+            };
 
             let medal = if low >= 0x3e8 && {
-                    let row = AppContext::MAP_STAGE_ROWS.wrapping_add((ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize).wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE));
-                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: entry.len() as i64 })?;
+                let row = AppContext::MAP_STAGE_ROWS.wrapping_add(
+                    (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
+                        .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
+                );
+                let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 0,
+                    limit: 0,
+                })?;
+                let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 1,
+                    limit: entry.len() as i64,
+                })?;
 
-                    xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0x2f })? as i32
-                } <= ctx.drop_chara_max_1000 {
+                xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
+                    Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: index as i64,
+                        limit: 0x2f,
+                    },
+                )? as i32
+            } <= ctx.drop_chara_max_1000
+            {
                 true
             } else {
                 ({
-                    let row = AppContext::MAP_STAGE_ROWS.wrapping_add((ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize).wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE));
-                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: entry.len() as i64 })?;
+                    let row = AppContext::MAP_STAGE_ROWS.wrapping_add(
+                        (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
+                            .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
+                    );
+                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: 0,
+                        limit: 0,
+                    })?;
+                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: 1,
+                        limit: entry.len() as i64,
+                    })?;
 
-                    xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0x2f })? as i32
-                }) >= 0x44c && {
-                    let row = AppContext::MAP_STAGE_ROWS.wrapping_add((ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize).wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE));
-                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
-                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange { site: SITE, index: 1, limit: entry.len() as i64 })?;
+                    xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
+                        Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: index as i64,
+                            limit: 0x2f,
+                        },
+                    )? as i32
+                }) >= 0x44c
+                    && {
+                        let row = AppContext::MAP_STAGE_ROWS.wrapping_add(
+                            (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
+                                .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
+                        );
+                        let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 0,
+                            limit: 0,
+                        })?;
+                        let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
+                            site: SITE,
+                            index: 1,
+                            limit: entry.len() as i64,
+                        })?;
 
-                    xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: index as i64, limit: 0x2f })? as i32
-                } <= ctx.drop_chara_max_1100
+                        xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
+                            Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: index as i64,
+                                limit: 0x2f,
+                            },
+                        )? as i32
+                    } <= ctx.drop_chara_max_1100
             };
 
             if medal {
@@ -193,7 +297,10 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         5 => {
             let counter = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?.wrapping_add(1);
 
-            ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, if (counter as u32) < 4 { counter } else { 4 })?;
+            ctx.set_i32_at(
+                AppContext::REWARD_POP_COUNTER,
+                if (counter as u32) < 4 { counter } else { 4 },
+            )?;
 
             if (counter as u32) < 4 {
                 return Ok(true);
@@ -222,7 +329,10 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             Ok(true)
         }
         6 => {
-            ctx.set_i32_at(AppContext::RESULT_OK_RECT, operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe))?;
+            ctx.set_i32_at(
+                AppContext::RESULT_OK_RECT,
+                operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
+            )?;
             ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, 0x280)?;
             ctx.set_i32_at(AppContext::RESULT_OK_RECT + 8, 0x17d)?;
             ctx.set_i32_at(AppContext::RESULT_OK_RECT + 0xc, 0x58)?;
@@ -241,13 +351,21 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let letterbox = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
             let inset = get_bottom_inset_logical(ctx)?;
 
-            ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, letterbox.wrapping_sub(inset.wrapping_add(offset)).wrapping_add(0x278))?;
+            ctx.set_i32_at(
+                AppContext::RESULT_OK_RECT + 4,
+                letterbox
+                    .wrapping_sub(inset.wrapping_add(offset))
+                    .wrapping_add(0x278),
+            )?;
 
             Ok(true)
         }
         7 => {
             if touch_is_down(ctx)? != 0 {
-                if ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? | ctx.u8_at(AppContext::CAMERA_DRAGGING)? != 0 {
+                if ctx.u8_at(AppContext::DECK_ROW_SWAPPING)?
+                    | ctx.u8_at(AppContext::CAMERA_DRAGGING)?
+                    != 0
+                {
                     ctx.set_block_at::<1>(AppContext::TOUCH_CAPTURED, [1])?;
                 }
             } else if touch_released(ctx)? == 0 {
@@ -274,7 +392,10 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(false);
             }
 
-            if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)? | ctx.i32_at(AppContext::SWIPE_VELOCITY)? == 0 {
+            if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)?
+                | ctx.i32_at(AppContext::SWIPE_VELOCITY)?
+                == 0
+            {
                 let hovered = touch_is_down(ctx)? != 0 && {
                     let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
                     let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
@@ -294,20 +415,26 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 }
             }
 
-            if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)? | ctx.i32_at(AppContext::SWIPE_VELOCITY)? != 0 {
+            if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)?
+                | ctx.i32_at(AppContext::SWIPE_VELOCITY)?
+                != 0
+            {
                 return Ok(true);
             }
 
-            let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            let map =
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
-            let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            let share =
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, share, 0)?;
 
             if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
-                let third = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+                let third = button_bank_find(&ctx.buttons, 0xcb)
+                    .ok_or(Fault::NullPointer { site: SITE })?;
 
                 new_button_set_touchable(&mut ctx.buttons, third, 0)?;
             }
@@ -323,7 +450,10 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 };
 
                 if released || back_pressed(ctx)? != 0 {
-                    ctx.set_i32_at(AppContext::RESULT_OK_PRESS, ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1))?;
+                    ctx.set_i32_at(
+                        AppContext::RESULT_OK_PRESS,
+                        ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1),
+                    )?;
                     play_sound(sound_manager(ctx)?, 0xb, None);
 
                     return Ok(true);
@@ -342,7 +472,8 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            let share =
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
@@ -350,7 +481,8 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            let map =
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 

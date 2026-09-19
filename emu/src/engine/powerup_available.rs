@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_type, labyrinth_active, AppContext};
+use super::{AppContext, get_map_type, labyrinth_active};
 
 pub fn powerup_available(ctx: &mut AppContext, powerup: i32) -> Result<bool, Fault> {
     if get_map_type(ctx, 0)? == -6 {

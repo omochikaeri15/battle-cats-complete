@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{stop_vibration, AppContext};
+use super::{AppContext, stop_vibration};
 
 pub fn vibration_reset(ctx: &mut AppContext) -> Result<(), Fault> {
     stop_vibration(ctx)?;

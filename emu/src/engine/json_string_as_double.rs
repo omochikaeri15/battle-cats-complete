@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 const SITE: &str = "json_string_as_double";
 

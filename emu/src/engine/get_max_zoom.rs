@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{camera_vertical_correction, get_setting, AppContext};
+use super::{AppContext, camera_vertical_correction, get_setting};
 
 const SITE: &str = "get_max_zoom";
 
@@ -20,8 +20,14 @@ pub fn get_max_zoom(ctx: &mut AppContext) -> Result<i32, Fault> {
     let zoom_y_again = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?;
     let letterbox = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
-    let dividend = castle_y.wrapping_sub(zoom_y).wrapping_mul(0x2710).wrapping_add(0x11da50);
-    let divisor = correction.wrapping_sub(zoom_y_again).wrapping_add(letterbox).wrapping_add(0x8a);
+    let dividend = castle_y
+        .wrapping_sub(zoom_y)
+        .wrapping_mul(0x2710)
+        .wrapping_add(0x11da50);
+    let divisor = correction
+        .wrapping_sub(zoom_y_again)
+        .wrapping_add(letterbox)
+        .wrapping_add(0x8a);
 
     let quotient = operation::idiv(dividend, divisor).ok_or(Fault::divide(SITE, divisor as i64))?;
     let max_zoom = if quotient < 0x2710 { quotient } else { 0x2710 };

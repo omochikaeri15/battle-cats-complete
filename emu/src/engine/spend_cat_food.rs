@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{obf_value_read, obf_value_sub, resource_log, AppContext};
+use super::{AppContext, obf_value_read, obf_value_sub, resource_log};
 
 pub fn spend_cat_food(ctx: &mut AppContext, amount: i32) -> Result<bool, Fault> {
     if amount < 0 {

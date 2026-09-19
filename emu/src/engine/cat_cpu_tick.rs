@@ -1,9 +1,12 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    add_money, call_rng, cannon_fire, cannon_reach_x, cannon_target_in_range, deck_slot_filled, deploy_unit, get_button_unit_row, get_castle_anim_state, get_deck_cooldown,
-    get_effective_deploy_cost, get_max_money, get_money, get_worker_level, get_worker_upgrade_cost, get_worker_upgrade_level, is_deploy_blocked, play_sound,
-    recount_deploy_rarities, slot_conjure_ready, slot_deploy_permitted, slot_occupied, sound_manager, upgrade_worker, AppContext, Base, Entity,
+    AppContext, Base, Entity, add_money, call_rng, cannon_fire, cannon_reach_x,
+    cannon_target_in_range, deck_slot_filled, deploy_unit, get_button_unit_row,
+    get_castle_anim_state, get_deck_cooldown, get_effective_deploy_cost, get_max_money, get_money,
+    get_worker_level, get_worker_upgrade_cost, get_worker_upgrade_level, is_deploy_blocked,
+    play_sound, recount_deploy_rarities, slot_conjure_ready, slot_deploy_permitted, slot_occupied,
+    sound_manager, upgrade_worker,
 };
 
 pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
@@ -17,8 +20,10 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
     let action = AppContext::CPU_PENDING_ACTION.wrapping_add(side.wrapping_mul(4));
     let pick = AppContext::CPU_PICK.wrapping_add(side.wrapping_mul(4));
-    let usable = AppContext::CPU_USABLE.wrapping_add(side.wrapping_mul(AppContext::CPU_FACTION_STRIDE));
-    let candidates = AppContext::CPU_CANDIDATES.wrapping_add(side.wrapping_mul(AppContext::CPU_FACTION_STRIDE));
+    let usable =
+        AppContext::CPU_USABLE.wrapping_add(side.wrapping_mul(AppContext::CPU_FACTION_STRIDE));
+    let candidates =
+        AppContext::CPU_CANDIDATES.wrapping_add(side.wrapping_mul(AppContext::CPU_FACTION_STRIDE));
     let wallet = AppContext::faction_flags(faction);
     let other = 1i32.wrapping_sub(faction);
 
@@ -57,7 +62,10 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 && !slot_conjure_ready(ctx, faction, button)?
                 && !((get_deck_cooldown(ctx, wallet, button)? != 0) | full);
 
-            ctx.set_i32_at(usable.wrapping_add((button as usize).wrapping_mul(4)), if open { button } else { -1 })?;
+            ctx.set_i32_at(
+                usable.wrapping_add((button as usize).wrapping_mul(4)),
+                if open { button } else { -1 },
+            )?;
             button += 1;
         }
 
@@ -76,9 +84,13 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         && deck_slot_filled(ctx, faction, button)?
                         && slot_deploy_permitted(ctx, faction, button, 1)?
                         && !is_deploy_blocked(ctx, button)?
-                        && get_max_money(ctx, wallet)? >= get_effective_deploy_cost(ctx, faction, button)?
+                        && get_max_money(ctx, wallet)?
+                            >= get_effective_deploy_cost(ctx, faction, button)?
                     {
-                        ctx.set_i32_at(candidates.wrapping_add((listed as i64 as usize).wrapping_mul(4)), button)?;
+                        ctx.set_i32_at(
+                            candidates.wrapping_add((listed as i64 as usize).wrapping_mul(4)),
+                            button,
+                        )?;
                         listed = listed.wrapping_add(1);
                     }
 
@@ -102,7 +114,10 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
             while button != 10 {
                 if ctx.i32_at(usable.wrapping_add((button as usize).wrapping_mul(4)))? != -1 {
-                    ctx.set_i32_at(candidates.wrapping_add((listed as usize).wrapping_mul(4)), button)?;
+                    ctx.set_i32_at(
+                        candidates.wrapping_add((listed as usize).wrapping_mul(4)),
+                        button,
+                    )?;
                     listed = listed.wrapping_add(1);
                 }
 
@@ -133,7 +148,14 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     break 'decide;
                 }
 
-                ctx.set_i32_at(action, if get_worker_level(ctx, wallet)? != 7 { 2 } else { 0 })?;
+                ctx.set_i32_at(
+                    action,
+                    if get_worker_level(ctx, wallet)? != 7 {
+                        2
+                    } else {
+                        0
+                    },
+                )?;
 
                 break 'decide;
             }
@@ -157,12 +179,18 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
         let mut slot = 1i32;
 
         while slot != 51 {
-            if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4 {
-                let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+            if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0
+                && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4
+            {
+                let screen_x = operation::div_10(
+                    ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
+                        .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
+                );
 
-                ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
+                ctx.set_i32_at(AppContext::DRAW_TEMP_2, screen_x)?;
 
-                if cannon_target_in_range(ctx, faction, screen_x)? && ctx.i32_at(cannon_state)? == 0 {
+                if cannon_target_in_range(ctx, faction, screen_x)? && ctx.i32_at(cannon_state)? == 0
+                {
                     ctx.set_i32_at(cannon_state, 1)?;
                 }
             }
@@ -175,12 +203,15 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
         while slot != 51 {
             let reach = cannon_reach_x(ctx, faction)?;
 
-            ctx.set_i32_at(AppContext::SCRATCH_1, reach)?;
+            ctx.set_i32_at(AppContext::DRAW_TEMP_1, reach)?;
 
             if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 {
-                let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+                let screen_x = operation::div_10(
+                    ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
+                        .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
+                );
 
-                ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
+                ctx.set_i32_at(AppContext::DRAW_TEMP_2, screen_x)?;
 
                 let close = match faction {
                     1 => screen_x < reach.wrapping_add(-0xc8),
@@ -203,14 +234,21 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             1 => {
                 let wait = call_rng(ctx, 0x96);
 
-                ctx.set_i32_at(AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)), wait)?;
+                ctx.set_i32_at(
+                    AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)),
+                    wait,
+                )?;
 
                 2
             }
             2 => {
-                let wait = ctx.i32_at(AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)))?;
+                let wait =
+                    ctx.i32_at(AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)))?;
 
-                ctx.set_i32_at(AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)), wait.wrapping_sub(1))?;
+                ctx.set_i32_at(
+                    AppContext::CPU_CANNON_WAIT.wrapping_add(side.wrapping_mul(8)),
+                    wait.wrapping_sub(1),
+                )?;
 
                 if wait > 1 {
                     break 'cannon;
@@ -223,10 +261,16 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let mut slot = 1i32;
 
                     while slot != 51 {
-                        if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4 {
-                            let screen_x = operation::div_10(ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+                        if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0
+                            && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))?
+                                != 4
+                        {
+                            let screen_x = operation::div_10(
+                                ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
+                                    .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
+                            );
 
-                            ctx.set_i32_at(AppContext::SCRATCH_2, screen_x)?;
+                            ctx.set_i32_at(AppContext::DRAW_TEMP_2, screen_x)?;
 
                             if cannon_target_in_range(ctx, faction, screen_x)? {
                                 ctx.set_i32_at(action, 1)?;
@@ -258,14 +302,19 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let target = ctx.i32_at(candidates.wrapping_add((chosen * 4) as usize))?;
             let shown = ctx.i32_at(AppContext::DECK_ROW_SHOWN)?;
 
-            if target >= 0 && (target as u32 >= 5 && shown == 0 || target as u32 <= 4 && shown == 1) {
+            if target >= 0 && (target as u32 >= 5 && shown == 0 || target as u32 <= 4 && shown == 1)
+            {
                 if ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? == 0 {
                     ctx.set_i32_at(AppContext::DECK_ROW_SWAP_DIRECTION, 1)?;
                     ctx.set_i32_at(AppContext::DECK_ROW_SWAP_TARGET, 1)?;
                 } else {
                     match ctx.i32_at(AppContext::DECK_ROW_SWAP_DIRECTION)? {
-                        -1 if ctx.i32_at(AppContext::DECK_ROW_SWAP_TARGET)? == 1 => ctx.set_i32_at(AppContext::DECK_ROW_SWAP_DIRECTION, 1)?,
-                        1 if ctx.i32_at(AppContext::DECK_ROW_SWAP_TARGET)? == 0 => ctx.set_i32_at(AppContext::DECK_ROW_SWAP_DIRECTION, -1)?,
+                        -1 if ctx.i32_at(AppContext::DECK_ROW_SWAP_TARGET)? == 1 => {
+                            ctx.set_i32_at(AppContext::DECK_ROW_SWAP_DIRECTION, 1)?
+                        }
+                        1 if ctx.i32_at(AppContext::DECK_ROW_SWAP_TARGET)? == 0 => {
+                            ctx.set_i32_at(AppContext::DECK_ROW_SWAP_DIRECTION, -1)?
+                        }
                         _ => {}
                     }
                 }
@@ -301,14 +350,20 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let mut button = 0i32;
 
             while button != 10 {
-                if deck_slot_filled(ctx, faction, button)? && slot_deploy_permitted(ctx, faction, button, 1)? {
+                if deck_slot_filled(ctx, faction, button)?
+                    && slot_deploy_permitted(ctx, faction, button, 1)?
+                {
                     open = open.wrapping_add((is_deploy_blocked(ctx, button)? as u8 ^ 1) as i32);
                 }
 
                 button += 1;
             }
 
-            let chosen = if open != 0 { call_rng(ctx, open) as i64 } else { 0 };
+            let chosen = if open != 0 {
+                call_rng(ctx, open) as i64
+            } else {
+                0
+            };
             let saving = AppContext::CPU_SAVING_FOR.wrapping_add(side.wrapping_mul(4));
             let target = ctx.i32_at(candidates.wrapping_add((chosen * 4) as usize))?;
 
@@ -321,7 +376,8 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     && slot_deploy_permitted(ctx, faction, button, 1)?
                     && !is_deploy_blocked(ctx, button)?
                     && ctx.i32_at(saving)? == get_button_unit_row(ctx, faction, button)?
-                    && get_max_money(ctx, wallet)? < get_effective_deploy_cost(ctx, faction, button)?
+                    && get_max_money(ctx, wallet)?
+                        < get_effective_deploy_cost(ctx, faction, button)?
                 {
                     ctx.set_i32_at(saving, -1)?;
 
@@ -335,7 +391,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
             add_money(ctx, wallet, price.wrapping_neg())?;
             upgrade_worker(ctx, wallet)?;
-            ctx.set_i32_at(AppContext::WORKER_UPGRADE_FX, 0xe)?;
+            ctx.set_i32_at(AppContext::WORKER_UPGRADE_VFX, 0xe)?;
             play_sound(sound_manager(ctx)?, 0x13, None);
 
             Ok(())
@@ -350,7 +406,9 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let chosen = ctx.i32_at(pick)? as i64;
             let target = ctx.i32_at(candidates.wrapping_add((chosen * 4) as usize))?;
 
-            if money < get_effective_deploy_cost(ctx, faction, target)? || ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? != 0 {
+            if money < get_effective_deploy_cost(ctx, faction, target)?
+                || ctx.u8_at(AppContext::DECK_ROW_SWAPPING)? != 0
+            {
                 return Ok(());
             }
 

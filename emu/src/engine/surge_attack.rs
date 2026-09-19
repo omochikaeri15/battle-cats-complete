@@ -1,16 +1,26 @@
 use crate::Fault;
 
 use super::{
-    cat_attack_dispatch, enemy_attack_dispatch, get_counter_surge, get_counter_surge_once, get_counter_surge_pct, get_death_surge_anchor,
-    get_death_surge_level, get_death_surge_mini, get_death_surge_pct, get_death_surge_span, get_mini_surge, get_pos_x, get_surge_anchor, get_surge_level,
-    get_surge_span, set_counter_surge, set_counter_surge_once, AppContext, CounterSurgeEvent,
+    AppContext, CounterSurgeEvent, cat_attack_dispatch, enemy_attack_dispatch, get_counter_surge,
+    get_counter_surge_once, get_counter_surge_pct, get_death_surge_anchor, get_death_surge_level,
+    get_death_surge_mini, get_death_surge_pct, get_death_surge_span, get_mini_surge, get_pos_x,
+    get_surge_anchor, get_surge_level, get_surge_span, set_counter_surge, set_counter_surge_once,
 };
 
 const SITE: &str = "surge_attack";
 
-pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack: i32) -> Result<(), Fault> {
+pub fn surge_attack(
+    ctx: &mut AppContext,
+    event_index: i32,
+    target: i32,
+    attack: i32,
+) -> Result<(), Fault> {
     let index = event_index as i64 as usize;
-    let missing = Fault::IndexOutOfRange { site: SITE, index: event_index as i64, limit: ctx.surge_events.len() as i64 };
+    let missing = Fault::IndexOutOfRange {
+        site: SITE,
+        index: event_index as i64,
+        limit: ctx.surge_events.len() as i64,
+    };
     let event = ctx.surge_events.get(index).ok_or(missing.clone())?;
     let faction = event.faction;
     let slot = event.slot;
@@ -113,7 +123,14 @@ pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack:
         mini = get_mini_surge(ctx, faction, slot)?;
     }
 
-    let counter = ctx.counter_surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+    let counter = ctx
+        .counter_surge_events
+        .last_mut()
+        .ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: 0,
+            limit: 0,
+        })?;
 
     counter.frame = 0;
     counter.faction = other;

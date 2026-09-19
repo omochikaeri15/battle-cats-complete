@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{ranking_entry_id, ranking_submit, AppContext};
+use super::{AppContext, ranking_entry_id, ranking_submit};
 
 pub fn ranking_submit_score(ctx: &mut AppContext, id: i32, score: i32) -> Result<(), Fault> {
     for entry in 0..ctx.ranking_entries.len() {

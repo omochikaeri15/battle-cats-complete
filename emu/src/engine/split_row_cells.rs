@@ -16,7 +16,10 @@ pub fn split_row_cells(bytes: &[u8], row: &Cell, delimiter: u8, cells: &mut Vec<
             .position(|byte| *byte == delimiter)
             .map_or(end, |at| cursor + at);
 
-        cells.push(Cell { at: cursor, len: hit - cursor });
+        cells.push(Cell {
+            at: cursor,
+            len: hit - cursor,
+        });
 
         if hit == end {
             return;

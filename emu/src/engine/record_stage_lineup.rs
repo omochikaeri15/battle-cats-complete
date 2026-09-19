@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_built_deck_stage_key, get_cannon_part_id, get_foundation_part_id, get_map_type, get_style_part_id, is_ex_option_target, AppContext};
+use super::{
+    AppContext, get_built_deck_stage_key, get_cannon_part_id, get_foundation_part_id, get_map_type,
+    get_style_part_id, is_ex_option_target,
+};
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct LineupRecord {
@@ -28,11 +31,20 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
     let style = get_style_part_id(ctx)? as u8;
     let foundation = get_foundation_part_id(ctx)? as u8;
     let key = ctx.block_at::<2>(AppContext::BATTLE_DECK + 0x28)?;
-    let mut lineup = LineupRecord { cannon, style, foundation, ..Default::default() };
+    let mut lineup = LineupRecord {
+        cannon,
+        style,
+        foundation,
+        ..Default::default()
+    };
 
     for slot in 0..10usize {
         let cell = ctx.block_at::<2>(AppContext::BATTLE_DECK + slot * 4)?;
-        let unit = lineup.units.get_mut(slot).ok_or(Fault::IndexOutOfRange { site: "record_stage_lineup", index: slot as i64, limit: 10 })?;
+        let unit = lineup.units.get_mut(slot).ok_or(Fault::IndexOutOfRange {
+            site: "record_stage_lineup",
+            index: slot as i64,
+            limit: 10,
+        })?;
 
         *unit = u16::from_le_bytes([cell[0] ^ key[0], cell[1] ^ key[1]]);
 
@@ -51,7 +63,11 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    let existing = ctx.lineup_records.iter().find(|(_, record)| **record == lineup).map(|(id, _)| *id);
+    let existing = ctx
+        .lineup_records
+        .iter()
+        .find(|(_, record)| **record == lineup)
+        .map(|(id, _)| *id);
 
     if let Some(id) = existing {
         ctx.lineup_stages.entry(id).or_default().push(stage_key);
@@ -64,7 +80,12 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut probe = 0i32;
 
     while probe < count {
-        if ctx.lineup_stages.entry(probe as i16).or_default().is_empty() {
+        if ctx
+            .lineup_stages
+            .entry(probe as i16)
+            .or_default()
+            .is_empty()
+        {
             id = probe;
 
             break;
@@ -74,7 +95,10 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     *ctx.lineup_records.entry(id as i16).or_default() = lineup;
-    ctx.lineup_stages.entry(id as i16).or_default().push(stage_key);
+    ctx.lineup_stages
+        .entry(id as i16)
+        .or_default()
+        .push(stage_key);
 
     Ok(())
 }

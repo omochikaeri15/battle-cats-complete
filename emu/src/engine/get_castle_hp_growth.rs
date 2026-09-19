@@ -1,11 +1,15 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{get_cannon_base_level, AppContext};
+use super::{AppContext, get_cannon_base_level};
 
 const SITE: &str = "get_castle_hp_growth";
 
 pub fn get_castle_hp_growth(ctx: &AppContext, level: i32) -> Result<i32, Fault> {
-    let level = if level == -1 { get_cannon_base_level(ctx)?.wrapping_add(1) } else { level };
+    let level = if level == -1 {
+        get_cannon_base_level(ctx)?.wrapping_add(1)
+    } else {
+        level
+    };
     let mut from_level = 1i32;
 
     for step in &ctx.castle_hp_growth {
@@ -19,14 +23,21 @@ pub fn get_castle_hp_growth(ctx: &AppContext, level: i32) -> Result<i32, Fault> 
                 2 => {
                     let ratio = progress as f32 / divisor as f32;
 
-                    Ok(operation::cvttss2si(step.value1 as f32 + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span as f32))
+                    Ok(operation::cvttss2si(
+                        step.value1 as f32
+                            + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span as f32,
+                    ))
                 }
                 1 => {
                     let ratio = progress as f32 / divisor as f32;
 
-                    Ok(operation::cvttss2si(operation::powf(ratio, 3.0) * span as f32 + step.value1 as f32))
+                    Ok(operation::cvttss2si(
+                        operation::powf(ratio, 3.0) * span as f32 + step.value1 as f32,
+                    ))
                 }
-                0 => Ok(operation::idiv(span.wrapping_mul(progress), divisor).ok_or(Fault::divide(SITE, divisor as i64))?.wrapping_add(step.value1)),
+                0 => Ok(operation::idiv(span.wrapping_mul(progress), divisor)
+                    .ok_or(Fault::divide(SITE, divisor as i64))?
+                    .wrapping_add(step.value1)),
                 _ => Ok(0),
             };
         }

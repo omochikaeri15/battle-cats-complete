@@ -1,9 +1,11 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    cannon_attack_dispatch, cannon_shot_origin_x, get_anim_len, get_base_level, get_cannon_nonzombie_permille, get_cannon_shot_id, get_cannon_strike_width, get_cannon_strike_x,
-    get_cannon_type, get_castle_anim_frame, get_castle_anim_state, get_entity_base_idx, get_hitbox_pos, get_pos_x, is_zombie, slot_occupied, AppContext, CannonShot, Entity,
-    CANNON_SHOT_SPACING,
+    AppContext, CANNON_SHOT_SPACING, CannonShot, Entity, cannon_attack_dispatch,
+    cannon_shot_origin_x, get_anim_len, get_base_level, get_cannon_nonzombie_permille,
+    get_cannon_shot_id, get_cannon_strike_width, get_cannon_strike_x, get_cannon_type,
+    get_castle_anim_frame, get_castle_anim_state, get_entity_base_idx, get_hitbox_pos, get_pos_x,
+    is_zombie, slot_occupied,
 };
 
 pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
@@ -23,7 +25,9 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             after = length.wrapping_sub(8);
         }
 
-        let shots = AppContext::CANNON_SHOTS.wrapping_add((faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE));
+        let shots = AppContext::CANNON_SHOTS.wrapping_add(
+            (faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE),
+        );
         let mut shot = 0usize;
 
         while shot != 15 {
@@ -36,7 +40,10 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 continue;
             }
 
-            ctx.set_i32_at(record.wrapping_add(CannonShot::TIMER), timer.wrapping_sub(1))?;
+            ctx.set_i32_at(
+                record.wrapping_add(CannonShot::TIMER),
+                timer.wrapping_sub(1),
+            )?;
 
             if timer <= after || timer.wrapping_sub(1) > until {
                 shot += 1;
@@ -53,7 +60,13 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     }
 
                     if faction == 1 {
-                        let x = ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::entity_field(other, slot, Entity::HITBOX_POS))?);
+                        let x = ctx
+                            .i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
+                            .wrapping_sub(ctx.i32_at(AppContext::entity_field(
+                                other,
+                                slot,
+                                Entity::HITBOX_POS,
+                            ))?);
 
                         if x > ctx.i32_at(record.wrapping_add(CannonShot::POS_X))? {
                             break 'slot;
@@ -67,14 +80,23 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             break 'slot;
                         }
 
-                        let x = ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::entity_field(other, slot, Entity::HITBOX_POS))?);
+                        let x = ctx
+                            .i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
+                            .wrapping_sub(ctx.i32_at(AppContext::entity_field(
+                                other,
+                                slot,
+                                Entity::HITBOX_POS,
+                            ))?);
 
                         if x < ctx.i32_at(record.wrapping_add(CannonShot::POS_X))? {
                             break 'slot;
                         }
                     }
 
-                    if get_cannon_type(ctx, faction)? == 5 && !is_zombie(ctx, other, slot)? && get_cannon_nonzombie_permille(ctx, faction)? == 0 {
+                    if get_cannon_type(ctx, faction)? == 5
+                        && !is_zombie(ctx, other, slot)?
+                        && get_cannon_nonzombie_permille(ctx, faction)? == 0
+                    {
                         break 'slot;
                     }
 
@@ -95,8 +117,18 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
     if get_castle_anim_state(ctx, faction)? == 3 || get_castle_anim_state(ctx, faction)? == 0xc {
         let origin = cannon_shot_origin_x(ctx, faction)?;
         let step = get_base_level(ctx, faction)?.wrapping_mul(CANNON_SHOT_SPACING);
-        let reach = operation::div_32(get_castle_anim_frame(ctx, faction)?.wrapping_mul(step).wrapping_mul(2).wrapping_mul(5));
-        let limit = (if faction != 0 { reach } else { reach.wrapping_neg() }).wrapping_add(origin);
+        let reach = operation::div_32(
+            get_castle_anim_frame(ctx, faction)?
+                .wrapping_mul(step)
+                .wrapping_mul(2)
+                .wrapping_mul(5),
+        );
+        let limit = (if faction != 0 {
+            reach
+        } else {
+            reach.wrapping_neg()
+        })
+        .wrapping_add(origin);
         let mut slot = 1i32;
 
         while slot != 51 {
@@ -109,7 +141,8 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     break 'slot;
                 }
 
-                let x = get_pos_x(ctx, other, slot)?.wrapping_sub(get_hitbox_pos(ctx, other, slot)?);
+                let x =
+                    get_pos_x(ctx, other, slot)?.wrapping_sub(get_hitbox_pos(ctx, other, slot)?);
 
                 if x < limit {
                     break 'slot;
@@ -126,8 +159,12 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
         return Ok(());
     }
 
-    if (get_castle_anim_state(ctx, faction)? == 5 && get_castle_anim_frame(ctx, faction)? >= 5 && get_castle_anim_frame(ctx, faction)? < 0x10)
-        || (get_castle_anim_state(ctx, faction)? == 0xb && get_castle_anim_frame(ctx, faction)? >= 0xa && get_castle_anim_frame(ctx, faction)? <= 0x14)
+    if (get_castle_anim_state(ctx, faction)? == 5
+        && get_castle_anim_frame(ctx, faction)? >= 5
+        && get_castle_anim_frame(ctx, faction)? < 0x10)
+        || (get_castle_anim_state(ctx, faction)? == 0xb
+            && get_castle_anim_frame(ctx, faction)? >= 0xa
+            && get_castle_anim_frame(ctx, faction)? <= 0x14)
     {
         let mut slot = 1i32;
 
@@ -146,7 +183,11 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 let state = get_castle_anim_state(ctx, faction)?;
                 let strike_x = get_cannon_strike_x(ctx, faction)?;
                 let width = get_cannon_strike_width(ctx, 0)?;
-                let offset = if state == 0xb { operation::div_neg_10(width.wrapping_shl(3) as i64) as i32 } else { operation::div_2(width).wrapping_neg() };
+                let offset = if state == 0xb {
+                    operation::div_neg_10(width.wrapping_shl(3) as i64) as i32
+                } else {
+                    operation::div_2(width).wrapping_neg()
+                };
                 let x = pos.wrapping_sub(hitbox);
                 let left = offset.wrapping_add(strike_x);
                 let width = get_cannon_strike_width(ctx, 0)?;
@@ -179,8 +220,10 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     break 'slot;
                 }
 
-                let x = get_pos_x(ctx, other, slot)?.wrapping_sub(get_hitbox_pos(ctx, other, slot)?);
-                let left = get_cannon_strike_x(ctx, faction)?.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                let x =
+                    get_pos_x(ctx, other, slot)?.wrapping_sub(get_hitbox_pos(ctx, other, slot)?);
+                let left = get_cannon_strike_x(ctx, faction)?
+                    .wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
                 let strike_x = get_cannon_strike_x(ctx, faction)?;
                 let width = get_cannon_strike_width(ctx, 0)?;
 

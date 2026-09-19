@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::AppContext;
 
@@ -14,7 +14,11 @@ pub struct TreasureGroup {
 
 pub type TreasureStore = [Vec<TreasureGroup>; 10];
 
-pub fn get_treasure_value(ctx: &AppContext, store: &TreasureStore, effect: i32) -> Result<i32, Fault> {
+pub fn get_treasure_value(
+    ctx: &AppContext,
+    store: &TreasureStore,
+    effect: i32,
+) -> Result<i32, Fault> {
     let mut total = 0i32;
     let mut progress_row = AppContext::TREASURE_PROGRESS;
 
@@ -24,7 +28,9 @@ pub fn get_treasure_value(ctx: &AppContext, store: &TreasureStore, effect: i32) 
                 continue;
             }
 
-            if group.chapter_only != 0 && chapter as u64 != ctx.i32_at(AppContext::CHAPTER_MODE)? as u32 as u64 {
+            if group.chapter_only != 0
+                && chapter as u64 != ctx.i32_at(AppContext::CHAPTER_MODE)? as u32 as u64
+            {
                 continue;
             }
 

@@ -1,13 +1,21 @@
 use crate::Fault;
 
-use super::{analytics_named, button_bank_find, new_button_set_touchable, play_sound, show_rewarded_ad, sound_manager, AppContext};
+use super::{
+    AppContext, analytics_named, button_bank_find, new_button_set_touchable, play_sound,
+    show_rewarded_ad, sound_manager,
+};
 
 const SITE: &str = "game_lose_update_lambda_1";
 
-pub fn game_lose_update_lambda_1(ctx: &mut AppContext, _button: i32, event: i32) -> Result<(), Fault> {
+pub fn game_lose_update_lambda_1(
+    ctx: &mut AppContext,
+    _button: i32,
+    event: i32,
+) -> Result<(), Fault> {
     match event {
         4 => {
-            let video = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+            let video =
+                button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, video, 0)?;
             ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [0])?;

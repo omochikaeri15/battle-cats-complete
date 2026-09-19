@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_scene_id, AppContext};
+use super::{AppContext, get_scene_id};
 
 pub fn scene_transition_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_scene_id(ctx)? == 0x12c {

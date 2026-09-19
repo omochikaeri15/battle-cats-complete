@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 const SITE: &str = "string_to_int";
 

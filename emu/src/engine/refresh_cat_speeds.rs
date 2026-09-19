@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_button_unit_form, get_entity_button, get_slot_unit_id, get_speed, set_speed, slot_occupied, stat_speed, AppContext};
+use super::{
+    AppContext, get_button_unit_form, get_entity_button, get_slot_unit_id, get_speed, set_speed,
+    slot_occupied, stat_speed,
+};
 
 pub fn refresh_cat_speeds(ctx: &mut AppContext) -> Result<(), Fault> {
     for slot in 1..0x33 {

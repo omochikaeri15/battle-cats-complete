@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{read_flag, AppContext, Entity};
+use super::{AppContext, Entity, read_flag};
 
 pub fn get_no_revive(ctx: &AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0 {

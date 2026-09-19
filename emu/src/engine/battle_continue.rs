@@ -1,8 +1,9 @@
 use crate::Fault;
 
 use super::{
-    add_resource, analytics_record, app_on_draw, base_shake_reset, get_global_map_id, get_stage_index, get_star_level, is_ex_option_target,
-    log_analytics_event, save_battle_snapshot, AppContext, FormatArg,
+    AppContext, FormatArg, add_resource, analytics_record, app_on_draw, base_shake_reset,
+    get_global_map_id, get_stage_index, get_star_level, is_ex_option_target, log_analytics_event,
+    save_battle_snapshot,
 };
 
 pub fn battle_continue(ctx: &mut AppContext) -> Result<(), Fault> {

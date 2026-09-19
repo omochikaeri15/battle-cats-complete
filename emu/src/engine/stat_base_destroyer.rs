@@ -1,13 +1,23 @@
 use crate::Fault;
 
-use super::{has_talent, read_flag, AppContext, CatStats, EnemyStats};
+use super::{AppContext, CatStats, EnemyStats, has_talent, read_flag};
 
-pub fn stat_base_destroyer(ctx: &mut AppContext, faction: i32, unit_id: i32, form: i32) -> Result<bool, Fault> {
+pub fn stat_base_destroyer(
+    ctx: &mut AppContext,
+    faction: i32,
+    unit_id: i32,
+    form: i32,
+) -> Result<bool, Fault> {
     if read_flag(ctx, AppContext::faction_flags(faction))? & 1 == 0 {
         return Ok(ctx.i32_at(AppContext::enemy_stat(unit_id, EnemyStats::BASE_DESTROYER))? != 0);
     }
 
-    if ctx.i32_at(AppContext::cat_stat(unit_id, form, CatStats::BASE_DESTROYER))? != 0 {
+    if ctx.i32_at(AppContext::cat_stat(
+        unit_id,
+        form,
+        CatStats::BASE_DESTROYER,
+    ))? != 0
+    {
         return Ok(true);
     }
 

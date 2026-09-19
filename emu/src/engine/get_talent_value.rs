@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{has_talent, AppContext};
+use super::{AppContext, has_talent};
 
 pub fn get_talent_value(
     ctx: &mut AppContext,
@@ -38,7 +38,14 @@ pub fn get_talent_value(
     if definition[talent_slot * 0xe + 2] <= 1 {
         let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
 
-        return definition.get(min_cell).copied().ok_or(Fault::IndexOutOfRange { site: "get_talent_value", index: param as i64, limit: 4 });
+        return definition
+            .get(min_cell)
+            .copied()
+            .ok_or(Fault::IndexOutOfRange {
+                site: "get_talent_value",
+                index: param as i64,
+                limit: 4,
+            });
     }
 
     let levels = ctx.talent_levels.entry(unit_id).or_default();
@@ -46,20 +53,35 @@ pub fn get_talent_value(
     let level = *levels.entry(definition[talent_slot * 0xe + 1]).or_default();
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let min = *definition.get(min_cell).ok_or(Fault::IndexOutOfRange { site: "get_talent_value", index: param as i64, limit: 4 })?;
+    let min = *definition.get(min_cell).ok_or(Fault::IndexOutOfRange {
+        site: "get_talent_value",
+        index: param as i64,
+        limit: 4,
+    })?;
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let max = *definition.get(max_cell).ok_or(Fault::IndexOutOfRange { site: "get_talent_value", index: param as i64, limit: 4 })?;
+    let max = *definition.get(max_cell).ok_or(Fault::IndexOutOfRange {
+        site: "get_talent_value",
+        index: param as i64,
+        limit: 4,
+    })?;
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let span = max.wrapping_sub(*definition.get(min_cell).ok_or(Fault::IndexOutOfRange { site: "get_talent_value", index: param as i64, limit: 4 })?);
+    let span = max.wrapping_sub(*definition.get(min_cell).ok_or(Fault::IndexOutOfRange {
+        site: "get_talent_value",
+        index: param as i64,
+        limit: 4,
+    })?);
     let scaled = level.wrapping_sub(1).wrapping_mul(span);
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
     let steps = definition[talent_slot * 0xe + 2].wrapping_sub(1);
 
-    let quotient =
-        (scaled as i64).checked_div(steps as i64).ok_or(Fault::DivideByZero { site: "get_talent_value" })? as i32;
+    let quotient = (scaled as i64)
+        .checked_div(steps as i64)
+        .ok_or(Fault::DivideByZero {
+            site: "get_talent_value",
+        })? as i32;
 
     Ok(quotient.wrapping_add(min))
 }

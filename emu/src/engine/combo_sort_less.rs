@@ -4,7 +4,11 @@ use super::{AppContext, NyancomboRecord};
 
 const SITE: &str = "combo_sort_less";
 
-pub fn combo_sort_less(ctx: &AppContext, left: &NyancomboRecord, right: &NyancomboRecord) -> Result<bool, Fault> {
+pub fn combo_sort_less(
+    ctx: &AppContext,
+    left: &NyancomboRecord,
+    right: &NyancomboRecord,
+) -> Result<bool, Fault> {
     if left.kind[0] == right.kind[0] {
         return Ok(left.power[0] < right.power[0]);
     }
@@ -13,7 +17,15 @@ pub fn combo_sort_less(ctx: &AppContext, left: &NyancomboRecord, right: &Nyancom
 
     loop {
         let tab = ctx.i32_at(AppContext::COMBO_TAB)?;
-        let kinds = ctx.combo_store.tab_kinds.get(tab as i64 as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: tab as i64, limit: ctx.combo_store.tab_kinds.len() as i64 })?;
+        let kinds =
+            ctx.combo_store
+                .tab_kinds
+                .get(tab as i64 as usize)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: tab as i64,
+                    limit: ctx.combo_store.tab_kinds.len() as i64,
+                })?;
 
         if entry as i64 >= kinds.len() as i32 as i64 {
             return Ok(false);

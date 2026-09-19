@@ -1,13 +1,18 @@
 use crate::Fault;
 
 use super::{
-    analytics_named, battle_init_win_lambda_0_0, dialog_close, dialog_set_back_button, dialog_show_kind2, dialog_top, new_button_set_touchable, play_sound,
-    query_localizable, sound_manager, substitute_tokens, AppContext,
+    AppContext, analytics_named, battle_init_win_lambda_0_0, dialog_close, dialog_set_back_button,
+    dialog_show_kind2, dialog_top, new_button_set_touchable, play_sound, query_localizable,
+    sound_manager, substitute_tokens,
 };
 
 const SITE: &str = "battle_init_win_lambda_0";
 
-pub fn battle_init_win_lambda_0(ctx: &mut AppContext, button: i32, event: i32) -> Result<(), Fault> {
+pub fn battle_init_win_lambda_0(
+    ctx: &mut AppContext,
+    button: i32,
+    event: i32,
+) -> Result<(), Fault> {
     match event {
         4 => {}
         3 => {
@@ -37,7 +42,11 @@ pub fn battle_init_win_lambda_0(ctx: &mut AppContext, button: i32, event: i32) -
     } else {
         4
     };
-    let key: &[u8] = if ctx.ad_button_cleared != 0 { b"ScatCPU_ad_confirm" } else { b"clear_adreward_1" };
+    let key: &[u8] = if ctx.ad_button_cleared != 0 {
+        b"ScatCPU_ad_confirm"
+    } else {
+        b"clear_adreward_1"
+    };
     let text = query_localizable(ctx, key);
     let xp = ctx.i32_at(AppContext::WIN_XP)?.to_string();
     let text = substitute_tokens(ctx, &text, &[(b"xp", xp.as_bytes())])?;

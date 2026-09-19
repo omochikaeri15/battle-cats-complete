@@ -1,9 +1,12 @@
 use crate::Fault;
 
-use super::{is_map_cleared, AppContext};
+use super::{AppContext, is_map_cleared};
 
 pub fn invasion_z_available(ctx: &mut AppContext, chapter: i32) -> Result<bool, Fault> {
-    if chapter != 9 || ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? == 0 || ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? != 0 {
+    if chapter != 9
+        || ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? == 0
+        || ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? != 0
+    {
         return Ok(false);
     }
 
@@ -17,7 +20,12 @@ pub fn invasion_z_available(ctx: &mut AppContext, chapter: i32) -> Result<bool, 
         let chapter = next;
 
         if chapter != 3 {
-            let moon = ctx.outbreak_cleared.entry(chapter).or_default().entry(0x2f).or_default();
+            let moon = ctx
+                .outbreak_cleared
+                .entry(chapter)
+                .or_default()
+                .entry(0x2f)
+                .or_default();
 
             if !*moon {
                 return Ok(false);

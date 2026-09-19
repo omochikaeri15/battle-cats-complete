@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{dialog_close, play_sound, sound_manager, AppContext};
+use super::{AppContext, dialog_close, play_sound, sound_manager};
 
-pub fn point_lose_update_lambda_2(ctx: &mut AppContext, dialog: u64, event: i32, _button: i32) -> Result<(), Fault> {
+pub fn point_lose_update_lambda_2(
+    ctx: &mut AppContext,
+    dialog: u64,
+    event: i32,
+    _button: i32,
+) -> Result<(), Fault> {
     match event {
         5 => {
             if !ctx.reward_queue.is_empty() {

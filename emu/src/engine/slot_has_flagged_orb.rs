@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_button_unit_id, get_equipped_orb, get_orb_def, get_orb_slot_count, orb_ability_flag, AppContext};
+use super::{
+    AppContext, get_button_unit_id, get_equipped_orb, get_orb_def, get_orb_slot_count,
+    orb_ability_flag,
+};
 
 pub fn slot_has_flagged_orb(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
     let unit_id = get_button_unit_id(ctx, faction, slot)?;

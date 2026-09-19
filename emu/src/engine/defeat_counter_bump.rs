@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{eoc_progress_total, AppContext};
+use super::{AppContext, eoc_progress_total};
 
 pub fn defeat_counter_bump(ctx: &mut AppContext) -> Result<(), Fault> {
     let count = ctx.i8_at(AppContext::DEFEAT_COUNTER)?;

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{special_rules_at, MapRules, SpecialRuleStore};
+use super::{MapRules, SpecialRuleStore, special_rules_at};
 
 pub fn get_map_rules(store: &SpecialRuleStore, map_id: i32) -> Result<Option<&MapRules>, Fault> {
     if !store.maps.contains_key(&map_id) {

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{jni_vibrate, AppContext};
+use super::{AppContext, jni_vibrate};
 
 pub fn vibrate(ctx: &mut AppContext, gate: f64, duration: f64, strength: f64) -> Result<(), Fault> {
     if 0.0 >= duration {

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{draw_number, DrawSink, Imgcut, NumberBox};
+use super::{DrawSink, Imgcut, NumberBox, draw_number};
 
 #[allow(clippy::too_many_arguments)]
 pub fn draw_number_scaled(
@@ -17,5 +17,7 @@ pub fn draw_number_scaled(
     flags: i32,
     digits: i32,
 ) -> Result<NumberBox, Fault> {
-    draw_number(dc, sheet, base, value, offset, x, y, spacing, scale, scale, lead, flags, digits)
+    draw_number(
+        dc, sheet, base, value, offset, x, y, spacing, scale, scale, lead, flags, digits,
+    )
 }

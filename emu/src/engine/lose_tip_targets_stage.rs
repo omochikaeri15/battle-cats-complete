@@ -4,7 +4,12 @@ use super::AppContext;
 
 const SITE: &str = "lose_tip_targets_stage";
 
-pub fn lose_tip_targets_stage(ctx: &AppContext, id: i32, map: i32, stage: i32) -> Result<bool, Fault> {
+pub fn lose_tip_targets_stage(
+    ctx: &AppContext,
+    id: i32,
+    map: i32,
+    stage: i32,
+) -> Result<bool, Fault> {
     if ctx.lose_text_settings.len() as i32 <= 0 {
         return Ok(false);
     }
@@ -13,7 +18,9 @@ pub fn lose_tip_targets_stage(ctx: &AppContext, id: i32, map: i32, stage: i32) -
     let mut row = 0usize;
 
     loop {
-        let first = *ctx.lose_text_settings[row].first().ok_or(Fault::NullPointer { site: SITE })?;
+        let first = *ctx.lose_text_settings[row]
+            .first()
+            .ok_or(Fault::NullPointer { site: SITE })?;
 
         if first == id {
             break;
@@ -27,7 +34,11 @@ pub fn lose_tip_targets_stage(ctx: &AppContext, id: i32, map: i32, stage: i32) -
     }
 
     let cells = &ctx.lose_text_settings[row];
-    let mode = *cells.get(0x1b).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0x1b, limit: cells.len() as i64 })?;
+    let mode = *cells.get(0x1b).ok_or(Fault::IndexOutOfRange {
+        site: SITE,
+        index: 0x1b,
+        limit: cells.len() as i64,
+    })?;
 
     let target = match mode {
         1 => key,

@@ -1,4 +1,4 @@
-use super::{read_asset_stream_line, split_row_cells, AssetStream, Cell};
+use super::{AssetStream, Cell, read_asset_stream_line, split_row_cells};
 
 pub fn read_stream_row(stm: &mut AssetStream<'_>, delimiter: u8) -> bool {
     let mut line = Cell { at: 0, len: 0 };

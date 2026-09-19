@@ -11,7 +11,12 @@ pub fn string_split(text: &[u8], separator: &[u8]) -> Vec<Vec<u8>> {
         let found = if separator.is_empty() {
             Some(start)
         } else {
-            text.get(start..).and_then(|rest| rest.windows(separator.len()).position(|window| window == separator)).map(|at| at + start)
+            text.get(start..)
+                .and_then(|rest| {
+                    rest.windows(separator.len())
+                        .position(|window| window == separator)
+                })
+                .map(|at| at + start)
         };
 
         let Some(at) = found else {

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_global_map_id, lose_tip_allowed, lose_tip_targets_stage, AppContext};
+use super::{AppContext, get_global_map_id, lose_tip_allowed, lose_tip_targets_stage};
 
 pub fn collect_lose_tip_candidates(ctx: &mut AppContext) -> Result<Vec<i32>, Fault> {
     let mut candidates = Vec::new();

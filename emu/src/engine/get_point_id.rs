@@ -5,5 +5,9 @@ pub fn get_point_id(store: &EventItemStore) -> i32 {
         return 0;
     }
 
-    store.stage_points.get(&store.stage_key).copied().unwrap_or(0)
+    store
+        .stage_points
+        .get(&store.stage_key)
+        .copied()
+        .unwrap_or(0)
 }

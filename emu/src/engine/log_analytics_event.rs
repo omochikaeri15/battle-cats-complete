@@ -9,7 +9,13 @@ pub trait MetaHost {
     fn check_medals(&mut self, kind: i32);
     fn request_save(&mut self);
     fn set_item_count(&mut self, item: i32, count: i32, flag: u8);
-    fn analytics_record(&mut self, code: i32, value: i32, flag: i32, params: &[(&[u8], FormatArg<'_>)]);
+    fn analytics_record(
+        &mut self,
+        code: i32,
+        value: i32,
+        flag: i32,
+        params: &[(&[u8], FormatArg<'_>)],
+    );
     fn analytics_named(&mut self, code: i32, name: &[u8], detail: &[u8]);
     fn bc_log(&mut self, name: &[u8]);
     fn save_battle_snapshot(&mut self);
@@ -27,8 +33,19 @@ pub trait MetaHost {
     fn load_battle_snapshot(&mut self, mode: i32);
 }
 
-pub fn log_analytics_event(ctx: &mut AppContext, event: i32, first: i32, second: i32, third: i32, fourth: i32) -> Result<(), Fault> {
-    ctx.meta().ok_or(Fault::HostMissing { site: "log_analytics_event" })?.analytics_event(event, first, second, third, fourth);
+pub fn log_analytics_event(
+    ctx: &mut AppContext,
+    event: i32,
+    first: i32,
+    second: i32,
+    third: i32,
+    fourth: i32,
+) -> Result<(), Fault> {
+    ctx.meta()
+        .ok_or(Fault::HostMissing {
+            site: "log_analytics_event",
+        })?
+        .analytics_event(event, first, second, third, fourth);
 
     Ok(())
 }

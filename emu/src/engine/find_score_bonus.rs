@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{get_global_map_id, AppContext};
+use super::{AppContext, get_global_map_id};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct ScoredMap {
@@ -16,9 +16,22 @@ pub fn find_score_bonus(ctx: &mut AppContext, kind: i32) -> Result<Option<&Vec<i
         return Ok(None);
     }
 
-    if !ctx.scored_maps.entry(map_id).or_default().bonuses.contains_key(&kind) {
+    if !ctx
+        .scored_maps
+        .entry(map_id)
+        .or_default()
+        .bonuses
+        .contains_key(&kind)
+    {
         return Ok(None);
     }
 
-    Ok(Some(ctx.scored_maps.entry(map_id).or_default().bonuses.entry(kind).or_default()))
+    Ok(Some(
+        ctx.scored_maps
+            .entry(map_id)
+            .or_default()
+            .bonuses
+            .entry(kind)
+            .or_default(),
+    ))
 }

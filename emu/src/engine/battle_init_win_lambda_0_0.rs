@@ -1,8 +1,15 @@
 use crate::Fault;
 
-use super::{dialog_close, new_button_set_touchable, play_sound, show_rewarded_ad, sound_manager, AppContext};
+use super::{
+    AppContext, dialog_close, new_button_set_touchable, play_sound, show_rewarded_ad, sound_manager,
+};
 
-pub fn battle_init_win_lambda_0_0(ctx: &mut AppContext, dialog: u64, event: i32, button: i32) -> Result<(), Fault> {
+pub fn battle_init_win_lambda_0_0(
+    ctx: &mut AppContext,
+    dialog: u64,
+    event: i32,
+    button: i32,
+) -> Result<(), Fault> {
     if event != 5 {
         if event != 2 || button as u32 > 1 {
             return Ok(());

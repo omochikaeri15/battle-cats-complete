@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_occupant, AppContext};
+use super::{AppContext, get_occupant};
 
 pub fn get_entity_base_idx(ctx: &AppContext) -> Result<i32, Fault> {
     if ctx.i32_at(AppContext::CASTLE_ENEMY_ROW)? <= 0 {

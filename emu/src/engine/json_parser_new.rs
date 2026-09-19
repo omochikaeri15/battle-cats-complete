@@ -26,9 +26,19 @@ pub struct JsonParser {
 
 pub fn json_parser_new(source: Vec<u8>) -> Result<JsonParser, Fault> {
     let end = source.len();
-    let mut parser = JsonParser { source, begin: 0, end, root: None, cursor: 0 };
+    let mut parser = JsonParser {
+        source,
+        begin: 0,
+        end,
+        root: None,
+        cursor: 0,
+    };
 
-    if parser.source.len() >= 4 && parser.source[0] == 0xef && parser.source[1] == 0xbb && parser.source[2] == 0xbf {
+    if parser.source.len() >= 4
+        && parser.source[0] == 0xef
+        && parser.source[1] == 0xbb
+        && parser.source[2] == 0xbf
+    {
         parser.begin += 3;
     }
 

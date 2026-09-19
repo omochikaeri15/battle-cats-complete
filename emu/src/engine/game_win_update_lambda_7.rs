@@ -1,10 +1,15 @@
 use crate::Fault;
 
-use super::{dialog_close, play_sound, sound_manager, AppContext};
+use super::{AppContext, dialog_close, play_sound, sound_manager};
 
 const SITE: &str = "game_win_update_lambda_7";
 
-pub fn game_win_update_lambda_7(ctx: &mut AppContext, dialog: u64, event: i32, _button: i32) -> Result<(), Fault> {
+pub fn game_win_update_lambda_7(
+    ctx: &mut AppContext,
+    dialog: u64,
+    event: i32,
+    _button: i32,
+) -> Result<(), Fault> {
     if event == 2 {
         play_sound(sound_manager(ctx)?, 0xb, None);
 
@@ -15,7 +20,10 @@ pub fn game_win_update_lambda_7(ctx: &mut AppContext, dialog: u64, event: i32, _
         return Ok(());
     }
 
-    let head = ctx.reward_queue.first_mut().ok_or(Fault::NullPointer { site: SITE })?;
+    let head = ctx
+        .reward_queue
+        .first_mut()
+        .ok_or(Fault::NullPointer { site: SITE })?;
 
     if head.len() as i32 >= 2 {
         let mut cleared = 0;
@@ -35,7 +43,10 @@ pub fn game_win_update_lambda_7(ctx: &mut AppContext, dialog: u64, event: i32, _
         }
     }
 
-    let head = ctx.reward_queue.first().ok_or(Fault::NullPointer { site: SITE })?;
+    let head = ctx
+        .reward_queue
+        .first()
+        .ok_or(Fault::NullPointer { site: SITE })?;
     let mut remaining = false;
 
     if head.len() as i32 >= 2 {

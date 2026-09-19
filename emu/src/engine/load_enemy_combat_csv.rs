@@ -2,8 +2,8 @@ use crate::Fault;
 use crate::operation::{blend_epi16, slli_epi32};
 
 use super::{
-    get_column_count, read_csv_cell, read_csv_row, AppContext, AssetStream, ENEMY_STATS, ENEMY_STATS_STRIDE,
-    EnemyStats,
+    AppContext, AssetStream, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, get_column_count,
+    read_csv_cell, read_csv_row,
 };
 
 const ROWS: usize = 0x324;
@@ -25,7 +25,10 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
 
         while column != COLUMNS {
             if (column as u64) < get_column_count(stm) {
-                ctx.set_i32_at(stats + (column as usize) * 4, read_csv_cell(stm, column) as i32)?;
+                ctx.set_i32_at(
+                    stats + (column as usize) * 4,
+                    read_csv_cell(stm, column) as i32,
+                )?;
             }
 
             column += 1;
@@ -35,13 +38,19 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
         ctx.set_i32_at(row_at + ENEMY_STATS + EnemyStats::SPEED, speed << 1)?;
 
         let quad = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN)?;
-        ctx.set_block_at(row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN, blend_epi16(slli_epi32(quad, 1), slli_epi32(quad, 2), 0xc))?;
+        ctx.set_block_at(
+            row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN,
+            blend_epi16(slli_epi32(quad, 1), slli_epi32(quad, 2), 0xc),
+        )?;
 
         let width = ctx.i32_at(row_at + ENEMY_STATS + EnemyStats::HITBOX_WIDTH)?;
         ctx.set_i32_at(row_at + ENEMY_STATS + EnemyStats::HITBOX_WIDTH, width << 2)?;
 
         let long_distance = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR)?;
-        ctx.set_block_at(row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR, slli_epi32(long_distance, 2))?;
+        ctx.set_block_at(
+            row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR,
+            slli_epi32(long_distance, 2),
+        )?;
 
         stats += ENEMY_STATS_STRIDE;
     }
@@ -50,16 +59,31 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
 
     while group != ROWS * ENEMY_STATS_STRIDE {
         let first = ctx.i32_at(group + ENEMY_STATS + EnemyStats::CASH_DROP)?;
-        ctx.set_i32_at(group + ENEMY_STATS + EnemyStats::CASH_DROP, first.wrapping_mul(0x64))?;
+        ctx.set_i32_at(
+            group + ENEMY_STATS + EnemyStats::CASH_DROP,
+            first.wrapping_mul(0x64),
+        )?;
 
-        let second = ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE + EnemyStats::CASH_DROP)?;
-        ctx.set_i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE + EnemyStats::CASH_DROP, second.wrapping_mul(0x64))?;
+        let second =
+            ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE + EnemyStats::CASH_DROP)?;
+        ctx.set_i32_at(
+            group + ENEMY_STATS + ENEMY_STATS_STRIDE + EnemyStats::CASH_DROP,
+            second.wrapping_mul(0x64),
+        )?;
 
-        let third = ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 2 + EnemyStats::CASH_DROP)?;
-        ctx.set_i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 2 + EnemyStats::CASH_DROP, third.wrapping_mul(0x64))?;
+        let third =
+            ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 2 + EnemyStats::CASH_DROP)?;
+        ctx.set_i32_at(
+            group + ENEMY_STATS + ENEMY_STATS_STRIDE * 2 + EnemyStats::CASH_DROP,
+            third.wrapping_mul(0x64),
+        )?;
 
-        let fourth = ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 3 + EnemyStats::CASH_DROP)?;
-        ctx.set_i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 3 + EnemyStats::CASH_DROP, fourth.wrapping_mul(0x64))?;
+        let fourth =
+            ctx.i32_at(group + ENEMY_STATS + ENEMY_STATS_STRIDE * 3 + EnemyStats::CASH_DROP)?;
+        ctx.set_i32_at(
+            group + ENEMY_STATS + ENEMY_STATS_STRIDE * 3 + EnemyStats::CASH_DROP,
+            fourth.wrapping_mul(0x64),
+        )?;
 
         group += ENEMY_STATS_STRIDE * 4;
     }

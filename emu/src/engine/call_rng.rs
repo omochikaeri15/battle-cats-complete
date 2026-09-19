@@ -1,4 +1,4 @@
-use super::{rng, AppContext};
+use super::{AppContext, rng};
 
 pub fn call_rng(ctx: &mut AppContext, bound: i32) -> i32 {
     let mut seed = ctx.rng_state();

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_button_unit_row, read_flag, AppContext};
+use super::{AppContext, get_button_unit_row, read_flag};
 
 pub fn get_button_unit_form(ctx: &AppContext, faction: i32, slot: i32) -> Result<i32, Fault> {
     if faction == 1 {

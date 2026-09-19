@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_map_index, get_map_type, AppContext};
+use super::{AppContext, get_map_index, get_map_type};
 
 pub fn is_ex_map_68(ctx: &mut AppContext) -> Result<bool, Fault> {
     if get_map_type(ctx, 0)? != -8 {

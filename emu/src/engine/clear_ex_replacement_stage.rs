@@ -1,9 +1,12 @@
 use crate::Fault;
 
-use super::{map_type_base_id, validate_map_type, AppContext};
+use super::{AppContext, map_type_base_id, validate_map_type};
 
 pub fn clear_ex_replacement_stage(ctx: &mut AppContext) -> Result<(), Fault> {
-    let key = map_type_base_id(validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?), ctx.i32_at(AppContext::MAP_INDEX)?);
+    let key = map_type_base_id(
+        validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?),
+        ctx.i32_at(AppContext::MAP_INDEX)?,
+    );
 
     if !ctx.ex_replacement_stages.contains_key(&key) {
         return Ok(());

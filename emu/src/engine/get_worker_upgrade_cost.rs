@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_base_upgrade, AppContext};
+use super::{AppContext, get_base_upgrade};
 
 pub fn get_worker_upgrade_cost(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> {
     let tier = get_base_upgrade(ctx, 4)?;
@@ -14,7 +14,10 @@ pub fn get_worker_upgrade_cost(ctx: &mut AppContext, wallet: usize) -> Result<i3
     let step = if tier >= 7 { 0x7d0 } else { 0x3e8 };
     let offset = if tier >= 7 { -0x7d0 } else { 0xfa0 };
     let flat = flat_upgrade.wrapping_mul(step).wrapping_add(offset);
-    let scaled = scaled_upgrade.wrapping_mul(step).wrapping_add(offset).wrapping_mul(worker_level);
+    let scaled = scaled_upgrade
+        .wrapping_mul(step)
+        .wrapping_add(offset)
+        .wrapping_mul(worker_level);
 
     Ok(scaled.wrapping_add(flat))
 }

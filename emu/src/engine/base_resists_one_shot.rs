@@ -1,8 +1,8 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    get_base_hp, get_base_max_hp, is_boss_guarding_base, stage_entry_base_trigger, stage_entry_count, stage_entry_is_boss,
-    AppContext,
+    AppContext, get_base_hp, get_base_max_hp, is_boss_guarding_base, stage_entry_base_trigger,
+    stage_entry_count, stage_entry_is_boss,
 };
 
 pub fn base_resists_one_shot(ctx: &AppContext) -> Result<bool, Fault> {
@@ -22,7 +22,10 @@ pub fn base_resists_one_shot(ctx: &AppContext) -> Result<bool, Fault> {
         })?;
 
         if stage_entry_is_boss(enemy_row)
-            && hp >= operation::div_100(stage_entry_base_trigger(enemy_row).wrapping_mul(max_hp) as i64) as i32
+            && hp
+                >= operation::div_100(
+                    stage_entry_base_trigger(enemy_row).wrapping_mul(max_hp) as i64
+                ) as i32
         {
             let spawned = ctx.spawn_states.get(row).ok_or(Fault::IndexOutOfRange {
                 site: "base_resists_one_shot",

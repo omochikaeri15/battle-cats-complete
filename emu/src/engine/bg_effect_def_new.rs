@@ -1,4 +1,4 @@
-use super::{bg_equally_spaced_new, bg_param_spec_new_float, bg_param_spec_new_int, BgEffectDef};
+use super::{BgEffectDef, bg_equally_spaced_new, bg_param_spec_new_float, bg_param_spec_new_int};
 
 pub fn bg_effect_def_new() -> BgEffectDef {
     BgEffectDef {

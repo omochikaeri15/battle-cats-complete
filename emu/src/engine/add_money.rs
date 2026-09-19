@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{get_max_money, obfuscate_value, AppContext};
+use super::{AppContext, get_max_money, obfuscate_value};
 
 pub fn add_money(ctx: &mut AppContext, wallet: usize, amount: i32) -> Result<(), Fault> {
     let held = ctx.block_at::<8>(wallet.wrapping_add(AppContext::WALLET_MONEY))?;
@@ -8,7 +8,11 @@ pub fn add_money(ctx: &mut AppContext, wallet: usize, amount: i32) -> Result<(),
     let second = ((held[6] ^ held[1]) as u32) << 8;
     let third = ((held[5] ^ held[2]) as u32) << 0x10;
     let high = ((held[4] ^ held[3]) as u32) << 0x18;
-    let total = (low as i32).wrapping_add(amount).wrapping_add(second as i32).wrapping_add(third as i32).wrapping_add(high as i32);
+    let total = (low as i32)
+        .wrapping_add(amount)
+        .wrapping_add(second as i32)
+        .wrapping_add(third as i32)
+        .wrapping_add(high as i32);
     let mut cell = [0u8; 8];
 
     if total < 0 {

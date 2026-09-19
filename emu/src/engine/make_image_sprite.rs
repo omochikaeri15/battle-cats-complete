@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{matrix_identity, rect_zero, Imgcut};
+use super::{Imgcut, matrix_identity, rect_zero};
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum SpriteKind {

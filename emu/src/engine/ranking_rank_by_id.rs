@@ -1,4 +1,4 @@
-use super::{ranking_entry_id, ranking_record_rank, RankingRecord};
+use super::{RankingRecord, ranking_entry_id, ranking_record_rank};
 
 pub fn ranking_rank_by_id(entries: &[Option<RankingRecord>], id: i32) -> i32 {
     let mut record = None;

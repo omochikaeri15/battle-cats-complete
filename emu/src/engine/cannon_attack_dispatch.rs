@@ -1,22 +1,44 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    attack_dmg_dispatch, attack_proc_dispatch, call_rng, cannon_hp_mode, cannon_makes_wave, does_target, get_barrier_hp, get_base_soulstrike, get_cannon_burrowed_permille,
-    get_cannon_damage, get_cannon_hit_stamp, get_cannon_metal_permille, get_cannon_nonmetal_permille, get_cannon_nonzombie_permille, get_cannon_shot_id, get_cannon_type,
-    get_cannon_zombie_permille, get_dodge_chance, get_dodge_duration, get_dodge_timer, get_entity_state, get_global_map_id, get_hp, get_max_hp, get_special_rule_params,
-    get_wave_block, get_wave_immune, has_base_curse_chance, has_base_freeze_chance, has_base_slow_chance, has_cannon_recoil, is_metal, is_touchable_thunk, is_zombie, max_i32,
-    get_unit_name, set_barrier_state, set_cannon_blast_hit, set_cannon_hit_stamp, set_castle_anim_frame, set_castle_anim_state, set_dodge_fx_frame, set_dodge_timer, set_zkill_hit,
-    std_map_int_string_subscript, std_string_concat_cstr, std_string_from_cstr, AppContext, CannonShot, Entity,
+    AppContext, CannonShot, Entity, attack_dmg_dispatch, attack_proc_dispatch, call_rng,
+    cannon_hp_mode, cannon_makes_wave, does_target, get_barrier_hp, get_base_soulstrike,
+    get_cannon_burrowed_permille, get_cannon_damage, get_cannon_hit_stamp,
+    get_cannon_metal_permille, get_cannon_nonmetal_permille, get_cannon_nonzombie_permille,
+    get_cannon_shot_id, get_cannon_type, get_cannon_zombie_permille, get_dodge_chance,
+    get_dodge_duration, get_dodge_timer, get_entity_state, get_global_map_id, get_hp, get_max_hp,
+    get_special_rule_params, get_unit_name, get_wave_block, get_wave_immune, has_base_curse_chance,
+    has_base_freeze_chance, has_base_slow_chance, has_cannon_recoil, is_metal, is_touchable_thunk,
+    is_zombie, max_i32, set_barrier_state, set_cannon_blast_hit, set_cannon_hit_stamp,
+    set_castle_anim_frame, set_castle_anim_state, set_dodge_timer, set_dodge_vfx_frame,
+    set_zkill_hit, std_map_int_string_subscript, std_string_concat_cstr, std_string_from_cstr,
 };
 
 const SITE: &str = "cannon_attack_dispatch";
 
-pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, shot_id: i32) -> Result<(), Fault> {
+pub fn cannon_attack_dispatch(
+    ctx: &mut AppContext,
+    faction: i32,
+    target: i32,
+    shot_id: i32,
+) -> Result<(), Fault> {
     let other = 1i32.wrapping_sub(faction);
-    let burrowed = if get_cannon_type(ctx, faction)? == 5 { get_entity_state(ctx, other, target)? == 0xc } else { false };
-    let spark = if get_base_soulstrike(ctx, faction)? && get_entity_state(ctx, other, target)? == 0xe { 2 } else { 0 };
+    let burrowed = if get_cannon_type(ctx, faction)? == 5 {
+        get_entity_state(ctx, other, target)? == 0xc
+    } else {
+        false
+    };
+    let spark =
+        if get_base_soulstrike(ctx, faction)? && get_entity_state(ctx, other, target)? == 0xe {
+            2
+        } else {
+            0
+        };
 
-    ctx.set_i32_at(AppContext::entity_field(other, target, Entity::HIT_SPARK_TYPE), spark)?;
+    ctx.set_i32_at(
+        AppContext::entity_field(other, target, Entity::HIT_SPARK_TYPE),
+        spark,
+    )?;
 
     if !(burrowed | is_touchable_thunk(ctx, other, target, 0)?) {
         return Ok(());
@@ -38,7 +60,7 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
 
             set_dodge_timer(ctx, other, target, duration)?;
 
-            return set_dodge_fx_frame(ctx, other, target, 1);
+            return set_dodge_vfx_frame(ctx, other, target, 1);
         }
     }
 
@@ -47,17 +69,30 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
         set_castle_anim_frame(ctx, 0, 0)?;
 
         if get_cannon_type(ctx, faction)? == 0 || get_cannon_type(ctx, faction)? == 5 {
-            let shots = AppContext::CANNON_SHOTS.wrapping_add((faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE));
+            let shots = AppContext::CANNON_SHOTS.wrapping_add(
+                (faction as i64 as usize).wrapping_mul(AppContext::CANNON_SHOTS_FACTION_STRIDE),
+            );
             let mut shot = 0usize;
 
             while shot != 15 {
-                ctx.set_i32_at(shots.wrapping_add(shot.wrapping_mul(AppContext::CANNON_SHOT_STRIDE)).wrapping_add(CannonShot::TIMER), 0)?;
+                ctx.set_i32_at(
+                    shots
+                        .wrapping_add(shot.wrapping_mul(AppContext::CANNON_SHOT_STRIDE))
+                        .wrapping_add(CannonShot::TIMER),
+                    0,
+                )?;
                 shot += 1;
             }
         }
 
-        ctx.set_i32_at(AppContext::entity_field(other, target, Entity::WAVE_BLOCK_FX_FRAME), 0)?;
-        ctx.set_i32_at(AppContext::entity_field(other, target, Entity::WAVE_BLOCK_FX_ACTIVE), 1)?;
+        ctx.set_i32_at(
+            AppContext::entity_field(other, target, Entity::WAVE_BLOCK_VFX_FRAME),
+            0,
+        )?;
+        ctx.set_i32_at(
+            AppContext::entity_field(other, target, Entity::WAVE_BLOCK_VFX_ACTIVE),
+            1,
+        )?;
 
         return Ok(());
     }
@@ -67,8 +102,14 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
     set_cannon_hit_stamp(ctx, other, target, stamp)?;
 
     if cannon_makes_wave(ctx, faction)? && get_wave_immune(ctx, other, target)? {
-        ctx.set_i32_at(AppContext::entity_field(other, target, Entity::WAVE_IMMUNE_FX_FRAME), 0)?;
-        ctx.set_i32_at(AppContext::entity_field(other, target, Entity::WAVE_IMMUNE_FX_ACTIVE), 1)?;
+        ctx.set_i32_at(
+            AppContext::entity_field(other, target, Entity::WAVE_IMMUNE_VFX_FRAME),
+            0,
+        )?;
+        ctx.set_i32_at(
+            AppContext::entity_field(other, target, Entity::WAVE_IMMUNE_VFX_ACTIVE),
+            1,
+        )?;
 
         return Ok(());
     }
@@ -86,15 +127,21 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             };
             let cannon_type = get_cannon_type(ctx, faction)?;
 
-            std_string_concat_cstr(b"%d -------------------------- ", ctx.cannon_type_names.entry(cannon_type).or_default());
+            std_string_concat_cstr(
+                b"%d -------------------------- ",
+                ctx.cannon_type_names.entry(cannon_type).or_default(),
+            );
             get_unit_name(ctx, other, target)?;
 
             if is_metal(ctx, other, target)? {
-                damage = operation::div_1000(get_cannon_metal_permille(ctx, faction)?.wrapping_mul(hp));
+                damage =
+                    operation::div_1000(get_cannon_metal_permille(ctx, faction)?.wrapping_mul(hp));
                 max_i32(damage, 1);
                 get_cannon_metal_permille(ctx, faction)?;
             } else {
-                damage = operation::div_1000(get_cannon_nonmetal_permille(ctx, faction)?.wrapping_mul(hp));
+                damage = operation::div_1000(
+                    get_cannon_nonmetal_permille(ctx, faction)?.wrapping_mul(hp),
+                );
                 max_i32(damage, 1);
                 get_cannon_nonmetal_permille(ctx, faction)?;
             }
@@ -108,22 +155,34 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             };
             let cannon_type = get_cannon_type(ctx, faction)?;
 
-            std_string_concat_cstr(b"%d -------------------------- ", ctx.cannon_type_names.entry(cannon_type).or_default());
+            std_string_concat_cstr(
+                b"%d -------------------------- ",
+                ctx.cannon_type_names.entry(cannon_type).or_default(),
+            );
             get_unit_name(ctx, other, target)?;
 
             if is_zombie(ctx, other, target)? {
-                if get_entity_state(ctx, other, target)? == 0xb || get_entity_state(ctx, other, target)? == 0xc || get_entity_state(ctx, other, target)? == 0xd {
-                    damage = operation::div_1000(get_cannon_burrowed_permille(ctx, faction)?.wrapping_mul(hp));
+                if get_entity_state(ctx, other, target)? == 0xb
+                    || get_entity_state(ctx, other, target)? == 0xc
+                    || get_entity_state(ctx, other, target)? == 0xd
+                {
+                    damage = operation::div_1000(
+                        get_cannon_burrowed_permille(ctx, faction)?.wrapping_mul(hp),
+                    );
                     std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93\xe5\x9c\xb0\xe4\xb8\xad");
                 } else {
-                    damage = operation::div_1000(get_cannon_zombie_permille(ctx, faction)?.wrapping_mul(hp));
+                    damage = operation::div_1000(
+                        get_cannon_zombie_permille(ctx, faction)?.wrapping_mul(hp),
+                    );
                     std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93");
                 }
 
                 max_i32(damage, 1);
                 set_zkill_hit(ctx, other, target, 1)?;
             } else {
-                damage = operation::div_1000(get_cannon_nonzombie_permille(ctx, faction)?.wrapping_mul(hp));
+                damage = operation::div_1000(
+                    get_cannon_nonzombie_permille(ctx, faction)?.wrapping_mul(hp),
+                );
                 std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d");
                 max_i32(damage, 1);
             }
@@ -131,7 +190,10 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             if get_cannon_type(ctx, faction)? != 0 {
                 let cannon_type = get_cannon_type(ctx, faction)?;
 
-                std_string_concat_cstr(b"%d -------------------------- ", std_map_int_string_subscript(&mut ctx.cannon_type_names, &cannon_type));
+                std_string_concat_cstr(
+                    b"%d -------------------------- ",
+                    std_map_int_string_subscript(&mut ctx.cannon_type_names, &cannon_type),
+                );
             } else {
                 std_string_from_cstr(b"%d -------------------------- \xe3\x81\xab\xe3\x82\x83\xe3\x82\x93\xe3\x81\x93\xe7\xa0\xb2");
             }
@@ -151,7 +213,11 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
                 let map_id = get_global_map_id(ctx, 0)?;
 
                 if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 9)? {
-                    let percent = *params.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
+                    let percent = *params.first().ok_or(Fault::IndexOutOfRange {
+                        site: SITE,
+                        index: 0,
+                        limit: 0,
+                    })?;
 
                     plain = operation::div_100(plain.wrapping_mul(percent));
                 }
@@ -179,5 +245,18 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
     let p_slow = has_base_slow_chance(ctx, faction)? as i32;
     let p_curse = has_base_curse_chance(ctx, faction)? as u8;
 
-    attack_proc_dispatch(ctx, faction, 0, target, 0x19, p_knockback, p_freeze, p_slow, 0, 0, p_curse, 0)
+    attack_proc_dispatch(
+        ctx,
+        faction,
+        0,
+        target,
+        0x19,
+        p_knockback,
+        p_freeze,
+        p_slow,
+        0,
+        0,
+        p_curse,
+        0,
+    )
 }

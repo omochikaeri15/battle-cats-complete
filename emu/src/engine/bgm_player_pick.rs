@@ -8,7 +8,8 @@ pub fn bgm_player_pick(ctx: &mut AppContext) -> Result<i32, Fault> {
     }
 
     let boss_phase = ctx.i32_at(AppContext::BGM_BOSS_PHASE)?;
-    let row = (ctx.i32_at(AppContext::STAGE_MUSIC_ROW)? as i64).wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
+    let row = (ctx.i32_at(AppContext::STAGE_MUSIC_ROW)? as i64)
+        .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
     let row = AppContext::MAP_STAGE_ROWS.wrapping_add(row);
 
     let key = ctx.block_at::<4>(row.wrapping_add(0xb8))?;

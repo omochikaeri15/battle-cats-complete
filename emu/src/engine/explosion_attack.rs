@@ -1,13 +1,22 @@
 use crate::Fault;
 
-use super::{cat_attack_dispatch, enemy_attack_dispatch, AppContext};
+use super::{AppContext, cat_attack_dispatch, enemy_attack_dispatch};
 
-pub fn explosion_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack: i32, dmg_scale: i32) -> Result<bool, Fault> {
-    let event = ctx.explosion_events.get(event_index as i64 as usize).ok_or(Fault::IndexOutOfRange {
-        site: "explosion_attack",
-        index: event_index as i64,
-        limit: ctx.explosion_events.len() as i64,
-    })?;
+pub fn explosion_attack(
+    ctx: &mut AppContext,
+    event_index: i32,
+    target: i32,
+    attack: i32,
+    dmg_scale: i32,
+) -> Result<bool, Fault> {
+    let event = ctx
+        .explosion_events
+        .get(event_index as i64 as usize)
+        .ok_or(Fault::IndexOutOfRange {
+            site: "explosion_attack",
+            index: event_index as i64,
+            limit: ctx.explosion_events.len() as i64,
+        })?;
     let slot = event.slot;
     let proc_flags = event.proc_flags;
 

@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{JsonNode, JsonParser};
 
@@ -14,7 +14,14 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
         if byte == b'\\' {
             parser.cursor += 1;
 
-            let escape = *parser.source.get(parser.cursor).ok_or(Fault::IndexOutOfRange { site: SITE, index: parser.cursor as i64, limit: parser.end as i64 })?;
+            let escape = *parser
+                .source
+                .get(parser.cursor)
+                .ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: parser.cursor as i64,
+                    limit: parser.end as i64,
+                })?;
 
             match escape {
                 b'b' => text.push(0x8),
@@ -36,7 +43,17 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
         parser.cursor += 1;
     }
 
-    if !closed && *parser.source.get(parser.cursor).ok_or(Fault::IndexOutOfRange { site: SITE, index: parser.cursor as i64, limit: parser.end as i64 })? != b'"' {
+    if !closed
+        && *parser
+            .source
+            .get(parser.cursor)
+            .ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: parser.cursor as i64,
+                limit: parser.end as i64,
+            })?
+            != b'"'
+    {
         return Ok(None);
     }
 
@@ -59,9 +76,18 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
             } else if code as u32 <= 0x7ff {
                 vec![(code as u32 >> 6) as u8 | 0xc0, (code as u8 & 0x3f) | 0x80]
             } else if code as u32 <= 0xffff {
-                vec![(code as u32 >> 0xc) as u8 | 0xe0, ((code as u32 >> 6) as u8 & 0x3f) | 0x80, (code as u8 & 0x3f) | 0x80]
+                vec![
+                    (code as u32 >> 0xc) as u8 | 0xe0,
+                    ((code as u32 >> 6) as u8 & 0x3f) | 0x80,
+                    (code as u8 & 0x3f) | 0x80,
+                ]
             } else {
-                vec![(code as u32 >> 0x12) as u8 | 0xf0, ((code as u32 >> 0xc) as u8 & 0x3f) | 0x80, ((code as u32 >> 6) as u8 & 0x3f) | 0x80, (code as u8 & 0x3f) | 0x80]
+                vec![
+                    (code as u32 >> 0x12) as u8 | 0xf0,
+                    ((code as u32 >> 0xc) as u8 & 0x3f) | 0x80,
+                    ((code as u32 >> 6) as u8 & 0x3f) | 0x80,
+                    (code as u8 & 0x3f) | 0x80,
+                ]
             };
 
             text.splice(position..(position + 6).min(text.len()), bytes);

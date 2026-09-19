@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{dialog_close, AppContext};
+use super::{AppContext, dialog_close};
 
-pub fn trial_win_update_lambda_0_0(ctx: &mut AppContext, dialog: u64, event: i32, _button: i32) -> Result<(), Fault> {
+pub fn trial_win_update_lambda_0_0(
+    ctx: &mut AppContext,
+    dialog: u64,
+    event: i32,
+    _button: i32,
+) -> Result<(), Fault> {
     match event {
         5 => {
             ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;

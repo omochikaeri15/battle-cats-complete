@@ -5,5 +5,8 @@ pub fn clear_count_rewards_has(ctx: &mut AppContext, map: i32, stage: i32) -> bo
         return false;
     }
 
-    ctx.clear_count_rewards.entry(map).or_default().contains_key(&stage)
+    ctx.clear_count_rewards
+        .entry(map)
+        .or_default()
+        .contains_key(&stage)
 }

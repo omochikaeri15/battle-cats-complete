@@ -1,6 +1,6 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{AppContext, UnitBuy, UNIT_BUY, UNIT_BUY_STRIDE};
+use super::{AppContext, UNIT_BUY, UNIT_BUY_STRIDE, UnitBuy};
 
 const SITE: &str = "reward_unit_id";
 
@@ -13,8 +13,17 @@ pub fn reward_unit_id(ctx: &AppContext, id: i32) -> Result<i32, Fault> {
         }
 
         for row in ctx.event_unit_rows.iter().take(count as u32 as usize) {
-            if *row.first().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })? == id {
-                return row.get(2).copied().ok_or(Fault::IndexOutOfRange { site: SITE, index: 2, limit: row.len() as i64 });
+            if *row.first().ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: 0,
+                limit: 0,
+            })? == id
+            {
+                return row.get(2).copied().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: 2,
+                    limit: row.len() as i64,
+                });
             }
         }
 
@@ -25,11 +34,23 @@ pub fn reward_unit_id(ctx: &AppContext, id: i32) -> Result<i32, Fault> {
         let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
         let slots = UnitBuy::KEY / 4;
 
-        if operation::xor_row_decode(row, slots, 0x17).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0x17, limit: slots as i64 })? as i32 == id {
+        if operation::xor_row_decode(row, slots, 0x17).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: 0x17,
+            limit: slots as i64,
+        })? as i32
+            == id
+        {
             return Ok(unit as i32);
         }
 
-        if operation::xor_row_decode(row, slots, 0x18).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0x18, limit: slots as i64 })? as i32 == id {
+        if operation::xor_row_decode(row, slots, 0x18).ok_or(Fault::IndexOutOfRange {
+            site: SITE,
+            index: 0x18,
+            limit: slots as i64,
+        })? as i32
+            == id
+        {
             return Ok(unit as i32);
         }
     }

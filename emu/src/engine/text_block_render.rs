@@ -1,6 +1,9 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
-use super::{draw_context, draw_surface_scaled, set_tint, texture_get_height, texture_get_width, DrawSink, Surface};
+use super::{
+    DrawSink, Surface, draw_context, draw_surface_scaled, set_tint, texture_get_height,
+    texture_get_width,
+};
 
 const SITE: &str = "text_block_render";
 
@@ -29,7 +32,14 @@ pub struct TextBlock {
     pub spacing: i32,
 }
 
-pub fn text_block_render(sink: &mut Option<Box<dyn DrawSink>>, block: &mut TextBlock, x: i32, y: i32, align: i32, scale: f32) -> Result<(), Fault> {
+pub fn text_block_render(
+    sink: &mut Option<Box<dyn DrawSink>>,
+    block: &mut TextBlock,
+    x: i32,
+    y: i32,
+    align: i32,
+    scale: f32,
+) -> Result<(), Fault> {
     let blink = block.blink;
 
     block.blink = if blink < 4 { blink.wrapping_add(1) } else { 0 };
@@ -48,7 +58,13 @@ pub fn text_block_render(sink: &mut Option<Box<dyn DrawSink>>, block: &mut TextB
                     set_tint(dc, 0xff, 0xff, 0, 0xff);
                 }
             } else {
-                set_tint(draw_context(sink)?, glyph.red, glyph.green, glyph.blue, 0xff);
+                set_tint(
+                    draw_context(sink)?,
+                    glyph.red,
+                    glyph.green,
+                    glyph.blue,
+                    0xff,
+                );
             }
 
             let shift = if align & 1 != 0 {
@@ -60,8 +76,13 @@ pub fn text_block_render(sink: &mut Option<Box<dyn DrawSink>>, block: &mut TextB
             };
 
             let lift = if align & 4 != 0 {
-                let last = block.lines.last().ok_or(Fault::IndexOutOfRange { site: SITE, index: -1, limit: 0 })?;
-                let lift = operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale * 0.5);
+                let last = block.lines.last().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: -1,
+                    limit: 0,
+                })?;
+                let lift =
+                    operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale * 0.5);
 
                 if block.lines.len() & 1 != 0 {
                     lift
@@ -69,7 +90,11 @@ pub fn text_block_render(sink: &mut Option<Box<dyn DrawSink>>, block: &mut TextB
                     operation::cvttsd2si((block.spacing as f32 * scale) as f64 * 0.1 + lift as f64)
                 }
             } else if align & 8 != 0 {
-                let last = block.lines.last().ok_or(Fault::IndexOutOfRange { site: SITE, index: -1, limit: 0 })?;
+                let last = block.lines.last().ok_or(Fault::IndexOutOfRange {
+                    site: SITE,
+                    index: -1,
+                    limit: 0,
+                })?;
 
                 operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale)
             } else {
@@ -79,9 +104,15 @@ pub fn text_block_render(sink: &mut Option<Box<dyn DrawSink>>, block: &mut TextB
             let dc = draw_context(sink)?;
             let across = operation::cvttss2si(glyph.x as f32 * line.scale + left - shift as f32);
             let down = y.wrapping_sub(lift).wrapping_add(line.y);
-            let texture = glyph.texture.as_ref().ok_or(Fault::NullPointer { site: SITE })?;
-            let width = operation::cvttss2si(texture_get_width(Surface::Label(texture)) as f32 * line.scale * scale);
-            let height = operation::cvttss2si(texture_get_height(Surface::Label(texture)) as f32 * scale);
+            let texture = glyph
+                .texture
+                .as_ref()
+                .ok_or(Fault::NullPointer { site: SITE })?;
+            let width = operation::cvttss2si(
+                texture_get_width(Surface::Label(texture)) as f32 * line.scale * scale,
+            );
+            let height =
+                operation::cvttss2si(texture_get_height(Surface::Label(texture)) as f32 * scale);
 
             draw_surface_scaled(dc, Surface::Label(texture), across, down, width, height);
         }

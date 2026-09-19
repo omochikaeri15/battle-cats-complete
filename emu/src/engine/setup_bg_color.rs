@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{cell_is_int, get_column_count, open_asset_stream, read_asset_stream_line, read_csv_cell, read_csv_row, AppContext, AssetStream, Cell};
+use super::{
+    AppContext, AssetStream, Cell, cell_is_int, get_column_count, open_asset_stream,
+    read_asset_stream_line, read_csv_cell, read_csv_row,
+};
 
 pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault> {
     let Some(bytes) = open_asset_stream(ctx, b"bg.csv", 0, 0)? else {
@@ -21,13 +24,23 @@ pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault
             let green = read_csv_cell(&stm, color as i32 * 3 + 2) as i32;
             let blue = read_csv_cell(&stm, color as i32 * 3 + 3) as i32;
 
-            ctx.set_i32_at(AppContext::BG_SETUP + color * 4, (green << 8) | (red << 0x10) | blue)?;
+            ctx.set_i32_at(
+                AppContext::BG_SETUP + color * 4,
+                (green << 8) | (red << 0x10) | blue,
+            )?;
         }
 
         ctx.set_i32_at(AppContext::BG_SETUP + 0x10, read_csv_cell(&stm, 0xd) as i32)?;
-        ctx.set_block_at::<1>(AppContext::BG_SETUP + 0x14, [(read_csv_cell(&stm, 0xe) as i32 != 0) as u8])?;
+        ctx.set_block_at::<1>(
+            AppContext::BG_SETUP + 0x14,
+            [(read_csv_cell(&stm, 0xe) as i32 != 0) as u8],
+        )?;
 
-        let effect = if get_column_count(&stm) as i64 >= 0x10 && cell_is_int(&stm, 0xf) { read_csv_cell(&stm, 0xf) as i32 } else { -1 };
+        let effect = if get_column_count(&stm) as i64 >= 0x10 && cell_is_int(&stm, 0xf) {
+            read_csv_cell(&stm, 0xf) as i32
+        } else {
+            -1
+        };
 
         ctx.set_i32_at(AppContext::BG_SETUP + 0x18, effect)?;
         ctx.set_block_at::<8>(AppContext::BG_SETUP + 0x1c, [0; 8])?;

@@ -26,7 +26,11 @@ pub trait SceneHost {
 }
 
 pub fn battle_check_login_bonus(ctx: &mut AppContext) -> Result<(), Fault> {
-    ctx.scene_host().ok_or(Fault::HostMissing { site: "battle_check_login_bonus" })?.battle_check_login_bonus();
+    ctx.scene_host()
+        .ok_or(Fault::HostMissing {
+            site: "battle_check_login_bonus",
+        })?
+        .battle_check_login_bonus();
 
     Ok(())
 }

@@ -10,7 +10,9 @@ pub fn deck_row_swap_tick(ctx: &mut AppContext, target: i32) -> Result<(), Fault
             break 'swap;
         }
 
-        let frame = ctx.i32_at(AppContext::DECK_ROW_SWAP_FRAME)?.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_DIRECTION)?);
+        let frame = ctx
+            .i32_at(AppContext::DECK_ROW_SWAP_FRAME)?
+            .wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_DIRECTION)?);
 
         ctx.set_i32_at(AppContext::DECK_ROW_SWAP_FRAME, frame)?;
 
@@ -24,7 +26,10 @@ pub fn deck_row_swap_tick(ctx: &mut AppContext, target: i32) -> Result<(), Fault
                     };
 
                     for (index, offset) in offsets.iter().enumerate() {
-                        ctx.set_i32_at(AppContext::DECK_ROW_SWAP_OFFSETS.wrapping_add(index * 4), *offset)?;
+                        ctx.set_i32_at(
+                            AppContext::DECK_ROW_SWAP_OFFSETS.wrapping_add(index * 4),
+                            *offset,
+                        )?;
                     }
 
                     break 'swap;
@@ -35,8 +40,12 @@ pub fn deck_row_swap_tick(ctx: &mut AppContext, target: i32) -> Result<(), Fault
                 ctx.set_i32_at(AppContext::DECK_ROW_SWAP_FRAME, 0)?;
 
                 match ctx.i32_at(AppContext::DECK_ROW_SHOWN)? {
-                    1 => ctx.set_i32_at(AppContext::DECK_ROW_SHOWN, if frame > 0 { 0 } else { 1 })?,
-                    0 => ctx.set_i32_at(AppContext::DECK_ROW_SHOWN, if frame > 0 { 1 } else { 0 })?,
+                    1 => {
+                        ctx.set_i32_at(AppContext::DECK_ROW_SHOWN, if frame > 0 { 0 } else { 1 })?
+                    }
+                    0 => {
+                        ctx.set_i32_at(AppContext::DECK_ROW_SHOWN, if frame > 0 { 1 } else { 0 })?
+                    }
                     _ => {}
                 }
             }
@@ -49,7 +58,10 @@ pub fn deck_row_swap_tick(ctx: &mut AppContext, target: i32) -> Result<(), Fault
                     };
 
                     for (index, offset) in offsets.iter().enumerate() {
-                        ctx.set_i32_at(AppContext::DECK_ROW_SWAP_OFFSETS.wrapping_add(index * 4), *offset)?;
+                        ctx.set_i32_at(
+                            AppContext::DECK_ROW_SWAP_OFFSETS.wrapping_add(index * 4),
+                            *offset,
+                        )?;
                     }
 
                     break 'swap;
@@ -77,11 +89,20 @@ pub fn deck_row_swap_tick(ctx: &mut AppContext, target: i32) -> Result<(), Fault
     }
 
     for slot in 0..10usize {
-        let counter = AppContext::faction_flags(0).wrapping_add(AppContext::WALLET_SLOT_FLASH).wrapping_add(slot * 4);
+        let counter = AppContext::faction_flags(0)
+            .wrapping_add(AppContext::WALLET_SLOT_FLASH)
+            .wrapping_add(slot * 4);
         let value = ctx.i32_at(counter)?;
 
         if value >= 0 {
-            ctx.set_i32_at(counter, if (value as u32) < 9 { value.wrapping_add(1) } else { -1 })?;
+            ctx.set_i32_at(
+                counter,
+                if (value as u32) < 9 {
+                    value.wrapping_add(1)
+                } else {
+                    -1
+                },
+            )?;
         }
     }
 

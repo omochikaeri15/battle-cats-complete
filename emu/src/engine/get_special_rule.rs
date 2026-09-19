@@ -1,8 +1,13 @@
 use crate::Fault;
 
-use super::{get_scene_id, special_rules_at, AppContext, SpecialRuleStore};
+use super::{AppContext, SpecialRuleStore, get_scene_id, special_rules_at};
 
-pub fn get_special_rule(ctx: &AppContext, store: &SpecialRuleStore, map_id: i32, rule: i32) -> Result<bool, Fault> {
+pub fn get_special_rule(
+    ctx: &AppContext,
+    store: &SpecialRuleStore,
+    map_id: i32,
+    rule: i32,
+) -> Result<bool, Fault> {
     if !store.maps.contains_key(&map_id) {
         return Ok(false);
     }

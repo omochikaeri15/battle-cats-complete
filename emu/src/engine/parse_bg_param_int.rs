@@ -3,12 +3,17 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    bg_param_base_id, json_container_as_int, json_container_as_string, json_string_as_int, json_string_as_string, json_value_as_int, json_value_as_string, parse_bg_param_bound_int, BgParamSpec, JsonNode,
+    BgParamSpec, JsonNode, bg_param_base_id, json_container_as_int, json_container_as_string,
+    json_string_as_int, json_string_as_string, json_value_as_int, json_value_as_string,
+    parse_bg_param_bound_int,
 };
 
 const SITE: &str = "parse_bg_param_int";
 
-pub fn parse_bg_param_int(spec: &mut BgParamSpec<i32>, node: Option<&BTreeMap<Vec<u8>, JsonNode>>) -> Result<(), Fault> {
+pub fn parse_bg_param_int(
+    spec: &mut BgParamSpec<i32>,
+    node: Option<&BTreeMap<Vec<u8>, JsonNode>>,
+) -> Result<(), Fault> {
     spec.enabled = 0;
     spec.value = 0;
     spec.values.clear();
@@ -73,11 +78,13 @@ pub fn parse_bg_param_int(spec: &mut BgParamSpec<i32>, node: Option<&BTreeMap<Ve
         }
     }
 
-    let name = node.get(b"base".as_slice()).map_or(Vec::new(), |found| match found {
-        JsonNode::String(text) => json_string_as_string(text),
-        JsonNode::Array(_) | JsonNode::Object(_) => json_container_as_string(),
-        _ => json_value_as_string(found),
-    });
+    let name = node
+        .get(b"base".as_slice())
+        .map_or(Vec::new(), |found| match found {
+            JsonNode::String(text) => json_string_as_string(text),
+            JsonNode::Array(_) | JsonNode::Object(_) => json_container_as_string(),
+            _ => json_value_as_string(found),
+        });
 
     spec.base = bg_param_base_id(&name);
 

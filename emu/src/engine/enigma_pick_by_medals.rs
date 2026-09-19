@@ -2,11 +2,15 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{call_rng, medal_awarded, AppContext};
+use super::{AppContext, call_rng, medal_awarded};
 
 const SITE: &str = "enigma_pick_by_medals";
 
-pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, bool>, mut excluded: BTreeMap<i32, bool>) -> Result<i32, Fault> {
+pub fn enigma_pick_by_medals(
+    ctx: &mut AppContext,
+    mut eligible: BTreeMap<i32, bool>,
+    mut excluded: BTreeMap<i32, bool>,
+) -> Result<i32, Fault> {
     if ctx.enigma.medals.is_empty() {
         return Ok(-1);
     }
@@ -15,7 +19,11 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
     let mut index = 0usize;
 
     loop {
-        let medal = *ctx.enigma.medals.get(index).ok_or(Fault::OutOfRange { site: SITE })?;
+        let medal = *ctx
+            .enigma
+            .medals
+            .get(index)
+            .ok_or(Fault::OutOfRange { site: SITE })?;
 
         owned = owned.wrapping_add(medal_awarded(ctx, medal) as i32);
         index += 1;
@@ -45,19 +53,31 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
     let mut index = 0usize;
 
     loop {
-        let pool = ctx.enigma.pools.get(tier).ok_or(Fault::OutOfRange { site: SITE })?;
+        let pool = ctx
+            .enigma
+            .pools
+            .get(tier)
+            .ok_or(Fault::OutOfRange { site: SITE })?;
 
         if index >= pool.groups.len() {
             break;
         }
 
-        let group = *pool.groups.get(index).ok_or(Fault::OutOfRange { site: SITE })?;
+        let group = *pool
+            .groups
+            .get(index)
+            .ok_or(Fault::OutOfRange { site: SITE })?;
 
         if *eligible.entry(group).or_insert(false) {
             let mut slot = 0usize;
 
             loop {
-                let stages = &ctx.enigma.groups.get(group as i64 as usize).ok_or(Fault::OutOfRange { site: SITE })?.stage_ids;
+                let stages = &ctx
+                    .enigma
+                    .groups
+                    .get(group as i64 as usize)
+                    .ok_or(Fault::OutOfRange { site: SITE })?
+                    .stage_ids;
 
                 if slot >= stages.len() {
                     break;
@@ -93,7 +113,12 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
     let mut step = 0usize;
 
     loop {
-        let thresholds = &ctx.enigma.tiers.get(tier).ok_or(Fault::OutOfRange { site: SITE })?.thresholds;
+        let thresholds = &ctx
+            .enigma
+            .tiers
+            .get(tier)
+            .ok_or(Fault::OutOfRange { site: SITE })?
+            .thresholds;
 
         if step >= thresholds.len() {
             ctx.enigma.last_threshold = ctx.enigma.stamina;
@@ -101,7 +126,9 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
             return Ok(-1);
         }
 
-        let threshold = *thresholds.get(step).ok_or(Fault::OutOfRange { site: SITE })?;
+        let threshold = *thresholds
+            .get(step)
+            .ok_or(Fault::OutOfRange { site: SITE })?;
 
         if threshold > ctx.enigma.last_threshold {
             if threshold > ctx.enigma.stamina {
@@ -111,26 +138,52 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
             }
 
             let roll = call_rng(ctx, 0x3e8);
-            let chances = &ctx.enigma.tiers.get(tier).ok_or(Fault::OutOfRange { site: SITE })?.chances;
-            let chance = *chances.get(step).ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: chances.len() as i64 })?;
+            let chances = &ctx
+                .enigma
+                .tiers
+                .get(tier)
+                .ok_or(Fault::OutOfRange { site: SITE })?
+                .chances;
+            let chance = *chances.get(step).ok_or(Fault::IndexOutOfRange {
+                site: SITE,
+                index: step as i64,
+                limit: chances.len() as i64,
+            })?;
 
             if roll < chance {
                 let mut total = 0i32;
                 let mut slot = 0usize;
 
                 loop {
-                    let pool = ctx.enigma.pools.get(tier).ok_or(Fault::OutOfRange { site: SITE })?;
+                    let pool = ctx
+                        .enigma
+                        .pools
+                        .get(tier)
+                        .ok_or(Fault::OutOfRange { site: SITE })?;
 
                     if slot >= pool.groups.len() {
                         break;
                     }
 
-                    let group = *pool.groups.get(slot).ok_or(Fault::OutOfRange { site: SITE })?;
+                    let group = *pool
+                        .groups
+                        .get(slot)
+                        .ok_or(Fault::OutOfRange { site: SITE })?;
 
                     if *candidates.entry(group).or_insert(false) {
-                        let pool = ctx.enigma.pools.get(tier).ok_or(Fault::OutOfRange { site: SITE })?;
+                        let pool = ctx
+                            .enigma
+                            .pools
+                            .get(tier)
+                            .ok_or(Fault::OutOfRange { site: SITE })?;
 
-                        total = total.wrapping_add(*pool.weights.get(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: pool.weights.len() as i64 })?);
+                        total = total.wrapping_add(*pool.weights.get(slot).ok_or(
+                            Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: slot as i64,
+                                limit: pool.weights.len() as i64,
+                            },
+                        )?);
                     }
 
                     slot += 1;
@@ -140,18 +193,35 @@ pub fn enigma_pick_by_medals(ctx: &mut AppContext, mut eligible: BTreeMap<i32, b
                 let mut sum = 0i32;
                 let mut slot = 0usize;
                 let chosen = loop {
-                    let pool = ctx.enigma.pools.get(tier).ok_or(Fault::OutOfRange { site: SITE })?;
+                    let pool = ctx
+                        .enigma
+                        .pools
+                        .get(tier)
+                        .ok_or(Fault::OutOfRange { site: SITE })?;
 
                     if slot >= pool.groups.len() {
                         break -1;
                     }
 
-                    let group = *pool.groups.get(slot).ok_or(Fault::OutOfRange { site: SITE })?;
+                    let group = *pool
+                        .groups
+                        .get(slot)
+                        .ok_or(Fault::OutOfRange { site: SITE })?;
 
                     if *candidates.entry(group).or_insert(false) {
-                        let pool = ctx.enigma.pools.get(tier).ok_or(Fault::OutOfRange { site: SITE })?;
+                        let pool = ctx
+                            .enigma
+                            .pools
+                            .get(tier)
+                            .ok_or(Fault::OutOfRange { site: SITE })?;
 
-                        sum = sum.wrapping_add(*pool.weights.get(slot).ok_or(Fault::IndexOutOfRange { site: SITE, index: slot as i64, limit: pool.weights.len() as i64 })?);
+                        sum = sum.wrapping_add(*pool.weights.get(slot).ok_or(
+                            Fault::IndexOutOfRange {
+                                site: SITE,
+                                index: slot as i64,
+                                limit: pool.weights.len() as i64,
+                            },
+                        )?);
 
                         if pick < sum {
                             break group;

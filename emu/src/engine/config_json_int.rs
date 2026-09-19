@@ -2,8 +2,19 @@ use crate::Fault;
 
 use super::AppContext;
 
-pub fn config_json_int(ctx: &mut AppContext, section: &[u8], name: &[u8], min: i32, max: i32) -> Result<i32, Fault> {
-    let value = ctx.platform().ok_or(Fault::HostMissing { site: "config_json_int" })?.config_json_int(section, name);
+pub fn config_json_int(
+    ctx: &mut AppContext,
+    section: &[u8],
+    name: &[u8],
+    min: i32,
+    max: i32,
+) -> Result<i32, Fault> {
+    let value = ctx
+        .platform()
+        .ok_or(Fault::HostMissing {
+            site: "config_json_int",
+        })?
+        .config_json_int(section, name);
     let Some(value) = value else {
         return Ok(min);
     };

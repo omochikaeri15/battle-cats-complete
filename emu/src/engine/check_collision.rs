@@ -1,11 +1,17 @@
 use crate::Fault;
 
 use super::{
-    get_entity_base_idx, get_entity_state, get_hp, get_ld_anchor, get_ld_span, has_castle_enemy, is_attack_long_range,
-    is_touchable, slot_occupied, AppContext, Entity,
+    AppContext, Entity, get_entity_base_idx, get_entity_state, get_hp, get_ld_anchor, get_ld_span,
+    has_castle_enemy, is_attack_long_range, is_touchable, slot_occupied,
 };
 
-pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, attack: i32) -> Result<bool, Fault> {
+pub fn check_collision(
+    ctx: &AppContext,
+    faction: i32,
+    slot: i32,
+    target: i32,
+    attack: i32,
+) -> Result<bool, Fault> {
     let other = (faction == 0) as i32;
 
     if target | faction == 0 && has_castle_enemy(ctx)? && get_hp(ctx, 1, 0)? > 0 {
@@ -20,9 +26,13 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
         get_entity_base_idx(ctx)? == target
     };
 
-    if at_base && get_entity_state(ctx, faction, slot)? != 2 && is_attack_long_range(ctx, faction, slot, 0)? {
+    if at_base
+        && get_entity_state(ctx, faction, slot)? != 2
+        && is_attack_long_range(ctx, faction, slot, 0)?
+    {
         let edge = if faction == 0 {
-            ctx.i32_at(AppContext::entity_field(0, slot, Entity::POS_X))?.wrapping_sub(get_ld_anchor(ctx, 0, slot, 0)?)
+            ctx.i32_at(AppContext::entity_field(0, slot, Entity::POS_X))?
+                .wrapping_sub(get_ld_anchor(ctx, 0, slot, 0)?)
         } else {
             let own_x = ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_X))?;
 
@@ -42,7 +52,9 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
         return Ok(target_x >= edge);
     }
 
-    if get_entity_state(ctx, faction, slot)? == 2 && is_attack_long_range(ctx, faction, slot, attack)? {
+    if get_entity_state(ctx, faction, slot)? == 2
+        && is_attack_long_range(ctx, faction, slot, attack)?
+    {
         if slot_occupied(ctx, other, target)? == 0 {
             return Ok(false);
         }
@@ -65,7 +77,9 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
                 let own_x = ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_X))?;
                 let anchor = get_ld_anchor(ctx, faction, slot, attack)?;
 
-                second = get_ld_span(ctx, faction, slot, attack)?.wrapping_add(anchor).wrapping_add(own_x);
+                second = get_ld_span(ctx, faction, slot, attack)?
+                    .wrapping_add(anchor)
+                    .wrapping_add(own_x);
                 first = anchored;
             }
         } else {
@@ -87,7 +101,8 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
                 let own_x = ctx.i32_at(AppContext::entity_field(0, slot, Entity::POS_X))?;
                 let anchor = get_ld_anchor(ctx, 0, slot, attack)?;
 
-                second = own_x.wrapping_sub(get_ld_span(ctx, 0, slot, attack)?.wrapping_add(anchor));
+                second =
+                    own_x.wrapping_sub(get_ld_span(ctx, 0, slot, attack)?.wrapping_add(anchor));
             }
         }
 
@@ -129,10 +144,16 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
 
     if faction != 0 {
         near = ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_X))?;
-        far = ctx.i32_at(AppContext::entity_field(1, slot, Entity::STANDING_RANGE))?.wrapping_add(near);
+        far = ctx
+            .i32_at(AppContext::entity_field(1, slot, Entity::STANDING_RANGE))?
+            .wrapping_add(near);
     } else {
         far = ctx.i32_at(AppContext::entity_field(0, slot, Entity::POS_X))?;
-        near = far.wrapping_sub(ctx.i32_at(AppContext::entity_field(0, slot, Entity::STANDING_RANGE))?);
+        near = far.wrapping_sub(ctx.i32_at(AppContext::entity_field(
+            0,
+            slot,
+            Entity::STANDING_RANGE,
+        ))?);
     }
 
     if slot_occupied(ctx, other, target)? == 0 {
@@ -147,18 +168,32 @@ pub fn check_collision(ctx: &AppContext, faction: i32, slot: i32, target: i32, a
 
     if faction != 0 {
         let target_x = ctx.i32_at(AppContext::entity_field(0, target, Entity::POS_X))?;
-        let back = ctx.i32_at(AppContext::entity_field(0, target, Entity::HITBOX_WIDTH))?.wrapping_add(target_x);
+        let back = ctx
+            .i32_at(AppContext::entity_field(0, target, Entity::HITBOX_WIDTH))?
+            .wrapping_add(target_x);
 
-        edge = target_x.wrapping_add(ctx.i32_at(AppContext::entity_field(0, target, Entity::HITBOX_POS))?);
+        edge = target_x.wrapping_add(ctx.i32_at(AppContext::entity_field(
+            0,
+            target,
+            Entity::HITBOX_POS,
+        ))?);
 
         if near > back {
             return Ok(false);
         }
     } else {
         let target_x = ctx.i32_at(AppContext::entity_field(1, target, Entity::POS_X))?;
-        let back = target_x.wrapping_sub(ctx.i32_at(AppContext::entity_field(1, target, Entity::HITBOX_POS))?);
+        let back = target_x.wrapping_sub(ctx.i32_at(AppContext::entity_field(
+            1,
+            target,
+            Entity::HITBOX_POS,
+        ))?);
 
-        edge = target_x.wrapping_sub(ctx.i32_at(AppContext::entity_field(1, target, Entity::HITBOX_WIDTH))?);
+        edge = target_x.wrapping_sub(ctx.i32_at(AppContext::entity_field(
+            1,
+            target,
+            Entity::HITBOX_WIDTH,
+        ))?);
 
         if near > back {
             return Ok(false);

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{json_parse_number, json_parse_string, JsonNode, JsonParser};
+use super::{JsonNode, JsonParser, json_parse_number, json_parse_string};
 
 pub fn json_parse_value(parser: &mut JsonParser, token: i32) -> Result<Option<JsonNode>, Fault> {
     match token {

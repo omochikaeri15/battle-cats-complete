@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{get_built_deck_cannon, get_built_deck_stage_key, get_preset_foundation_part, has_built_deck, has_fixed_lineup, AppContext};
+use super::{
+    AppContext, get_built_deck_cannon, get_built_deck_stage_key, get_preset_foundation_part,
+    has_built_deck, has_fixed_lineup,
+};
 
 pub fn get_foundation_part_id(ctx: &mut AppContext) -> Result<i32, Fault> {
     if has_fixed_lineup(ctx, -1, -1, -1)? && ctx.i32_at(AppContext::LINEUP_CANNON_TYPE)? != -1 {
@@ -11,7 +14,9 @@ pub fn get_foundation_part_id(ctx: &mut AppContext) -> Result<i32, Fault> {
         let stage_key = get_built_deck_stage_key(ctx)?;
 
         if has_built_deck(ctx, stage_key)? {
-            return Ok(((get_built_deck_cannon(ctx, stage_key)? as u32 >> 0x10) as u8 as i8) as i32);
+            return Ok(
+                ((get_built_deck_cannon(ctx, stage_key)? as u32 >> 0x10) as u8 as i8) as i32,
+            );
         }
     }
 

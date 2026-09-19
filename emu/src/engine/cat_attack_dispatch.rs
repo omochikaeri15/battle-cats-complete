@@ -1,16 +1,22 @@
-use crate::{operation, Fault};
+use crate::{Fault, operation};
 
 use super::{
-    add_score_hit_mask, attack_dmg_dispatch, attack_proc_dispatch, battle_not_finishing, build_trait_mask, call_rng, compute_attack, count_target_traits,
-    does_target, get_attack_damage, get_barrier_hp, get_base_destroyer, get_best_treasure, get_button_unit_form, get_cat_combo_bonus,
-    get_colossus_orb_atk_pct, get_dodge_chance, get_dodge_duration, get_dodge_timer, get_entity_base_idx, get_entity_button, get_explosion_immune, get_hp,
-    get_max_hp, get_orb_value_max, get_orb_value_vs_trait, get_savage_blow_boost, get_score_bonus, get_setting, get_shield_hp, get_slot_unit_id,
-    get_spawn_serial, get_status_bits, get_strengthen_boost, get_strengthen_threshold, get_surge_immune, get_trait_kaijin, get_treasure_capped,
-    get_wave_immune, get_weaken_active, get_weaken_active_pct, get_weaken_timer, has_behemoth_slayer, has_colossus_slayer, has_double_bounty,
-    has_eva_killer, has_insane_damage, has_massive_damage, has_sage_slayer, has_strong_against, has_witch_slayer, has_zombie_killer, is_alien, is_aku,
-    is_angel, is_behemoth, is_colossus, is_dark, is_eva_angel, is_floating, is_metal, is_red, is_relic, is_sage, is_touchable_thunk, is_traitless,
-    is_witch, is_zombie, set_barrier_state, set_crit_fx, set_dodge_fx_frame, set_dodge_timer, set_metal_killer_fx, set_savage_blow_fx, set_shield_state,
-    set_zkill_hit, AppContext, Entity,
+    AppContext, Entity, add_score_hit_mask, attack_dmg_dispatch, attack_proc_dispatch,
+    battle_not_finishing, build_trait_mask, call_rng, compute_attack, count_target_traits,
+    does_target, get_attack_damage, get_barrier_hp, get_base_destroyer, get_best_treasure,
+    get_button_unit_form, get_cat_combo_bonus, get_colossus_orb_atk_pct, get_dodge_chance,
+    get_dodge_duration, get_dodge_timer, get_entity_base_idx, get_entity_button,
+    get_explosion_immune, get_hp, get_max_hp, get_orb_value_max, get_orb_value_vs_trait,
+    get_savage_blow_boost, get_score_bonus, get_setting, get_shield_hp, get_slot_unit_id,
+    get_spawn_serial, get_status_bits, get_strengthen_boost, get_strengthen_threshold,
+    get_surge_immune, get_trait_kaijin, get_treasure_capped, get_wave_immune, get_weaken_active,
+    get_weaken_active_pct, get_weaken_timer, has_behemoth_slayer, has_colossus_slayer,
+    has_double_bounty, has_eva_killer, has_insane_damage, has_massive_damage, has_sage_slayer,
+    has_strong_against, has_witch_slayer, has_zombie_killer, is_aku, is_alien, is_angel,
+    is_behemoth, is_colossus, is_dark, is_eva_angel, is_floating, is_metal, is_red, is_relic,
+    is_sage, is_touchable_thunk, is_traitless, is_witch, is_zombie, set_barrier_state,
+    set_crit_vfx, set_dodge_timer, set_dodge_vfx_frame, set_metal_killer_vfx, set_savage_blow_vfx,
+    set_shield_state, set_zkill_hit,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -71,7 +77,7 @@ pub fn cat_attack_dispatch(
     }
 
     if crit != 0 {
-        set_crit_fx(ctx, 1, target, 1)?;
+        set_crit_vfx(ctx, 1, target, 1)?;
         damage = damage.wrapping_add(damage);
     }
 
@@ -109,7 +115,7 @@ pub fn cat_attack_dispatch(
 
         get_savage_blow_boost(ctx, 0, attacker)?;
         damage = damage.wrapping_mul(boost.wrapping_add(100) as i64);
-        set_savage_blow_fx(ctx, 1, target, 1)?;
+        set_savage_blow_vfx(ctx, 1, target, 1)?;
         damage = operation::div_100(damage);
     }
 
@@ -129,7 +135,7 @@ pub fn cat_attack_dispatch(
                 let duration = get_dodge_duration(ctx, 1, target)?;
 
                 set_dodge_timer(ctx, 1, target, duration)?;
-                set_dodge_fx_frame(ctx, 1, target, 1)?;
+                set_dodge_vfx_frame(ctx, 1, target, 1)?;
                 get_dodge_chance(ctx, 1, target)?;
                 get_dodge_chance(ctx, 1, target)?;
 
@@ -150,7 +156,9 @@ pub fn cat_attack_dispatch(
 
                 let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0xe, unit_id)?;
 
-                damage = operation::div_1000(damage.wrapping_mul(treasure.wrapping_add(orb).wrapping_add(0x5dc) as i64));
+                damage = operation::div_1000(
+                    damage.wrapping_mul(treasure.wrapping_add(orb).wrapping_add(0x5dc) as i64),
+                );
                 damage = (combo.wrapping_add(100) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0xe, unit_id)?;
 
@@ -176,7 +184,9 @@ pub fn cat_attack_dispatch(
 
                 let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0xf, unit_id)?;
 
-                damage = operation::div_300(damage.wrapping_mul(treasure.wrapping_add(orb).wrapping_add(0x384) as i64));
+                damage = operation::div_300(
+                    damage.wrapping_mul(treasure.wrapping_add(orb).wrapping_add(0x384) as i64),
+                );
                 damage = (combo.wrapping_add(100) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0xf, unit_id)?;
 
@@ -237,7 +247,9 @@ pub fn cat_attack_dispatch(
         if has_witch_slayer(ctx, 0, attacker)? && is_witch(ctx, 1, target)? {
             let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0x16, unit_id)?;
 
-            damage = damage.wrapping_mul(combo.wrapping_add(100) as i64).wrapping_mul(5);
+            damage = damage
+                .wrapping_mul(combo.wrapping_add(100) as i64)
+                .wrapping_mul(5);
             get_cat_combo_bonus(ctx, &ctx.combo_store, 0x16, unit_id)?;
             damage = operation::div_100(damage);
         }
@@ -245,7 +257,9 @@ pub fn cat_attack_dispatch(
         if has_eva_killer(ctx, 0, attacker)? && is_eva_angel(ctx, 1, target)? {
             let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0x17, unit_id)?;
 
-            damage = damage.wrapping_mul(combo.wrapping_add(100) as i64).wrapping_mul(5);
+            damage = damage
+                .wrapping_mul(combo.wrapping_add(100) as i64)
+                .wrapping_mul(5);
             get_cat_combo_bonus(ctx, &ctx.combo_store, 0x17, unit_id)?;
             damage = operation::div_100(damage);
         }
@@ -267,7 +281,8 @@ pub fn cat_attack_dispatch(
         }
 
         if has_sage_slayer(ctx, 0, attacker)? && is_sage(ctx, 1, target)? {
-            let permille = get_setting(&ctx.settings, b"battle_super_sage_hunter_damage1", 0x640)? as i64;
+            let permille =
+                get_setting(&ctx.settings, b"battle_super_sage_hunter_damage1", 0x640)? as i64;
 
             damage = damage.wrapping_mul(permille);
             get_setting(&ctx.settings, b"battle_super_sage_hunter_damage1", 0x640)?;
@@ -325,25 +340,44 @@ pub fn cat_attack_dispatch(
     };
 
     if immune {
-        ctx.set_i32_at(AppContext::entity_field(1, target, Entity::WAVE_IMMUNE_FX_FRAME), 0)?;
-        ctx.set_i32_at(AppContext::entity_field(1, target, Entity::WAVE_IMMUNE_FX_ACTIVE), 1)?;
+        ctx.set_i32_at(
+            AppContext::entity_field(1, target, Entity::WAVE_IMMUNE_VFX_FRAME),
+            0,
+        )?;
+        ctx.set_i32_at(
+            AppContext::entity_field(1, target, Entity::WAVE_IMMUNE_VFX_ACTIVE),
+            1,
+        )?;
         dealt = 0;
     } else if is_metal(ctx, 1, target)? && metal_killer_pct > 0 {
-        ctx.metal_killer_map.entry(target).or_default().push(metal_killer_pct);
-        set_metal_killer_fx(ctx, 1, target, 1)?;
+        ctx.metal_killer_map
+            .entry(target)
+            .or_default()
+            .push(metal_killer_pct);
+        set_metal_killer_vfx(ctx, 1, target, 1)?;
     }
 
     let attacker_serial = get_spawn_serial(ctx, 0, attacker)?;
     let victim_serial = get_spawn_serial(ctx, 1, target)?;
 
-    if !ctx.attackers_by_serial[1].entry(victim_serial).or_default().contains(&attacker_serial) {
-        ctx.attackers_by_serial[1].entry(victim_serial).or_default().push(attacker_serial);
+    if !ctx.attackers_by_serial[1]
+        .entry(victim_serial)
+        .or_default()
+        .contains(&attacker_serial)
+    {
+        ctx.attackers_by_serial[1]
+            .entry(victim_serial)
+            .or_default()
+            .push(attacker_serial);
     }
 
     attack_dmg_dispatch(ctx, 1, target, dealt as i32)?;
 
     if has_double_bounty(ctx, 0, attacker)? {
-        ctx.set_i32_at(AppContext::entity_field(1, target, Entity::DOUBLE_BOUNTY_STATE), 1)?;
+        ctx.set_i32_at(
+            AppContext::entity_field(1, target, Entity::DOUBLE_BOUNTY_STATE),
+            1,
+        )?;
     }
 
     if has_zombie_killer(ctx, 0, attacker)? && is_zombie(ctx, 1, target)? {

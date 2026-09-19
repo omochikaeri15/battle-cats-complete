@@ -5,12 +5,14 @@ use std::{
 
 use crate::Fault;
 
-use super::{call_rng, AppContext};
+use super::{AppContext, call_rng};
 
 pub fn roll_filibuster_stage(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_block_at::<1>(AppContext::INVASION_STAGE, [0xff])?;
 
-    if ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? != 0 && ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? != 0 {
+    if ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? != 0
+        && ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? != 0
+    {
         return Ok(());
     }
 
@@ -20,18 +22,39 @@ pub fn roll_filibuster_stage(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let stage = stage as i8 as i32;
 
-    if !ctx.outbreak_active.entry(9).or_default().contains_key(&stage) {
+    if !ctx
+        .outbreak_active
+        .entry(9)
+        .or_default()
+        .contains_key(&stage)
+    {
         return Ok(());
     }
 
-    if !*ctx.outbreak_active.entry(9).or_default().entry(stage).or_insert(false) {
+    if !*ctx
+        .outbreak_active
+        .entry(9)
+        .or_default()
+        .entry(stage)
+        .or_insert(false)
+    {
         return Ok(());
     }
 
     let mut open: Vec<i32> = Vec::new();
 
     for candidate in 0..0x30 {
-        let flagged = ctx.outbreak_active.entry(9).or_default().contains_key(&candidate) && *ctx.outbreak_active.entry(9).or_default().entry(candidate).or_insert(false);
+        let flagged = ctx
+            .outbreak_active
+            .entry(9)
+            .or_default()
+            .contains_key(&candidate)
+            && *ctx
+                .outbreak_active
+                .entry(9)
+                .or_default()
+                .entry(candidate)
+                .or_insert(false);
 
         if !flagged {
             open.push(candidate);
