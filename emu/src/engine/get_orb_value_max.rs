@@ -7,6 +7,7 @@ use super::{get_equipped_orb, has_fixed_lineup, AppContext};
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct OrbDef {
     pub grade: i32,
+    pub trait_index: i32,
     pub abil: i32,
     pub values: Vec<i32>,
 }
@@ -14,6 +15,7 @@ pub struct OrbDef {
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct OrbStore {
     pub orbs: Vec<OrbDef>,
+    pub trait_masks: Vec<i32>,
     pub slot_counts: BTreeMap<i32, i32>,
 }
 

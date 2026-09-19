@@ -1,9 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::Fault;
 
 use super::{
-    BattleEventLatch, CastleRow, CounterSurgeEvent, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, SoundManager,
+    BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
     SpecialRuleStore, SurgeEvent, TreasureStore,
 };
 
@@ -585,7 +585,27 @@ pub struct AppContext {
     pub surge_events: Vec<SurgeEvent>,
     pub counter_surge_events: Vec<CounterSurgeEvent>,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
-    pub money_scored_maps: BTreeSet<i32>,
+    pub scored_maps: BTreeMap<i32, ScoredMap>,
+    pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
+    pub maps_neg26: Vec<[u64; 3]>,
+    pub maps_neg24: Vec<[u64; 3]>,
+    pub maps_neg23: Vec<[u64; 3]>,
+    pub maps_neg22: Vec<[u64; 3]>,
+    pub maps_neg21: Vec<[u64; 3]>,
+    pub maps_neg20: Vec<[u64; 3]>,
+    pub maps_neg19: Vec<[u64; 3]>,
+    pub maps_neg18: Vec<[u64; 3]>,
+    pub maps_neg17: Vec<[u64; 3]>,
+    pub maps_neg16: Vec<[u64; 3]>,
+    pub maps_neg11: Vec<[u64; 3]>,
+    pub maps_neg10: Vec<[u64; 3]>,
+    pub maps_neg9: Vec<[u64; 3]>,
+    pub maps_neg4: Vec<[u64; 3]>,
+    pub ex_option_targets: BTreeMap<i32, i32>,
+    pub ex_replacement_stages: BTreeMap<i32, Vec<i32>>,
+    pub built_deck_stages: BTreeMap<i16, Vec<i32>>,
+    pub built_deck_records: BTreeMap<i16, BuiltDeckRecord>,
+    pub cannon_parts: BTreeMap<i32, CannonPart>,
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
@@ -673,6 +693,10 @@ impl AppContext {
     pub const TECH_LEVELS: usize = 0x4a3ac;
     pub const WALLET_MONEY: usize = 0x4;
     pub const WALLET_WORKER_LEVEL: usize = 0xc;
+    pub const WALLET_COOLDOWNS: usize = 0x14;
+    pub const WALLET_COOLDOWN_KEY: usize = 0x3c;
+    pub const WALLET_COOLDOWN_MAXES: usize = 0x40;
+    pub const WALLET_COOLDOWN_MAX_KEY: usize = 0x68;
     pub const WALLET_CONJURE_READY: usize = 0x6c;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
     pub const WALLET_ESCALATING_COSTS: usize = 0x130;
@@ -691,7 +715,12 @@ impl AppContext {
     pub const SCORE_TOTAL: usize = 0x32bc;
     pub const SCORE_ELAPSED: usize = 0x32c0;
     pub const SCORE_CHANGED: usize = 0x32e0;
+    pub const LINEUP_CANNON_TYPE: usize = 0x4b0;
+    pub const LINEUP_CANNON_LEVEL: usize = 0x4b4;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
+    pub const BUILT_DECK_EX_STAGE_KEY: usize = 0x3280;
+    pub const USE_BUILT_DECK: usize = 0x3284;
+    pub const STORY_MAP_COUNTS: usize = 0x3364;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
     pub const FACTION_1_DECK: usize = 0xc33c;
@@ -722,6 +751,9 @@ impl AppContext {
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
     pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
+    pub const POWERUPS: usize = 0x327eb0;
+    pub const POWERUP_AVAILABLE: usize = 0x327eec;
+    pub const SPEED_UP_LATCH: usize = 0x327eef;
     pub const BUTTON_UNIT_FORMS: usize = 0x327f40;
     pub const BATTLE_IS_OUTBREAK: usize = 0x32c5c8;
     pub const OUTBREAKS_ENABLED: usize = 0x32c5c9;
@@ -741,6 +773,8 @@ impl AppContext {
     pub const CHAPTER_COST_TIER: usize = 0x388028;
     pub const PROC_ROLLS: usize = 0x3880dc;
     pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
+    pub const PRESET_STYLE_PARTS: usize = 0x427259;
+    pub const PRESET_FOUNDATION_PARTS: usize = 0x42725a;
     pub const STAR_LEVEL: usize = 0x38fecc;
     pub const EX_MAP_INDEX: usize = 0x402168;
     pub const EX_STAGE_INDEX: usize = 0x402170;
@@ -771,7 +805,27 @@ impl AppContext {
             surge_events: Vec::new(),
             counter_surge_events: Vec::new(),
             attackers_by_serial: Default::default(),
-            money_scored_maps: Default::default(),
+            scored_maps: Default::default(),
+            cannon_part_rows: Default::default(),
+            maps_neg26: Default::default(),
+            maps_neg24: Default::default(),
+            maps_neg23: Default::default(),
+            maps_neg22: Default::default(),
+            maps_neg21: Default::default(),
+            maps_neg20: Default::default(),
+            maps_neg19: Default::default(),
+            maps_neg18: Default::default(),
+            maps_neg17: Default::default(),
+            maps_neg16: Default::default(),
+            maps_neg11: Default::default(),
+            maps_neg10: Default::default(),
+            maps_neg9: Default::default(),
+            maps_neg4: Default::default(),
+            ex_option_targets: Default::default(),
+            ex_replacement_stages: Default::default(),
+            built_deck_stages: Default::default(),
+            built_deck_records: Default::default(),
+            cannon_parts: Default::default(),
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),

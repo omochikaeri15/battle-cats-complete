@@ -83,6 +83,22 @@ pub fn div_1000<T: Truncating>(x: T) -> T {
     x / T::from(1000)
 }
 
+pub fn div_1500<T: Truncating>(x: T) -> T {
+    x / T::from(1500)
+}
+
+pub fn div_3000<T: Truncating>(x: T) -> T {
+    x / T::from(3000)
+}
+
+pub fn div_6000<T: Truncating>(x: T) -> T {
+    x / T::from(6000)
+}
+
+pub fn div_12600<T: Truncating>(x: T) -> T {
+    x / T::from(12600)
+}
+
 pub fn div_10000<T: Truncating>(x: T) -> T {
     x / T::from(10000)
 }
@@ -93,6 +109,18 @@ pub fn cvttsd2si(x: f64) -> i32 {
     } else {
         i32::MIN
     }
+}
+
+pub fn cvttss2si(x: f32) -> i32 {
+    if (-2147483648.0..2147483648.0).contains(&x) {
+        x as i32
+    } else {
+        i32::MIN
+    }
+}
+
+pub fn powf(base: f32, exponent: f32) -> f32 {
+    base.powf(exponent)
 }
 
 pub fn div_wide(dividend: i64, divisor: i64) -> Option<i64> {
