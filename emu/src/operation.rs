@@ -43,6 +43,10 @@ pub fn blend_epi16(a: [u8; 16], b: [u8; 16], mask: u8) -> [u8; 16] {
     out
 }
 
+pub fn div_2<T: Truncating>(x: T) -> T {
+    x / T::from(2)
+}
+
 pub fn div_5<T: Truncating>(x: T) -> T {
     x / T::from(5)
 }

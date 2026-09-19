@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
+    BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
     SpecialRuleStore, SurgeEvent, TreasureStore,
 };
 
@@ -592,6 +592,7 @@ pub struct AppContext {
     pub unit_anims: [Vec<BTreeMap<i32, Maanim>>; 2],
     pub death_surge_anims: [Maanim; 2],
     pub wave_anim: Maanim,
+    pub mini_wave_anim: Maanim,
     pub effect_anims: BTreeMap<i32, Maanim>,
     pub base_anims: [Maanim; 4],
     pub battle_event_latch: BattleEventLatch,
@@ -601,6 +602,7 @@ pub struct AppContext {
     pub surge_events: Vec<SurgeEvent>,
     pub counter_surge_events: Vec<CounterSurgeEvent>,
     pub explosion_events: Vec<ExplosionEvent>,
+    pub base_shake: BaseShake,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
     pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
@@ -815,6 +817,7 @@ impl AppContext {
             unit_anims: [Vec::new(), Vec::new()],
             death_surge_anims: Default::default(),
             wave_anim: Default::default(),
+            mini_wave_anim: Default::default(),
             effect_anims: Default::default(),
             base_anims: Default::default(),
             battle_event_latch: Default::default(),
@@ -824,6 +827,7 @@ impl AppContext {
             surge_events: Vec::new(),
             counter_surge_events: Vec::new(),
             explosion_events: Vec::new(),
+            base_shake: Default::default(),
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
             cannon_part_rows: Default::default(),
