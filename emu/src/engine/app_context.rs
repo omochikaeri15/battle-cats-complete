@@ -1,9 +1,9 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::Fault;
 
 use super::{
-    BattleEventLatch, CastleRow, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, SoundManager,
+    BattleEventLatch, CastleRow, CounterSurgeEvent, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, SoundManager,
     SpecialRuleStore, SurgeEvent, TreasureStore,
 };
 
@@ -583,6 +583,9 @@ pub struct AppContext {
     pub listed_item_counts: Vec<[i32; 2]>,
     pub metal_killer_map: BTreeMap<i32, Vec<i32>>,
     pub surge_events: Vec<SurgeEvent>,
+    pub counter_surge_events: Vec<CounterSurgeEvent>,
+    pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
+    pub money_scored_maps: BTreeSet<i32>,
     pub enemy_castle: Vec<CastleRow>,
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
@@ -674,9 +677,20 @@ impl AppContext {
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
     pub const WALLET_ESCALATING_COSTS: usize = 0x130;
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
+    pub const PENDING_STRIKE_TRIGGER_X: usize = 0x326690;
+    pub const PENDING_STRIKE_TARGET: usize = 0x326820;
+    pub const PENDING_STRIKE_ACTIVE: usize = 0x3268e8;
+    pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
+    pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
+    pub const ENEMY_BASE_BLAST_X: usize = 0x327da8;
+    pub const CANNON_BLAST_ACTIVE: usize = 0x32b6ac;
     pub const BASE_GUARD_NOTICE: usize = 0x870;
     pub const KILLS_SINCE_SPAWN_TICK: usize = 0x10f8;
+    pub const LABYRINTH_ACTIVE: usize = 0xff4;
     pub const SCORE_MODE_FLAG: usize = 0x32b9;
+    pub const SCORE_TOTAL: usize = 0x32bc;
+    pub const SCORE_ELAPSED: usize = 0x32c0;
+    pub const SCORE_CHANGED: usize = 0x32e0;
     pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
@@ -694,6 +708,7 @@ impl AppContext {
     pub const SPAWN_COUNTDOWN: usize = 0x838c0;
     pub const CAT_DEBRIS: usize = 0x9c768;
     pub const DEBRIS_STRIDE: usize = 0x10;
+    pub const ENEMY_DEBRIS: usize = 0x9cae8;
     pub const CANNON_SHOTS: usize = 0x9ce68;
     pub const CANNON_SHOTS_FACTION_STRIDE: usize = 0xb4;
     pub const CANNON_SHOT_STRIDE: usize = 0xc;
@@ -754,6 +769,9 @@ impl AppContext {
             listed_item_counts: Vec::new(),
             metal_killer_map: Default::default(),
             surge_events: Vec::new(),
+            counter_surge_events: Vec::new(),
+            attackers_by_serial: Default::default(),
+            money_scored_maps: Default::default(),
             enemy_castle: Vec::new(),
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),
