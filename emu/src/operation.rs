@@ -103,6 +103,10 @@ pub fn div_12600<T: Truncating>(x: T) -> T {
     x / T::from(12600)
 }
 
+pub fn div_100000<T: Truncating + From<i32>>(x: T) -> T {
+    x / T::from(100000i32)
+}
+
 pub fn div_10000<T: Truncating>(x: T) -> T {
     x / T::from(10000)
 }

@@ -4,7 +4,7 @@ use crate::Fault;
 
 use super::{
     BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, Platform, ScoredMap, SoundManager,
-    ScreenMetrics, SpecialRuleStore, StageRestriction, SurgeEvent, TreasureStore,
+    ScreenMetrics, SpecialRuleStore, UnlockGroup, StageRestriction, SurgeEvent, TreasureStore,
 };
 
 pub const SIZE: usize = 0x500000;
@@ -607,6 +607,15 @@ pub struct AppContext {
     pub base_shake: BaseShake,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
+    pub cleared_session_keys: Vec<i32>,
+    pub conditioned_maps: Vec<i32>,
+    pub stage_conditions: BTreeMap<i32, BTreeMap<i32, BTreeMap<i32, i32>>>,
+    pub legend_stage_conditions: Vec<[i32; 9]>,
+    pub aku_stage_lists: BTreeMap<i32, Vec<i32>>,
+    pub unlock_groups: BTreeMap<i32, UnlockGroup>,
+    pub unlock_flags: BTreeMap<i32, bool>,
+    pub condition_list_200k: Vec<i32>,
+    pub condition_list_300k: Vec<i32>,
     pub deploy_queue: Vec<u64>,
     pub altar_level_caps: BTreeMap<i32, i32>,
     pub altar_unsealed: BTreeMap<i32, bool>,
@@ -730,6 +739,8 @@ impl AppContext {
     pub const ITEM_COUNTS_KIND_5: usize = 0x440314;
     pub const ITEM_COUNTS_KIND_6: usize = 0x440344;
     pub const ITEM_COUNTS_KIND_7: usize = 0x44035c;
+    pub const UNITS_OWNED: usize = 0x46ce8;
+    pub const UNITS_OWNED_KEY: usize = 0x47a98;
     pub const UNIT_LEVELS: usize = 0x47a9c;
     pub const TECH_LEVELS: usize = 0x4a3ac;
     pub const WALLET_MONEY: usize = 0x4;
@@ -802,6 +813,9 @@ impl AppContext {
     pub const USE_BUILT_DECK: usize = 0x3284;
     pub const STORY_MAP_COUNTS: usize = 0x3364;
     pub const UNIT_INFO_OVERLAY_OPEN: usize = 0x910;
+    pub const CHAPTER_PROGRESS: usize = 0xc94c;
+    pub const CHAPTER_PROGRESS_KEY: usize = 0xc974;
+    pub const ENEMY_GUIDE_SEEN: usize = 0xd968;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
     pub const FACTION_1_DECK: usize = 0xc33c;
@@ -898,6 +912,15 @@ impl AppContext {
             base_shake: Default::default(),
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
+            cleared_session_keys: Vec::new(),
+            conditioned_maps: Vec::new(),
+            stage_conditions: BTreeMap::new(),
+            legend_stage_conditions: Vec::new(),
+            aku_stage_lists: BTreeMap::new(),
+            unlock_groups: BTreeMap::new(),
+            unlock_flags: BTreeMap::new(),
+            condition_list_200k: Vec::new(),
+            condition_list_300k: Vec::new(),
             deploy_queue: Vec::new(),
             altar_level_caps: BTreeMap::new(),
             altar_unsealed: BTreeMap::new(),
