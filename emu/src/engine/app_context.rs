@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
+    BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, Platform, ScoredMap, SoundManager,
     ScreenMetrics, SpecialRuleStore, StageRestriction, SurgeEvent, TreasureStore,
 };
 
@@ -681,6 +681,7 @@ pub struct AppContext {
     pub stage_record_neg9: Vec<i32>,
     pub stage_record_neg4: Vec<i32>,
     sound: Option<Box<dyn SoundManager>>,
+    platform: Option<Box<dyn Platform>>,
 }
 
 impl Default for AppContext {
@@ -800,6 +801,7 @@ impl AppContext {
     pub const BUILT_DECK_EX_STAGE_KEY: usize = 0x3280;
     pub const USE_BUILT_DECK: usize = 0x3284;
     pub const STORY_MAP_COUNTS: usize = 0x3364;
+    pub const UNIT_INFO_OVERLAY_OPEN: usize = 0x910;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
     pub const FACTION_1_DECK: usize = 0xc33c;
@@ -811,6 +813,7 @@ impl AppContext {
     pub const UNIT_FORMS: usize = 0x495fc;
     pub const BATTLE_FRAME_COUNTER: usize = 0x83678;
     pub const CAMERA_X: usize = 0x83688;
+    pub const AUTO_CAMERA_MODE: usize = 0x836a4;
     pub const BATTLE_STATUS: usize = 0x836ac;
     pub const WORKER_UPGRADE_FX: usize = 0x836d8;
     pub const CASTLE_ID: usize = 0x836c4;
@@ -830,6 +833,7 @@ impl AppContext {
     pub const CASTLE_ENEMY_ROW: usize = 0x9e540;
     pub const STAGE_SCORE_TIME_LIMIT: usize = 0x9e544;
     pub const STAGE_BOSS_GUARD: usize = 0x9e548;
+    pub const SCENE_0X63_STATE: usize = 0x325c2c;
     pub const STAGE_INDEX: usize = 0x325c48;
     pub const CHAPTER_MODE: usize = 0x327efc;
     pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
@@ -968,6 +972,7 @@ impl AppContext {
             stage_record_neg9: Default::default(),
             stage_record_neg4: Default::default(),
             sound: None,
+            platform: None,
         }
     }
 
@@ -996,6 +1001,14 @@ impl AppContext {
 
     pub fn sound(&mut self) -> Option<&mut (dyn SoundManager + 'static)> {
         self.sound.as_deref_mut()
+    }
+
+    pub fn platform(&mut self) -> Option<&mut (dyn Platform + 'static)> {
+        self.platform.as_deref_mut()
+    }
+
+    pub fn set_platform(&mut self, platform: Box<dyn Platform>) {
+        self.platform = Some(platform);
     }
 
     pub fn set_sound(&mut self, sound: Box<dyn SoundManager>) {
