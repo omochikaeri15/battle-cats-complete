@@ -1,0 +1,1 @@
+pub const EXPLOSION_DAMAGE_DEFAULTS: [i32; 3] = [100, 60, 20];

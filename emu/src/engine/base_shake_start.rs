@@ -4,7 +4,9 @@ use super::AppContext;
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct ShakeRecord {
-    pub head: [i32; 3],
+    pub amplitude_from: i32,
+    pub amplitude_to: i32,
+    pub duration: i32,
     pub priority: i32,
     pub count: i32,
     pub until: i32,
@@ -18,12 +20,12 @@ pub struct BaseShake {
     pub id: i32,
     pub frame: i32,
     pub unknown_2: i32,
-    pub unknown_3: i32,
+    pub offset: i32,
 }
 
 impl Default for BaseShake {
     fn default() -> Self {
-        Self { records: BTreeMap::new(), id: -1, frame: 0, unknown_2: 0, unknown_3: 0 }
+        Self { records: BTreeMap::new(), id: -1, frame: 0, unknown_2: 0, offset: 0 }
     }
 }
 
@@ -64,7 +66,7 @@ pub fn base_shake_start(ctx: &mut AppContext, id: i32) {
     }
 
     if shake.records.entry(id).or_default().count == 0 {
-        shake.unknown_3 = 0;
+        shake.offset = 0;
         shake.frame = 0;
         shake.unknown_2 = 0;
         shake.id = id;

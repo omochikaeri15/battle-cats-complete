@@ -115,7 +115,7 @@ pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack:
 
     let counter = ctx.counter_surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
 
-    counter.unknown_3 = 0;
+    counter.frame = 0;
     counter.faction = other;
     counter.slot = target;
     counter.x = x;
@@ -123,7 +123,7 @@ pub fn surge_attack(ctx: &mut AppContext, event_index: i32, target: i32, attack:
     counter.anchor = anchor;
     counter.span = span;
     counter.mini = mini != 0;
-    counter.unknown_2 = 0;
+    counter.state = 0;
 
     if get_counter_surge_once(ctx, other, target)? {
         set_counter_surge(ctx, other, target, 0)?;

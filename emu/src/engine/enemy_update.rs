@@ -26,8 +26,8 @@ use super::{
 pub struct CounterSurgeEvent {
     pub faction: i32,
     pub slot: i32,
-    pub unknown_2: i32,
-    pub unknown_3: i32,
+    pub state: i32,
+    pub frame: i32,
     pub x: i32,
     pub level: i32,
     pub anchor: i32,

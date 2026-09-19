@@ -17,7 +17,7 @@ pub struct ExplosionEvent {
     pub attack: i32,
     pub proc_flags: [u8; 12],
     pub metal_killer_pct: i32,
-    pub hits: BTreeMap<i32, i32>,
+    pub hits: BTreeMap<i32, [u8; 5]>,
 }
 
 pub fn cat_hit_executor(ctx: &mut AppContext, slot: i32, targets: &[i32], attack: i32) -> Result<(), Fault> {

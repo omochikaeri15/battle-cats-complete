@@ -146,3 +146,11 @@ pub fn irem(dividend: i32, divisor: i32) -> Option<i32> {
 pub fn div_neg_100<T: Truncating>(x: T) -> T {
     x / T::from(-100)
 }
+
+pub fn div_neg_10<T: Truncating>(x: T) -> T {
+    x / T::from(-10)
+}
+
+pub fn div_32<T: Truncating>(x: T) -> T {
+    x / T::from(32)
+}

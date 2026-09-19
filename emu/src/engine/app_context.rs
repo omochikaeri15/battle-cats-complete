@@ -591,6 +591,7 @@ pub struct AppContext {
     pub unit_models: [Vec<Mamodel>; 2],
     pub unit_anims: [Vec<BTreeMap<i32, Maanim>>; 2],
     pub death_surge_anims: [Maanim; 2],
+    pub counter_surge_anims: [Maanim; 2],
     pub wave_anim: Maanim,
     pub mini_wave_anim: Maanim,
     pub effect_anims: BTreeMap<i32, Maanim>,
@@ -605,6 +606,7 @@ pub struct AppContext {
     pub base_shake: BaseShake,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
+    pub cannon_type_names: BTreeMap<i32, Vec<u8>>,
     pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
     pub maps_neg26: Vec<[u64; 3]>,
     pub maps_neg24: Vec<[u64; 3]>,
@@ -704,11 +706,13 @@ impl AppContext {
     pub const ITEM_15_COUNT: usize = 0x32cc6c;
     pub const ITEM_COUNTS_KIND_1: usize = 0x32cc74;
     pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
+    pub const MISSION_CANNON_FIRED: usize = 0x3bb700;
     pub const ITEM_DEFINITION_STRIDE: usize = 0x40;
     pub const ITEM_5C_COUNT: usize = 0x427a58;
     pub const ITEM_COUNTS_KIND_5: usize = 0x440314;
     pub const ITEM_COUNTS_KIND_6: usize = 0x440344;
     pub const ITEM_COUNTS_KIND_7: usize = 0x44035c;
+    pub const UNIT_LEVELS: usize = 0x47a9c;
     pub const TECH_LEVELS: usize = 0x4a3ac;
     pub const WALLET_MONEY: usize = 0x4;
     pub const WALLET_WORKER_LEVEL: usize = 0xc;
@@ -719,13 +723,19 @@ impl AppContext {
     pub const WALLET_CONJURE_READY: usize = 0x6c;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
     pub const WALLET_ESCALATING_COSTS: usize = 0x130;
+    pub const WALLET_CANNON_FIRED: usize = 0x1d0;
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
+    pub const INPUT_BLOCKED: usize = 0x3265fc;
+    pub const OPTION_MENU_IS_OPEN: usize = 0x326624;
     pub const PENDING_STRIKE_TRIGGER_X: usize = 0x326690;
     pub const PENDING_STRIKE_TARGET: usize = 0x326820;
     pub const PENDING_STRIKE_ACTIVE: usize = 0x3268e8;
     pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
     pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
     pub const ENEMY_BASE_BLAST_X: usize = 0x327da8;
+    pub const CPU_PENDING_ACTION: usize = 0x328564;
+    pub const UI_TAP_LOCKOUT: usize = 0x32a474;
+    pub const CAT_GOD_MENU_IS_OPEN: usize = 0x32b494;
     pub const CANNON_BLAST_ACTIVE: usize = 0x32b6ac;
     pub const BASE_GUARD_NOTICE: usize = 0x870;
     pub const KILLS_SINCE_SPAWN_TICK: usize = 0x10f8;
@@ -816,6 +826,7 @@ impl AppContext {
             unit_models: [Vec::new(), Vec::new()],
             unit_anims: [Vec::new(), Vec::new()],
             death_surge_anims: Default::default(),
+            counter_surge_anims: Default::default(),
             wave_anim: Default::default(),
             mini_wave_anim: Default::default(),
             effect_anims: Default::default(),
@@ -830,6 +841,7 @@ impl AppContext {
             base_shake: Default::default(),
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
+            cannon_type_names: BTreeMap::new(),
             cannon_part_rows: Default::default(),
             maps_neg26: Default::default(),
             maps_neg24: Default::default(),

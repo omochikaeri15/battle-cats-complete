@@ -1,0 +1,1 @@
+pub const EXPLOSION_WIDTH_DEFAULTS: [i32; 3] = [800, 500, 400];
