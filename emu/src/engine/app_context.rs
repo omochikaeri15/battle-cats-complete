@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::Fault;
 
 use super::{
-    BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
+    BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
     SpecialRuleStore, SurgeEvent, TreasureStore,
 };
 
@@ -85,8 +85,24 @@ impl ItemDefinition {
 pub struct WaveRecord;
 
 impl WaveRecord {
+    pub const KIND: usize = 0x0;
     pub const OWNER_SLOT: usize = 0x4;
     pub const IN_USE: usize = 0x8;
+    pub const FRAME: usize = 0xc;
+    pub const POS_X: usize = 0x10;
+    pub const LEVEL: usize = 0x14;
+    pub const ATTACK: usize = 0x18;
+    pub const PROC_FLAGS: usize = 0x1c;
+    pub const METAL_KILLER_PCT: usize = 0x28;
+    pub const MINI: usize = 0x2c;
+}
+
+pub struct WaveSprite;
+
+impl WaveSprite {
+    pub const STRIDE: usize = 0x8;
+    pub const TIMER: usize = 0x0;
+    pub const POS_X: usize = 0x4;
 }
 
 pub struct CannonShot;
@@ -584,6 +600,7 @@ pub struct AppContext {
     pub metal_killer_map: BTreeMap<i32, Vec<i32>>,
     pub surge_events: Vec<SurgeEvent>,
     pub counter_surge_events: Vec<CounterSurgeEvent>,
+    pub explosion_events: Vec<ExplosionEvent>,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
     pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
@@ -764,6 +781,7 @@ impl AppContext {
     pub const MAP_NEG25_CLEARED: usize = 0x32c5da;
     pub const WAVE_RECORDS: usize = 0x333d6c;
     pub const WAVE_RECORD_STRIDE: usize = 0x30;
+    pub const WAVE_SPRITES: usize = 0x3362ec;
     pub const MAP_INDEX: usize = 0x3388b8;
     pub const STAGES_CLEARED_STORY: usize = 0x33e020;
     pub const STAGES_CLEARED_NEG6: usize = 0x340748;
@@ -772,6 +790,7 @@ impl AppContext {
     pub const SAVED_MAP_TYPE: usize = 0x3836b4;
     pub const CHAPTER_COST_TIER: usize = 0x388028;
     pub const PROC_ROLLS: usize = 0x3880dc;
+    pub const WAVE_HITS: usize = 0x388110;
     pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
     pub const PRESET_STYLE_PARTS: usize = 0x427259;
     pub const PRESET_FOUNDATION_PARTS: usize = 0x42725a;
@@ -804,6 +823,7 @@ impl AppContext {
             metal_killer_map: Default::default(),
             surge_events: Vec::new(),
             counter_surge_events: Vec::new(),
+            explosion_events: Vec::new(),
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
             cannon_part_rows: Default::default(),

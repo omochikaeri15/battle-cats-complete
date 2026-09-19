@@ -26,6 +26,13 @@ use super::{
 pub struct CounterSurgeEvent {
     pub faction: i32,
     pub slot: i32,
+    pub unknown_2: i32,
+    pub unknown_3: i32,
+    pub x: i32,
+    pub level: i32,
+    pub anchor: i32,
+    pub span: i32,
+    pub mini: bool,
 }
 
 pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
@@ -540,7 +547,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
 
                             event.level = level;
-                            event.unknown_5 = 0;
+                            event.attack = 0;
                             event.proc_flags = [
                                 (rolls[0] != 0) as u8,
                                 (rolls[1] != 0) as u8,

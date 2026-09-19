@@ -5,7 +5,7 @@ use super::{
     get_attack_damage, get_barrier_hp, get_base_destroyer, get_behemoth_dodge_chance, get_behemoth_dodge_duration, get_behemoth_dodge_timer,
     get_best_treasure, get_button_unit_form, get_cannon_effect, get_cat_combo_bonus, get_colossus_orb_def_pct, get_dodge_chance, get_dodge_duration,
     get_dodge_timer, get_entity_button, get_explosion_immune, get_explosion_resist_pct, get_foundation_part_id, get_foundation_part_level,
-    get_armour_part_rec, get_hp, get_max_hp, get_orb_dodge_chance, get_orb_dodge_duration, get_orb_dodge_timer, get_orb_value_vs_trait,
+    get_foundation_part_rec, get_hp, get_max_hp, get_orb_dodge_chance, get_orb_dodge_duration, get_orb_dodge_timer, get_orb_value_vs_trait,
     get_resist_part_rec, get_savage_blow_boost, get_score_bonus, get_setting, get_shield_hp, get_slot_unit_id, get_strengthen_boost,
     get_strengthen_threshold, get_style_part_id, get_style_part_level, get_surge_immune, get_surge_resist_pct, get_toxic_damage, get_toxic_immune,
     get_toxic_resist_pct, get_trait_kaijin, get_treasure_capped, get_wave_immune, get_wave_resist_pct, get_weaken_active, get_weaken_active_pct,
@@ -386,7 +386,7 @@ pub fn enemy_attack_dispatch(
 
     if target != 0 {
         if is_red(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x64, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x64, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -394,7 +394,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_floating(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x65, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x65, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -402,7 +402,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_dark(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x66, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x66, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -410,7 +410,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_metal(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x67, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x67, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -418,7 +418,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_angel(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x68, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x68, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -426,7 +426,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_alien(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x69, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x69, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -434,7 +434,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_zombie(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6a, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6a, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -442,7 +442,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_relic(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6b, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6b, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -450,7 +450,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_traitless(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6c, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6c, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -458,7 +458,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_witch(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6d, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6d, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -466,7 +466,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_eva_angel(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6e, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6e, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
@@ -474,7 +474,7 @@ pub fn enemy_attack_dispatch(
         }
 
         if is_aku(ctx, 1, attacker)? {
-            let reduction = get_cannon_effect(get_armour_part_rec(ctx)?, 0x6f, foundation_level)?;
+            let reduction = get_cannon_effect(get_foundation_part_rec(ctx)?, 0x6f, foundation_level)?;
 
             if reduction != 0 {
                 damage = operation::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));

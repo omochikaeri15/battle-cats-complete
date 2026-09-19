@@ -26,7 +26,7 @@ pub struct SurgeEvent {
     pub frame: i32,
     pub x: i32,
     pub level: i32,
-    pub unknown_5: i32,
+    pub attack: i32,
     pub proc_flags: [u8; 12],
     pub metal_killer_pct: i32,
     pub mini: bool,
@@ -467,7 +467,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange { site: SITE, index: 0, limit: 0 })?;
 
                             event.level = level;
-                            event.unknown_5 = 0;
+                            event.attack = 0;
                             event.proc_flags = [
                                 (rolls[0] != 0) as u8,
                                 (rolls[1] != 0) as u8,
