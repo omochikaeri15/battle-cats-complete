@@ -21,5 +21,5 @@ pub fn get_unit_name(ctx: &AppContext, faction: i32, slot: i32) -> Result<Vec<u8
     let unit_id = row.wrapping_sub(2);
     let form = ctx.i32_at((row * 4 + AppContext::FACTION_1_UNIT_FORMS as i64) as usize)? as i64;
 
-    Ok(ctx.cat_names.get(unit_id as usize).and_then(|forms| forms.get(form as usize)).cloned().unwrap_or_default())
+    Ok(ctx.cat_names.get(unit_id as usize).and_then(|forms| forms.get(form as usize)).map(|record| record[0].clone()).unwrap_or_default())
 }

@@ -1,0 +1,19 @@
+use crate::Fault;
+
+use super::{get_built_deck_cannon, get_built_deck_stage_key, get_preset_cannon_part, has_built_deck, has_fixed_lineup, AppContext};
+
+pub fn get_cannon_part_id(ctx: &mut AppContext) -> Result<i32, Fault> {
+    if has_fixed_lineup(ctx, -1, -1, -1)? && ctx.i32_at(AppContext::LINEUP_CANNON_TYPE)? != -1 {
+        return ctx.i32_at(AppContext::LINEUP_CANNON_TYPE);
+    }
+
+    if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 {
+        let stage_key = get_built_deck_stage_key(ctx)?;
+
+        if has_built_deck(ctx, stage_key)? {
+            return Ok((get_built_deck_cannon(ctx, stage_key)? as u8 as i8) as i32);
+        }
+    }
+
+    get_preset_cannon_part(ctx)
+}

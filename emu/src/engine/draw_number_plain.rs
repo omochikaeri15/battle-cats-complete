@@ -1,0 +1,20 @@
+use crate::Fault;
+
+use super::{draw_number, DrawSink, Imgcut, NumberBox};
+
+#[allow(clippy::too_many_arguments)]
+pub fn draw_number_plain(
+    dc: &mut dyn DrawSink,
+    sheet: &Imgcut,
+    base: i32,
+    value: i32,
+    offset: i32,
+    x: f32,
+    y: f32,
+    spacing: f32,
+    lead: i32,
+    flags: i32,
+    digits: i32,
+) -> Result<NumberBox, Fault> {
+    draw_number(dc, sheet, base, value, offset, x, y, spacing, 1.0, 1.0, lead, flags, digits)
+}

@@ -4,6 +4,9 @@ use super::AppContext;
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct TreasureGroup {
+    pub count: i32,
+    pub castles: Vec<i32>,
+    pub extra: i32,
     pub effect: i32,
     pub percent: i32,
     pub chapter_only: u8,

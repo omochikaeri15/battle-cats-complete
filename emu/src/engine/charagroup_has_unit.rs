@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 pub struct CharaGroup {
     pub units: Vec<i32>,
     pub kind: i32,
+    pub name_key: Vec<u8>,
 }
 
 pub fn charagroup_has_unit(store: &BTreeMap<i32, CharaGroup>, group_id: i32, unit_id: i32) -> bool {

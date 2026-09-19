@@ -1,8 +1,14 @@
+mod strtod;
+mod strtof;
 mod strtol;
+mod strtoull;
 mod xor_cell_decode;
 mod xor_row_decode;
 
+pub use strtod::strtod;
+pub use strtof::strtof;
 pub use strtol::{strtol, Strtol};
+pub use strtoull::strtoull;
 pub use xor_cell_decode::xor_cell_decode;
 pub use xor_row_decode::xor_row_decode;
 
@@ -47,6 +53,10 @@ pub fn div_2<T: Truncating>(x: T) -> T {
     x / T::from(2)
 }
 
+pub fn div_4<T: Truncating>(x: T) -> T {
+    x / T::from(4)
+}
+
 pub fn div_5<T: Truncating>(x: T) -> T {
     x / T::from(5)
 }
@@ -67,12 +77,24 @@ pub fn div_24<T: Truncating>(x: T) -> T {
     x / T::from(24)
 }
 
+pub fn div_30<T: Truncating>(x: T) -> T {
+    x / T::from(30)
+}
+
 pub fn div_48<T: Truncating>(x: T) -> T {
     x / T::from(48)
 }
 
 pub fn div_100<T: Truncating>(x: T) -> T {
     x / T::from(100)
+}
+
+pub fn div_255<T: Truncating>(x: T) -> T {
+    x / T::from(255)
+}
+
+pub fn div_960<T: Truncating>(x: T) -> T {
+    x / T::from(960)
 }
 
 pub fn div_300<T: Truncating>(x: T) -> T {
@@ -89,6 +111,18 @@ pub fn div_1000<T: Truncating>(x: T) -> T {
 
 pub fn div_1500<T: Truncating>(x: T) -> T {
     x / T::from(1500)
+}
+
+pub fn div_1600<T: Truncating>(x: T) -> T {
+    x / T::from(1600)
+}
+
+pub fn div_200<T: Truncating>(x: T) -> T {
+    x / T::from(200)
+}
+
+pub fn mul_high(x: i32, magic: i64) -> i32 {
+    ((x as i64).wrapping_mul(magic) >> 32) as i32
 }
 
 pub fn div_3000<T: Truncating>(x: T) -> T {
@@ -116,6 +150,14 @@ pub fn cvttsd2si(x: f64) -> i32 {
         x as i32
     } else {
         i32::MIN
+    }
+}
+
+pub fn cvttsd2si_64(x: f64) -> i64 {
+    if (-9223372036854775808.0..9223372036854775808.0).contains(&x) {
+        x as i64
+    } else {
+        i64::MIN
     }
 }
 
@@ -149,6 +191,14 @@ pub fn irem(dividend: i32, divisor: i32) -> Option<i32> {
 
 pub fn div_neg_100<T: Truncating>(x: T) -> T {
     x / T::from(-100)
+}
+
+pub fn div_neg_200<T: Truncating>(x: T) -> T {
+    x / T::from(-200)
+}
+
+pub fn div_neg_20<T: Truncating>(x: T) -> T {
+    x / T::from(-20)
 }
 
 pub fn div_neg_10<T: Truncating>(x: T) -> T {

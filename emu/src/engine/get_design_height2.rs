@@ -1,6 +1,6 @@
 use super::AppContext;
 
-#[derive(Clone, Default, PartialEq, Eq, Debug)]
+#[derive(Clone, Default, PartialEq, Debug)]
 pub struct ScreenMetrics {
     pub screen_w: i32,
     pub screen_h: i32,
@@ -11,6 +11,8 @@ pub struct ScreenMetrics {
     pub inset_top: i32,
     pub inset_right: i32,
     pub inset_bottom: i32,
+    pub letterbox_top: i32,
+    pub scale2: f32,
 }
 
 pub fn get_design_height2(ctx: &AppContext) -> i32 {

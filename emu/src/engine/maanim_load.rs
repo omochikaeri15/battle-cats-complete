@@ -1,4 +1,6 @@
-use super::{read_asset_stream_line, read_csv_cell, read_csv_row, AssetStream, Cell};
+use crate::Fault;
+
+use super::{open_asset_stream, read_asset_stream_line, read_csv_cell, read_csv_row, AppContext, AssetStream, Cell};
 
 pub const TRACK_HEADER_CELLS: usize = 3;
 pub const KEYFRAME_CELLS: usize = 4;
@@ -10,22 +12,25 @@ pub struct MaanimTrack {
     pub keyframes: Vec<[i32; KEYFRAME_CELLS]>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Maanim {
     pub tracks: Vec<MaanimTrack>,
     pub track_count: i32,
-    pub path: String,
+    pub path: Vec<u8>,
 }
 
-pub fn maanim_load(anim: &mut Maanim, path: &str, stm: Option<&mut AssetStream<'_>>) -> bool {
+pub fn maanim_load(ctx: &mut AppContext, anim: &mut Maanim, path: &[u8]) -> Result<bool, Fault> {
     anim.tracks.clear();
     anim.track_count = 0;
     anim.path.clear();
-    anim.path.push_str(path);
+    anim.path.extend_from_slice(path);
 
-    let Some(stm) = stm else {
-        return false;
+    let Some(bytes) = open_asset_stream(ctx, path, 1, 0)? else {
+        return Ok(false);
     };
+
+    let mut stream = AssetStream::new(&bytes, b'\n');
+    let stm = &mut stream;
 
     let mut discarded = Cell { at: 0, len: 0 };
     read_asset_stream_line(stm, &mut discarded);
@@ -77,5 +82,5 @@ pub fn maanim_load(anim: &mut Maanim, path: &str, stm: Option<&mut AssetStream<'
         track += 1;
     }
 
-    true
+    Ok(true)
 }

@@ -1,8 +1,12 @@
-use std::rc::Rc;
+use std::{cell, rc::Rc};
 
-use super::{read_asset_stream_line, read_csv_cell, read_csv_row, AssetStream, Cell, Imgcut};
+use crate::Fault;
+
+use super::{open_asset_stream, read_asset_stream_line, read_csv_cell, read_csv_row, AppContext, AssetStream, Cell, Imgcut};
 
 pub const PART_STRIDE: usize = 0xb0;
+
+pub type SheetTable = Rc<[cell::Cell<Option<Rc<Imgcut>>>]>;
 
 const DEFAULT_SCALE_UNIT: i32 = 0x64;
 const DEFAULT_ANGLE_UNIT: i32 = 0x168;
@@ -73,7 +77,7 @@ pub struct MamodelAnchor {
 #[derive(Default)]
 pub struct Mamodel {
     pub sheet: Option<Rc<Imgcut>>,
-    pub sheet_table: Vec<Option<Rc<Imgcut>>>,
+    pub sheet_table: SheetTable,
     pub single_sheet: u8,
     pub parts: Vec<MamodelPart>,
     pub draw_order: Vec<i32>,
@@ -84,21 +88,24 @@ pub struct Mamodel {
     pub mirror: i32,
     pub anchors: Vec<MamodelAnchor>,
     pub anchor_count: i32,
-    pub path: String,
+    pub path: Vec<u8>,
 }
 
-pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStream<'_>>) -> bool {
+pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> Result<bool, Fault> {
     model.parts.clear();
     model.draw_order.clear();
     model.draw_z.clear();
     model.anchors.clear();
     model.path.clear();
     model.mirror = 0;
-    model.path.push_str(path);
+    model.path.extend_from_slice(path);
 
-    let Some(stm) = stm else {
-        return false;
+    let Some(bytes) = open_asset_stream(ctx, path, 1, 0)? else {
+        return Ok(false);
     };
+
+    let mut stream = AssetStream::new(&bytes, b'\n');
+    let stm = &mut stream;
 
     let mut discarded = Cell { at: 0, len: 0 };
     read_asset_stream_line(stm, &mut discarded);
@@ -146,7 +153,7 @@ pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStrea
         model.opacity_unit = DEFAULT_OPACITY_UNIT;
         model.anchor_count = 0;
 
-        return true;
+        return Ok(true);
     }
 
     read_csv_row(stm);
@@ -157,7 +164,7 @@ pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStrea
     if (version as u32) < 3 {
         model.anchor_count = 0;
 
-        return true;
+        return Ok(true);
     }
 
     read_csv_row(stm);
@@ -180,5 +187,5 @@ pub fn mamodel_load(model: &mut Mamodel, path: &str, stm: Option<&mut AssetStrea
         anchor.unused_5 = read_csv_cell(stm, 5) as i32;
     }
 
-    true
+    Ok(true)
 }

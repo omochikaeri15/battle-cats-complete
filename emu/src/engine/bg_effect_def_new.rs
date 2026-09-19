@@ -1,0 +1,38 @@
+use super::{bg_equally_spaced_new, bg_param_spec_new_float, bg_param_spec_new_int, BgEffectDef};
+
+pub fn bg_effect_def_new() -> BgEffectDef {
+    BgEffectDef {
+        count: bg_param_spec_new_int(),
+        model: bg_param_spec_new_int(),
+        z: bg_param_spec_new_int(),
+        frame: bg_param_spec_new_int(),
+        start_frame: bg_param_spec_new_int(),
+        wait: bg_param_spec_new_int(),
+        life_time: bg_param_spec_new_int(),
+        x: bg_param_spec_new_float(),
+        start_x: bg_param_spec_new_float(),
+        y: bg_param_spec_new_float(),
+        start_y: bg_param_spec_new_float(),
+        scale: bg_param_spec_new_float(),
+        start_scale: bg_param_spec_new_float(),
+        scale_x: bg_param_spec_new_float(),
+        start_scale_x: bg_param_spec_new_float(),
+        scale_y: bg_param_spec_new_float(),
+        start_scale_y: bg_param_spec_new_float(),
+        angle: bg_param_spec_new_float(),
+        angular_v: bg_param_spec_new_float(),
+        alpha: bg_param_spec_new_float(),
+        v: bg_param_spec_new_float(),
+        start_v: bg_param_spec_new_float(),
+        move_angle: bg_param_spec_new_float(),
+        vx: bg_param_spec_new_float(),
+        start_vx: bg_param_spec_new_float(),
+        vy: bg_param_spec_new_float(),
+        start_vy: bg_param_spec_new_float(),
+        destroy_left: bg_param_spec_new_float(),
+        destroy_right: bg_param_spec_new_float(),
+        destroy_top: bg_param_spec_new_float(),
+        destroy_bottom: bg_param_spec_new_float(),
+        equally_spaced: bg_equally_spaced_new(),
+    }
+}

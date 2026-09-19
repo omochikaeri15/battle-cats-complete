@@ -15,6 +15,12 @@ pub struct CannonGrowthStep {
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct CannonPart {
+    pub kind: i32,
+    pub makes_wave: u8,
+    pub unit_id: i32,
+    pub recoil: u8,
+    pub ready_fx: u8,
+    pub soulstrike: u8,
     pub growth: BTreeMap<i32, Vec<CannonGrowthStep>>,
 }
 

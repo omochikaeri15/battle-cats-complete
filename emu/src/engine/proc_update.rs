@@ -16,7 +16,7 @@ pub struct BattleEffects {
     pub immune_anim: Maanim,
 }
 
-pub fn proc_update(ctx: &mut AppContext, effects: &BattleEffects) -> Result<(), Fault> {
+pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
     for faction in 0..2i32 {
         for slot in 0..0x33i32 {
             set_kb_proc_hit(ctx, faction, slot, 0)?;
@@ -94,9 +94,9 @@ pub fn proc_update(ctx: &mut AppContext, effects: &BattleEffects) -> Result<(), 
                 let at = AppContext::entity_field(faction, slot, Entity::SURVIVE_FX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&effects.survive_anim)?;
+                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
                 let frame = ctx.i32_at(at)?;
-                let limit = if length == -1 { maanim_get_max_keyframe(&effects.survive_anim)? } else { get_anim_len(&effects.survive_anim)? };
+                let limit = if length == -1 { maanim_get_max_keyframe(&ctx.battle_effects.survive_anim)? } else { get_anim_len(&ctx.battle_effects.survive_anim)? };
 
                 if frame >= limit {
                     turn_off_proc_badge(ctx, faction, slot, 3)?;
@@ -107,9 +107,9 @@ pub fn proc_update(ctx: &mut AppContext, effects: &BattleEffects) -> Result<(), 
                 let at = AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_FX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&effects.survive_anim)?;
+                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
                 let frame = ctx.i32_at(at)?;
-                let limit = if length == -1 { maanim_get_max_keyframe(&effects.wave_immune_anim)? } else { get_anim_len(&effects.wave_immune_anim)? };
+                let limit = if length == -1 { maanim_get_max_keyframe(&ctx.battle_effects.wave_immune_anim)? } else { get_anim_len(&ctx.battle_effects.wave_immune_anim)? };
 
                 if frame >= limit {
                     ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_FX_FRAME), 0)?;
@@ -121,9 +121,9 @@ pub fn proc_update(ctx: &mut AppContext, effects: &BattleEffects) -> Result<(), 
                 let at = AppContext::entity_field(faction, slot, Entity::WAVE_BLOCK_FX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&effects.survive_anim)?;
+                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
                 let frame = ctx.i32_at(at)?;
-                let limit = if length == -1 { maanim_get_max_keyframe(&effects.wave_block_anim)? } else { get_anim_len(&effects.wave_block_anim)? };
+                let limit = if length == -1 { maanim_get_max_keyframe(&ctx.battle_effects.wave_block_anim)? } else { get_anim_len(&ctx.battle_effects.wave_block_anim)? };
 
                 if frame >= limit {
                     ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_BLOCK_FX_FRAME), 0)?;
@@ -135,9 +135,9 @@ pub fn proc_update(ctx: &mut AppContext, effects: &BattleEffects) -> Result<(), 
                 let at = AppContext::entity_field(faction, slot, Entity::IMMUNE_FX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&effects.immune_anim)?;
+                let length = get_anim_len(&ctx.battle_effects.immune_anim)?;
                 let frame = ctx.i32_at(at)?;
-                let limit = if length == -1 { maanim_get_max_keyframe(&effects.immune_anim)? } else { get_anim_len(&effects.immune_anim)? };
+                let limit = if length == -1 { maanim_get_max_keyframe(&ctx.battle_effects.immune_anim)? } else { get_anim_len(&ctx.battle_effects.immune_anim)? };
 
                 if frame >= limit {
                     ctx.set_i32_at(AppContext::entity_field(faction, slot, Entity::IMMUNE_FX_FRAME), 0)?;

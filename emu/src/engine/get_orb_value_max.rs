@@ -17,6 +17,7 @@ pub struct OrbStore {
     pub orbs: Vec<OrbDef>,
     pub trait_masks: Vec<i32>,
     pub slot_counts: BTreeMap<i32, i32>,
+    pub ability_flags: BTreeMap<i32, [u8; 2]>,
 }
 
 pub fn get_orb_value_max(ctx: &mut AppContext, unit_id: i32, abil: i32, param: i32, dflt: i32) -> Result<i32, Fault> {

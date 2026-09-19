@@ -1,0 +1,25 @@
+pub fn map_type_code(map_type: i32) -> Vec<u8> {
+    match map_type {
+        -26 => b"pr".to_vec(),
+        -24 => b"g".to_vec(),
+        -23 => b"sr".to_vec(),
+        -22 => b"nd".to_vec(),
+        -21 => b"l".to_vec(),
+        -20 => b"q".to_vec(),
+        -19 => b"dm".to_vec(),
+        -18 => b"ca".to_vec(),
+        -17 => b"h".to_vec(),
+        -16 => b"a".to_vec(),
+        -11 => b"d".to_vec(),
+        -10 => b"b".to_vec(),
+        -9 => b"na".to_vec(),
+        -6 => b"m".to_vec(),
+        -4 => b"v".to_vec(),
+        0 => b"n".to_vec(),
+        1 => b"s".to_vec(),
+        2 => b"c".to_vec(),
+        3 => b"t".to_vec(),
+        4 => b"r".to_vec(),
+        _ => Vec::new(),
+    }
+}

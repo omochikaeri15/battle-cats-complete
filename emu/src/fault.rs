@@ -7,6 +7,7 @@ pub enum Fault {
     HostMissing { site: &'static str },
     InvalidArgument { site: &'static str },
     NullPointer { site: &'static str },
+    BadFunctionCall { site: &'static str },
     OutOfRange { site: &'static str },
     Unrepresentable { site: &'static str, reason: &'static str },
 }
@@ -32,6 +33,7 @@ impl std::fmt::Display for Fault {
             }
             Self::HostMissing { site } => write!(f, "{site} has no host attached"),
             Self::NullPointer { site } => write!(f, "{site} followed a pointer that was never set"),
+            Self::BadFunctionCall { site } => write!(f, "{site} called a handler that was never set"),
             Self::InvalidArgument { site } => write!(f, "{site} was given text that holds no number"),
             Self::OutOfRange { site } => write!(f, "{site} was given a number too large to store"),
             Self::IndexOutOfRange { site, index, limit } => {

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{operation, Fault};
 
 use super::{
@@ -75,19 +77,18 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
 
     if sheet_id as i32 != -1 {
         let sheet = match &model.sheet {
-            Some(sheet) => Some(sheet),
+            Some(sheet) => Some(Rc::clone(sheet)),
             None => {
                 let at = if model.single_sheet == 0 { sheet_id } else { 0 };
+                let slot = model.sheet_table.get(at as usize).ok_or(Fault::IndexOutOfRange { site: SITE, index: at, limit: model.sheet_table.len() as i64 })?;
+                let held = slot.take();
 
-                model
-                    .sheet_table
-                    .get(at as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: at, limit: model.sheet_table.len() as i64 })?
-                    .as_ref()
+                slot.set(held.clone());
+                held
             }
         };
 
-        let Some(sheet) = sheet else {
+        let Some(sheet) = sheet.as_deref() else {
             *model.parts.get_mut(part_index as i64 as usize).ok_or(Fault::NullPointer { site: SITE })? = part;
 
             return Ok(());

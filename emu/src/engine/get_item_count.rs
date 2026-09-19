@@ -160,5 +160,5 @@ pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
         return Ok(0);
     }
 
-    event_items_count(store, item)
+    Ok(event_items_count(store, item))
 }

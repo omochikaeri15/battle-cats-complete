@@ -15,7 +15,7 @@ pub struct FixedLineupRow {
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct FixedLineupUnit {
     pub unit_id: i32,
-    pub unknown_1: i32,
+    pub form: i32,
     pub level: i32,
     pub plus_level: i32,
 }
@@ -26,6 +26,7 @@ pub struct FixedLineupStore {
     pub rows: Vec<FixedLineupRow>,
     pub hints: Vec<FixedLineupRow>,
     pub ability_levels: BTreeMap<i32, i32>,
+    pub treasure_flags: BTreeMap<i32, bool>,
 }
 
 pub fn has_fixed_lineup(ctx: &mut AppContext, mut map_id: i32, mut stage: i32, mut level: i32) -> Result<bool, Fault> {

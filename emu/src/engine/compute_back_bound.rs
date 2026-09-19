@@ -11,16 +11,20 @@ pub fn compute_back_bound(ctx: &mut AppContext, faction: i32, slot: i32) -> Resu
     let button = get_entity_button(ctx, faction, slot)?;
     let idx = read_flag(ctx, AppContext::faction_flags(faction))? & 1;
 
-    let model = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+    let (side, index) = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+    let model = &ctx.unit_models[side][index];
     let part_index = mamodel_get_anchor_part(mamodel_get_anchor(model, idx)?);
     let part = model.parts.get(part_index as i64 as usize).ok_or(Fault::IndexOutOfRange {
         site: SITE,
         index: part_index as i64,
         limit: model.parts.len() as i64,
     })?;
-    let model = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
-    let x = mamodel_get_anchor_x(mamodel_get_anchor(get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?, idx)?);
-    let y = mamodel_get_anchor_y(mamodel_get_anchor(get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?, idx)?);
+    let (side, index) = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+    let model = &ctx.unit_models[side][index];
+    let (side, index) = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+    let x = mamodel_get_anchor_x(mamodel_get_anchor(&ctx.unit_models[side][index], idx)?);
+    let (side, index) = get_unit_model(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+    let y = mamodel_get_anchor_y(mamodel_get_anchor(&ctx.unit_models[side][index], idx)?);
     let mut out = 0i64;
 
     transform_anchor(part, model, x, y, &mut out)?;

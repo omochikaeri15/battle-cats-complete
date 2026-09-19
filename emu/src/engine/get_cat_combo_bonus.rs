@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::Fault;
 
 use super::{charagroup_has_unit, AppContext};
@@ -6,7 +8,9 @@ use super::{charagroup_has_unit, AppContext};
 pub struct NyancomboRecord {
     pub combo_id: i32,
     pub unit_count: i32,
-    pub unlock_gate: i32,
+    pub revealed: u8,
+    pub reveal_badge: u8,
+    pub availability: i32,
     pub charagroup_id: i32,
     pub name_index: i32,
     pub kind: [i32; 3],
@@ -22,7 +26,13 @@ pub struct NyancomboRecord {
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct ComboStore {
     pub records: Vec<NyancomboRecord>,
+    pub secondary_records: Vec<NyancomboRecord>,
+    pub page: i32,
     pub params: Vec<Vec<i32>>,
+    pub tab_kinds: Vec<Vec<i32>>,
+    pub revealed: BTreeMap<i32, u8>,
+    pub states: Vec<i32>,
+    pub unlock_notices: BTreeMap<i32, u8>,
 }
 
 pub fn get_cat_combo_bonus(ctx: &AppContext, table: &ComboStore, kind: i32, unit_id: i32) -> Result<i32, Fault> {
