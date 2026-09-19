@@ -13,7 +13,16 @@ pub struct FixedLineupRow {
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
+pub struct FixedLineupUnit {
+    pub unit_id: i32,
+    pub unknown_1: i32,
+    pub level: i32,
+    pub plus_level: i32,
+}
+
+#[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct FixedLineupStore {
+    pub units: Vec<FixedLineupUnit>,
     pub rows: Vec<FixedLineupRow>,
     pub hints: Vec<FixedLineupRow>,
     pub ability_levels: BTreeMap<i32, i32>,

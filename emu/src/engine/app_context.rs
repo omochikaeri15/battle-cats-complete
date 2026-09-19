@@ -4,7 +4,7 @@ use crate::Fault;
 
 use super::{
     BaseShake, BattleEventLatch, BuiltDeckRecord, CannonPart, CastleRow, CounterSurgeEvent, EventItemStore, ExplosionEvent, CharaGroup, ComboStore, FixedLineupStore, Maanim, Mamodel, MapData, OrbStore, ScoredMap, SoundManager,
-    SpecialRuleStore, SurgeEvent, TreasureStore,
+    ScreenMetrics, SpecialRuleStore, StageRestriction, SurgeEvent, TreasureStore,
 };
 
 pub const SIZE: usize = 0x500000;
@@ -607,6 +607,11 @@ pub struct AppContext {
     pub base_shake: BaseShake,
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
+    pub deploy_queue: Vec<u64>,
+    pub altar_level_caps: BTreeMap<i32, i32>,
+    pub altar_unsealed: BTreeMap<i32, bool>,
+    pub screen_metrics: ScreenMetrics,
+    pub stage_restrictions: BTreeMap<i32, StageRestriction>,
     pub cannon_type_names: BTreeMap<i32, Vec<u8>>,
     pub enemy_names: Vec<Vec<u8>>,
     pub cat_names: Vec<[Vec<u8>; 4]>,
@@ -708,6 +713,15 @@ impl AppContext {
     pub const ITEM_14_COUNT: usize = 0x32cc64;
     pub const ITEM_15_COUNT: usize = 0x32cc6c;
     pub const ITEM_COUNTS_KIND_1: usize = 0x32cc74;
+    pub const DEPLOY_NOTICE_TIMER: usize = 0x290550;
+    pub const DEPLOY_NOTICE_KIND: usize = 0x290554;
+    pub const BABY_BOOM_ACTIVE: usize = 0x32b6b4;
+    pub const EVENT_POINT_BOOST: usize = 0x388028;
+    pub const MEDAL_MONEY_SPENT: usize = 0x19d0;
+    pub const MEDAL_KIND_1: usize = 0x19d4;
+    pub const MEDAL_KIND_4: usize = 0x19d8;
+    pub const DEPLOY_LIMIT_RARITY_COUNTS: usize = 0x33b7f0;
+    pub const DEPLOY_LIMIT_TOTAL: usize = 0x33b808;
     pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
     pub const MISSION_CANNON_FIRED: usize = 0x3bb700;
     pub const ITEM_DEFINITION_STRIDE: usize = 0x40;
@@ -725,6 +739,7 @@ impl AppContext {
     pub const WALLET_COOLDOWN_MAX_KEY: usize = 0x68;
     pub const WALLET_CONJURE_READY: usize = 0x6c;
     pub const WALLET_CONJURE_LOCKOUT: usize = 0x94;
+    pub const WALLET_CONJURE_TIMER: usize = 0xbc;
     pub const WALLET_SPIRIT_USED: usize = 0xe4;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
     pub const WALLET_ESCALATING_COSTS: usize = 0x130;
@@ -732,13 +747,43 @@ impl AppContext {
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
     pub const INPUT_BLOCKED: usize = 0x3265fc;
     pub const OPTION_MENU_IS_OPEN: usize = 0x326624;
+    pub const DECK_ROW_SWAP_DIRECTION: usize = 0x32665c;
+    pub const CAMERA_KICK: usize = 0x326660;
+    pub const SNIPER_TARGET: usize = 0x326680;
+    pub const SNIPER_BOB_ANGLE: usize = 0x326684;
+    pub const SNIPER_AIM_ANGLE: usize = 0x326688;
+    pub const SNIPER_AIM_GOAL: usize = 0x32668c;
     pub const PENDING_STRIKE_TRIGGER_X: usize = 0x326690;
+    pub const PENDING_STRIKE_Y: usize = 0x326758;
     pub const PENDING_STRIKE_TARGET: usize = 0x326820;
     pub const PENDING_STRIKE_ACTIVE: usize = 0x3268e8;
+    pub const PENDING_STRIKE_SPEED: usize = 0x32691c;
+    pub const PENDING_STRIKE_ANGLE: usize = 0x3269e4;
+    pub const SNIPER_CHARGE: usize = 0x326aac;
+    pub const SNIPER_FIRING: usize = 0x326ab0;
+    pub const SNIPER_FIRE_FRAME: usize = 0x326ab4;
+    pub const SNIPER_RECOIL: usize = 0x326ab8;
+    pub const SNIPER_CASINGS: usize = 0x326abc;
+    pub const SNIPER_CASINGS_LIVE: usize = 0x326fbc;
+    pub const DECK_ROW_SHOWN: usize = 0x326fc0;
+    pub const DECK_ROW_SWAP_TARGET: usize = 0x326fd8;
+    pub const DECK_ROW_SWAPPING: usize = 0x326fdc;
     pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
     pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
-    pub const ENEMY_BASE_BLAST_X: usize = 0x327da8;
+    pub const SNIPER_LOCKED: usize = 0x327da4;
+    pub const EFFECT_ORIGIN_X: usize = 0x327da8;
+    pub const EFFECT_ORIGIN_Y: usize = 0x327dac;
+    pub const SNIPER_ALIGNED: usize = 0x327db0;
+    pub const CPU_ENABLED: usize = 0x328560;
     pub const CPU_PENDING_ACTION: usize = 0x328564;
+    pub const CPU_PICK: usize = 0x32856c;
+    pub const CPU_USABLE: usize = 0x328574;
+    pub const CPU_FACTION_STRIDE: usize = 0x28;
+    pub const CPU_SAVING_FOR: usize = 0x3285c4;
+    pub const CPU_CANNON_STATE: usize = 0x3285cc;
+    pub const CPU_CANNON_WAIT: usize = 0x3285d4;
+    pub const CPU_CANDIDATES: usize = 0x3285e4;
+    pub const DECK_SOURCE_MODE: usize = 0x3284d4;
     pub const UI_TAP_LOCKOUT: usize = 0x32a474;
     pub const CAT_GOD_MENU_IS_OPEN: usize = 0x32b494;
     pub const CANNON_BLAST_ACTIVE: usize = 0x32b6ac;
@@ -763,8 +808,11 @@ impl AppContext {
     pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
     pub const SEEN_ENEMIES: usize = 0xd968;
     pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
+    pub const UNIT_FORMS: usize = 0x495fc;
     pub const BATTLE_FRAME_COUNTER: usize = 0x83678;
+    pub const CAMERA_X: usize = 0x83688;
     pub const BATTLE_STATUS: usize = 0x836ac;
+    pub const WORKER_UPGRADE_FX: usize = 0x836d8;
     pub const CASTLE_ID: usize = 0x836c4;
     pub const STAGE_CASTLE_ID: usize = 0x836fc;
     pub const TREASURE_PROGRESS: usize = 0x83708;
@@ -846,6 +894,11 @@ impl AppContext {
             base_shake: Default::default(),
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
+            deploy_queue: Vec::new(),
+            altar_level_caps: BTreeMap::new(),
+            altar_unsealed: BTreeMap::new(),
+            screen_metrics: ScreenMetrics::default(),
+            stage_restrictions: BTreeMap::new(),
             cannon_type_names: BTreeMap::new(),
             enemy_names: Vec::new(),
             cat_names: Vec::new(),
@@ -999,6 +1052,14 @@ impl AppContext {
 
     pub fn bytes_from(&self, off: usize) -> Result<&[u8], Fault> {
         self.raw.get(off..).ok_or(Fault::IndexOutOfRange { site: SITE, index: off as i64, limit: SIZE as i64 })
+    }
+
+    pub fn f32_at(&self, off: usize) -> Result<f32, Fault> {
+        Ok(f32::from_le_bytes(self.block_at::<4>(off)?))
+    }
+
+    pub fn set_f32_at(&mut self, off: usize, value: f32) -> Result<(), Fault> {
+        self.set_block_at::<4>(off, value.to_le_bytes())
     }
 
     pub fn u8_at(&self, off: usize) -> Result<u8, Fault> {

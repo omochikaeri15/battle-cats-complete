@@ -96,13 +96,13 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let span = depth.wrapping_add(width);
                     let half = (((span as u32) >> 0x1f) as i32).wrapping_add(span) >> 1;
 
-                    ctx.set_i32_at(AppContext::ENEMY_BASE_BLAST_X, x.wrapping_sub(half))?;
+                    ctx.set_i32_at(AppContext::EFFECT_ORIGIN_X, x.wrapping_sub(half))?;
 
                     let record = AppContext::ENEMY_DEBRIS.wrapping_add((ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE));
 
                     ctx.set_i32_at(record.wrapping_add(Debris::KIND), 0xc)?;
 
-                    let blast_x = ctx.i32_at(AppContext::ENEMY_BASE_BLAST_X)?;
+                    let blast_x = ctx.i32_at(AppContext::EFFECT_ORIGIN_X)?;
                     let scatter = call_rng(ctx, 0xf1);
 
                     ctx.set_i32_at(record.wrapping_add(Debris::POS_X), blast_x.wrapping_add(scatter.wrapping_mul(5).wrapping_mul(2)).wrapping_add(-0x75f))?;

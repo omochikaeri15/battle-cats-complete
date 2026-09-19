@@ -4,6 +4,7 @@ use super::{find_built_deck_4star, has_built_deck, AppContext};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct BuiltDeckRecord {
+    pub rows: [(i16, i8); 10],
     pub cannon_parts: u16,
     pub cannon_type: u8,
 }
