@@ -5,8 +5,8 @@ use super::{
     get_cannon_damage, get_cannon_hit_stamp, get_cannon_metal_permille, get_cannon_nonmetal_permille, get_cannon_nonzombie_permille, get_cannon_shot_id, get_cannon_type,
     get_cannon_zombie_permille, get_dodge_chance, get_dodge_duration, get_dodge_timer, get_entity_state, get_global_map_id, get_hp, get_max_hp, get_special_rule_params,
     get_wave_block, get_wave_immune, has_base_curse_chance, has_base_freeze_chance, has_base_slow_chance, has_cannon_recoil, is_metal, is_touchable_thunk, is_zombie, max_i32,
-    set_barrier_state, set_cannon_blast_hit, set_cannon_hit_stamp, set_castle_anim_frame, set_castle_anim_state, set_dodge_fx_frame, set_dodge_timer, set_zkill_hit,
-    std_map_int_string_subscript, AppContext, CannonShot, Entity,
+    get_unit_name, set_barrier_state, set_cannon_blast_hit, set_cannon_hit_stamp, set_castle_anim_frame, set_castle_anim_state, set_dodge_fx_frame, set_dodge_timer, set_zkill_hit,
+    std_map_int_string_subscript, std_string_concat_cstr, std_string_from_cstr, AppContext, CannonShot, Entity,
 };
 
 pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, shot_id: i32) -> Result<(), Fault> {
@@ -86,7 +86,8 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             };
             let cannon_type = get_cannon_type(ctx, faction)?;
 
-            ctx.cannon_type_names.entry(cannon_type).or_default();
+            std_string_concat_cstr(b"%d -------------------------- ", ctx.cannon_type_names.entry(cannon_type).or_default());
+            get_unit_name(ctx, other, target)?;
 
             if is_metal(ctx, other, target)? {
                 damage = operation::div_1000(get_cannon_metal_permille(ctx, faction)?.wrapping_mul(hp));
@@ -107,30 +108,39 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             };
             let cannon_type = get_cannon_type(ctx, faction)?;
 
-            ctx.cannon_type_names.entry(cannon_type).or_default();
+            std_string_concat_cstr(b"%d -------------------------- ", ctx.cannon_type_names.entry(cannon_type).or_default());
+            get_unit_name(ctx, other, target)?;
 
             if is_zombie(ctx, other, target)? {
                 if get_entity_state(ctx, other, target)? == 0xb || get_entity_state(ctx, other, target)? == 0xc || get_entity_state(ctx, other, target)? == 0xd {
                     damage = operation::div_1000(get_cannon_burrowed_permille(ctx, faction)?.wrapping_mul(hp));
+                    std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93\xe5\x9c\xb0\xe4\xb8\xad");
                 } else {
                     damage = operation::div_1000(get_cannon_zombie_permille(ctx, faction)?.wrapping_mul(hp));
+                    std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93");
                 }
 
                 max_i32(damage, 1);
                 set_zkill_hit(ctx, other, target, 1)?;
             } else {
                 damage = operation::div_1000(get_cannon_nonzombie_permille(ctx, faction)?.wrapping_mul(hp));
+                std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d");
                 max_i32(damage, 1);
             }
         } else {
             if get_cannon_type(ctx, faction)? != 0 {
                 let cannon_type = get_cannon_type(ctx, faction)?;
 
-                std_map_int_string_subscript(&mut ctx.cannon_type_names, &cannon_type);
+                std_string_concat_cstr(b"%d -------------------------- ", std_map_int_string_subscript(&mut ctx.cannon_type_names, &cannon_type));
+            } else {
+                std_string_from_cstr(b"%d -------------------------- \xe3\x81\xab\xe3\x82\x83\xe3\x82\x93\xe3\x81\x93\xe7\xa0\xb2");
             }
+
+            get_unit_name(ctx, other, target)?;
 
             if get_cannon_damage(ctx, faction)? > 0 && is_metal(ctx, other, target)? {
                 attack_dmg_dispatch(ctx, other, target, 1)?;
+                std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x83\xa1\xe3\x82\xbf\xe3\x83\xab");
 
                 break 'damage;
             }
@@ -148,6 +158,7 @@ pub fn cannon_attack_dispatch(ctx: &mut AppContext, faction: i32, target: i32, s
             }
 
             attack_dmg_dispatch(ctx, other, target, plain)?;
+            std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d");
 
             break 'damage;
         }

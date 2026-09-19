@@ -37,6 +37,7 @@ pub struct UnitBuy;
 
 impl UnitBuy {
     pub const RARITY: usize = 0x34;
+    pub const MAX_LEVEL: usize = 0xc8;
     pub const KEY: usize = 0xfc;
 }
 
@@ -607,6 +608,8 @@ pub struct AppContext {
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
     pub cannon_type_names: BTreeMap<i32, Vec<u8>>,
+    pub enemy_names: Vec<Vec<u8>>,
+    pub cat_names: Vec<[Vec<u8>; 4]>,
     pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
     pub maps_neg26: Vec<[u64; 3]>,
     pub maps_neg24: Vec<[u64; 3]>,
@@ -721,6 +724,8 @@ impl AppContext {
     pub const WALLET_COOLDOWN_MAXES: usize = 0x40;
     pub const WALLET_COOLDOWN_MAX_KEY: usize = 0x68;
     pub const WALLET_CONJURE_READY: usize = 0x6c;
+    pub const WALLET_CONJURE_LOCKOUT: usize = 0x94;
+    pub const WALLET_SPIRIT_USED: usize = 0xe4;
     pub const WALLET_DEPLOY_COUNTS: usize = 0x108;
     pub const WALLET_ESCALATING_COSTS: usize = 0x130;
     pub const WALLET_CANNON_FIRED: usize = 0x1d0;
@@ -842,6 +847,8 @@ impl AppContext {
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
             cannon_type_names: BTreeMap::new(),
+            enemy_names: Vec::new(),
+            cat_names: Vec::new(),
             cannon_part_rows: Default::default(),
             maps_neg26: Default::default(),
             maps_neg24: Default::default(),
