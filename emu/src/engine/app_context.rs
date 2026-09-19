@@ -702,7 +702,7 @@ pub struct AppContext {
     pub buttons: ButtonBank,
     pub unlock_popups: BTreeMap<i32, bool>,
     pub img001_sheet: Option<Rc<Imgcut>>,
-    pub result_event_sheets: [Option<Rc<Imgcut>>; 3],
+    pub outro_event_sheets: [Option<Rc<Imgcut>>; 3],
     pub texture_cache: BTreeMap<Vec<u8>, Weak<Imgcut>>,
     pub reward_queue: Vec<Vec<i32>>,
     pub item_possession: BTreeMap<i32, i32>,
@@ -793,6 +793,7 @@ pub struct AppContext {
     pub stage_record_cache: BTreeMap<i32, BTreeMap<i32, [i16; 4]>>,
     pub download_sheet: Option<Rc<Imgcut>>,
     pub deploy_cost_alt_sheet: Option<Rc<Imgcut>>,
+    pub scene_img005_sheet: Option<Rc<Imgcut>>,
     pub unit_icon_textures: [Option<Rc<Imgcut>>; 10],
     pub enemy_sheets: SheetTable,
     pub unit_sheets: [SheetTable; 4],
@@ -1155,17 +1156,18 @@ impl AppContext {
     pub const SNIPER_ALIGNED: usize = 0x327db0;
     pub const DECK_BAR_SLIDE: usize = 0x327dcc;
     pub const LETTERBOX_SHIFT: usize = 0x327f70;
-    pub const RESULT_EXIT_DIRECT: usize = 0x1ec0;
-    pub const RESULT_EXIT_EVENT: usize = 0x1ec1;
-    pub const RESULT_MAP_LOCKED: usize = 0x836c8;
-    pub const RESULT_VIDEO_BUTTON: usize = 0x858;
-    pub const RESULT_VIDEO_WATCHED: usize = 0x859;
+    pub const OUTRO_EXIT_DIRECT: usize = 0x1ec0;
+    pub const OUTRO_EXIT_EVENT: usize = 0x1ec1;
+    pub const OUTRO_MAP_LOCKED: usize = 0x836c8;
+    pub const OUTRO_VIDEO_BUTTON: usize = 0x858;
+    pub const OUTRO_VIDEO_WATCHED: usize = 0x859;
     pub const LAST_VIDEO_TIME: usize = 0x860;
     pub const LEADERSHIP_REFUND: usize = 0x3f8;
     pub const LOSE_BANNER_Y: usize = 0x326648;
     pub const LOSE_CHOICE: usize = 0x327f78;
     pub const LOSE_NO_PRESS: usize = 0x328338;
     pub const LOSE_SHOP_PRESS: usize = 0x32836c;
+    pub const LOSE_SHOP_X: usize = 0x326634;
     pub const LOSE_SHOP_RECT: usize = 0x3282e4;
     pub const LOSE_SHOP_HELD: usize = 0x32a412;
     pub const LOSE_RECORDED: usize = 0xc2dc;
@@ -1187,18 +1189,21 @@ impl AppContext {
     pub const EX_ACCEPTED: usize = 0x402162;
     pub const EX_MAP: usize = 0x402164;
     pub const EX_STAGE: usize = 0x40216c;
-    pub const RESULT_FRAME: usize = 0x836b4;
-    pub const RESULT_TICKS: usize = 0x3bb73c;
+    pub const OUTRO_FRAME: usize = 0x836b4;
+    pub const OUTRO_TICKS: usize = 0x3bb73c;
     pub const BATTLE_RESUMED: usize = 0x3880d8;
     pub const BATTLE_CONTINUED: usize = 0x32c970;
     pub const POINT_LIMIT_PENDING: usize = 0x220;
-    pub const RESULT_OK_PRESS: usize = 0x328334;
-    pub const RESULT_OK_RECT: usize = 0x328244;
-    pub const RESULT_OK_SLIDE: usize = 0x327dd0;
+    pub const OUTRO_OK_PRESS: usize = 0x328334;
+    pub const OUTRO_OK_RECT: usize = 0x328244;
+    pub const OUTRO_OK_SLIDE: usize = 0x327dd0;
     pub const REWARD_POP_HOLD: usize = 0x328538;
     pub const LABYRINTH_RESULT_READY: usize = 0x1068;
     pub const LABYRINTH_RANK: usize = 0x1044;
     pub const LABYRINTH: usize = 0xad0;
+    pub const LABYRINTH_MAP_ID: usize = 0x1020;
+    pub const LABYRINTH_FLOOR_REACHED: usize = 0x103c;
+    pub const LABYRINTH_FLOOR_BEST: usize = 0x1040;
     pub const DECK_BACK_ROW_ENABLED: usize = 0x32b392;
     pub const DRAG_LATCHED: usize = 0x32c8e4;
     pub const CPU_ENABLED: usize = 0x328560;
@@ -1385,7 +1390,7 @@ impl AppContext {
     pub const HIT_COUNT: usize = 0x28be38;
     pub const HIT_LIST: usize = 0x28bc98;
     pub const HIT_SWAP: usize = 0x28be30;
-    pub const RESULT_PHASE: usize = 0x836b0;
+    pub const OUTRO_PHASE: usize = 0x836b0;
     pub const LOSE_TIP_SHOWN: usize = 0x836d4;
     pub const LOST_MAP_TYPE: usize = 0x327f0c;
     pub const LOST_MAP_INDEX: usize = 0x327f10;
@@ -1408,7 +1413,7 @@ impl AppContext {
     pub const BG_TINT_XS: usize = 0x328670;
     pub const BG_TINT_YS: usize = 0x328680;
     pub const BG_TINT_COLORS: usize = 0x328690;
-    pub const RESULT_RECTS: usize = 0x3282d4;
+    pub const OUTRO_RECTS: usize = 0x3282d4;
     pub const OPTION_RECTS: usize = 0x3282a4;
     pub const DECK_SWAP_BLOCK: usize = 0x328650;
     pub const UI_STATE_TAIL: usize = 0x32b7c8;
@@ -1430,8 +1435,8 @@ impl AppContext {
     pub const SCENE_4_PAGE: usize = 0x32f4;
     pub const ALL_MAPS_OPEN: usize = 0x38fc10;
     pub const MAP_COORDS: usize = 0x290250;
-    pub const TOOLTIP_ARROW_YS: usize = 0x3286ac;
-    pub const TOOLTIP_ARROW_XS: usize = 0x3286a0;
+    pub const POLYGON_YS: usize = 0x3286ac;
+    pub const POLYGON_XS: usize = 0x3286a0;
     pub const LETTERBOX_PAD: usize = 0x327f74;
     pub const MIRACLE_PRICES: usize = 0x46b970;
     pub const CAT_GOD_TICKS: usize = 0x32b4ac;
@@ -1471,7 +1476,7 @@ impl AppContext {
     pub const EFFECT_SLOTS: usize = 0x33356c;
     pub const BGM_PLAYER: usize = 0x46b948;
     pub const LEADERSHIP_TOTAL: usize = 0x3f4;
-    pub const RESULT_EXIT_TARGET: usize = 0xc30c;
+    pub const OUTRO_EXIT_TARGET: usize = 0xc30c;
     pub const LOSE_ENTRY_CHAPTER: usize = 0xc300;
     pub const MENU_BUILD_MODE: usize = 0x32e794;
     pub const MENU_CURSOR: usize = 0x440da0;
@@ -1515,10 +1520,10 @@ impl AppContext {
     pub const DROP_RATE: usize = 0x32c964;
     pub const UNIT_UNLOCKED_BY_CLEAR: usize = 0x32c958;
     pub const UNIT_UNLOCK_NOTICE: usize = 0x4af04;
-    pub const RESULT_NEW_CLEAR: usize = 0x32c95c;
-    pub const RESULT_STAGE_CLEARED: usize = 0x836f0;
-    pub const RESULT_ENTRY_STAGE: usize = 0x325c3c;
-    pub const RESULT_CHAPTER_MODE: usize = 0x327f00;
+    pub const OUTRO_NEW_CLEAR: usize = 0x32c95c;
+    pub const OUTRO_STAGE_CLEARED: usize = 0x836f0;
+    pub const OUTRO_ENTRY_STAGE: usize = 0x325c3c;
+    pub const OUTRO_CHAPTER_MODE: usize = 0x327f00;
     pub const AD_CONFIRM_DECLINED: usize = 0x8d8;
     pub const WIN_XP: usize = 0x836b8;
     pub const PRESET_CANNON_PARTS: usize = 0x427258;
@@ -1640,7 +1645,7 @@ impl AppContext {
             buttons: ButtonBank::default(),
             unlock_popups: BTreeMap::new(),
             img001_sheet: None,
-            result_event_sheets: Default::default(),
+            outro_event_sheets: Default::default(),
             texture_cache: BTreeMap::new(),
             reward_queue: Vec::new(),
             item_possession: BTreeMap::new(),
@@ -1733,6 +1738,7 @@ impl AppContext {
             stage_record_cache: Default::default(),
             download_sheet: Default::default(),
             deploy_cost_alt_sheet: Default::default(),
+            scene_img005_sheet: Default::default(),
             unit_icon_textures: Default::default(),
             enemy_sheets: Default::default(),
             unit_sheets: Default::default(),

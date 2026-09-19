@@ -18,7 +18,7 @@ pub fn game_lose_update_lambda_1(
                 button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
 
             new_button_set_touchable(&mut ctx.buttons, video, 0)?;
-            ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [0])?;
+            ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [0])?;
             analytics_named(ctx, 0x66, b"BattleContinue", b"")?;
             show_rewarded_ad(ctx, 1)?;
         }

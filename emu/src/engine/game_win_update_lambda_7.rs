@@ -61,6 +61,6 @@ pub fn game_win_update_lambda_7(
         ctx.reward_queue.remove(0);
     }
 
-    ctx.set_i32_at(AppContext::RESULT_PHASE, 3)?;
-    ctx.set_i32_at(AppContext::RESULT_FRAME, 0x1e)
+    ctx.set_i32_at(AppContext::OUTRO_PHASE, 3)?;
+    ctx.set_i32_at(AppContext::OUTRO_FRAME, 0x1e)
 }

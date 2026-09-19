@@ -19,7 +19,7 @@ pub fn game_win_update_lambda_16(
         return ctx.set_block_at::<1>(AppContext::EX_OFFERED, [0]);
     }
 
-    ctx.set_i32_at(AppContext::RESULT_OK_PRESS, 0)?;
+    ctx.set_i32_at(AppContext::OUTRO_OK_PRESS, 0)?;
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
     ctx.set_block_at::<1>(AppContext::EX_ACCEPTED, [1])?;

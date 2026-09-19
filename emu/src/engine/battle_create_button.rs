@@ -45,13 +45,13 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
         Some(battle_create_button_lambda_0),
     );
 
-    let enabled = ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? == 0
+    let enabled = ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? == 0
         && unlock_popup_is_unlocked(ctx, 0x4b)
         && !lose_exit_map_check(ctx)?;
     let map = new_button_set_enabled(&mut ctx.buttons, map, enabled as u8)?;
 
     new_button_set_touchable(&mut ctx.buttons, map, 0)?;
-    ctx.set_block_at::<2>(AppContext::RESULT_EXIT_DIRECT, [0, 0])?;
+    ctx.set_block_at::<2>(AppContext::OUTRO_EXIT_DIRECT, [0, 0])?;
 
     let x = get_drawable_width(ctx)?.wrapping_sub(get_right_inset_logical(ctx)?);
     let y = ctx

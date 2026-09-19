@@ -33,21 +33,21 @@ const SITE: &str = "game_win_update";
 pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
-    let phase = if ctx.i32_at(AppContext::RESULT_PHASE)? != 0 {
+    let phase = if ctx.i32_at(AppContext::OUTRO_PHASE)? != 0 {
         handle_battle_swipe_pinch(ctx)?;
-        ctx.i32_at(AppContext::RESULT_PHASE)?
+        ctx.i32_at(AppContext::OUTRO_PHASE)?
     } else {
         ctx.set_i32_at(AppContext::SWIPE_VELOCITY, 0)?;
         0
     };
 
-    let frame = ctx.i32_at(AppContext::RESULT_FRAME)?;
+    let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
     let next = frame.wrapping_add(1);
 
-    ctx.set_i32_at(AppContext::RESULT_FRAME, next)?;
+    ctx.set_i32_at(AppContext::OUTRO_FRAME, next)?;
     ctx.set_i32_at(
-        AppContext::RESULT_TICKS,
-        ctx.i32_at(AppContext::RESULT_TICKS)?.wrapping_add(1),
+        AppContext::OUTRO_TICKS,
+        ctx.i32_at(AppContext::OUTRO_TICKS)?.wrapping_add(1),
     )?;
 
     if phase == 0 {
@@ -64,12 +64,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(true);
         }
 
-        if ctx.i32_at(AppContext::RESULT_FRAME)? < 0x14 {
+        if ctx.i32_at(AppContext::OUTRO_FRAME)? < 0x14 {
             return Ok(true);
         }
 
-        ctx.set_i32_at(AppContext::RESULT_PHASE, 1)?;
-        ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_PHASE, 1)?;
+        ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
         ctx.set_i32_at(AppContext::DECK_BAR_SLIDE, 0x3e8)?;
 
         return Ok(true);
@@ -79,11 +79,11 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         if frame >= 0xc {
             let phase = phase.wrapping_add(1);
 
-            ctx.set_i32_at(AppContext::RESULT_PHASE, phase)?;
-            ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, phase)?;
+            ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
             if phase == 2 && is_score_stage(ctx.event_items.as_ref()) {
-                ctx.set_i32_at(AppContext::RESULT_FRAME, -100)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, -100)?;
             }
 
             return Ok(true);
@@ -93,11 +93,11 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(true);
         }
 
-        if (ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_add(0x64) as u32) < 0x2e {
+        if (ctx.i32_at(AppContext::OUTRO_FRAME)?.wrapping_add(0x64) as u32) < 0x2e {
             return Ok(true);
         }
 
-        ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
         return Ok(true);
     }
@@ -121,7 +121,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let dialog = dialog_set_on_update(ctx, dialog, Some(game_win_update_lambda_1))?;
 
             dialog_set_back_button(ctx, dialog, 0)?;
-            frame = ctx.i32_at(AppContext::RESULT_FRAME)?;
+            frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
         }
 
         if frame < 0x1e {
@@ -130,14 +130,14 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         if ctx.reward_queue.len() as i32 <= 0 {
             if ctx.i32_at(AppContext::NEXT_STAGE_UNLOCKED)? == -1 {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 6)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 6)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
                 return Ok(true);
             }
 
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 5)?;
-            ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 5)?;
+            ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
             play_sound(sound_manager(ctx)?, 0x1d, None);
 
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -215,8 +215,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         match kind {
             0 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -392,8 +392,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
             1 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -425,8 +425,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_3;
             }
             2 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -438,8 +438,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_4;
             }
             3..=5 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -627,8 +627,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_5;
             }
             6 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -636,8 +636,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_7;
             }
             7 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -645,8 +645,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_6;
             }
             8 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -673,8 +673,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_8;
             }
             9 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -688,8 +688,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_9;
             }
             10 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -779,8 +779,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_10;
             }
             11 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -795,8 +795,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_14;
             }
             12 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -922,8 +922,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 handler = game_win_update_lambda_11;
             }
             13 | 14 | 16 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 message = match kind {
@@ -938,8 +938,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
             15 => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 message = query_localizable(ctx, b"backstage_clear");
@@ -949,8 +949,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
             _ => {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 8)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 8)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
                 play_sound(sound_manager(ctx)?, 0x1d, None);
@@ -1143,8 +1143,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     if phase == 4 {
-        ctx.set_i32_at(AppContext::RESULT_PHASE, 3)?;
-        ctx.set_i32_at(AppContext::RESULT_FRAME, 0x1e)?;
+        ctx.set_i32_at(AppContext::OUTRO_PHASE, 3)?;
+        ctx.set_i32_at(AppContext::OUTRO_FRAME, 0x1e)?;
 
         return Ok(true);
     }
@@ -1177,8 +1177,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
         ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
-        ctx.set_i32_at(AppContext::RESULT_PHASE, 6)?;
-        ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_PHASE, 6)?;
+        ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
         play_sound(sound_manager(ctx)?, 0xb, None);
 
         return Ok(true);
@@ -1186,24 +1186,24 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     if phase == 6 {
         ctx.set_i32_at(
-            AppContext::RESULT_OK_RECT,
+            AppContext::OUTRO_OK_RECT,
             operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
         )?;
-        ctx.set_i32_at(AppContext::RESULT_OK_RECT + 4, 0x280)?;
-        ctx.set_i32_at(AppContext::RESULT_OK_RECT + 8, 0x17d)?;
-        ctx.set_i32_at(AppContext::RESULT_OK_RECT + 0xc, 0x58)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 4, 0x280)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 0xc, 0x58)?;
 
-        let slide = ctx.i32_at(AppContext::RESULT_OK_SLIDE)?;
+        let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
 
-        ctx.set_i32_at(AppContext::RESULT_OK_SLIDE, slide.wrapping_add(0x14))?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_SLIDE, slide.wrapping_add(0x14))?;
 
         'offer: {
             if slide < 0x3e {
                 break 'offer;
             }
 
-            ctx.set_i32_at(AppContext::RESULT_OK_SLIDE, 0x52)?;
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 7)?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_SLIDE, 0x52)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 7)?;
             ctx.set_block_at::<1>(AppContext::EX_ACCEPTED, [0])?;
             ctx.set_block_at::<2>(AppContext::EX_OFFERED, [0, 0])?;
 
@@ -1265,12 +1265,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             dialog_set_back_button(ctx, dialog, 1)?;
         }
 
-        let slide = ctx.i32_at(AppContext::RESULT_OK_SLIDE)?;
+        let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
         let letterbox = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
         let inset = get_bottom_inset_logical(ctx)?;
 
         ctx.set_i32_at(
-            AppContext::RESULT_OK_RECT + 4,
+            AppContext::OUTRO_OK_RECT + 4,
             letterbox
                 .wrapping_sub(inset.wrapping_add(slide))
                 .wrapping_add(0x278),
@@ -1290,16 +1290,16 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_block_at::<1>(AppContext::TOUCH_CAPTURED, [0])?;
         }
 
-        let press = ctx.i32_at(AppContext::RESULT_OK_PRESS)?;
+        let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
 
         if press > 0 {
-            ctx.set_i32_at(AppContext::RESULT_OK_PRESS, press.wrapping_add(1))?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_PRESS, press.wrapping_add(1))?;
 
             if (press as u32) < 5 {
                 return Ok(true);
             }
 
-            ctx.set_i32_at(AppContext::RESULT_OK_PRESS, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_PRESS, 0)?;
             app_on_draw(ctx)?;
 
             if get_map_type(ctx, 0)? == -19 {
@@ -1309,7 +1309,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             if labyrinth_active(ctx)? && !labyrinth_result_ready(ctx)? {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 9)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 9)?;
 
                 return Ok(false);
             }
@@ -1323,10 +1323,10 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         if ctx.i32_at(AppContext::DECK_ROW_SWAPPING)? | ctx.i32_at(AppContext::SWIPE_VELOCITY)? == 0
         {
             let hovered = touch_is_down(ctx)? != 0 && {
-                let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-                let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+                let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -1359,7 +1359,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             new_button_set_touchable(&mut ctx.buttons, button, 0)?;
         }
 
-        if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
+        if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xcb)
                     .ok_or(Fault::NullPointer { site: SITE })?;
@@ -1370,18 +1370,18 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         if !button_bank_busy(&ctx.buttons)? {
             let released = touch_released(ctx)? != 0 && {
-                let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-                let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+                let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
 
             if released || back_pressed(ctx)? != 0 {
                 ctx.set_i32_at(
-                    AppContext::RESULT_OK_PRESS,
-                    ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1),
+                    AppContext::OUTRO_OK_PRESS,
+                    ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
                 )?;
                 play_sound(sound_manager(ctx)?, 0xb, None);
 
@@ -1408,7 +1408,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             new_button_set_touchable(&mut ctx.buttons, button, 1)?;
         }
 
-        if ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? == 0 {
+        if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? == 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xc8)
                     .ok_or(Fault::NullPointer { site: SITE })?;
@@ -1417,7 +1417,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
         }
 
-        if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
+        if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xcb)
                     .ok_or(Fault::NullPointer { site: SITE })?;
@@ -1430,9 +1430,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     if (phase.wrapping_sub(9) as u32) <= 0x1b && labyrinth_active(ctx)? {
-        let phase = ctx.i32_at(AppContext::RESULT_PHASE)?.wrapping_add(1);
+        let phase = ctx.i32_at(AppContext::OUTRO_PHASE)?.wrapping_add(1);
 
-        ctx.set_i32_at(AppContext::RESULT_PHASE, phase)?;
+        ctx.set_i32_at(AppContext::OUTRO_PHASE, phase)?;
 
         if phase != 0x25 {
             return Ok(true);
@@ -1441,13 +1441,13 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let text = query_localizable(ctx, b"connecting");
 
         connecting_indicator_show(ctx, &text)?;
-        ctx.result_event_sheets[0] = texture_cache_load(
+        ctx.outro_event_sheets[0] = texture_cache_load(
             ctx,
             b"img009_Labyrinth_001.png",
             b"img009_Labyrinth_001.imgcut",
             0x2601,
         )?;
-        ctx.result_event_sheets[1] = texture_cache_load(
+        ctx.outro_event_sheets[1] = texture_cache_load(
             ctx,
             b"img009_Labyrinth_result.png",
             b"img009_Labyrinth_result.imgcut",
@@ -1458,10 +1458,10 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let language = query_localizable(ctx, b"lang");
         let name = string_format_rank_comment(ctx, b"mapname%03d_l_%@.png", map, &language)?;
 
-        ctx.result_event_sheets[2] = texture_cache_load(ctx, &name, b"", 0x2601)?;
+        ctx.outro_event_sheets[2] = texture_cache_load(ctx, &name, b"", 0x2601)?;
 
         let sheet = Rc::clone(
-            ctx.result_event_sheets[0]
+            ctx.outro_event_sheets[0]
                 .as_ref()
                 .ok_or(Fault::NullPointer { site: SITE })?,
         );
@@ -1502,7 +1502,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         return Ok(true);
     }
 
-    let phase = ctx.i32_at(AppContext::RESULT_PHASE)?;
+    let phase = ctx.i32_at(AppContext::OUTRO_PHASE)?;
 
     if phase < 0x26 {
         return Ok(true);
@@ -1512,9 +1512,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         return Ok(true);
     }
 
-    let old = ctx.i32_at(AppContext::RESULT_PHASE)?;
+    let old = ctx.i32_at(AppContext::OUTRO_PHASE)?;
 
-    ctx.set_i32_at(AppContext::RESULT_PHASE, old.wrapping_add(1))?;
+    ctx.set_i32_at(AppContext::OUTRO_PHASE, old.wrapping_add(1))?;
 
     if old.wrapping_add(1) == 0x27 {
         play_sound(sound_manager(ctx)?, 0x2a, None);
@@ -1563,10 +1563,10 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     let hovered = touch_is_down(ctx)? != 0 && {
-        let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-        let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-        let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-        let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+        let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+        let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+        let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+        let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
         hit_test_rect(ctx, x, y, width, height)?
     };
@@ -1581,10 +1581,10 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     let released = touch_released(ctx)? != 0 && {
-        let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-        let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-        let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-        let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+        let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+        let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+        let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+        let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
         hit_test_rect(ctx, x, y, width, height)?
     };

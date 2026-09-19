@@ -21,10 +21,10 @@ const SITE: &str = "game_lose_update";
 pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
-    let phase = ctx.i32_at(AppContext::RESULT_PHASE)?;
-    let frame = ctx.i32_at(AppContext::RESULT_FRAME)?;
+    let phase = ctx.i32_at(AppContext::OUTRO_PHASE)?;
+    let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
 
-    ctx.set_i32_at(AppContext::RESULT_FRAME, frame.wrapping_add(1))?;
+    ctx.set_i32_at(AppContext::OUTRO_FRAME, frame.wrapping_add(1))?;
 
     if phase as u32 > 4 {
         return Ok(true);
@@ -52,12 +52,12 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            if ctx.i32_at(AppContext::RESULT_FRAME)? < 0x14 {
+            if ctx.i32_at(AppContext::OUTRO_FRAME)? < 0x14 {
                 return Ok(true);
             }
 
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 1)?;
-            ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 1)?;
+            ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
             ctx.set_i32_at(AppContext::DECK_BAR_SLIDE, 0x3e8)?;
 
             Ok(true)
@@ -67,8 +67,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 2)?;
-            ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 2)?;
+            ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
             Ok(true)
         }
@@ -81,8 +81,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 && get_stage_record(ctx, -2, 0, 2, 0, 0)? != 0;
 
             if !continues {
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 4)?;
-                ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 4)?;
+                ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
                 for label in 0..4usize {
                     let text = ctx
@@ -109,7 +109,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            if ctx.i32_at(AppContext::RESULT_FRAME)? == 0x50 {
+            if ctx.i32_at(AppContext::OUTRO_FRAME)? == 0x50 {
                 if web_popup_pending(ctx, 4) {
                     web_popup_clear(ctx, 4);
 
@@ -118,13 +118,13 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     web_popup_open(ctx, 4, map, stage)?;
                     ctx.set_i32_at(
-                        AppContext::RESULT_FRAME,
-                        ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1),
+                        AppContext::OUTRO_FRAME,
+                        ctx.i32_at(AppContext::OUTRO_FRAME)?.wrapping_sub(1),
                     )?;
                 } else if ctx.i32_at(AppContext::PENDING_SCENE)? == 0x66 {
                     ctx.set_i32_at(
-                        AppContext::RESULT_FRAME,
-                        ctx.i32_at(AppContext::RESULT_FRAME)?.wrapping_sub(1),
+                        AppContext::OUTRO_FRAME,
+                        ctx.i32_at(AppContext::OUTRO_FRAME)?.wrapping_sub(1),
                     )?;
                 }
 
@@ -142,8 +142,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             ctx.set_i32_at(AppContext::LOSE_BANNER_Y, -0x64)?;
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 3)?;
-            ctx.set_i32_at(AppContext::RESULT_FRAME, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 3)?;
+            ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
 
             let mut found = false;
             let mut percent = 0i32;
@@ -188,7 +188,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     std_string_append(&mut message, &line);
                 }
 
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 5)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 5)?;
 
                 let height = get_design_height2(ctx);
 
@@ -278,7 +278,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [1])?;
+            ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [1])?;
 
             let sheet = Rc::clone(
                 ctx.img004_sheet
@@ -350,26 +350,26 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
+            if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let video = button_bank_find(&ctx.buttons, 0xcb)
                     .ok_or(Fault::NullPointer { site: SITE })?;
 
                 new_button_set_touchable(&mut ctx.buttons, video, 0)?;
             }
 
-            let yes = ctx.i32_at(AppContext::RESULT_OK_PRESS)?;
+            let yes = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
 
             if yes > 0 {
-                ctx.set_i32_at(AppContext::RESULT_OK_PRESS, yes.wrapping_add(1))?;
+                ctx.set_i32_at(AppContext::OUTRO_OK_PRESS, yes.wrapping_add(1))?;
 
                 if (yes as u32) < 5 {
                     return Ok(true);
                 }
 
-                ctx.set_i32_at(AppContext::RESULT_OK_PRESS, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_OK_PRESS, 0)?;
 
                 if obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32 > 0x1d
-                    || ctx.u8_at(AppContext::RESULT_VIDEO_WATCHED)? != 0
+                    || ctx.u8_at(AppContext::OUTRO_VIDEO_WATCHED)? != 0
                 {
                     battle_continue(ctx)?;
 
@@ -393,7 +393,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 }
 
                 ctx.set_i32_at(AppContext::LOSE_NO_PRESS, 0)?;
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 4)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 4)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
 
                 if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0
@@ -489,7 +489,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
+            if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let video = button_bank_find(&ctx.buttons, 0xcb)
                     .ok_or(Fault::NullPointer { site: SITE })?;
 
@@ -565,8 +565,8 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if yes_released {
                 ctx.set_i32_at(
-                    AppContext::RESULT_OK_PRESS,
-                    ctx.i32_at(AppContext::RESULT_OK_PRESS)?.wrapping_add(1),
+                    AppContext::OUTRO_OK_PRESS,
+                    ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
                 )?;
                 play_sound(sound_manager(ctx)?, 0xb, None);
             } else {
@@ -646,14 +646,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-            let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-            let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-            let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+            let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+            let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+            let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+            let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
             let hovered = touch_is_down(ctx)? != 0
                 && hit_test_rect(ctx, x, y, width, height)?
-                && (ctx.i32_at(AppContext::RESULT_PHASE)? != 4
+                && (ctx.i32_at(AppContext::OUTRO_PHASE)? != 4
                     || ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? != 0);
 
             if hovered {
@@ -673,13 +673,13 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
             let released = touch_released(ctx)? != 0 && {
-                let x = ctx.i32_at(AppContext::RESULT_OK_RECT)?;
-                let y = ctx.i32_at(AppContext::RESULT_OK_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::RESULT_OK_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::RESULT_OK_RECT + 0xc)?;
+                let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
+                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
+                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
+                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
-                    || (ctx.i32_at(AppContext::RESULT_PHASE)? == 4
+                    || (ctx.i32_at(AppContext::OUTRO_PHASE)? == 4
                         && ctx.i32_at(AppContext::LOSE_TIP_SHOWN)? == 0)
             };
 

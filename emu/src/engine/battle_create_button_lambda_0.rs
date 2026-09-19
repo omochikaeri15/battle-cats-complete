@@ -27,7 +27,7 @@ pub fn battle_create_button_lambda_0(
 
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
-            if ctx.u8_at(AppContext::RESULT_VIDEO_BUTTON)? != 0 {
+            if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let third = button_bank_find(&ctx.buttons, 0xcb)
                     .ok_or(Fault::NullPointer { site: SITE })?;
 

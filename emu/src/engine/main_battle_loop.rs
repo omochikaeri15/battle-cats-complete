@@ -1743,7 +1743,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 break 'finish;
                             }
 
-                            ctx.set_block_at::<8>(AppContext::RESULT_PHASE, [0; 8])?;
+                            ctx.set_block_at::<8>(AppContext::OUTRO_PHASE, [0; 8])?;
                             ctx.set_block_at::<16>(AppContext::BGM_SWITCH_STATE, BGM_SWITCH_RESET)?;
                             battle_init_win(ctx, 0)?;
                             battle_create_button(ctx)?;
@@ -3643,7 +3643,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         if get_battle_status(ctx)? == 0 {
                             if ctx.i32_at(AppContext::entity_field(1, 0, Entity::HP))? == 0 {
-                                ctx.set_block_at::<8>(AppContext::RESULT_PHASE, [0; 8])?;
+                                ctx.set_block_at::<8>(AppContext::OUTRO_PHASE, [0; 8])?;
                                 ctx.set_block_at::<16>(
                                     AppContext::BGM_SWITCH_STATE,
                                     BGM_SWITCH_RESET,
@@ -3656,7 +3656,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 battle_init_win(ctx, 0)?;
                                 battle_create_button(ctx)?;
                             } else if ctx.i32_at(AppContext::entity_field(0, 0, Entity::HP))? == 0 {
-                                ctx.set_block_at::<8>(AppContext::RESULT_PHASE, [0; 8])?;
+                                ctx.set_block_at::<8>(AppContext::OUTRO_PHASE, [0; 8])?;
                                 ctx.set_block_at::<16>(
                                     AppContext::BGM_SWITCH_STATE,
                                     BGM_SWITCH_RESET,

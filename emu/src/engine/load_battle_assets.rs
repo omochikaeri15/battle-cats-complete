@@ -39,7 +39,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.img101_sheet = None;
     ctx.img001_second_sheet = None;
     ctx.bubble_sheet = None;
-    ctx.result_event_sheets = [None, None, None];
+    ctx.outro_event_sheets = [None, None, None];
     ctx.castle_sheet = None;
     ctx.castle_models = Default::default();
     ctx.castle_anims = Default::default();

@@ -102,6 +102,10 @@ pub fn div_255<T: Truncating>(x: T) -> T {
     x / T::from(255)
 }
 
+pub fn div_900<T: Truncating>(x: T) -> T {
+    x / T::from(900)
+}
+
 pub fn div_960<T: Truncating>(x: T) -> T {
     x / T::from(960)
 }
@@ -204,6 +208,10 @@ pub fn div_neg_100<T: Truncating>(x: T) -> T {
 
 pub fn div_neg_200<T: Truncating>(x: T) -> T {
     x / T::from(-200)
+}
+
+pub fn div_neg_80<T: Truncating>(x: T) -> T {
+    x / T::from(-80)
 }
 
 pub fn div_neg_30<T: Truncating>(x: T) -> T {

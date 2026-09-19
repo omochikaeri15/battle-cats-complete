@@ -56,7 +56,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             (b"StageIndex", &stage_text),
         ],
     )?;
-    ctx.set_block_at::<2>(AppContext::RESULT_VIDEO_BUTTON, [0; 2])?;
+    ctx.set_block_at::<2>(AppContext::OUTRO_VIDEO_BUTTON, [0; 2])?;
     ctx.item_snapshot.clear();
 
     for item in 0..0x113 {
@@ -413,14 +413,14 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         }
 
         ctx.set_i32_at(
-            AppContext::RESULT_CHAPTER_MODE,
+            AppContext::OUTRO_CHAPTER_MODE,
             ctx.i32_at(AppContext::CHAPTER_MODE)?,
         )?;
         ctx.set_i32_at(
-            AppContext::RESULT_ENTRY_STAGE,
+            AppContext::OUTRO_ENTRY_STAGE,
             ctx.i32_at(AppContext::ENTRY_STAGE)?,
         )?;
-        ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 0)?;
         ctx.set_i32_at(AppContext::NEXT_STAGE_UNLOCKED, -1)?;
 
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
@@ -429,15 +429,15 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let target = if get_stages_cleared(ctx, map_type, map_index, star, use_cache)?
             != ctx.i32_at(AppContext::STAGE_ROW)?
         {
-            AppContext::RESULT_STAGE_CLEARED
+            AppContext::OUTRO_STAGE_CLEARED
         } else {
             add_stages_cleared(ctx, map_type, map_index, star, 1, use_cache)?;
 
             let cleared_now = get_stages_cleared(ctx, map_type, map_index, star, use_cache)?;
 
-            ctx.set_i32_at(AppContext::RESULT_STAGE_CLEARED, cleared_now)?;
-            ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR, 0)?;
-            ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR + 4, -1)?;
+            ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, cleared_now)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, -1)?;
             add_stage_unlock(ctx, map_type, map_index, star, 1, use_cache)?;
 
             let cleared_now = get_stages_cleared(ctx, map_type, map_index, star, use_cache)?;
@@ -563,8 +563,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             && ctx.i32_at(AppContext::STAGE_ROW)? == get_stage_count(ctx, 0, 0x30)?.wrapping_sub(1)
             && get_stage_record(ctx, map_type, map_index, stage_row, star, use_cache)? == 1
         {
-            ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 1)?;
-            ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR, 1)?;
+            ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 1)?;
         }
 
         if validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?) == -9
@@ -576,7 +576,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 == get_stage_count(ctx, -9, last_map)?.wrapping_sub(1)
                 && get_stage_record(ctx, map_type, map_index, stage_row, star, use_cache)? == 1
             {
-                ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 1)?;
+                ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
             }
         }
     } else if chapter != 0x63 {
@@ -585,9 +585,9 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-        ctx.set_i32_at(AppContext::RESULT_CHAPTER_MODE, chapter)?;
+        ctx.set_i32_at(AppContext::OUTRO_CHAPTER_MODE, chapter)?;
         ctx.set_i32_at(
-            AppContext::RESULT_ENTRY_STAGE,
+            AppContext::OUTRO_ENTRY_STAGE,
             ctx.i32_at(AppContext::ENTRY_STAGE)?,
         )?;
 
@@ -627,7 +627,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             0,
         )?;
         mission_progress(ctx, 9, operation::div_1000(pair_map), 1, cleared as i32, 0)?;
-        ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 0)?;
 
         let mut chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let progress_cell = (AppContext::CHAPTER_PROGRESS as i64 + (chapter as i64) * 4) as usize;
@@ -641,7 +641,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         ]);
 
         if progress as i32 != ctx.i32_at(AppContext::STAGE_ROW)? {
-            ctx.set_i32_at(AppContext::RESULT_STAGE_CLEARED, -1)?;
+            ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, -1)?;
         } else {
             let next = progress.wrapping_add(1).to_le_bytes();
 
@@ -664,9 +664,9 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     limit: 10,
                 })?;
 
-            ctx.set_i32_at(AppContext::RESULT_STAGE_CLEARED, progress as i32)?;
-            ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR, 0)?;
-            ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR + 4, -1)?;
+            ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, progress as i32)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, -1)?;
 
             let unlocks =
                 ((chapter_now as i64) * 4 + AppContext::STAGE_UNLOCK_CHAPTERS as i64) as usize;
@@ -685,15 +685,15 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 })?;
 
             if progress == 0x30 {
-                ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 1)?;
-                ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR, 1)?;
+                ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
+                ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 1)?;
                 ctx.set_i32_at(
                     ((chapter as i64) * 4 + AppContext::STAGE_UNLOCK_CHAPTERS as i64) as usize,
                     0x2f,
                 )?;
                 chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-                let cleared_stage = ctx.i32_at(AppContext::RESULT_STAGE_CLEARED)?;
+                let cleared_stage = ctx.i32_at(AppContext::OUTRO_STAGE_CLEARED)?;
 
                 for unit in 0..0x36cusize {
                     let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
@@ -702,7 +702,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         && unit_buy_field(row, 0)? == cleared_stage
                         && unit_buy_field(row, 1)? == 0
                     {
-                        ctx.set_i32_at(AppContext::RESULT_NEW_CLEAR + 4, unit as i32)?;
+                        ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, unit as i32)?;
                     }
                 }
             }
@@ -770,7 +770,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let mut chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
         if (ctx.i32_at(AppContext::STAGE_ROW)? > 0 && chapter == 0) || chapter > 0 {
-            let unlocked = ctx.i32_at(AppContext::RESULT_STAGE_CLEARED)?;
+            let unlocked = ctx.i32_at(AppContext::OUTRO_STAGE_CLEARED)?;
 
             if unlocked != -1 {
                 for unit in 0..0x36cusize {
@@ -847,7 +847,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let map_id = get_global_map_id(ctx, 0)?;
 
             shop_offer_start(ctx, map_id)?;
-            ctx.set_i32_at(AppContext::RESULT_MAP_LOCKED, 1)?;
+            ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
         } else if is_ex_option_target(ctx)? {
             clear_ex_replacement_stage(ctx)?;
         }
@@ -2098,7 +2098,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             && get_item_count(ctx, 6)?.wrapping_add(ctx.i32_at(AppContext::WIN_XP)?) <= 0x5f5e0ff
             && reward_ad_ready(ctx, 0, 0)?
         {
-            ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [1])?;
+            ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [1])?;
 
             let (id, x, y, width, height, panel) = if cleared == 0 {
                 let sheet = Rc::clone(

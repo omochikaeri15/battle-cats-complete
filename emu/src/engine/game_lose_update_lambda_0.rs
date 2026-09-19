@@ -16,7 +16,7 @@ pub fn game_lose_update_lambda_0(
     match event {
         5 => {
             ctx.set_i32_at(AppContext::LOSE_NO_PRESS, 0)?;
-            ctx.set_i32_at(AppContext::RESULT_PHASE, 4)?;
+            ctx.set_i32_at(AppContext::OUTRO_PHASE, 4)?;
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
 
             if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0

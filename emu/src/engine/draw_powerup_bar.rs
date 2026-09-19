@@ -138,34 +138,34 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
             .wrapping_add(offset)
             .wrapping_add(-0x1e4);
 
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_XS, tip)?;
+        ctx.set_i32_at(AppContext::POLYGON_XS, tip)?;
 
         let right = get_drawable_width(ctx)?
             .wrapping_add(offset)
             .wrapping_add(-0x1d5);
 
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_XS + 4, right)?;
+        ctx.set_i32_at(AppContext::POLYGON_XS + 4, right)?;
 
         let left = get_drawable_width(ctx)?
             .wrapping_add(offset)
             .wrapping_add(-0x1f3);
 
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_XS + 8, left)?;
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_YS, 0x76)?;
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_YS + 4, 0x86)?;
-        ctx.set_i32_at(AppContext::TOOLTIP_ARROW_YS + 8, 0x86)?;
+        ctx.set_i32_at(AppContext::POLYGON_XS + 8, left)?;
+        ctx.set_i32_at(AppContext::POLYGON_YS, 0x76)?;
+        ctx.set_i32_at(AppContext::POLYGON_YS + 4, 0x86)?;
+        ctx.set_i32_at(AppContext::POLYGON_YS + 8, 0x86)?;
 
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xd8);
 
         let xs = [
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_XS)?,
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_XS + 4)?,
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_XS + 8)?,
+            ctx.i32_at(AppContext::POLYGON_XS)?,
+            ctx.i32_at(AppContext::POLYGON_XS + 4)?,
+            ctx.i32_at(AppContext::POLYGON_XS + 8)?,
         ];
         let ys = [
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_YS)?,
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_YS + 4)?,
-            ctx.i32_at(AppContext::TOOLTIP_ARROW_YS + 8)?,
+            ctx.i32_at(AppContext::POLYGON_YS)?,
+            ctx.i32_at(AppContext::POLYGON_YS + 4)?,
+            ctx.i32_at(AppContext::POLYGON_YS + 8)?,
         ];
 
         fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);

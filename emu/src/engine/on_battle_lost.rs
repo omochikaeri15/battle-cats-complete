@@ -17,7 +17,7 @@ const SITE: &str = "on_battle_lost";
 
 pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     breadcrumb(ctx, 0x49)?;
-    ctx.set_block_at::<2>(AppContext::RESULT_VIDEO_BUTTON, [0; 2])?;
+    ctx.set_block_at::<2>(AppContext::OUTRO_VIDEO_BUTTON, [0; 2])?;
 
     let map_type = get_map_type(ctx, 0)?;
     let map_index = get_map_index(ctx, 0)?;
@@ -337,7 +337,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     let width = get_drawable_width(ctx)?;
 
     ctx.set_i32_at(
-        AppContext::RESULT_OK_RECT,
+        AppContext::OUTRO_OK_RECT,
         operation::div_2(width).wrapping_sub(0xbe),
     )?;
 
@@ -345,11 +345,11 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     let inset = get_bottom_inset_logical(ctx)?;
 
     ctx.set_i32_at(
-        AppContext::RESULT_OK_RECT + 4,
+        AppContext::OUTRO_OK_RECT + 4,
         shift.wrapping_sub(inset).wrapping_add(0x226),
     )?;
-    ctx.set_i32_at(AppContext::RESULT_OK_RECT + 8, 0x17d)?;
-    ctx.set_i32_at(AppContext::RESULT_OK_RECT + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
+    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 0xc, 0x58)?;
     web_popup_request(ctx, 4);
     check_medals(ctx, 3)?;
     ad_prepare(ctx, 1)?;

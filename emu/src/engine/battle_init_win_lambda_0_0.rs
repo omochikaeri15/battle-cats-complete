@@ -26,7 +26,7 @@ pub fn battle_init_win_lambda_0_0(
         }
         0 => {
             new_button_set_touchable(&mut ctx.buttons, ctx.ad_button_id, 0)?;
-            ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_BUTTON, [0])?;
+            ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [0])?;
 
             if ctx.ad_button_cleared != 0 {
                 sound_manager(ctx)?.pause_all();

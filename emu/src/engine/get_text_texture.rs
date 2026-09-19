@@ -24,6 +24,7 @@ pub trait TextRenderer {
     fn substitute(&mut self, text: &[u8], tokens: &[(&[u8], &[u8])]) -> Vec<u8>;
     fn format_args(&mut self, pattern: &[u8], args: &[FormatArg<'_>]) -> Vec<u8>;
     fn stage_name(&mut self, map_type: i32, map_index: i32, stage: i32) -> Vec<u8>;
+    fn text_width(&mut self, text: &[u8], size: i32) -> i32;
 }
 
 pub fn get_text_texture(

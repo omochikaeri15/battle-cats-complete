@@ -142,7 +142,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
         } else {
             let blocked = get_battle_status(ctx)? != 0
                 && (get_battle_status(ctx)? != 1
-                    || ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? != 0)
+                    || ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0)
                 && (get_battle_status(ctx)? != 2 || ctx.i32_at(AppContext::REVIVE_REQUESTED)? != 0);
 
             if !blocked
@@ -245,7 +245,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 let camera = ctx.i32_at(AppContext::STAGE_LENGTH)?.wrapping_add(-0x2580);
 
                 ctx.set_i32_at(AppContext::CAMERA_X, camera)?;
-                ctx.set_i32_at(AppContext::RESULT_PHASE, 0)?;
+                ctx.set_i32_at(AppContext::OUTRO_PHASE, 0)?;
                 set_battle_status(ctx, 3)?;
                 ctx.set_i32_at(ENTITY_BASE + Entity::STATE, 0)?;
 
@@ -290,7 +290,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<0x2ba>(AppContext::CAMERA_KICK, [0; 0x2ba])?;
                 ctx.set_block_at::<0x195>(AppContext::PENDING_STRIKE_SPEED, [0; 0x195])?;
                 ctx.set_block_at::<0x508>(AppContext::SNIPER_FIRE_FRAME, [0; 0x508])?;
-                ctx.set_block_at::<0x7c>(AppContext::RESULT_OK_PRESS, [0; 0x7c])?;
+                ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
 
                 for offset in (0..0x2580usize).step_by(0x30) {
                     clear_effect_slot(ctx, AppContext::EFFECT_SLOTS + offset)?;
@@ -358,11 +358,11 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     if chapter == 0x63 {
                         ctx.set_i32_at(
                             AppContext::CHAPTER_MODE,
-                            ctx.i32_at(AppContext::RESULT_CHAPTER_MODE)?,
+                            ctx.i32_at(AppContext::OUTRO_CHAPTER_MODE)?,
                         )?;
                         ctx.set_i32_at(
                             AppContext::ENTRY_STAGE,
-                            ctx.i32_at(AppContext::RESULT_ENTRY_STAGE)?,
+                            ctx.i32_at(AppContext::OUTRO_ENTRY_STAGE)?,
                         )?;
                     }
 
@@ -388,7 +388,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.set_i32_at(AppContext::SWIPE_STATE, 0)?;
                     ctx.set_block_at::<8>(AppContext::SWIPE_VELOCITY, [0; 8])?;
 
-                    if ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? != 0 {
+                    if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0 {
                         clear_items_selected(ctx)?;
                         ctx.scene_host()
                             .ok_or(Fault::HostMissing { site: SITE })?
@@ -454,7 +454,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         let camera = ctx.i32_at(AppContext::STAGE_LENGTH)?.wrapping_add(-0x2580);
 
                         ctx.set_i32_at(AppContext::CAMERA_X, camera)?;
-                        ctx.set_i32_at(AppContext::RESULT_PHASE, 0)?;
+                        ctx.set_i32_at(AppContext::OUTRO_PHASE, 0)?;
                         set_battle_status(ctx, 3)?;
                         ctx.set_i32_at(ENTITY_BASE + Entity::STATE, 0)?;
 
@@ -499,7 +499,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         ctx.set_block_at::<0x2ba>(AppContext::CAMERA_KICK, [0; 0x2ba])?;
                         ctx.set_block_at::<0x195>(AppContext::PENDING_STRIKE_SPEED, [0; 0x195])?;
                         ctx.set_block_at::<0x509>(AppContext::SNIPER_FIRE_FRAME, [0; 0x509])?;
-                        ctx.set_block_at::<0x7c>(AppContext::RESULT_OK_PRESS, [0; 0x7c])?;
+                        ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
 
                         for offset in (0..0x2580usize).step_by(0x30) {
                             clear_effect_slot(ctx, AppContext::EFFECT_SLOTS + offset)?;
@@ -525,7 +525,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                         set_money(ctx, WALLET, money)?;
                         set_cannon_countdown(ctx, 0, 0)?;
-                        ctx.set_block_at::<1>(AppContext::RESULT_VIDEO_WATCHED, [0])?;
+                        ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_WATCHED, [0])?;
                         ctx.set_i32_at(AppContext::DEPLOY_LIMIT_TOTAL, 0)?;
                         fever_clear_state(&mut ctx.special_rules);
                         vibration_clear(ctx);
@@ -546,11 +546,11 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         ctx.set_block_at::<1>(AppContext::EX_OFFERED, [0])?;
                         ctx.set_i32_at(
                             AppContext::CHAPTER_MODE,
-                            ctx.i32_at(AppContext::RESULT_CHAPTER_MODE)?,
+                            ctx.i32_at(AppContext::OUTRO_CHAPTER_MODE)?,
                         )?;
                         ctx.set_i32_at(
                             AppContext::ENTRY_STAGE,
-                            ctx.i32_at(AppContext::RESULT_ENTRY_STAGE)?,
+                            ctx.i32_at(AppContext::OUTRO_ENTRY_STAGE)?,
                         )?;
                     }
 
@@ -596,7 +596,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.set_block_at::<0x34>(AppContext::HUD_STATE, [0; 0x34])?;
                     ctx.set_block_at::<8>(AppContext::SWIPE_VELOCITY, [0; 8])?;
                     ctx.set_i32_at(AppContext::SWIPE_STATE, 0)?;
-                    ctx.set_block_at::<0x7c>(AppContext::RESULT_OK_PRESS, [0; 0x7c])?;
+                    ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
 
                     let tutorial = ctx.i32_at(AppContext::TUTORIAL_CLEARED)?;
 
@@ -611,7 +611,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         return Ok(false);
                     }
 
-                    let direct = ctx.u8_at(AppContext::RESULT_EXIT_DIRECT)? as i32;
+                    let direct = ctx.u8_at(AppContext::OUTRO_EXIT_DIRECT)? as i32;
 
                     ctx.set_i32_at(
                         AppContext::SCENE_0X64_PAGE,
@@ -621,7 +621,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     button_bank_remove(&mut ctx.buttons, 0xc8);
                     button_bank_remove(&mut ctx.buttons, 0xc9);
 
-                    if ctx.u8_at(AppContext::RESULT_EXIT_DIRECT)? != 0 {
+                    if ctx.u8_at(AppContext::OUTRO_EXIT_DIRECT)? != 0 {
                         let entry = ctx.i32_at(AppContext::LOSE_ENTRY_CHAPTER)?;
 
                         if (entry == 0x62 || entry == 3) && !lose_exit_map_check(ctx)? {
@@ -678,7 +678,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.set_i32_at(AppContext::SWIPE_STATE, 0)?;
                     ctx.set_block_at::<8>(AppContext::SWIPE_VELOCITY, [0; 8])?;
 
-                    if ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? != 0 {
+                    if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0 {
                         clear_items_selected(ctx)?;
                         ctx.scene_host()
                             .ok_or(Fault::HostMissing { site: SITE })?
@@ -699,7 +699,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.set_i32_at(AppContext::SWIPE_STATE, 0)?;
                     ctx.set_block_at::<8>(AppContext::SWIPE_VELOCITY, [0; 8])?;
 
-                    if ctx.i32_at(AppContext::RESULT_MAP_LOCKED)? != 0
+                    if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0
                         || ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? != 0
                     {
                         return Ok(false);
@@ -755,11 +755,11 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 if ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63 {
                     ctx.set_i32_at(
                         AppContext::CHAPTER_MODE,
-                        ctx.i32_at(AppContext::RESULT_CHAPTER_MODE)?,
+                        ctx.i32_at(AppContext::OUTRO_CHAPTER_MODE)?,
                     )?;
                     ctx.set_i32_at(
                         AppContext::ENTRY_STAGE,
-                        ctx.i32_at(AppContext::RESULT_ENTRY_STAGE)?,
+                        ctx.i32_at(AppContext::OUTRO_ENTRY_STAGE)?,
                     )?;
                 }
 
@@ -775,7 +775,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING, [0; 8])?;
                 ctx.set_block_at::<0x3c>(AppContext::SETUP_FRAMES - 4, [0; 0x3c])?;
 
-                let direct = ctx.u8_at(AppContext::RESULT_EXIT_DIRECT)? as i32;
+                let direct = ctx.u8_at(AppContext::OUTRO_EXIT_DIRECT)? as i32;
 
                 ctx.set_i32_at(
                     AppContext::SCENE_0X64_PAGE,
@@ -805,7 +805,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     AppContext::MENU_TEXTURE_PAGE + 0x30,
                     0x1ca00000000u64.to_le_bytes(),
                 )?;
-                ctx.set_block_at::<0x7c>(AppContext::RESULT_OK_PRESS, [0; 0x7c])?;
+                ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
                 ctx.scene_host()
                     .ok_or(Fault::HostMissing { site: SITE })?
                     .map_screen_init(0);

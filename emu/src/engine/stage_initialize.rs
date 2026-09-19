@@ -79,11 +79,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if let Some(ex_map) = ex_map {
         ctx.set_i32_at(
-            AppContext::RESULT_CHAPTER_MODE,
+            AppContext::OUTRO_CHAPTER_MODE,
             ctx.i32_at(AppContext::CHAPTER_MODE)?,
         )?;
         ctx.set_i32_at(
-            AppContext::RESULT_ENTRY_STAGE,
+            AppContext::OUTRO_ENTRY_STAGE,
             ctx.i32_at(AppContext::ENTRY_STAGE)?,
         )?;
         ctx.set_i32_at(AppContext::EX_MAP, ex_map)?;
@@ -92,11 +92,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::ENTRY_STAGE, 0)?;
     } else if ex_replacement_pending(ctx, -1, -1)? {
         ctx.set_i32_at(
-            AppContext::RESULT_CHAPTER_MODE,
+            AppContext::OUTRO_CHAPTER_MODE,
             ctx.i32_at(AppContext::CHAPTER_MODE)?,
         )?;
         ctx.set_i32_at(
-            AppContext::RESULT_ENTRY_STAGE,
+            AppContext::OUTRO_ENTRY_STAGE,
             ctx.i32_at(AppContext::ENTRY_STAGE)?,
         )?;
 
@@ -686,7 +686,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    ctx.set_i32_at(AppContext::RESULT_TICKS, 0)?;
+    ctx.set_i32_at(AppContext::OUTRO_TICKS, 0)?;
     ctx.set_i32_at(AppContext::RANK_REWARD_BASE, 0)?;
     sound_set_channel(sound_manager(ctx)?, 5, 5);
     ctx.set_block_at::<1>(AppContext::RANK_POPUP_SHOWN, [0])?;
@@ -969,7 +969,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             )?;
         }
 
-        ctx.set_i32_at(AppContext::RESULT_PHASE, 0)?;
+        ctx.set_i32_at(AppContext::OUTRO_PHASE, 0)?;
 
         let length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
 
@@ -1921,10 +1921,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     )?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 0x18, 0x58)?;
     ctx.set_i32_at(AppContext::OPTION_RECTS + 0x1c, 0x58)?;
-    ctx.set_i32_at(AppContext::RESULT_RECTS, 0xc5)?;
-    ctx.set_i32_at(AppContext::RESULT_RECTS + 4, 0x228)?;
-    ctx.set_i32_at(AppContext::RESULT_RECTS + 8, 0xd6)?;
-    ctx.set_i32_at(AppContext::RESULT_RECTS + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS, 0xc5)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + 4, 0x228)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + 8, 0xd6)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + 0xc, 0x58)?;
     ctx.set_i32_at(
         AppContext::LOSE_SHOP_RECT,
         get_drawable_width(ctx)?.wrapping_add(-0x118),

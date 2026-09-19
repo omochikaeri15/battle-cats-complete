@@ -34,8 +34,8 @@ pub fn trial_win_update_lambda_0(
 
             request_save_data(ctx)?;
             ctx.set_i32_at(
-                AppContext::RESULT_PHASE,
-                ctx.i32_at(AppContext::RESULT_PHASE)?.wrapping_add(1),
+                AppContext::OUTRO_PHASE,
+                ctx.i32_at(AppContext::OUTRO_PHASE)?.wrapping_add(1),
             )?;
         }
         _ => {}
