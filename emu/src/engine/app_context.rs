@@ -816,6 +816,16 @@ impl AppContext {
     pub const CHAPTER_PROGRESS: usize = 0xc94c;
     pub const CHAPTER_PROGRESS_KEY: usize = 0xc974;
     pub const ENEMY_GUIDE_SEEN: usize = 0xd968;
+    pub const TOUCH_X: usize = 0x3428;
+    pub const TOUCH_START_X: usize = 0x3430;
+    pub const TOUCH_PREV_X: usize = 0x3434;
+    pub const TOUCH_Y: usize = 0x3438;
+    pub const TOUCH_START_Y: usize = 0x3440;
+    pub const TOUCH_PREV_Y: usize = 0x3444;
+    pub const TOUCH_BEGAN: usize = 0x3448;
+    pub const TOUCH_IS_DOWN: usize = 0x344a;
+    pub const TOUCH_RELEASED: usize = 0x344b;
+    pub const BACK_PRESSED: usize = 0x344e;
     pub const SCENE_ID: usize = 0x3450;
     pub const DECK_PRESETS: usize = 0xc310;
     pub const FACTION_1_DECK: usize = 0xc33c;
