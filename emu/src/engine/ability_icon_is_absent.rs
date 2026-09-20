@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{AppContext, get_talent_icon_state, stat_colossus_slayer};
 
-pub fn ability_icon_is_base(
+pub fn ability_icon_is_absent(
     ctx: &mut AppContext,
     icon: i32,
     unit_id: i32,

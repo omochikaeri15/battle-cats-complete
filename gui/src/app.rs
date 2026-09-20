@@ -971,7 +971,7 @@ impl BattleCatsApp {
                 self.window_size = size;
                 self.window_measured = true;
 
-                self.sandbox_state.resize(size.width, size.height);
+                self.sandbox_state.resize(size.width, size.height, &self.app_state.sandbox);
 
                 self.settings.window.width = size.width;
                 self.settings.window.height = size.height;

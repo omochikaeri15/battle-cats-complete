@@ -8,7 +8,7 @@ use std::sync::Arc;
 use emu::engine::SoundManager;
 use rodio::buffer::SamplesBuffer;
 use rodio::mixer::Mixer;
-use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player, Source};
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 use tracing::warn;
 
 use super::assets::FileIndex;
@@ -72,6 +72,7 @@ pub struct Speaker {
     stream: Option<Output>,
     music: Option<(i32, Player)>,
     effects: BTreeMap<i32, Effect>,
+    voices: BTreeMap<i32, Player>,
     duck: i32,
 }
 
@@ -85,6 +86,7 @@ impl Speaker {
             stream,
             music: None,
             effects: BTreeMap::new(),
+            voices: BTreeMap::new(),
             duck: FULL,
         }
     }
@@ -220,13 +222,22 @@ impl SoundManager for Speaker {
             return;
         };
         let source = SamplesBuffer::new(channels, rate, effect.samples.to_vec());
+        let voice = Player::connect_new(stream.mixer());
 
-        stream.mixer().add(source.amplify(level));
+        voice.set_volume(level);
+        voice.append(source);
+        self.voices.insert(sound_id, voice);
     }
 
     fn stop_audio(&mut self, sound_id: i32) {
         if sound_id == EVERY_TRACK || self.music.as_ref().is_some_and(|(held, _)| *held == sound_id) {
             self.music = None;
+        }
+
+        if sound_id == EVERY_TRACK {
+            self.voices.clear();
+        } else {
+            self.voices.remove(&sound_id);
         }
     }
 
@@ -242,4 +253,21 @@ impl SoundManager for Speaker {
     }
 
     fn set_channel(&mut self, _channel: i32, _value: i32) {}
+
+    fn get_bgm_volume_setting(&mut self) -> i32 {
+        self.volumes.borrow().music
+    }
+
+    fn get_se_volume_setting(&mut self) -> i32 {
+        self.volumes.borrow().effects
+    }
+
+    fn set_bgm_volume_setting(&mut self, percent: i32) {
+        self.volumes.borrow_mut().music = percent;
+        self.refresh();
+    }
+
+    fn set_se_volume_setting(&mut self, percent: i32) {
+        self.volumes.borrow_mut().effects = percent;
+    }
 }

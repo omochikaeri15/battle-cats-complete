@@ -12,4 +12,16 @@ impl SoundManager for SilentSound {
     fn pause_all(&mut self) {}
 
     fn set_channel(&mut self, _channel: i32, _value: i32) {}
+
+    fn get_bgm_volume_setting(&mut self) -> i32 {
+        0
+    }
+
+    fn get_se_volume_setting(&mut self) -> i32 {
+        0
+    }
+
+    fn set_bgm_volume_setting(&mut self, _percent: i32) {}
+
+    fn set_se_volume_setting(&mut self, _percent: i32) {}
 }

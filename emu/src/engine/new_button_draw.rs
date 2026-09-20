@@ -30,8 +30,8 @@ pub fn new_button_draw(ctx: &mut AppContext, button: i32, x: i32, y: i32) -> Res
             ui_node_set_offset(node, across, down);
 
             drawn = match node.kind {
-                SpriteKind::Image => image_sprite_draw(ctx, node),
-                SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, node),
+                SpriteKind::Image => image_sprite_draw(ctx, node, None),
+                SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, node, None),
             };
         }
     }

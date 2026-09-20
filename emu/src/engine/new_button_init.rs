@@ -1,7 +1,10 @@
-use super::{AppContext, Sprite};
+use std::rc::Rc;
+
 use crate::Fault;
 
-pub type ButtonHandler = fn(&mut AppContext, i32, i32) -> Result<(), Fault>;
+use super::{AppContext, Sprite};
+
+pub type ButtonHandler = Rc<dyn Fn(&mut AppContext, i32, i32) -> Result<(), Fault>>;
 
 #[derive(Clone, Default)]
 pub struct Button {

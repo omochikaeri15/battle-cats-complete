@@ -5,8 +5,12 @@ use super::{
     scale9_image_sprite_update, set_color, set_tint,
 };
 
-pub fn scale9_image_sprite_draw(ctx: &mut AppContext, sprite: &mut Sprite) -> Result<(), Fault> {
-    scale9_image_sprite_update(sprite, None);
+pub fn scale9_image_sprite_draw(
+    ctx: &mut AppContext,
+    sprite: &mut Sprite,
+    parent: Option<([f32; 6], [f32; 2])>,
+) -> Result<(), Fault> {
+    scale9_image_sprite_update(sprite, parent);
 
     if sprite.visible != 0 {
         let sheet = sprite.sheet.clone();
@@ -72,10 +76,12 @@ pub fn scale9_image_sprite_draw(ctx: &mut AppContext, sprite: &mut Sprite) -> Re
         }
     }
 
+    let handed = (sprite.transform, sprite.world_scale);
+
     for child in sprite.children.iter_mut() {
         match child.kind {
-            SpriteKind::Image => image_sprite_draw(ctx, child)?,
-            SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, child)?,
+            SpriteKind::Image => image_sprite_draw(ctx, child, Some(handed))?,
+            SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, child, Some(handed))?,
         }
     }
 

@@ -24,7 +24,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
             if this.touching != 0 {
                 this.touching = 0;
 
-                let handler = this.handler;
+                let handler = this.handler.clone();
 
                 std_function_new_button_invoke(ctx, handler, id, 1)?;
 
@@ -77,7 +77,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
 
             this.state = 0;
 
-            let handler = this.handler;
+            let handler = this.handler.clone();
 
             return std_function_new_button_invoke(ctx, handler, id, 4);
         }
@@ -188,7 +188,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
             this.state = 1;
             this.frame = 0;
 
-            let handler = this.handler;
+            let handler = this.handler.clone();
 
             return std_function_new_button_invoke(ctx, handler, id, 3);
         }
@@ -205,14 +205,14 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
             .ok_or(Fault::null_pointer())?;
 
         if this.touching != 0 {
-            let handler = this.handler;
+            let handler = this.handler.clone();
 
             return std_function_new_button_invoke(ctx, handler, id, 2);
         }
 
         this.touching = 1;
 
-        let handler = this.handler;
+        let handler = this.handler.clone();
 
         return std_function_new_button_invoke(ctx, handler, id, 0);
     }
@@ -227,7 +227,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
     if this.touching != 0 {
         this.touching = 0;
 
-        let handler = this.handler;
+        let handler = this.handler.clone();
 
         std_function_new_button_invoke(ctx, handler, id, 1)?;
     }

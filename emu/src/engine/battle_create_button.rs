@@ -40,7 +40,7 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
         width,
         height,
         Some(node),
-        Some(battle_create_button_lambda_0),
+        Some(Rc::new(battle_create_button_lambda_0)),
     );
 
     let enabled = ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? == 0
@@ -86,7 +86,7 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
         0xb2,
         0x44,
         Some(panel),
-        Some(battle_create_button_lambda_1),
+        Some(Rc::new(battle_create_button_lambda_1)),
     );
 
     new_button_set_touchable(&mut ctx.buttons, share, 0)?;

@@ -14,6 +14,7 @@ pub trait Platform {
     fn system_clock_now(&mut self) -> i64;
     fn vibrate(&mut self, delay: f64, duration: f64, amplitude: f64);
     fn cancel_vibration(&mut self);
+    fn has_vibrator(&mut self) -> bool;
     fn web_view_is_open(&mut self) -> bool;
     fn share_image(&mut self, x: i32, y: i32, width: i32, height: i32);
     fn has_inquiry_code(&mut self) -> bool;

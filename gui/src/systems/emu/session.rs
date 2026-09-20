@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use emu::runtime::PauseOptions;
+use emu::runtime::BattleOptions;
 use kore::Vfs;
 use tracing::warn;
 
@@ -110,12 +110,16 @@ impl Session {
         self.failure = None;
     }
 
-    pub fn configure(&mut self, options: PauseOptions) {
+    pub fn configure(&mut self, options: BattleOptions) {
         self.driver.set_options(options);
     }
 
-    pub fn take_options(&mut self) -> Option<PauseOptions> {
+    pub fn take_options(&mut self) -> Option<BattleOptions> {
         self.driver.take_options()
+    }
+
+    pub fn set_phone(&mut self, phone: bool) {
+        self.driver.set_phone(phone);
     }
 
     pub fn retune(&mut self, music: i32, effects: i32) {
@@ -230,19 +234,6 @@ impl Session {
             self.driver.silence();
             self.driver.dim();
             self.frozen = self.frame.borrow().quads.len();
-
-            return;
-        }
-
-        if self.driver.take_quit() {
-            self.entered = false;
-            self.driver.silence();
-            self.driver.dim();
-            self.frozen = self.frame.borrow().quads.len();
-            self.phase = Phase::Closing;
-            self.discard = true;
-            self.sweep = 0;
-            self.started = Instant::now();
 
             return;
         }

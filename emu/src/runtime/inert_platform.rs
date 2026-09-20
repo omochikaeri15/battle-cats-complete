@@ -1,8 +1,20 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use crate::engine::Platform;
 
-pub struct InertPlatform;
+#[derive(Default)]
+pub struct DeviceProfile {
+    pub tablet: Cell<bool>,
+    pub side_inset: Cell<i32>,
+}
+
+#[derive(Default)]
+pub struct InertPlatform {
+    pub profile: Rc<DeviceProfile>,
+}
 
 impl Platform for InertPlatform {
     fn set_keep_awake(&mut self, _awake: bool) {}
@@ -12,7 +24,7 @@ impl Platform for InertPlatform {
     }
 
     fn is_tablet(&mut self) -> bool {
-        false
+        self.profile.tablet.get()
     }
 
     fn screen_window_ratio(&mut self) -> f32 {
@@ -20,7 +32,7 @@ impl Platform for InertPlatform {
     }
 
     fn safe_inset_left(&mut self) -> i32 {
-        0
+        self.profile.side_inset.get()
     }
 
     fn safe_inset_top(&mut self) -> i32 {
@@ -28,7 +40,7 @@ impl Platform for InertPlatform {
     }
 
     fn safe_inset_right(&mut self) -> i32 {
-        0
+        self.profile.side_inset.get()
     }
 
     fn safe_inset_bottom(&mut self) -> i32 {
@@ -44,6 +56,10 @@ impl Platform for InertPlatform {
     fn vibrate(&mut self, _gate: f64, _duration: f64, _strength: f64) {}
 
     fn cancel_vibration(&mut self) {}
+
+    fn has_vibrator(&mut self) -> bool {
+        true
+    }
 
     fn web_view_is_open(&mut self) -> bool {
         false

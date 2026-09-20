@@ -1524,13 +1524,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ))
     };
 
-    for label in 0..4usize {
+    for label in 0..3usize {
         ctx.label_texts[1 + label] =
             {
                 let font = ctx.default_font.clone();
-                let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(
-                    Fault::index_out_of_range((4 + label) as i64, 0x24),
-                )?;
+                let text = ctx.option_rows[1][label].clone();
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,

@@ -51,6 +51,97 @@ pub(crate) struct NoticeState {
     pub acknowledged: Vec<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum SandboxVolume {
+    Off,
+    Low,
+    Medium,
+    #[default]
+    High,
+}
+
+impl SandboxVolume {
+    pub const ALL: [Self; 4] = [Self::Off, Self::Low, Self::Medium, Self::High];
+
+    pub fn percent(self) -> i32 {
+        match self {
+            Self::Off => 0,
+            Self::Low => 25,
+            Self::Medium => 50,
+            Self::High => 100,
+        }
+    }
+
+    pub fn nearest(percent: i32) -> Self {
+        Self::ALL
+            .into_iter()
+            .min_by_key(|step| (step.percent() - percent).abs())
+            .unwrap_or_default()
+    }
+}
+
+impl std::fmt::Display for SandboxVolume {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Off => "Off",
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum SandboxDevice {
+    #[default]
+    Tablet,
+    Phone,
+}
+
+impl SandboxDevice {
+    pub const ALL: [Self; 2] = [Self::Tablet, Self::Phone];
+}
+
+impl std::fmt::Display for SandboxDevice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Tablet => "Tablet",
+            Self::Phone => "Phone",
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub struct SandboxScale(pub i32);
+
+impl SandboxScale {
+    pub const ALL: [Self; 7] = [
+        Self(50),
+        Self(75),
+        Self(100),
+        Self(125),
+        Self(150),
+        Self(200),
+        Self(300),
+    ];
+
+    pub fn factor(self) -> f32 {
+        self.0 as f32 / 100.0
+    }
+}
+
+impl Default for SandboxScale {
+    fn default() -> Self {
+        Self(100)
+    }
+}
+
+impl std::fmt::Display for SandboxScale {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}%", self.0)
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub(crate) struct SandboxState {
@@ -59,6 +150,8 @@ pub(crate) struct SandboxState {
     pub effects_volume: i32,
     pub two_rows: bool,
     pub vibrate: bool,
+    pub device: SandboxDevice,
+    pub screen_size: SandboxScale,
 }
 
 impl Default for SandboxState {
@@ -69,6 +162,8 @@ impl Default for SandboxState {
             effects_volume: 100,
             two_rows: false,
             vibrate: false,
+            device: SandboxDevice::default(),
+            screen_size: SandboxScale::default(),
         }
     }
 }

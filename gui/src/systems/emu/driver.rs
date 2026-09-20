@@ -1,11 +1,11 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use emu::engine::AppContext;
 use emu::runtime::{
-    PauseOptions, PauseOutcome, draw_dialogs, draw_pause, pump_dialogs, pump_pause,
-    InertMeta, InertPlatform, InertScene, InertUi, fill_dummy_save, fill_dummy_talents,
-    load_scene_sheets, stock_battle_items, unlock_dummy_combos,
+    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, apply_battle_options,
+    fill_dummy_save, fill_dummy_talents, load_scene_sheets,
+    pump_stage_return, read_battle_options, relatch_battle_rects, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use tracing::{info, warn};
@@ -30,6 +30,7 @@ const STAGE_MAP: i32 = 52;
 const STAGE_INDEX: i32 = 9;
 const CAT_SIDE: i32 = 1;
 const ENEMY_SIDE: i32 = 2;
+const NOTCH_SHARE: f32 = 0.04;
 
 pub struct Driver {
     ctx: Box<AppContext>,
@@ -38,9 +39,11 @@ pub struct Driver {
     files: Rc<RefCell<FileIndex>>,
     touches: TouchQueue,
     volumes: SharedVolumes,
-    options: PauseOptions,
+    options: BattleOptions,
     changed: bool,
-    quitting: bool,
+    returning: Rc<Cell<bool>>,
+    profile: Rc<DeviceProfile>,
+    phone: bool,
     spread: i32,
     gap: Option<i32>,
     booted: bool,
@@ -59,10 +62,19 @@ impl Driver {
         }));
 
         ctx.set_assets(Box::new(DiskAssets::new(Rc::clone(&files), Rc::clone(&sheets))));
-        ctx.set_platform(Box::new(InertPlatform));
+        let profile = Rc::new(DeviceProfile::default());
+
+        profile.tablet.set(true);
+        ctx.set_platform(Box::new(InertPlatform {
+            profile: Rc::clone(&profile),
+        }));
         ctx.set_sound(Box::new(Speaker::new(Rc::clone(&files), Rc::clone(&volumes))));
-        ctx.set_meta(Box::new(InertMeta::default()));
-        ctx.set_scene_host(Box::new(InertScene));
+        ctx.set_meta(Box::new(InertMeta));
+        let returning = Rc::new(Cell::new(false));
+
+        ctx.set_scene_host(Box::new(InertScene {
+            returning: Rc::clone(&returning),
+        }));
         ctx.set_text_renderer(Box::new(Formatter::new(Rc::clone(&sheets))));
         ctx.set_ui(Box::new(InertUi));
         ctx.draw = Some(Box::new(Recorder::new(Rc::clone(&frame))));
@@ -78,14 +90,16 @@ impl Driver {
             files,
             touches: super::input::queue(),
             volumes,
-            options: PauseOptions {
+            options: BattleOptions {
                 music: FULL_VOLUME,
                 effects: FULL_VOLUME,
                 two_rows: false,
                 vibrate: false,
             },
             changed: false,
-            quitting: false,
+            returning,
+            profile,
+            phone: false,
             spread: 0,
             gap: None,
             booted: false,
@@ -162,10 +176,31 @@ impl Driver {
 
         self.ctx.device_screen_w = width as i32;
         self.ctx.device_screen_h = height as i32;
+        self.profile.tablet.set(!self.phone);
+        self.profile
+            .side_inset
+            .set(if self.phone { (width * NOTCH_SHARE).round() as i32 } else { 0 });
 
         if let Err(fault) = emu::engine::compute_layout_metrics(&mut self.ctx) {
             warn!("emu: layout metrics could not be computed: {fault}");
         }
+
+        if !self.in_battle() {
+            return;
+        }
+
+        if let Err(fault) = relatch_battle_rects(&mut self.ctx) {
+            warn!("emu: battle rects could not be re-latched: {fault}");
+        }
+    }
+
+    pub fn set_phone(&mut self, phone: bool) {
+        self.phone = phone;
+
+        let width = self.ctx.device_screen_w as f32;
+        let height = self.ctx.device_screen_h as f32;
+
+        self.resize(width, height);
     }
 
     pub fn design_height(&self) -> f32 {
@@ -197,9 +232,6 @@ impl Driver {
             Ok(true) => {
                 unlock_dummy_combos(&mut self.ctx);
 
-                let names = self.ctx.item_names.to_vec();
-
-                self.ctx.set_meta(Box::new(InertMeta::named(names)));
                 fill_dummy_talents(&mut self.ctx);
 
                 if let Err(fault) = load_scene_sheets(&mut self.ctx) {
@@ -280,21 +312,21 @@ impl Driver {
     }
 
     pub fn advance(&mut self) -> Result<(), String> {
-        self.pump_input();
-        pump_dialogs(&mut self.ctx).map_err(|fault| format!("pump_dialogs:{fault}"))?;
-
-        match pump_pause(&mut self.ctx, self.options).map_err(|fault| format!("pump_pause:{fault}"))? {
-            PauseOutcome::Idle => (),
-            PauseOutcome::Quit => self.quitting = true,
-            PauseOutcome::Changed(options) => {
-                self.options = options;
-                self.changed = true;
-                self.set_volumes(options.music, options.effects);
-            }
+        if !self.in_battle() {
+            return Ok(());
         }
 
+        self.pump_input();
+        emu::engine::dialog_manager_process(&mut self.ctx)
+            .map_err(|fault| format!("dialog_manager_process:{fault}"))?;
+
+        emu::engine::button_bank_process(&mut self.ctx)
+            .map_err(|fault| format!("button_bank_process:{fault}"))?;
         emu::engine::main_battle_loop(&mut self.ctx)
             .map_err(|fault| format!("main_battle_loop:{fault}"))?;
+        pump_stage_return(&mut self.ctx, &self.returning)
+            .map_err(|fault| format!("pump_stage_return:{fault}"))?;
+        self.sync_options();
 
         if !self.in_battle() {
             return Ok(());
@@ -303,8 +335,8 @@ impl Driver {
         self.frame.borrow_mut().clear();
         self.begin_draw();
         emu::engine::main_draw(&mut self.ctx, 0).map_err(|fault| format!("main_draw:{fault}"))?;
-        draw_pause(&mut self.ctx, self.options).map_err(|fault| format!("draw_pause:{fault}"))?;
-        draw_dialogs(&mut self.ctx).map_err(|fault| format!("draw_dialogs:{fault}"))?;
+        emu::engine::dialog_manager_draw(&mut self.ctx)
+            .map_err(|fault| format!("dialog_manager_draw:{fault}"))?;
         self.draw_letterbox_bars();
 
         Ok(())
@@ -387,23 +419,26 @@ impl Driver {
         sound.set_bgm_duck(FULL_VOLUME);
     }
 
-    pub fn set_options(&mut self, options: PauseOptions) {
+    pub fn set_options(&mut self, options: BattleOptions) {
         self.options = options;
-        self.set_volumes(options.music, options.effects);
-        self.set_two_rows(options.two_rows);
+
+        if let Err(fault) = apply_battle_options(&mut self.ctx, options) {
+            warn!("emu: battle options could not be applied: {fault}");
+        }
     }
 
-    pub fn take_options(&mut self) -> Option<PauseOptions> {
+    pub fn take_options(&mut self) -> Option<BattleOptions> {
         std::mem::take(&mut self.changed).then_some(self.options)
     }
 
-    pub fn take_quit(&mut self) -> bool {
-        std::mem::take(&mut self.quitting)
-    }
-
-    fn set_two_rows(&mut self, enabled: bool) {
-        if let Err(fault) = self.ctx.set_block_at::<1>(AppContext::DECK_TWO_LINES, [enabled as u8]) {
-            warn!("emu: deck rows could not be set: {fault}");
+    fn sync_options(&mut self) {
+        match read_battle_options(&mut self.ctx) {
+            Ok(options) if options != self.options => {
+                self.options = options;
+                self.changed = true;
+            }
+            Ok(_) => (),
+            Err(fault) => warn!("emu: battle options could not be read: {fault}"),
         }
     }
 

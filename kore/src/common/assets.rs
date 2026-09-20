@@ -19,6 +19,11 @@ pub const FONT_KR: &[u8] = include_bytes!("../../fonts/NotoSansKR-Regular.ttf");
 pub const FONT_TC: &[u8] = include_bytes!("../../fonts/NotoSansTC-Regular.ttf");
 pub const FONT_TH: &[u8] = include_bytes!("../../fonts/NotoSansThai-Regular.ttf");
 pub const FONT_SYMBOLS: &[u8] = include_bytes!("../../fonts/Miscellaneous-Symbols.ttf");
+pub const FONT_LATIN_BOLD: &[u8] = include_bytes!("../../fonts/Roboto-Bold.ttf");
+pub const FONT_JP_BOLD: &[u8] = include_bytes!("../../fonts/NotoSansJP-Bold.otf");
+pub const FONT_KR_BOLD: &[u8] = include_bytes!("../../fonts/NotoSansKR-Bold.otf");
+pub const FONT_TC_BOLD: &[u8] = include_bytes!("../../fonts/NotoSansTC-Bold.otf");
+pub const FONT_TH_BOLD: &[u8] = include_bytes!("../../fonts/NotoSansThai-Bold.ttf");
 
 pub const CUSTOM_ICON_DATA: &[(CustomIcon, &[u8])] = &[
     (CustomIcon::Multihit, MULTIHIT),

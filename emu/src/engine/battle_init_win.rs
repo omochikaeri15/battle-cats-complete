@@ -9,7 +9,7 @@ use super::{
     analytics_params, battle_init_win_lambda_0, breadcrumb, breadcrumb_with,
     calculate_treasure_percentages, call_rng, check_medals, clear_count_rewards_get,
     clear_ex_replacement_stage, clear_lineup_count, clear_lineup_record, commit_stage_score,
-    compute_stage_xp, config_json_int, dialog_origin, dialog_top, enigma_active_at,
+    compute_stage_xp, config_json_int, dialog_top, enigma_active_at,
     enigma_active_count, enigma_add_stamina, enigma_group_at, enigma_medal_count, enigma_prune,
     enigma_roll, event_reward_received, event_reward_set, event_unit_slot, ex_redirect_check_a,
     feature_enabled, find_item_by_kind, find_item_index, get_aku_stage_list, get_cleared_count,
@@ -1995,7 +1995,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         .ok_or(Fault::null_pointer())?,
                 );
                 let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
-                let (origin_x, origin_y) = dialog_origin(ctx, dialog)?;
+                let shown = ctx
+                    .dialogs
+                    .objects
+                    .get(&dialog)
+                    .ok_or(Fault::null_pointer())?;
+                let (origin_x, origin_y) = (shown.x, shown.y);
                 let mut panel = ui_node_set_panel(
                     &sheet,
                     origin_x.wrapping_add(0x78),
@@ -2041,7 +2046,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 width,
                 height,
                 Some(panel),
-                Some(battle_init_win_lambda_0),
+                Some(Rc::new(battle_init_win_lambda_0)),
             );
 
             ctx.ad_button_id = button;

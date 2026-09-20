@@ -17,7 +17,7 @@ pub struct Sheet {
 }
 
 const NATIVE_REGION: &str = "ja";
-const WIDE_COMMA: &str = "\u{ff0c}";
+pub(super) const WIDE_COMMA: &str = "\u{ff0c}";
 
 pub type SheetCache = BTreeMap<Box<str>, Sheet>;
 

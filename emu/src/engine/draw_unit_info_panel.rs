@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    ability_icon_is_base, draw_context, draw_cut, get_equipped_orb, get_orb_def, get_orb_slot_count, get_scene_id, get_talent_max_level, get_talent_trait_set,
+    ability_icon_is_absent, draw_context, draw_cut, get_equipped_orb, get_orb_def, get_orb_slot_count, get_scene_id, get_talent_max_level, get_talent_trait_set,
     has_fixed_lineup, image_sprite_draw, orb_applies_to_unit, orb_trait_color, set_alpha, set_color, ui_node_add_child, ui_node_get_child, ui_node_set_alpha,
     ui_node_set_color, ui_node_set_sprite, ui_node_set_zoom, AppContext,
 };
@@ -195,7 +195,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             continue;
         }
 
-        if !ability_icon_is_base(ctx, row as i32, unit_id, form)? {
+        if ability_icon_is_absent(ctx, row as i32, unit_id, form)? {
             continue;
         }
 
@@ -278,7 +278,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         ui_node_set_color(tinted, color[0], color[1], color[2]);
         ui_node_set_alpha(tinted, 0x4b);
 
-        if orb_applies_to_unit(ctx, abil, trait_index, unit_id)? != 2 {
+        if orb_applies_to_unit(ctx, abil, trait_index, unit_id)? == 2 {
             for child in [0, 1, 3] {
                 let child = ui_node_get_child(&mut node, child)?;
 
@@ -292,7 +292,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         node.y = icon_y as f32;
 
-        image_sprite_draw(ctx, &mut node)?;
+        image_sprite_draw(ctx, &mut node, None)?;
 
         column = column.wrapping_add(1);
     }

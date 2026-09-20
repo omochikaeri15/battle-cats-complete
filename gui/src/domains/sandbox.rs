@@ -1,18 +1,18 @@
-use iced::widget::{column, markdown, row, scrollable, slider, text, Space};
+use iced::widget::{column, markdown, row, scrollable, text, Space};
 use iced::{Alignment, Element, Length, Size, Task, Theme};
 use tracing::warn;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use emu::runtime::PauseOptions;
+use emu::runtime::BattleOptions;
 use kore::Vfs;
 
-use crate::app::state::{AppState, SandboxState};
+use crate::app::state::{AppState, SandboxDevice, SandboxScale, SandboxState, SandboxVolume};
 use crate::app::theme;
 use crate::systems::emu::{Frame as EmuFrame, Session};
 use crate::systems::emu::SheetCache;
-use crate::widget::{popup, smooth_scroll, toggle_row};
+use crate::widget::{combo_row, popup, smooth_scroll, toggle_row};
 
 const ACKNOWLEDGEMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
@@ -33,9 +33,6 @@ const SCROLLBAR_GAP: f32 = 8.0;
 const CHOICE_SPACING: f32 = 12.0;
 const CHOICE_GAP: f32 = 18.0;
 const OPTION_SPACING: f32 = 12.0;
-const OPTION_LABEL_WIDTH: f32 = 140.0;
-const OPTION_SLIDER_WIDTH: f32 = 220.0;
-const VOLUME_STEPS: i32 = 100;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -45,8 +42,10 @@ pub enum Message {
     Disagree,
     Play,
     Tick,
-    MusicVolume(i32),
-    EffectsVolume(i32),
+    MusicVolume(SandboxVolume),
+    EffectsVolume(SandboxVolume),
+    Device(SandboxDevice),
+    ScreenSize(SandboxScale),
     TwoRows(bool),
     Vibrate(bool),
     FaultPopup(popup::Message),
@@ -61,6 +60,7 @@ pub struct State {
     terms: Vec<markdown::Item>,
     status: String,
     session: Option<Session>,
+    window: (f32, f32),
 }
 
 impl Default for State {
@@ -72,6 +72,7 @@ impl Default for State {
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
             status: String::new(),
             session: None,
+            window: (0.0, 0.0),
         }
     }
 }
@@ -105,19 +106,26 @@ impl State {
         self.session.as_ref().map(Session::touches)
     }
 
-    pub fn resize(&mut self, width: f32, height: f32) {
+    pub(crate) fn resize(&mut self, width: f32, height: f32, options: &SandboxState) {
+        self.window = (width, height);
+
+        let factor = options.screen_size.factor();
+
         if let Some(session) = self.session.as_mut() {
-            session.resize(width, height);
+            session.resize(width * factor, height * factor);
         }
     }
 
     pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState) {
         let session = self.session.get_or_insert_with(Session::new);
+        let factor = options.screen_size.factor();
 
-        session.resize(width, height);
-        session.configure(PauseOptions {
-            music: options.music_volume,
-            effects: options.effects_volume,
+        self.window = (width, height);
+        session.set_phone(options.device == SandboxDevice::Phone);
+        session.resize(width * factor, height * factor);
+        session.configure(BattleOptions {
+            music: SandboxVolume::nearest(options.music_volume).percent(),
+            effects: SandboxVolume::nearest(options.effects_volume).percent(),
             two_rows: options.two_rows,
             vibrate: options.vibrate,
         });
@@ -175,14 +183,32 @@ impl State {
                 Task::none()
             }
             Message::MusicVolume(volume) => {
-                app_state.sandbox.music_volume = volume;
+                app_state.sandbox.music_volume = volume.percent();
                 self.retune(&app_state.sandbox);
 
                 Task::none()
             }
             Message::EffectsVolume(volume) => {
-                app_state.sandbox.effects_volume = volume;
+                app_state.sandbox.effects_volume = volume.percent();
                 self.retune(&app_state.sandbox);
+
+                Task::none()
+            }
+            Message::Device(device) => {
+                app_state.sandbox.device = device;
+
+                if let Some(session) = self.session.as_mut() {
+                    session.set_phone(device == SandboxDevice::Phone);
+                }
+
+                Task::none()
+            }
+            Message::ScreenSize(size) => {
+                app_state.sandbox.screen_size = size;
+
+                let (width, height) = self.window;
+
+                self.resize(width, height, &app_state.sandbox);
 
                 Task::none()
             }
@@ -292,23 +318,39 @@ impl State {
         }
     }
 
-    fn volume_row<'a>(label: &'a str, value: i32, on_change: fn(i32) -> Message) -> Element<'a, Message> {
-        row![
-            text(label).size(BODY_SIZE).width(OPTION_LABEL_WIDTH),
-            slider(0..=VOLUME_STEPS, value, on_change).width(OPTION_SLIDER_WIDTH),
-        ]
-            .spacing(OPTION_SPACING)
-            .align_y(Alignment::Center)
-            .into()
-    }
-
     pub(crate) fn view<'a>(&'a self, options: &SandboxState) -> Element<'a, Message> {
         column![
             theme::sized_button("Play", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button)
                 .on_press(Message::Play),
             Space::new().height(CHOICE_GAP),
-            Self::volume_row("Music Volume", options.music_volume, Message::MusicVolume),
-            Self::volume_row("Sound Volume", options.effects_volume, Message::EffectsVolume),
+            combo_row(
+                "Device",
+                "Phone insets the battle controls from the screen edges like a notched phone",
+                SandboxDevice::ALL,
+                Some(options.device),
+                Some(Message::Device),
+            ),
+            combo_row(
+                "Screen Size",
+                "Size of the screen the game is told it has, as a share of the window",
+                SandboxScale::ALL,
+                Some(options.screen_size),
+                Some(Message::ScreenSize),
+            ),
+            combo_row(
+                "Music Volume",
+                "The four volume steps the battle settings cycle through",
+                SandboxVolume::ALL,
+                Some(SandboxVolume::nearest(options.music_volume)),
+                Some(Message::MusicVolume),
+            ),
+            combo_row(
+                "Sound Volume",
+                "The four volume steps the battle settings cycle through",
+                SandboxVolume::ALL,
+                Some(SandboxVolume::nearest(options.effects_volume)),
+                Some(Message::EffectsVolume),
+            ),
             toggle_row(options.two_rows, text("Two-Row Deck").size(BODY_SIZE), Some(Message::TwoRows)),
             toggle_row(options.vibrate, text("Vibrate").size(BODY_SIZE), Some(Message::Vibrate)),
             Space::new().height(CHOICE_GAP),

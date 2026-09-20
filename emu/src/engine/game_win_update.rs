@@ -1160,7 +1160,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             width.wrapping_add(0x34),
             height.wrapping_add(0x14),
             Some(node),
-            Some(game_win_update_lambda_17),
+            Some(Rc::new(game_win_update_lambda_17)),
         );
         let button = new_button_set_touchable(&mut ctx.buttons, button, 0)?;
 

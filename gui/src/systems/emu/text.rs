@@ -6,12 +6,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
 use emu::engine::{FormatArg, TextRenderer, Texture};
-use kore::common::assets::FONT_JP;
+use kore::common::assets::{
+    FONT_JP_BOLD, FONT_KR_BOLD, FONT_LATIN_BOLD, FONT_SYMBOLS, FONT_TC_BOLD, FONT_TH_BOLD,
+};
 
-use super::assets::{Sheet, SheetCache};
+use super::assets::{Sheet, SheetCache, WIDE_COMMA};
 
 const ALIGN_CENTER: i32 = 1;
 const ALIGN_RIGHT: i32 = 2;
+const LAYOUT_PAD: u32 = 4;
 
 static NEXT_LABEL: AtomicU64 = AtomicU64::new(1);
 
@@ -27,8 +30,23 @@ pub fn label_key(id: u64) -> Box<str> {
 }
 
 struct Line {
-    glyphs: Vec<(ab_glyph::GlyphId, f32)>,
+    glyphs: Vec<(usize, ab_glyph::GlyphId, f32)>,
     width: f32,
+    ascent: f32,
+    descent: f32,
+}
+
+impl Line {
+    fn empty(faces: &[FontRef<'_>], size: f32) -> Self {
+        let lead = faces.first().map(|face| face.as_scaled(Formatter::em(face, size)));
+
+        Self {
+            glyphs: Vec::new(),
+            width: 0.0,
+            ascent: lead.as_ref().map_or(0.0, ScaleFont::ascent),
+            descent: lead.as_ref().map_or(0.0, |face| -face.descent()),
+        }
+    }
 }
 
 impl Formatter {
@@ -39,38 +57,63 @@ impl Formatter {
         }
     }
 
-    fn lines(font: &FontRef<'_>, text: &str, size: f32, wrap: f32) -> Vec<Line> {
-        let scaled = font.as_scaled(PxScale::from(size));
+    fn faces() -> Vec<FontRef<'static>> {
+        [
+            FONT_LATIN_BOLD,
+            FONT_JP_BOLD,
+            FONT_KR_BOLD,
+            FONT_TC_BOLD,
+            FONT_TH_BOLD,
+            FONT_SYMBOLS,
+        ]
+        .into_iter()
+        .filter_map(|bytes| FontRef::try_from_slice(bytes).ok())
+        .collect()
+    }
+
+    fn em(face: &FontRef<'_>, size: f32) -> PxScale {
+        let height = face.height_unscaled();
+
+        PxScale::from(face.units_per_em().map_or(size, |units| size * height / units))
+    }
+
+    fn lines(faces: &[FontRef<'_>], text: &str, size: f32, wrap: f32) -> Vec<Line> {
         let mut lines = Vec::new();
 
         for paragraph in text.split('\n') {
-            let mut line = Line {
-                glyphs: Vec::new(),
-                width: 0.0,
-            };
-            let mut last = None;
+            let mut line = Line::empty(faces, size);
+            let mut last: Option<(usize, ab_glyph::GlyphId)> = None;
 
             for letter in paragraph.chars() {
-                let id = font.glyph_id(letter);
-                let kern = last.map_or(0.0, |before| scaled.kern(before, id));
+                let Some((face, id)) = faces
+                    .iter()
+                    .enumerate()
+                    .map(|(face, font)| (face, font.glyph_id(letter)))
+                    .find(|(_, id)| id.0 != 0)
+                    .or_else(|| faces.first().map(|font| (0, font.glyph_id(letter))))
+                else {
+                    continue;
+                };
+                let scaled = faces[face].as_scaled(Self::em(&faces[face], size));
                 let advance = scaled.h_advance(id);
+                let pair = |before: Option<(usize, ab_glyph::GlyphId)>| {
+                    before
+                        .filter(|(held, _)| *held == face)
+                        .map_or(0.0, |(_, left)| scaled.kern(left, id))
+                };
 
-                if wrap > 0.0 && line.width + kern + advance > wrap && !line.glyphs.is_empty() {
-                    lines.push(std::mem::replace(
-                        &mut line,
-                        Line {
-                            glyphs: Vec::new(),
-                            width: 0.0,
-                        },
-                    ));
+                if wrap > 0.0 && line.width + pair(last) + advance > wrap && !line.glyphs.is_empty() {
+                    lines.push(std::mem::replace(&mut line, Line::empty(faces, size)));
                     last = None;
                 }
 
-                let kern = last.map_or(0.0, |before| scaled.kern(before, id));
+                let kern = pair(last);
 
-                line.glyphs.push((id, line.width + kern));
+                line.glyphs.push((face, id, line.width + kern));
                 line.width += kern + advance;
-                last = Some(id);
+                line.ascent = line.ascent.max(scaled.ascent());
+                line.descent = line.descent.max(-scaled.descent());
+                last = Some((face, id));
             }
 
             lines.push(line);
@@ -80,27 +123,39 @@ impl Formatter {
     }
 
     fn rasterize(text: &str, size: i32, align: i32, wrap: i32) -> Option<Sheet> {
-        let font = FontRef::try_from_slice(FONT_JP).ok()?;
-        let scale = PxScale::from(size as f32);
-        let scaled = font.as_scaled(scale);
-        let lines = Self::lines(&font, text, size as f32, wrap as f32);
+        let faces = Self::faces();
+        let lines = Self::lines(&faces, text, size as f32, wrap as f32);
         let widest = lines.iter().map(|line| line.width).fold(0.0, f32::max);
-        let pitch = scaled.height() + scaled.line_gap();
-        let width = if wrap > 0 { wrap as u32 } else { widest.ceil() as u32 }.max(1);
-        let height = (pitch * lines.len() as f32).ceil().max(1.0) as u32;
+        let width = if wrap > 0 {
+            wrap as u32
+        } else {
+            (widest + 1.0).floor() as u32 + LAYOUT_PAD
+        }
+        .max(1);
+        let height = lines
+            .iter()
+            .map(|line| (line.ascent + line.descent).ceil())
+            .sum::<f32>()
+            .max(1.0) as u32;
         let mut pixels = vec![0u8; (width * height * 4) as usize];
+        let mut top = 0.0f32;
 
-        for (row, line) in lines.iter().enumerate() {
+        for line in &lines {
             let slack = width as f32 - line.width;
             let left = match align {
                 ALIGN_CENTER => slack / 2.0,
                 ALIGN_RIGHT => slack,
                 _ => 0.0,
             };
-            let baseline = pitch * row as f32 + scaled.ascent();
+            let baseline = top + line.ascent;
 
-            for (id, x) in &line.glyphs {
-                let glyph = id.with_scale_and_position(scale, point(left + x, baseline));
+            top += (line.ascent + line.descent).ceil();
+
+            for (face, id, x) in &line.glyphs {
+                let Some(font) = faces.get(*face) else {
+                    continue;
+                };
+                let glyph = id.with_scale_and_position(Self::em(font, size as f32), point(left + x, baseline));
                 let Some(outline) = font.outline_glyph(glyph) else {
                     continue;
                 };
@@ -221,7 +276,8 @@ impl TextRenderer for Formatter {
             return *texture;
         }
 
-        let Some(sheet) = Self::rasterize(&String::from_utf8_lossy(text), size, align, width) else {
+        let shown = String::from_utf8_lossy(text).replace(WIDE_COMMA, ",");
+        let Some(sheet) = Self::rasterize(&shown, size, align, width) else {
             return Texture::default();
         };
         let texture = Texture {
@@ -250,10 +306,12 @@ impl TextRenderer for Formatter {
                 continue;
             }
 
+            let marker = [b"${".as_slice(), name, b"}".as_slice()].concat();
+            let name = marker.as_slice();
             let mut at = 0usize;
 
             while at + name.len() <= out.len() {
-                if &out[at..at + name.len()] == *name {
+                if &out[at..at + name.len()] == name {
                     out.splice(at..at + name.len(), value.iter().copied());
                     at += value.len();
                 } else {
@@ -274,12 +332,15 @@ impl TextRenderer for Formatter {
     }
 
     fn text_width(&mut self, text: &[u8], size: i32) -> i32 {
-        FontRef::try_from_slice(FONT_JP).map_or(0, |font| {
-            Self::lines(&font, &String::from_utf8_lossy(text), size as f32, 0.0)
-                .iter()
-                .map(|line| line.width)
-                .fold(0.0, f32::max)
-                .ceil() as i32
-        })
+        Self::lines(
+            &Self::faces(),
+            &String::from_utf8_lossy(text).replace(WIDE_COMMA, ","),
+            size as f32,
+            0.0,
+        )
+        .iter()
+        .map(|line| line.width)
+        .fold(0.0, f32::max)
+        .ceil() as i32
     }
 }

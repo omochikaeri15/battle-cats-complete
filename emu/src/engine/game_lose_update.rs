@@ -290,7 +290,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 width,
                 height,
                 Some(node),
-                Some(game_lose_update_lambda_1),
+                Some(Rc::new(game_lose_update_lambda_1)),
             );
 
             new_button_set_touchable(&mut ctx.buttons, video, 0)?;

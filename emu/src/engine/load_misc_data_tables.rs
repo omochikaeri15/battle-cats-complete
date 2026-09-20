@@ -711,17 +711,13 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
-        ctx.option_rows.clear();
-
-        let mut slot = 0i32;
+        let mut slot = 0usize;
 
         while slot != 3 {
             read_stream_row(stm, b',');
-            ctx.option_rows.push([
-                read_cell_stream(stm, 0).to_vec(),
-                read_cell_stream(stm, 1).to_vec(),
-                read_cell_stream(stm, 2).to_vec(),
-            ]);
+            ctx.option_rows[slot][0] = read_cell_stream(stm, 0).to_vec();
+            ctx.option_rows[slot][1] = read_cell_stream(stm, 1).to_vec();
+            ctx.option_rows[slot][2] = read_cell_stream(stm, 2).to_vec();
             slot += 1;
         }
     }

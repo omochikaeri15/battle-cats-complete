@@ -8,6 +8,10 @@ pub trait SoundManager {
     fn set_bgm_duck(&mut self, percent: i32);
     fn pause_all(&mut self);
     fn set_channel(&mut self, channel: i32, value: i32);
+    fn get_bgm_volume_setting(&mut self) -> i32;
+    fn get_se_volume_setting(&mut self) -> i32;
+    fn set_bgm_volume_setting(&mut self, percent: i32);
+    fn set_se_volume_setting(&mut self, percent: i32);
 }
 
 pub fn sound_manager(ctx: &mut AppContext) -> Result<&mut (dyn SoundManager + 'static), Fault> {

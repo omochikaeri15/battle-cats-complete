@@ -20,5 +20,5 @@ pub fn get_top_inset_offset(ctx: &AppContext) -> i32 {
 
     metrics
         .design_h2
-        .wrapping_sub(scaled.wrapping_add(metrics.letterbox_top))
+        .wrapping_sub(scaled.wrapping_add(metrics.design_h))
 }

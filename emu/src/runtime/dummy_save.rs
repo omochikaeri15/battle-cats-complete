@@ -13,7 +13,9 @@ const STARS: usize = 4;
 
 const TUTORIAL_DONE: i32 = 1;
 const TECH_COUNT: usize = 0xb;
-const TECH_LEVEL: u32 = 0x14;
+const TECH_LEVEL: u32 = 0x13;
+const CANNON_RANGE: usize = 2;
+const CANNON_RANGE_LEVEL: u32 = 9;
 const PLUS_LEVEL: u32 = 0xa;
 const COMBO_UNLOCKED: i32 = 0;
 const PLUS_SHIFT: u32 = 0x10;
@@ -27,6 +29,7 @@ const TREASURE_CHAPTERS: usize = 0xa;
 const TREASURE_STAGES: usize = 0x31;
 const SUPERIOR_TREASURE: i32 = 3;
 const SPEED_MODES: usize = 3;
+const TWO_ROWS_UNLOCKED: i32 = 2;
 const TUTORIALS_SEEN: [usize; 4] = [
     AppContext::TUTORIAL_DECK_SEEN,
     AppContext::TUTORIAL_TWO_ROWS_SEEN,
@@ -40,6 +43,8 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
     for seen in TUTORIALS_SEEN {
         ctx.set_i32_at(seen, TUTORIAL_DONE)?;
     }
+
+    ctx.set_i32_at(AppContext::TUTORIAL_TWO_ROWS_SEEN, TWO_ROWS_UNLOCKED)?;
 
     ctx.set_i32_at(AppContext::MEDAL_MONEY_0, MEDAL_PROGRESS_CAP)?;
     ctx.set_i32_at(AppContext::MEDAL_MONEY_1, MEDAL_PROGRESS_CAP)?;
@@ -59,7 +64,13 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
     for tech in 0..TECH_COUNT {
         let mut cell = [0u8; 8];
 
-        cell[..4].copy_from_slice(&(PLUS_LEVEL << PLUS_SHIFT | TECH_LEVEL).to_le_bytes());
+        let packed = if tech == CANNON_RANGE {
+            CANNON_RANGE_LEVEL
+        } else {
+            PLUS_LEVEL << PLUS_SHIFT | TECH_LEVEL
+        };
+
+        cell[..4].copy_from_slice(&packed.to_le_bytes());
         obfuscate_value(&mut cell);
         ctx.set_block_at(AppContext::TECH_LEVELS + tech * 8, cell)?;
     }

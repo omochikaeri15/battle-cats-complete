@@ -92,7 +92,7 @@ pub fn get_ability_icon_set(
     icons.insert(0x13, stat_freeze_immune(ctx, faction, unit_id, form)?);
     icons.insert(0x14, stat_slow_immune(ctx, faction, unit_id, form)?);
     icons.insert(0x15, stat_knockback_immune(ctx, faction, unit_id, form)?);
-    icons.insert(0x16, stat_area_attack(ctx, faction, unit_id, form)?);
+    icons.insert(0x16, !stat_area_attack(ctx, faction, unit_id, form)?);
     icons.insert(0x17, stat_witch_killer(ctx, faction, unit_id, form)?);
     icons.insert(0x18, stat_zombie_killer(ctx, faction, unit_id, form)?);
     icons.insert(0x19, stat_wave_block(ctx, faction, unit_id, form)?);
@@ -172,7 +172,7 @@ pub fn get_ability_icon_set(
     icons.insert(0x48, stat_counter_surge(ctx, faction, unit_id, form)?);
     icons.insert(
         0x49,
-        stat_conjure_unit_id(ctx, faction, unit_id, form)? != 0,
+        stat_conjure_unit_id(ctx, faction, unit_id, form)? >= 0,
     );
     icons.insert(0x4a, stat_sage_slayer(ctx, faction, unit_id, form)?);
     icons.insert(

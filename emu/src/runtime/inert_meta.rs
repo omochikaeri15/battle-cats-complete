@@ -1,15 +1,7 @@
 use crate::engine::{FormatArg, MetaHost};
 
 #[derive(Default)]
-pub struct InertMeta {
-    item_names: Vec<Vec<u8>>,
-}
-
-impl InertMeta {
-    pub fn named(item_names: Vec<Vec<u8>>) -> Self {
-        Self { item_names }
-    }
-}
+pub struct InertMeta;
 
 impl MetaHost for InertMeta {
     fn analytics_event(&mut self, _event: i32, _first: i32, _second: i32, _third: i32, _fourth: i32) {}
@@ -22,13 +14,6 @@ impl MetaHost for InertMeta {
     fn analytics_named(&mut self, _code: i32, _name: &[u8], _detail: &[u8]) {}
     fn bc_log(&mut self, _name: &[u8]) {}
     fn save_battle_snapshot(&mut self) {}
-    fn drop_popup_text(&mut self, item: i32, _first: u8, amount: i32) -> Vec<u8> {
-        self.item_names
-            .get(item as i64 as usize)
-            .map(|name| format!("Obtained\n{} x{amount}", String::from_utf8_lossy(name)).into_bytes())
-            .unwrap_or_default()
-    }
-
     fn bonus_popup_text(&mut self) -> Vec<u8> {
         Vec::new()
     }

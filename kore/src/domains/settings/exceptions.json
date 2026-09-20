@@ -2,8 +2,24 @@
   "source": "custom",
   "rules": [
     {
-      "pattern": "img(015|022)",
+      "pattern": "img(005_1|015|022)",
       "extension": "png|imgcut",
+      "handling": "Only",
+      "languages": {
+        "en": true,
+        "ja": true,
+        "tw": true,
+        "ko": true,
+        "es": true,
+        "de": true,
+        "fr": true,
+        "it": true,
+        "th": true
+      }
+    },
+    {
+      "pattern": "(equipment|attribute)_explonation",
+      "extension": "tsv",
       "handling": "Only",
       "languages": {
         "en": true,

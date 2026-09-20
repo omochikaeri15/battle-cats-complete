@@ -13,7 +13,6 @@ pub struct ScreenMetrics {
     pub inset_top: i32,
     pub inset_right: i32,
     pub inset_bottom: i32,
-    pub letterbox_top: i32,
     pub scale2: f32,
     pub window_ratio: f32,
 }

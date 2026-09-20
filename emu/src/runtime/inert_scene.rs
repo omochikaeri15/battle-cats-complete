@@ -1,9 +1,32 @@
-use crate::engine::SceneHost;
+use std::cell::Cell;
+use std::rc::Rc;
 
-pub struct InertScene;
+use crate::{
+    Fault,
+    engine::{AppContext, SceneHost},
+};
+
+#[derive(Default)]
+pub struct InertScene {
+    pub returning: Rc<Cell<bool>>,
+}
+
+pub fn pump_stage_return(ctx: &mut AppContext, returning: &Cell<bool>) -> Result<(), Fault> {
+    ctx.set_block_at::<1>(AppContext::SCENE_CHANGE_REQUESTED, [0])?;
+
+    if !returning.take() {
+        return Ok(());
+    }
+
+    ctx.set_block_at::<1>(AppContext::OUTRO_EXIT_DIRECT, [1])?;
+    ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
+    ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)
+}
 
 impl SceneHost for InertScene {
-    fn battle_check_login_bonus(&mut self) {}
+    fn battle_check_login_bonus(&mut self) {
+        self.returning.set(true);
+    }
     fn scene_setup(&mut self, _scene: i32) {}
     fn battle_exit_cleanup(&mut self, _ex: u8) {}
     fn leadership_refund(&mut self) {}

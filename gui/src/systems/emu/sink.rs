@@ -681,20 +681,41 @@ impl DrawSink for Recorder {
         cut: i32,
         border_x: i32,
         border_y: i32,
-        inner_w: i32,
-        inner_h: i32,
+        _inner_w: i32,
+        _inner_h: i32,
     ) {
         let Some(outer) = Self::cut_of(sheet, cut) else {
             return;
         };
-        let inner = [
-            outer[0].wrapping_add(border_x),
-            outer[1].wrapping_add(border_y),
-            inner_w,
-            inner_h,
+        let edge_x = border_x as f32 * scale;
+        let edge_y = border_y as f32 * scale;
+        let corner = [edge_x as i32 as f32, edge_y as i32 as f32];
+        let near = [x as f32, y as f32];
+        let inner = [(x as f32 + edge_x) as i32 as f32, (y as f32 + edge_y) as i32 as f32];
+        let far = [
+            ((width + x) as f32 - edge_x) as i32 as f32,
+            ((height + y) as f32 - edge_y) as i32 as f32,
+        ];
+        let span = [
+            (width as f32 - (border_x * 2) as f32 * scale) as i32 as f32,
+            (height as f32 - (border_y * 2) as f32 * scale) as i32 as f32,
+        ];
+        let columns = [
+            (outer[0], border_x, near[0], corner[0]),
+            (outer[0] + border_x, outer[2] - border_x * 2, inner[0], span[0]),
+            (outer[0] - border_x + outer[2], border_x, far[0], corner[0]),
+        ];
+        let rows = [
+            (outer[1], border_y, near[1], corner[1]),
+            (outer[1] + border_y, outer[3] - border_y * 2, inner[1], span[1]),
+            (outer[1] - border_y + outer[3], border_y, far[1], corner[1]),
         ];
 
-        self.slices(sheet, outer, inner, [x as f32, y as f32, width as f32, height as f32], scale);
+        for (src_y, src_h, dest_y, dest_h) in rows {
+            for (src_x, src_w, dest_x, dest_w) in columns {
+                self.blit(sheet, [src_x, src_y, src_w, src_h], dest_x, dest_y, dest_w, dest_h);
+            }
+        }
     }
 
     fn draw_quad_cut(

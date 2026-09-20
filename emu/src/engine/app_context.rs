@@ -147,6 +147,19 @@ impl WaveRecord {
     pub const MINI: usize = 0x2c;
 }
 
+pub struct OptionPage;
+
+impl OptionPage {
+    pub const LEFT: usize = 0x10;
+    pub const RIGHT: usize = 0x14;
+    pub const TOP: usize = 0x18;
+    pub const BOTTOM: usize = 0x1c;
+    pub const SIDE: usize = 0x20;
+    pub const HEADER: usize = 0x24;
+    pub const FOOTER: usize = 0x28;
+    pub const TALL: usize = 0x2c;
+}
+
 pub struct Pinch;
 
 impl Pinch {
@@ -754,7 +767,7 @@ pub struct AppContext {
     pub challenge_mode_texts: [Vec<u8>; 4],
     pub page_names: Vec<Vec<u8>>,
     pub first_lose_texts: [Vec<u8>; 2],
-    pub option_rows: Vec<[Vec<u8>; 3]>,
+    pub option_rows: [[Vec<u8>; 3]; 3],
     pub main_menu_popups: Vec<[Vec<u8>; 4]>,
     pub tutorial_pages: Vec<[Vec<u8>; 12]>,
     pub popup_messages: Vec<[Vec<u8>; 10]>,
@@ -935,6 +948,7 @@ pub struct AppContext {
     pub download_sheet: Option<Rc<Imgcut>>,
     pub deploy_cost_alt_sheet: Option<Rc<Imgcut>>,
     pub scene_img005_sheet: Option<Rc<Imgcut>>,
+    pub dialog_sheet: Option<Rc<Imgcut>>,
     pub trait_icons: BTreeMap<i32, bool>,
     pub ability_icons: BTreeMap<i32, bool>,
     pub enemy_book_rows: Vec<[Vec<u8>; 5]>,
@@ -1091,7 +1105,6 @@ pub struct AppContext {
     pub miracle_anims: [[Maanim; 2]; 4],
     pub miracle_levels: [[u8; 8]; 4],
     pub battle_option_texts: Vec<Vec<u8>>,
-    pub battle_menu_texts: Vec<Vec<u8>>,
     pub battle_texts: Vec<Vec<u8>>,
     pub god_item_texts: Vec<[Vec<u8>; 2]>,
     pub god_item_names: Vec<Vec<u8>>,
@@ -1538,6 +1551,9 @@ impl AppContext {
     pub const BASE_GUARD_NOTICE_FRAME: usize = 0x874;
     pub const TUTORIAL_POPUP_OPEN: usize = 0x32b44c;
     pub const OPTION_WINDOW: usize = 0x469928;
+    pub const OPTION_WINDOW_PAGE: usize = 0x469940;
+    pub const RETURN_CONFIRM_OPEN: usize = 0x326625;
+    pub const UNIT_INFO_SAVED_TWO_LINES: usize = 0x911;
     pub const UNIT_INFO_SLOT: usize = 0x914;
     pub const BATTLE_ENTRY_RESET: usize = 0x32cbac;
     pub const CURTAIN_ACTIVE: usize = 0x326618;
@@ -1822,7 +1838,10 @@ impl AppContext {
             bg_effects: BgEffects::default(),
             bg_anim_cache: BTreeMap::new(),
             dialogs: DialogManager::default(),
-            buttons: ButtonBank::default(),
+            buttons: ButtonBank {
+                enabled: 1,
+                ..ButtonBank::default()
+            },
             unlock_popups: BTreeMap::new(),
             img001_sheet: None,
             outro_event_sheets: Default::default(),
@@ -2041,6 +2060,7 @@ impl AppContext {
             download_sheet: Default::default(),
             deploy_cost_alt_sheet: Default::default(),
             scene_img005_sheet: Default::default(),
+            dialog_sheet: Default::default(),
             trait_icons: Default::default(),
             ability_icons: Default::default(),
             enemy_book_rows: Default::default(),
@@ -2197,7 +2217,6 @@ impl AppContext {
             miracle_anims: Default::default(),
             miracle_levels: Default::default(),
             battle_option_texts: vec![Vec::new(); 9],
-            battle_menu_texts: vec![Vec::new(); 0x24],
             battle_texts: vec![Vec::new(); 0x35],
             god_item_texts: vec![Default::default(); 4],
             god_item_names: vec![Vec::new(); 4],

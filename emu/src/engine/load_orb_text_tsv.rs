@@ -5,7 +5,7 @@ use super::{AppContext, AssetStream, get_column_count, open_asset_stream, read_c
 pub fn load_orb_text_tsv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.orb_store.orb_explanations.clear();
 
-    let Some(bytes) = open_asset_stream(ctx, b"equipment_explanation.tsv", 0, 0)? else {
+    let Some(bytes) = open_asset_stream(ctx, b"equipment_explonation.tsv", 0, 0)? else {
         return Ok(());
     };
 
