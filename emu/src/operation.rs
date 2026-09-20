@@ -50,6 +50,26 @@ pub fn blend_epi16(a: [u8; 16], b: [u8; 16], mask: u8) -> [u8; 16] {
     out
 }
 
+pub fn lroundf(value: f32) -> i64 {
+    if value >= 0.0 {
+        (value + 0.5) as i64
+    } else {
+        (value - 0.5) as i64
+    }
+}
+
+pub fn lround(value: f64) -> i64 {
+    if value >= 0.0 {
+        (value + 0.5) as i64
+    } else {
+        (value - 0.5) as i64
+    }
+}
+
+pub fn atoi(text: &[u8]) -> i32 {
+    strtol(text, 10).value as i32
+}
+
 pub fn div_2<T: Truncating>(x: T) -> T {
     x / T::from(2)
 }

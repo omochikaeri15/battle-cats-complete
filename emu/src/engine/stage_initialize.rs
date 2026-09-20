@@ -1009,7 +1009,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let map_id = get_global_map_id(ctx, 0)?;
                 let item = get_map_rules(&ctx.special_rules, map_id)?
                     .ok_or(Fault::NullPointer { site: SITE })?
-                    .max_money_item;
+                    .contents_type;
 
                 if item == 2 {
                     let recharge = get_unit_recharge(ctx, 0, slot)?;

@@ -13,14 +13,14 @@ pub fn collect_rule_id_list(store: &mut SpecialRuleStore, map_id: i32) -> Vec<i3
         .collect();
 
     for group in groups {
-        if !store.rule_units.contains_key(&group) {
+        if !store.invalid_nyancombo_ids.contains_key(&group) {
             continue;
         }
 
         let mut index = 0usize;
 
-        while index < store.rule_units.entry(group).or_default().len() {
-            let unit = store.rule_units.entry(group).or_default()[index];
+        while index < store.invalid_nyancombo_ids.entry(group).or_default().len() {
+            let unit = store.invalid_nyancombo_ids.entry(group).or_default()[index];
 
             ids.push(unit);
             index += 1;

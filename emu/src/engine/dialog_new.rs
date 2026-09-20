@@ -45,6 +45,10 @@ pub trait UiHost {
     fn message_clear(&mut self, layer: i32);
     fn option_window_build(&mut self, kind: i32);
     fn option_window_draw(&mut self);
+    fn set_window_ratio(&mut self, ratio: f32);
+    fn clear_layout_latch(&mut self);
+    fn set_layout_latch(&mut self);
+    fn viewport_resized(&mut self);
     fn dialog_origin(&mut self, dialog: u64) -> (i32, i32);
     fn dialog_draw(&mut self, dialog: u64, layer: i32);
     fn page_list_layout(

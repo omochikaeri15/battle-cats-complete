@@ -6,6 +6,11 @@ pub trait Platform {
     fn item_pass_active(&mut self, item: i32) -> bool;
     fn set_keep_awake(&mut self, awake: bool);
     fn is_tablet(&mut self) -> bool;
+    fn screen_window_ratio(&mut self) -> f32;
+    fn safe_inset_left(&mut self) -> i32;
+    fn safe_inset_top(&mut self) -> i32;
+    fn safe_inset_right(&mut self) -> i32;
+    fn safe_inset_bottom(&mut self) -> i32;
     fn system_clock_now(&mut self) -> i64;
     fn vibrate(&mut self, delay: f64, duration: f64, amplitude: f64);
     fn cancel_vibration(&mut self);

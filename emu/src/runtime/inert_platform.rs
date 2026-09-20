@@ -15,6 +15,26 @@ impl Platform for InertPlatform {
         false
     }
 
+    fn screen_window_ratio(&mut self) -> f32 {
+        1.0
+    }
+
+    fn safe_inset_left(&mut self) -> i32 {
+        0
+    }
+
+    fn safe_inset_top(&mut self) -> i32 {
+        0
+    }
+
+    fn safe_inset_right(&mut self) -> i32 {
+        0
+    }
+
+    fn safe_inset_bottom(&mut self) -> i32 {
+        0
+    }
+
     fn system_clock_now(&mut self) -> i64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)

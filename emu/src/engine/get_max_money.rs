@@ -19,7 +19,7 @@ pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> 
         let map_id = get_global_map_id(ctx, 0)?;
         let first_mode = get_map_rules(&ctx.special_rules, map_id)?
             .ok_or(Fault::NullPointer { site: SITE })?
-            .max_money_item;
+            .contents_type;
         let mut item = 0xcf;
         let mut second_mode = 0i32;
 
@@ -28,7 +28,7 @@ pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> 
 
             second_mode = get_map_rules(&ctx.special_rules, map_id)?
                 .ok_or(Fault::NullPointer { site: SITE })?
-                .max_money_item;
+                .contents_type;
             item = 0xf7;
         }
 
