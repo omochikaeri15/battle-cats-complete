@@ -1392,6 +1392,11 @@ impl AppContext {
     pub const TOUCH_Y: usize = 0x3438;
     pub const TOUCH_START_Y: usize = 0x3440;
     pub const TOUCH_PREV_Y: usize = 0x3444;
+    pub const TOUCH_PENDING_X: usize = 0x342c;
+    pub const TOUCH_PENDING_Y: usize = 0x343c;
+    pub const TOUCH_PENDING_BEGAN: usize = 0x3449;
+    pub const TOUCH_PENDING_RELEASED: usize = 0x344c;
+    pub const TOUCH_DOWN_LATCH: usize = 0x344d;
     pub const TOUCH_BEGAN: usize = 0x3448;
     pub const TOUCH_IS_DOWN: usize = 0x344a;
     pub const TOUCH_RELEASED: usize = 0x344b;

@@ -1595,7 +1595,7 @@ impl BattleCatsApp {
             self.sandbox_state.curtain_sheets(),
             self.sandbox_state.curtain_covered(),
             self.sandbox_state.design_height(),
-            self.sandbox_state.letterbox_shift(),
+            self.sandbox_state.curtain_touches(),
         )
     }
 

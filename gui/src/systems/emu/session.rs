@@ -7,6 +7,7 @@ use tracing::warn;
 
 use super::driver::Driver;
 use super::assets::SheetCache;
+use super::input::TouchQueue;
 use super::sink::Frame;
 
 const BLACK_FROM: i32 = 0xb;
@@ -57,12 +58,12 @@ impl Session {
         self.driver.sheets()
     }
 
-    pub fn design_height(&self) -> f32 {
-        self.driver.design_height()
+    pub fn touches(&self) -> &TouchQueue {
+        self.driver.touches()
     }
 
-    pub fn letterbox_shift(&self) -> f32 {
-        self.driver.letterbox_shift()
+    pub fn design_height(&self) -> f32 {
+        self.driver.design_height()
     }
 
     pub fn covered(&self) -> bool {
@@ -149,18 +150,18 @@ impl Session {
     }
 
     fn step(&mut self) {
-        match self.driver.advance() {
-            Ok(true) => (),
-            Ok(false) => {
-                self.failure = Some("the battle ended".to_owned());
-                self.phase = Phase::Idle;
-                self.frame.borrow_mut().clear();
-            }
-            Err(reason) => {
-                self.failure = Some(reason);
-                self.phase = Phase::Idle;
-                self.frame.borrow_mut().clear();
-            }
+        if let Err(reason) = self.driver.advance() {
+            self.failure = Some(reason);
+            self.phase = Phase::Idle;
+            self.frame.borrow_mut().clear();
+
+            return;
+        }
+
+        if self.entered && !self.driver.in_battle() {
+            self.failure = Some("the battle ended".to_owned());
+            self.phase = Phase::Idle;
+            self.frame.borrow_mut().clear();
         }
     }
 

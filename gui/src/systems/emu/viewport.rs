@@ -7,6 +7,7 @@ use iced::{Element, Length, Rectangle, mouse};
 use tracing::debug;
 
 use super::assets::{Sheet, SheetCache};
+use super::input::{Touch, TouchQueue};
 use super::pipeline::{Pipeline, Run, Vertex};
 use super::sink::Frame as EmuFrame;
 
@@ -14,7 +15,7 @@ pub struct Viewport {
     frame: Rc<RefCell<EmuFrame>>,
     sheets: Rc<RefCell<SheetCache>>,
     design_height: f32,
-    letterbox: f32,
+    touches: TouchQueue,
     active: bool,
     covered: bool,
 }
@@ -94,7 +95,7 @@ impl<Message> shader::Program<Message> for Viewport {
             let clip = |point: [f32; 2]| {
                 [
                     (point[0] * scale + bounds.x) / bounds.width * 2.0 - 1.0,
-                    1.0 - ((point[1] + self.letterbox) * scale + bounds.y) / bounds.height * 2.0,
+                    1.0 - (point[1] * scale + bounds.y) / bounds.height * 2.0,
                 ]
             };
             let corner = |slot: usize| Vertex {
@@ -136,11 +137,40 @@ impl<Message> shader::Program<Message> for Viewport {
         &self,
         _state: &mut (),
         event: &iced::Event,
-        _bounds: Rectangle,
-        _cursor: mouse::Cursor,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
     ) -> Option<shader::Action<Message>> {
         if !self.active {
             return None;
+        }
+
+        let scale = if self.design_height > 0.0 && bounds.height > 0.0 {
+            bounds.height / self.design_height
+        } else {
+            1.0
+        };
+        let at = cursor.position_in(bounds).map(|point| {
+            (
+                (point.x / scale).round() as i32,
+                (point.y / scale).round() as i32,
+            )
+        });
+
+        if !self.covered && let Some((x, y)) = at {
+            let touch = match event {
+                iced::Event::Mouse(mouse::Event::CursorMoved { .. }) => Some(Touch::Moved { x, y }),
+                iced::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    Some(Touch::Pressed { x, y })
+                }
+                iced::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    Some(Touch::Released)
+                }
+                _ => None,
+            };
+
+            if let Some(touch) = touch {
+                self.touches.borrow_mut().push(touch);
+            }
         }
 
         matches!(
@@ -215,16 +245,17 @@ pub fn overlay<'a, Message: 'a>(
     sheets: Option<&Rc<RefCell<SheetCache>>>,
     covered: bool,
     design_height: f32,
-    letterbox: f32,
+    touches: Option<&TouchQueue>,
 ) -> Element<'a, Message> {
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
     let sheets = sheets.cloned().unwrap_or_default();
+    let touches = touches.cloned().unwrap_or_else(super::input::queue);
     let painted = shader::Shader::new(Viewport {
         frame,
         sheets,
         design_height,
-        letterbox,
+        touches,
         active,
         covered,
     })

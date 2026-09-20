@@ -7,6 +7,7 @@ use kore::Vfs;
 use tracing::{info, warn};
 
 use super::assets::{DiskAssets, FileIndex, SheetCache};
+use super::input::{Touch, TouchQueue};
 use super::sink::{Frame, Recorder};
 use super::text::Formatter;
 
@@ -25,6 +26,7 @@ pub struct Driver {
     frame: Rc<RefCell<Frame>>,
     sheets: Rc<RefCell<SheetCache>>,
     files: Rc<RefCell<FileIndex>>,
+    touches: TouchQueue,
     booted: bool,
 }
 
@@ -54,6 +56,7 @@ impl Driver {
             frame,
             sheets,
             files,
+            touches: super::input::queue(),
             booted: false,
         }
     }
@@ -76,6 +79,32 @@ impl Driver {
         &self.frame
     }
 
+    pub fn touches(&self) -> &TouchQueue {
+        &self.touches
+    }
+
+    fn pump_input(&mut self) {
+        let pending: Vec<Touch> = self.touches.borrow_mut().drain(..).collect();
+
+        for touch in pending {
+            let fed = match touch {
+                Touch::Moved { x, y } => {
+                    emu::runtime::queue_touch_position(&mut self.ctx, x, y)
+                }
+                Touch::Pressed { x, y } => emu::runtime::queue_touch_press(&mut self.ctx, x, y),
+                Touch::Released => emu::runtime::queue_touch_release(&mut self.ctx),
+            };
+
+            if let Err(fault) = fed {
+                warn!("emu: touch could not be queued: {fault}");
+            }
+        }
+
+        if let Err(fault) = emu::runtime::pump_touch(&mut self.ctx) {
+            warn!("emu: touch could not be pumped: {fault}");
+        }
+    }
+
     pub fn resize(&mut self, width: f32, height: f32) {
         if width < 1.0 || height < 1.0 {
             return;
@@ -93,8 +122,8 @@ impl Driver {
         self.ctx.screen_metrics.design_h2 as f32
     }
 
-    pub fn letterbox_shift(&self) -> f32 {
-        self.ctx.i32_at(AppContext::LETTERBOX_SHIFT).unwrap_or(0) as f32
+    pub fn in_battle(&self) -> bool {
+        emu::engine::get_scene_id(&self.ctx).is_ok_and(|scene| scene == BATTLE_SCENE)
     }
 
     pub fn arm_curtain(&mut self) {
@@ -169,17 +198,20 @@ impl Driver {
             .set_i32_at(AppContext::faction_flags(1), ENEMY_SIDE)
     }
 
-    pub fn advance(&mut self) -> Result<bool, String> {
-        let running = emu::engine::main_battle_loop(&mut self.ctx)
+    pub fn advance(&mut self) -> Result<(), String> {
+        self.pump_input();
+        emu::engine::main_battle_loop(&mut self.ctx)
             .map_err(|fault| format!("battle loop: {fault}"))?;
 
         self.frame.borrow_mut().clear();
+        self.begin_draw();
         emu::engine::main_draw(&mut self.ctx, 0).map_err(|fault| format!("main_draw: {fault}"))?;
+        self.draw_letterbox_bars();
 
-        Ok(running)
+        Ok(())
     }
 
-    fn reset_draw_state(&mut self) {
+    fn begin_draw(&mut self) {
         let scale = self.ctx.screen_metrics.scale2;
         let cleared = emu::engine::draw_context(&mut self.ctx.draw).map(|sink| {
             emu::engine::set_transform(sink, scale, &IDENTITY);
@@ -193,8 +225,49 @@ impl Driver {
             return;
         }
 
+        let origin = self
+            .ctx
+            .i32_at(AppContext::LETTERBOX_PAD)
+            .and_then(|pad| {
+                self.ctx
+                    .i32_at(AppContext::LETTERBOX_SHIFT)
+                    .map(|shift| pad.wrapping_add(shift))
+            })
+            .and_then(|top| emu::engine::set_draw_origin(&mut self.ctx, 0, top));
+
+        if let Err(fault) = origin {
+            warn!("emu: draw origin could not be set: {fault}");
+        }
+    }
+
+    fn draw_letterbox_bars(&mut self) {
+        let Ok(pad) = self.ctx.i32_at(AppContext::LETTERBOX_PAD) else {
+            return;
+        };
+
+        if pad <= 0 {
+            return;
+        }
+
         if let Err(fault) = emu::engine::set_draw_origin(&mut self.ctx, 0, 0) {
-            warn!("emu: draw origin could not be reset: {fault}");
+            warn!("emu: letterbox origin could not be set: {fault}");
+
+            return;
+        }
+
+        let Ok(width) = emu::engine::get_drawable_width(&self.ctx) else {
+            return;
+        };
+        let height = emu::engine::get_design_height2(&self.ctx);
+
+        let barred = emu::engine::draw_context(&mut self.ctx.draw).map(|sink| {
+            emu::engine::set_tint(sink, 0, 0, 0, 0xff);
+            emu::engine::fill_rect(sink, 0, 0, width, pad);
+            emu::engine::fill_rect(sink, 0, height.wrapping_sub(pad), width, pad);
+        });
+
+        if let Err(fault) = barred {
+            warn!("emu: letterbox bars could not be drawn: {fault}");
         }
     }
 
@@ -221,18 +294,19 @@ impl Driver {
             return;
         }
 
-        self.reset_draw_state();
+        self.begin_draw();
 
         if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
             warn!("emu: curtain draw faulted: {fault}");
         }
 
+        self.draw_letterbox_bars();
         self.release_curtain();
     }
 
     pub fn draw_curtain(&mut self, sweep: i32) {
         self.frame.borrow_mut().clear();
-        self.reset_draw_state();
+        self.begin_draw();
 
         if let Err(fault) = self.ctx.set_i32_at(AppContext::FADE_FRAME, sweep) {
             warn!("emu: curtain frame could not be set: {fault}");
@@ -243,5 +317,7 @@ impl Driver {
         if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
             warn!("emu: curtain draw faulted: {fault}");
         }
+
+        self.draw_letterbox_bars();
     }
 }

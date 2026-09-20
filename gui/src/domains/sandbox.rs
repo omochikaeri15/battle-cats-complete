@@ -86,8 +86,8 @@ impl State {
         self.session.as_ref().map_or(0.0, Session::design_height)
     }
 
-    pub fn letterbox_shift(&self) -> f32 {
-        self.session.as_ref().map_or(0.0, Session::letterbox_shift)
+    pub fn curtain_touches(&self) -> Option<&crate::systems::emu::TouchQueue> {
+        self.session.as_ref().map(Session::touches)
     }
 
     pub fn resize(&mut self, width: f32, height: f32) {
