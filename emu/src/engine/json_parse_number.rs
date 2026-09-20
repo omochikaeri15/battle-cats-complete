@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{JsonNode, JsonParser};
 
@@ -42,7 +42,7 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
 
     if fraction {
         let (value, range) =
-            operation::strtof(&text).ok_or(Fault::invalid_argument())?;
+            ops::strtof(&text).ok_or(Fault::invalid_argument())?;
 
         if range {
             return Err(Fault::out_of_range());
@@ -52,7 +52,7 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     }
 
     if text.iter().position(|&byte| byte == b'-') == Some(0) {
-        let parsed = operation::strtol(&text, 10);
+        let parsed = ops::strtol(&text, 10);
 
         if parsed.end == 0 {
             return Err(Fault::invalid_argument());
@@ -66,7 +66,7 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     }
 
     let (value, overflow) =
-        operation::strtoull(&text, 10).ok_or(Fault::invalid_argument())?;
+        ops::strtoull(&text, 10).ok_or(Fault::invalid_argument())?;
 
     if overflow {
         return Err(Fault::out_of_range());

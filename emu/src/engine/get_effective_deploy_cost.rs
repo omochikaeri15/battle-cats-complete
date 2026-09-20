@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_button_unit_row, get_deploy_cost, get_global_map_id, get_special_rule_params,
@@ -63,8 +63,8 @@ pub fn get_effective_deploy_cost(
         }
 
         if let Some(amount) = scaled {
-            let step = (operation::div_100(amount) as i32).wrapping_mul(params[1]);
-            let rounded = (operation::div_100(step as i64) as i32).wrapping_mul(0x64);
+            let step = (ops::div_100(amount) as i32).wrapping_mul(params[1]);
+            let rounded = (ops::div_100(step as i64) as i32).wrapping_mul(0x64);
 
             total = total.wrapping_add(step);
             total = total.wrapping_add(rounded.wrapping_sub(step));

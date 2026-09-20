@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{JsonNode, JsonParser};
 
@@ -50,7 +50,7 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     if text.len() >= 2 {
         while let Some(position) = text.windows(2).position(|pair| pair == b"\\u") {
             let digits = position + 2;
-            let parsed = operation::strtol(&text[digits..(digits + 4).min(text.len())], 0x10);
+            let parsed = ops::strtol(&text[digits..(digits + 4).min(text.len())], 0x10);
 
             if parsed.end == 0 {
                 return Err(Fault::invalid_argument());

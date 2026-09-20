@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, draw_context, draw_cut, draw_cut_scaled, draw_number_scaled,
@@ -127,7 +127,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         (0x23, 0xd, 0xf)
     };
 
-    let cost = operation::div_100(get_worker_upgrade_cost(ctx, wallet)?);
+    let cost = ops::div_100(get_worker_upgrade_cost(ctx, wallet)?);
     let left = get_left_inset_logical(ctx).wrapping_add(4);
     let y = ctx
         .i32_at(AppContext::DECK_BAR_SLIDE)?
@@ -155,7 +155,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.img001_sheet
             .as_deref()
             .ok_or(Fault::null_pointer())?,
-        operation::cvttss2si(area.left),
+        ops::cvttss2si(area.left),
         y,
         0x16,
         0x1a,

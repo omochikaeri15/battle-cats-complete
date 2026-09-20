@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, ads_available, app_on_draw, back_pressed, battle_check_login_bonus,
@@ -153,7 +153,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 let max = ctx.i32_at(AppContext::entity_field(1, slot, Entity::MAX_HP))? as f32;
                 let hp = ctx.i32_at(AppContext::entity_field(1, slot, Entity::HP))? as f32;
-                let value = operation::cvttss2si(hp / max * 100.0);
+                let value = ops::cvttss2si(hp / max * 100.0);
 
                 percent = if value == 0 { 1 } else { value };
                 found = true;
@@ -186,7 +186,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx,
                     &message,
                     0,
-                    operation::div_4(height),
+                    ops::div_4(height),
                     0,
                     Some(game_lose_update_lambda_0),
                 )?;
@@ -269,14 +269,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             );
             let width = imgcut_get_sprite_cut(&sheet, 0xa)?[2];
             let height = imgcut_get_sprite_cut(&sheet, 0xa)?[3];
-            let left = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0));
+            let left = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0));
             let top = 0x15ci32.wrapping_sub(height);
 
             let mut node = ui_node_set_sprite(
                 &sheet,
-                left.wrapping_add(operation::div_2(width))
+                left.wrapping_add(ops::div_2(width))
                     .wrapping_add(0x8c),
-                operation::div_2(height).wrapping_add(top),
+                ops::div_2(height).wrapping_add(top),
                 0xa,
             )?;
 
@@ -309,14 +309,14 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             if counter == 1 {
-                let half = operation::div_2(get_drawable_width(ctx)?);
+                let half = ops::div_2(get_drawable_width(ctx)?);
 
                 ctx.set_i32_at(AppContext::CANNON_RECT, half.wrapping_add(-0xe5))?;
                 ctx.set_i32_at(AppContext::CANNON_RECT + 4, 0x1d8)?;
                 ctx.set_i32_at(AppContext::CANNON_RECT + 8, 0xa8)?;
                 ctx.set_i32_at(AppContext::CANNON_RECT + 0xc, 0x59)?;
 
-                let half = operation::div_2(get_drawable_width(ctx)?);
+                let half = ops::div_2(get_drawable_width(ctx)?);
 
                 ctx.set_i32_at(AppContext::WORKER_RECT, half.wrapping_add(0x3d))?;
                 ctx.set_i32_at(AppContext::WORKER_RECT + 4, 0x1d8)?;

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, NyancomboRecord, UNIT_BUY, UnitBuy, get_tech_level, get_unit_level};
 
@@ -25,7 +25,7 @@ pub fn combo_unlocked(ctx: &AppContext, record: &NyancomboRecord) -> Result<bool
                 )?);
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+                if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     > 0
                 {
                     continue;
@@ -50,7 +50,7 @@ pub fn combo_unlocked(ctx: &AppContext, record: &NyancomboRecord) -> Result<bool
                     &ctx.block_at::<4>((row + (UNIT_BUY + UnitBuy::KEY) as i64) as usize)?,
                 );
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+                if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     != -1
                 {
                     let level = get_tech_level(
@@ -68,7 +68,7 @@ pub fn combo_unlocked(ctx: &AppContext, record: &NyancomboRecord) -> Result<bool
                     );
 
                     if level
-                        >= operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+                        >= ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     {
                         continue;
                     }
@@ -81,7 +81,7 @@ pub fn combo_unlocked(ctx: &AppContext, record: &NyancomboRecord) -> Result<bool
                     &ctx.block_at::<4>((row + (UNIT_BUY + UnitBuy::KEY) as i64) as usize)?,
                 );
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+                if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     == -1
                     && ctx.i32_at(
                         AppContext::REWARD_UNITS_OWNED

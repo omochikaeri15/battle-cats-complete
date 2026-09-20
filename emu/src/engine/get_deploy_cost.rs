@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CatStats, get_cat_combo_values, get_global_map_id, get_map_cost_multiplier,
@@ -30,7 +30,7 @@ pub fn get_deploy_cost(
         let discount = get_talent_value(ctx, 0, unit_id, form, 0x19, 0)?;
 
         base =
-            operation::div_100(max_i32(discount.wrapping_mul(-100).wrapping_add(column), 0) as i64)
+            ops::div_100(max_i32(discount.wrapping_mul(-100).wrapping_add(column), 0) as i64)
                 as i32;
     }
 
@@ -51,7 +51,7 @@ pub fn get_deploy_cost(
                     ctx.i32_at(AppContext::cat_stat(unit_id, form, CatStats::EOC1_COST))?;
                 let discount = get_talent_value(ctx, 0, unit_id, form, 0x19, 0)?;
 
-                base = operation::div_100(max_i32(
+                base = ops::div_100(max_i32(
                     discount.wrapping_mul(-100).wrapping_add(column),
                     0,
                 ) as i64) as i32;
@@ -67,7 +67,7 @@ pub fn get_deploy_cost(
         if orb_deploy_condition(ctx, AppContext::faction_flags(0), 0, slot)? {
             let orb = get_orb_value_max(ctx, unit_id, 0x16, 0, 0)?;
 
-            cost = (operation::div_10000(0x64i32.wrapping_sub(orb).wrapping_mul(cost) as i64)
+            cost = (ops::div_10000(0x64i32.wrapping_sub(orb).wrapping_mul(cost) as i64)
                 as i32)
                 .wrapping_mul(0x64);
         }
@@ -77,7 +77,7 @@ pub fn get_deploy_cost(
         }
 
         for value in get_cat_combo_values(ctx, &ctx.combo_store, 0x1b, unit_id)? {
-            cost = (operation::div_10000(0x64i32.wrapping_sub(value).wrapping_mul(cost) as i64)
+            cost = (ops::div_10000(0x64i32.wrapping_sub(value).wrapping_mul(cost) as i64)
                 as i32)
                 .wrapping_mul(0x64);
         }
@@ -90,7 +90,7 @@ pub fn get_deploy_cost(
             let rarity = get_unit_rarity(ctx, unit_id)? as i64;
             let percent = *params.get(rarity as usize).ok_or(Fault::index_out_of_range(rarity, params.len() as i64))?;
 
-            cost = operation::div_100(cost.wrapping_mul(percent) as i64) as i32;
+            cost = ops::div_100(cost.wrapping_mul(percent) as i64) as i32;
         }
     }
 

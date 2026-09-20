@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Base, Entity, add_money, call_rng, cannon_fire, cannon_reach_x,
@@ -182,7 +182,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0
                 && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))? != 4
             {
-                let screen_x = operation::div_10(
+                let screen_x = ops::div_10(
                     ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
                         .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
                 );
@@ -206,7 +206,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, reach)?;
 
             if ctx.i32_at(AppContext::entity_field(other, slot, Entity::OCCUPANT))? != 0 {
-                let screen_x = operation::div_10(
+                let screen_x = ops::div_10(
                     ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
                         .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
                 );
@@ -265,7 +265,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             && ctx.i32_at(AppContext::entity_field(other, slot, Entity::STATE))?
                                 != 4
                         {
-                            let screen_x = operation::div_10(
+                            let screen_x = ops::div_10(
                                 ctx.i32_at(AppContext::entity_field(other, slot, Entity::POS_X))?
                                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
                             );

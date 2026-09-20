@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_button_unit_id, get_scene_id, load_unit_icon, load_unit_rig, query_localizable,
@@ -31,7 +31,7 @@ pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
                 pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK + slot * 4)?);
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+                if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     == -1
                 {
                     let png = query_localizable(ctx, b"uni.png");

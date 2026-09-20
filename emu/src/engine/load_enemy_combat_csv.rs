@@ -1,5 +1,4 @@
-use crate::Fault;
-use crate::operation::{blend_epi16, slli_epi32};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, get_column_count,
@@ -40,7 +39,7 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
         let quad = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN)?;
         ctx.set_block_at(
             row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN,
-            blend_epi16(slli_epi32(quad, 1), slli_epi32(quad, 2), 0xc),
+            ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc),
         )?;
 
         let width = ctx.i32_at(row_at + ENEMY_STATS + EnemyStats::HITBOX_WIDTH)?;
@@ -49,7 +48,7 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
         let long_distance = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR)?;
         ctx.set_block_at(
             row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR,
-            slli_epi32(long_distance, 2),
+            ops::slli_epi32(long_distance, 2),
         )?;
 
         stats += ENEMY_STATS_STRIDE;

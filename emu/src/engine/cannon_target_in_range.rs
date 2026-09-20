@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, CANNON_SHOT_SPACING, Entity, get_base_level};
 
@@ -8,7 +8,7 @@ pub fn cannon_target_in_range(
     screen_x: i32,
 ) -> Result<bool, Fault> {
     if faction == 1 {
-        let base_x = operation::div_10(
+        let base_x = ops::div_10(
             ctx.i32_at(AppContext::entity_field(1, 0, Entity::POS_X))?
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         );
@@ -21,7 +21,7 @@ pub fn cannon_target_in_range(
         return Ok(false);
     }
 
-    let base_x = operation::div_10(
+    let base_x = ops::div_10(
         ctx.i32_at(AppContext::entity_field(0, 0, Entity::POS_X))?
             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
     );

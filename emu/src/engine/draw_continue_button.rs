@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, DECK_PRESS_SIZE_TABLE, Imgcut, draw_context, draw_cut_scaled};
 
@@ -19,7 +19,7 @@ pub fn draw_continue_button(
     } else {
         ctx.i32_at(AppContext::LOSE_SHOP_X)?
     };
-    let half = operation::div_2(bounce);
+    let half = ops::div_2(bounce);
     let across = origin.wrapping_add(x.wrapping_sub(half));
     let down = 0x24ci32.wrapping_sub(half);
 

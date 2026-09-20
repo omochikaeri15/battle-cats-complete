@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_base_upgrade, get_castle_hp_growth, get_cat_combo_bonus, get_treasure_value,
@@ -30,5 +30,5 @@ pub fn compute_base_health(ctx: &mut AppContext) -> Result<i32, Fault> {
     let total = base.wrapping_add(treasure).wrapping_add(growth);
     let bonus = get_cat_combo_bonus(ctx, &ctx.combo_store, 0xa, -1)?;
 
-    Ok(operation::div_100(bonus.wrapping_add(100).wrapping_mul(total) as i64) as i32)
+    Ok(ops::div_100(bonus.wrapping_add(100).wrapping_mul(total) as i64) as i32)
 }

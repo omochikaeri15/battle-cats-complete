@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, add_drain_pct, add_score_hit_mask, battle_not_finishing, call_rng,
@@ -109,13 +109,13 @@ pub fn attack_proc_dispatch(
 
                     get_freeze_resist_pct(ctx, other, target)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xca, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(
+                    duration = ops::div_10000(
                         10000i32.wrapping_sub(reduction).wrapping_mul(duration),
                     );
                 }
@@ -126,11 +126,11 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_freeze", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
-                duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(
+                duration = ops::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
+                duration = ops::div_100(
                     get_cat_combo_bonus(ctx, &ctx.combo_store, 0x13, unit_id)?
                         .wrapping_add(100)
                         .wrapping_mul(duration),
@@ -142,7 +142,7 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_freeze", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
@@ -179,13 +179,13 @@ pub fn attack_proc_dispatch(
 
                     get_slow_resist_pct(ctx, other, target)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xc8, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(
+                    duration = ops::div_10000(
                         10000i32.wrapping_sub(reduction).wrapping_mul(duration),
                     );
                 }
@@ -196,11 +196,11 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_slow", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
-                duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(
+                duration = ops::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
+                duration = ops::div_100(
                     get_cat_combo_bonus(ctx, &ctx.combo_store, 0x12, unit_id)?
                         .wrapping_add(100)
                         .wrapping_mul(duration),
@@ -212,7 +212,7 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_slow", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
@@ -249,13 +249,13 @@ pub fn attack_proc_dispatch(
 
                     get_weaken_resist_pct(ctx, other, target)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xcc, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(
+                    duration = ops::div_10000(
                         10000i32.wrapping_sub(reduction).wrapping_mul(duration),
                     );
                 }
@@ -266,11 +266,11 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_weaken", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
-                duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
-                duration = operation::div_100(
+                duration = ops::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
+                duration = ops::div_100(
                     get_cat_combo_bonus(ctx, &ctx.combo_store, 0x14, unit_id)?
                         .wrapping_add(100)
                         .wrapping_mul(duration),
@@ -282,7 +282,7 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_weaken", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && scored_map_pays_money(ctx)? {
@@ -315,7 +315,7 @@ pub fn attack_proc_dispatch(
 
                     get_warp_resist_pct(ctx, other, target)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if has_sage_slayer(ctx, other, target)? && is_sage(ctx, faction, attacker)? {
@@ -324,7 +324,7 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_warp", 0x46)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             }
 
@@ -362,13 +362,13 @@ pub fn attack_proc_dispatch(
 
                     get_curse_resist_pct(ctx, other, target)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 let reduction = get_cannon_effect(get_resist_part_rec(ctx)?, 0xce, level)?;
 
                 if reduction != 0 {
-                    duration = operation::div_10000(
+                    duration = ops::div_10000(
                         10000i32.wrapping_sub(reduction).wrapping_mul(duration),
                     );
                 }
@@ -379,17 +379,17 @@ pub fn attack_proc_dispatch(
 
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_curse", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
             } else {
-                duration = operation::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
+                duration = ops::div_1500(duration.wrapping_mul(treasure.wrapping_add(0x5dc)));
 
                 if !has_sage_slayer(ctx, faction, attacker)? && is_sage(ctx, other, target)? {
                     let resist = get_setting(&ctx.settings, b"battle_super_sage_curse", 0x32)?;
 
                     get_setting(&ctx.settings, b"battle_super_sage_curse", 0x32)?;
                     duration =
-                        operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
+                        ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
                 if slot_occupied(ctx, faction, attacker)? == 2 && scored_map_pays_money(ctx)? {
@@ -424,7 +424,7 @@ pub fn attack_proc_dispatch(
                 let resist =
                     get_setting(&ctx.settings, b"battle_super_sage_hunter_knockback", 0x32)?;
 
-                percent = operation::div_100(100i32.wrapping_sub(resist).wrapping_mul(percent));
+                percent = ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(percent));
             }
 
             add_drain_pct(ctx, other, target, percent)?;

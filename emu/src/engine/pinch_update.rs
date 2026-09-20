@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, Pinch};
 
@@ -29,7 +29,7 @@ pub fn pinch_update(ctx: &mut AppContext, pinch: usize) -> Result<(), Fault> {
 
         ctx.set_i32_at(
             pinch.wrapping_add(Pinch::DISTANCE),
-            operation::cvttsd2si(distance),
+            ops::cvttsd2si(distance),
         )?;
 
         return Ok(());
@@ -51,7 +51,7 @@ pub fn pinch_update(ctx: &mut AppContext, pinch: usize) -> Result<(), Fault> {
     let down = ctx
         .i32_at(pinch.wrapping_add(Pinch::FIRST_Y))?
         .wrapping_sub(ctx.i32_at(pinch.wrapping_add(Pinch::SECOND_Y))?) as f64;
-    let distance = operation::cvttsd2si((down * down + across * across).sqrt());
+    let distance = ops::cvttsd2si((down * down + across * across).sqrt());
 
     ctx.set_i32_at(pinch.wrapping_add(Pinch::PREV_DISTANCE), distance)?;
     ctx.set_i32_at(pinch.wrapping_add(Pinch::DISTANCE), distance)

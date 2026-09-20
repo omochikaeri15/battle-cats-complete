@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Surface, bg_param_resolve_int, cos_deg, draw_context, draw_cut_rotated,
@@ -23,14 +23,14 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             if fade <= 0x1d {
                 set_alpha(
                     draw_context(&mut ctx.draw)?,
-                    operation::div_30((fade << 8).wrapping_sub(fade)),
+                    ops::div_30((fade << 8).wrapping_sub(fade)),
                 );
             }
 
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let left = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
-                .wrapping_add(operation::div_100(ctx.i32_at(base + 0x20)?));
+            let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
+                .wrapping_add(ops::div_100(ctx.i32_at(base + 0x20)?));
             let width = get_drawable_width(ctx)?;
             let phase = ctx.i32_at(base + 0x28)?;
             let odd =
@@ -39,14 +39,14 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .wrapping_sub(width)
                 .wrapping_add(odd.wrapping_mul(2))
                 .wrapping_add(0x3c4);
-            let y = operation::div_100(ctx.i32_at(base + 0x24)?);
+            let y = ops::div_100(ctx.i32_at(base + 0x24)?);
             let cut = ctx.i32_at(base + 0x2c)?;
-            let span = operation::div_100(
+            let span = ops::div_100(
                 ctx.i32_at(base + 0x30)?
                     .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]),
             );
             let cut = ctx.i32_at(base + 0x2c)?;
-            let height = operation::div_100(
+            let height = ops::div_100(
                 ctx.i32_at(base + 0x30)?
                     .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]),
             );
@@ -75,7 +75,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         || get_background_id(ctx)? == 0x1b
         || get_background_id(ctx)? == 0xc5
     {
-        let left = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(0x3c0);
+        let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(0x3c0);
 
         for flake in 0..100usize {
             let drifter = AppContext::BG_DRIFTERS + flake * 0x10;
@@ -83,15 +83,15 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             for corner in 0..8usize {
                 let turn = (corner * 0x2d) as i32 as f32;
-                let across = operation::div_100(ctx.i32_at(drifter)?)
+                let across = ops::div_100(ctx.i32_at(drifter)?)
                     .wrapping_add(left)
                     .wrapping_sub(get_drawable_width(ctx)?) as f32;
-                let x = operation::cvttss2si(cos_deg(turn) * 12.0 + across);
+                let x = ops::cvttss2si(cos_deg(turn) * 12.0 + across);
 
                 ctx.set_i32_at(polygon + corner * 4, x)?;
 
-                let down = operation::div_100(ctx.i32_at(drifter + 4)?) as f32;
-                let y = operation::cvttss2si(sin_deg(turn) * 12.0 + down);
+                let down = ops::div_100(ctx.i32_at(drifter + 4)?) as f32;
+                let y = ops::cvttss2si(sin_deg(turn) * 12.0 + down);
 
                 ctx.set_i32_at(polygon + 0x20 + corner * 4, y)?;
             }
@@ -147,12 +147,12 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let base = AppContext::BG_PARTICLES + bubble * 0x14;
             let sheet = ctx.bubble_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let across = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
+            let across = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
                 .wrapping_add(ctx.i32_at(base)?)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0) as f32;
             let sway = ctx.i32_at(base + 8)?.wrapping_mul(0x12) as f32;
-            let x = operation::cvttss2si(cos_deg(sway) * 10.0 + across);
+            let x = ops::cvttss2si(cos_deg(sway) * 10.0 + across);
             let y = ctx.i32_at(base + 4)?;
 
             draw_surface_scaled(
@@ -178,21 +178,21 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let wide = ctx
                 .i32_at(base + 0xc)?
                 .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]);
-            let width = operation::div_100(wide);
+            let width = ops::div_100(wide);
             let cut = ctx.i32_at(base + 0x10)?.wrapping_add(0x14);
             let tall = ctx
                 .i32_at(base + 0xc)?
                 .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]);
-            let height = operation::div_100(tall);
-            let across = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
+            let height = ops::div_100(tall);
+            let across = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
                 .wrapping_add(ctx.i32_at(base)?)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0) as f32;
             let sway = ctx.i32_at(base + 8)?.wrapping_mul(3) as f32;
-            let x = operation::cvttss2si(
-                cos_deg(sway) * 10.0 + across - operation::div_200(wide) as f32,
+            let x = ops::cvttss2si(
+                cos_deg(sway) * 10.0 + across - ops::div_200(wide) as f32,
             );
-            let y = operation::div_neg_200(tall).wrapping_add(ctx.i32_at(base + 4)?);
+            let y = ops::div_neg_200(tall).wrapping_add(ctx.i32_at(base + 4)?);
             let cut = ctx.i32_at(base + 0x10)?.wrapping_add(0x14);
 
             draw_cut_scaled(
@@ -214,18 +214,18 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             for half in [0usize, 0x20] {
                 let sheet = ctx.bubble_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-                let across = operation::div_100(ctx.i32_at(base + half)?)
-                    .wrapping_add(operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
+                let across = ops::div_100(ctx.i32_at(base + half)?)
+                    .wrapping_add(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
                     .wrapping_sub(get_drawable_width(ctx)?)
                     .wrapping_add(0x3c0) as f32;
                 let size = (ctx.i32_at(base + half + 0xc)? << 2) as f32;
-                let sway = operation::div_100(
+                let sway = ops::div_100(
                     ctx.i32_at(base + half + 0x10)?
                         .wrapping_mul(ctx.i32_at(base + half + 8)?),
                 ) as f32;
-                let x = operation::cvttss2si(cos_deg(sway) * size / 100.0 + across);
-                let y = operation::div_100(ctx.i32_at(base + half + 4)?);
-                let size = operation::div_5(ctx.i32_at(base + half + 0xc)?);
+                let x = ops::cvttss2si(cos_deg(sway) * size / 100.0 + across);
+                let y = ops::div_100(ctx.i32_at(base + half + 4)?);
+                let size = ops::div_5(ctx.i32_at(base + half + 0xc)?);
 
                 draw_surface_scaled(
                     draw_context(&mut ctx.draw)?,
@@ -246,19 +246,19 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             for half in [0usize, 0x20] {
                 let sheet = ctx.bubble_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-                let across = operation::div_100(ctx.i32_at(base + half)?)
-                    .wrapping_add(operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
+                let across = ops::div_100(ctx.i32_at(base + half)?)
+                    .wrapping_add(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
                     .wrapping_sub(get_drawable_width(ctx)?)
                     .wrapping_add(0x3c0) as f32;
                 let size = (ctx.i32_at(base + half + 0xc)? << 2) as f32;
-                let sway = operation::div_100(
+                let sway = ops::div_100(
                     ctx.i32_at(base + half + 0x10)?
                         .wrapping_mul(ctx.i32_at(base + half + 8)?),
                 ) as f32;
-                let x = operation::cvttss2si(cos_deg(sway) * size / 100.0 + across);
-                let y = operation::div_100(ctx.i32_at(base + half + 4)?);
-                let width = operation::div_10(ctx.i32_at(base + half + 0xc)?);
-                let height = operation::div_5(ctx.i32_at(base + half + 0xc)?);
+                let x = ops::cvttss2si(cos_deg(sway) * size / 100.0 + across);
+                let y = ops::div_100(ctx.i32_at(base + half + 4)?);
+                let width = ops::div_10(ctx.i32_at(base + half + 0xc)?);
+                let height = ops::div_5(ctx.i32_at(base + half + 0xc)?);
 
                 draw_image_rotated(
                     draw_context(&mut ctx.draw)?,
@@ -335,8 +335,8 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .instances
                 .get(index)
                 .ok_or(Fault::out_of_range())?;
-            let width = operation::cvttss2si(scale * unit as f32 * scale_x);
-            let height = operation::cvttss2si(unit_y as f32 * instance.scale * instance.scale_y);
+            let width = ops::cvttss2si(scale * unit as f32 * scale_x);
+            let height = ops::cvttss2si(unit_y as f32 * instance.scale * instance.scale_y);
 
             set_part_scale(&mut model.parts[part], width, height);
 
@@ -350,7 +350,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             set_part_angle(
                 &mut model.parts[part],
-                operation::cvttss2si(unit as f32 * instance.angle / 360.0),
+                ops::cvttss2si(unit as f32 * instance.angle / 360.0),
             );
 
             let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
@@ -363,7 +363,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             set_part_opacity(
                 &mut model.parts[part],
-                operation::cvttss2si(unit as f32 * instance.alpha / 255.0),
+                ops::cvttss2si(unit as f32 * instance.alpha / 255.0),
             );
 
             let instance = ctx
@@ -420,11 +420,11 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                         .get(index)
                         .ok_or(Fault::out_of_range())?;
                     let placed = origin + spacing.wrapping_mul(step) as f32
-                        - operation::div_10(camera) as f32;
-                    let x = operation::cvttss2si(
-                        operation::div_2(width.wrapping_add(-0x3c0)) as f32 + placed,
+                        - ops::div_10(camera) as f32;
+                    let x = ops::cvttss2si(
+                        ops::div_2(width.wrapping_add(-0x3c0)) as f32 + placed,
                     );
-                    let y = operation::cvttss2si(instance.y);
+                    let y = ops::cvttss2si(instance.y);
 
                     draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
                     step = step.wrapping_add(1);

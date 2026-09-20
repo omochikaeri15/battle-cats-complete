@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, TreasureStore};
 
@@ -25,7 +25,7 @@ pub fn get_treasure_capped(
 
             let progress = ctx.i32_at(progress_row.wrapping_add(group_index * 4))?;
 
-            total = operation::div_100(progress.wrapping_mul(percent)).wrapping_add(total);
+            total = ops::div_100(progress.wrapping_mul(percent)).wrapping_add(total);
         }
 
         progress_row = progress_row.wrapping_add(0x2c);

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::AppContext;
 
@@ -40,7 +40,7 @@ pub fn get_treasure_value(
             if percent == 0 {
                 total = total.wrapping_add(progress);
             } else {
-                total = operation::div_100(progress.wrapping_mul(percent)).wrapping_add(total);
+                total = ops::div_100(progress.wrapping_mul(percent)).wrapping_add(total);
             }
         }
 

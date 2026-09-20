@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, DialogEventHandler, STAGE_DISPLAY_ORDER, ZOMBIE_CLEAR_ROWS, altar_recompute,
@@ -865,7 +865,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     if phase == 6 {
         ctx.set_i32_at(
             AppContext::OUTRO_OK_RECT,
-            operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
+            ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
         )?;
         ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 4, 0x280)?;
         ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
@@ -1141,8 +1141,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         );
         let width = imgcut_get_sprite_cut(&sheet, 0x25)?[2];
         let height = imgcut_get_sprite_cut(&sheet, 0x27)?[3];
-        let left = operation::div_2(get_drawable_width(ctx)?)
-            .wrapping_sub(operation::div_2(width.wrapping_add(0x20)));
+        let left = ops::div_2(get_drawable_width(ctx)?)
+            .wrapping_sub(ops::div_2(width.wrapping_add(0x20)));
 
         let mut node = ui_node_set_sprite(&sheet, left, 0x12, 0x27)?;
 

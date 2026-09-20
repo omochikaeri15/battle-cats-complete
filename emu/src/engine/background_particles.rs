@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, bg_effect_roll_params, bg_param_enabled, call_rng, cos_deg, get_background_id,
@@ -27,13 +27,13 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             let spread = call_rng(ctx, 0xc0).wrapping_add(seed);
-            let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+            let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
 
             ctx.set_i32_at(
                 record,
-                operation::irem(spread, width).ok_or(Fault::divide(width as i64))?,
+                ops::irem(spread, width).ok_or(Fault::divide(width as i64))?,
             )?;
 
             if get_background_id(ctx)? == 2
@@ -106,7 +106,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
         for flake in 0..100usize {
             let record = AppContext::BG_DRIFTERS.wrapping_add(flake * 0x10);
             let turn = cos_deg(ctx.i32_at(record.wrapping_add(8))? as f32);
-            let x = operation::cvttss2si(
+            let x = ops::cvttss2si(
                 ctx.i32_at(record.wrapping_add(0xc))? as f32 * turn + ctx.i32_at(record)? as f32,
             );
 
@@ -125,11 +125,11 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(wrapped, span).ok_or(Fault::divide(span as i64))?,
+                ops::irem(wrapped, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             let lift = sin_deg(ctx.i32_at(record.wrapping_add(8))? as f32);
-            let y = operation::cvttss2si(
+            let y = ops::cvttss2si(
                 ctx.i32_at(record.wrapping_add(0xc))? as f32 * lift
                     + ctx.i32_at(record.wrapping_add(4))? as f32,
             );
@@ -140,7 +140,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             let zoom = 0x64i32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?);
             let scaled = height.wrapping_mul(zoom);
             let floor = scaled
-                .wrapping_sub(operation::div_100(scaled).wrapping_mul(0x64))
+                .wrapping_sub(ops::div_100(scaled).wrapping_mul(0x64))
                 .wrapping_sub(scaled)
                 .wrapping_add(0x1fbd0);
 
@@ -203,13 +203,13 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             let spread = call_rng(ctx, 0xc0).wrapping_add(seed);
-            let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+            let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
 
             ctx.set_i32_at(
                 record,
-                operation::irem(spread, width).ok_or(Fault::divide(width as i64))?,
+                ops::irem(spread, width).ok_or(Fault::divide(width as i64))?,
             )?;
 
             let height = 0x280i32.wrapping_sub(ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?);
@@ -217,7 +217,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record.wrapping_add(4),
-                operation::div_neg_100(zoom.wrapping_mul(height)).wrapping_add(0x500),
+                ops::div_neg_100(zoom.wrapping_mul(height)).wrapping_add(0x500),
             )?;
 
             let tilt = call_rng(ctx, 0x168);
@@ -244,7 +244,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 0x21 || get_background_id(ctx)? == 0x3a {
         for star in 0..30usize {
             let record = AppContext::BG_DRIFTERS.wrapping_add(star * 0x10);
-            let width = operation::div_10(get_background_width(ctx)?)
+            let width = ops::div_10(get_background_width(ctx)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
             let x = call_rng(ctx, width);
@@ -258,7 +258,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
         for star in 0..60usize {
             let record = AppContext::BG_STARS.wrapping_add(star * 0x10);
-            let width = operation::div_10(get_background_width(ctx)?)
+            let width = ops::div_10(get_background_width(ctx)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
             let x = call_rng(ctx, width);
@@ -287,7 +287,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 0x28 {
         for record in 0..200usize {
             let sprite = AppContext::BG_SPRITES.wrapping_add(record * 0x20);
-            let rise = operation::div_100(
+            let rise = ops::div_100(
                 ctx.i32_at(sprite.wrapping_add(0x14))?
                     .wrapping_add(0xaa)
                     .wrapping_mul(ctx.i32_at(sprite.wrapping_add(0xc))?),
@@ -304,7 +304,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             let scaled =
                 height.wrapping_mul(0x64i32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?));
             let floor = scaled
-                .wrapping_sub(operation::div_100(scaled).wrapping_mul(0x64))
+                .wrapping_sub(ops::div_100(scaled).wrapping_mul(0x64))
                 .wrapping_sub(scaled)
                 .wrapping_add(0x1fbd0);
 
@@ -312,7 +312,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                 continue;
             }
 
-            let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+            let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
             let x = call_rng(ctx, width).wrapping_mul(0x64);
@@ -350,7 +350,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                 let sprite = AppContext::BG_SPRITES
                     .wrapping_add(pair * 0x40)
                     .wrapping_add(half * 0x20);
-                let fall = operation::div_neg_100(
+                let fall = ops::div_neg_100(
                     ctx.i32_at(sprite.wrapping_add(0x14))?
                         .wrapping_mul(ctx.i32_at(sprite.wrapping_add(0x10))?),
                 );
@@ -369,7 +369,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                     continue;
                 }
 
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(0x64);
@@ -395,7 +395,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                     (0x32, 0x32)
                 } else {
                     let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
-                    let lift = operation::idiv(0x4e20, min_zoom)
+                    let lift = ops::idiv(0x4e20, min_zoom)
                         .ok_or(Fault::divide(min_zoom as i64))?;
                     let y = call_rng(ctx, 0x32)
                         .wrapping_add(lift)
@@ -437,7 +437,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_add(pair * 0x40)
                     .wrapping_add(half * 0x20);
                 let speed = ctx.i32_at(sprite.wrapping_add(0xc))?;
-                let x = operation::div_100(
+                let x = ops::div_100(
                     ctx.i32_at(sprite.wrapping_add(0x14))?
                         .wrapping_add(0xaa)
                         .wrapping_mul(speed),
@@ -446,7 +446,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 ctx.set_i32_at(sprite, x)?;
 
-                let rise = operation::div_100(
+                let rise = ops::div_100(
                     ctx.i32_at(sprite.wrapping_add(0x18))?
                         .wrapping_add(0xaa)
                         .wrapping_mul(speed),
@@ -461,7 +461,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                     ctx.i32_at(sprite.wrapping_add(8))?.wrapping_add(1),
                 )?;
 
-                let stage = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
+                let stage = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
                 let edge = stage
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_mul(0x64)
@@ -475,7 +475,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                 let scaled = height
                     .wrapping_mul(0x64i32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?));
                 let floor = scaled
-                    .wrapping_sub(operation::div_100(scaled).wrapping_mul(0x64))
+                    .wrapping_sub(ops::div_100(scaled).wrapping_mul(0x64))
                     .wrapping_sub(scaled)
                     .wrapping_add(0x1fbd0);
 
@@ -483,7 +483,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                     continue;
                 }
 
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(0x64);
@@ -522,7 +522,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(record, old.wrapping_add(1))?;
 
             if old.wrapping_add(1) == 0 {
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(10);

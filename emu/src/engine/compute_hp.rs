@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CatStats, EOC_CHAPTER_HP_MUL, EnemyStats, ex_redirect_check_a, ex_redirect_check_b,
@@ -44,16 +44,16 @@ pub fn compute_hp(
                 }
             }
 
-            operation::div_100(scaled.wrapping_add(0x32))
+            ops::div_100(scaled.wrapping_add(0x32))
         };
 
         let treasure = get_treasure_value(ctx, &ctx.treasure_store, 9)? as i64;
         let with_treasure =
-            operation::div_100(treasure.wrapping_mul(leveled)).wrapping_add(leveled);
+            ops::div_100(treasure.wrapping_mul(leveled)).wrapping_add(leveled);
 
         let combo =
             get_cat_combo_bonus(ctx, &ctx.combo_store, 1, unit_id)?.wrapping_add(0x64) as i64;
-        let mut hp = operation::div_100(combo.wrapping_mul(with_treasure));
+        let mut hp = ops::div_100(combo.wrapping_mul(with_treasure));
 
         let mut boost = get_talent_value(ctx, faction, unit_id, form, 0x20, 0)?;
 
@@ -73,7 +73,7 @@ pub fn compute_hp(
         }
 
         if boost > 0 {
-            hp = operation::div_100(hp.wrapping_mul(boost.wrapping_add(0x64) as u32 as i64));
+            hp = ops::div_100(hp.wrapping_mul(boost.wrapping_add(0x64) as u32 as i64));
         }
 
         return Ok(hp as i32);
@@ -88,7 +88,7 @@ pub fn compute_hp(
             .stage_enemies
             .get(mag_slot as usize)
             .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
-        let mut scaled = operation::div_100(
+        let mut scaled = ops::div_100(
             (stage_entry_magnification(entry) as i64)
                 .wrapping_mul(base)
                 .wrapping_add(0x32),
@@ -98,7 +98,7 @@ pub fn compute_hp(
             let map_id = get_global_map_id(ctx, 0)?;
             let star = get_star_level(ctx)?;
 
-            scaled = operation::div_100(scaled.wrapping_mul(get_star_multiplier(
+            scaled = ops::div_100(scaled.wrapping_mul(get_star_multiplier(
                 &ctx.star_multipliers,
                 map_id,
                 star,
@@ -113,7 +113,7 @@ pub fn compute_hp(
             .get(chapter as usize)
             .ok_or(Fault::index_out_of_range(chapter as i64, 3))? as i64;
 
-        operation::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
+        ops::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
     };
 
     let alien = if read_flag(ctx, AppContext::faction_flags(1))? & 1 != 0 {
@@ -176,7 +176,7 @@ pub fn compute_hp(
         let gap =
             uncapped.wrapping_sub(get_treasure_value(ctx, &ctx.treasure_store, effect)?) as i64;
 
-        hp = hp.wrapping_add(operation::div_100(gap.wrapping_mul(hp)));
+        hp = hp.wrapping_add(ops::div_100(gap.wrapping_mul(hp)));
     }
 
     Ok(hp as i32)

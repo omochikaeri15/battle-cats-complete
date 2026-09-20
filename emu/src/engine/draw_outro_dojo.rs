@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     button_bank_find, dialog_draw, dialog_top, draw_context, draw_cut, draw_cut_scaled, draw_number_plain, draw_panel, draw_percent_number, entry_find_by_id,
@@ -17,7 +17,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let slide = *OUTRO_SLIDE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
 
         draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0xbe, 0);
 
@@ -41,17 +41,17 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let digits = ctx.img001_sheet.clone();
             let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
-            let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
+            let origin = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
             let score = ctx.i32_at(AppContext::SCORE_TOTAL)?;
             let offset = imgcut_get_sprite_cut(banner, 5)?[2].wrapping_add(0x14);
             let lead = imgcut_get_sprite_cut(banner, 4)?[2].wrapping_add(0x14);
             let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, score, offset, origin, 321.0, -1.0, lead, 1, 0)?;
             let cut = imgcut_get_sprite_cut(banner, 5)?[2];
-            let x = operation::cvttss2si(bounds.left - cut as f32 + -20.0);
+            let x = ops::cvttss2si(bounds.left - cut as f32 + -20.0);
 
             draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0x144, 5);
 
-            let x = operation::cvttss2si(20.0 + bounds.right);
+            let x = ops::cvttss2si(20.0 + bounds.right);
 
             draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0x143, 4);
 
@@ -60,10 +60,10 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             if phase != 2 && ctx.i32_at(AppContext::NEW_BEST_SCORE)? == 1 {
                 let middle = (bounds.right - bounds.left) * 0.5 + bounds.left;
                 let cut = imgcut_get_sprite_cut(banner, 6)?[2];
-                let x = operation::cvttss2si(middle - operation::div_2(cut) as f32);
+                let x = ops::cvttss2si(middle - ops::div_2(cut) as f32);
                 let ticks = ctx.i32_at(AppContext::OUTRO_TICKS)?;
-                let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-                let blink = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
+                let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+                let blink = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
 
                 draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0x12c, blink as i32);
             }
@@ -72,7 +72,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             if phase >= 8 {
                 let held = min_i32(phase.wrapping_add(-7), 0x1e);
-                let alpha = operation::div_30((held << 8).wrapping_sub(held));
+                let alpha = ops::div_30((held << 8).wrapping_sub(held));
 
                 set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, alpha);
 
@@ -90,10 +90,10 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_sprite_cut(plate, 0)?[2].wrapping_mul(0x86);
         let height = imgcut_get_sprite_cut(plate, 0)?[3].wrapping_mul(0x86);
-        let centre = operation::div_2(get_drawable_width(ctx)?);
-        let left = centre.wrapping_add(operation::div_neg_200(width));
+        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let left = centre.wrapping_add(ops::div_neg_200(width));
 
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, left, 0x32, operation::div_100(width), operation::div_100(height), 0);
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, left, 0x32, ops::div_100(width), ops::div_100(height), 0);
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0xff, 0xff);
 
         let title = ctx.stage_name_sheet.clone();
@@ -132,7 +132,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let rank = ranking_rank_by_id(&ctx.ranking_entries, map);
         let map = ctx.i32_at(AppContext::MAP_INDEX)?;
         let span = 0x64i32.wrapping_sub(ranking_rank_by_id(&ctx.ranking_entries, map));
-        let percent = operation::div_900(held.wrapping_mul(held).wrapping_mul(span)).wrapping_add(rank);
+        let percent = ops::div_900(held.wrapping_mul(held).wrapping_mul(span)).wrapping_add(rank);
         let gauge = ctx.outro_event_sheets[0].clone();
         let gauge = gauge.as_deref().ok_or(Fault::null_pointer())?;
         let small = ctx.img001_second_sheet.clone();
@@ -147,8 +147,8 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let bounce = *DECK_PRESS_SIZE_TABLE
                 .get(step as i64 as usize)
                 .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
-            let half = operation::div_2(bounce);
-            let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
+            let half = ops::div_2(bounce);
+            let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
                 .wrapping_sub(half)
@@ -159,7 +159,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let label = ctx.img006_sheet.clone();
             let label = label.as_deref().ok_or(Fault::null_pointer())?;
-            let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
+            let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
                 .wrapping_sub(half)
@@ -178,14 +178,14 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                 let plate = ctx.img101_sheet.clone();
                 let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
-                let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
                 let y = ctx
                     .i32_at(AppContext::LETTERBOX_SHIFT)?
                     .wrapping_sub(get_bottom_inset_logical(ctx)?)
                     .wrapping_add(0x22e);
                 let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-                let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-                let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
+                let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+                let cut = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
 
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
             }

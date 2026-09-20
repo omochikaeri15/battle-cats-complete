@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, battle_create_button_lambda_0, battle_create_button_lambda_1,
@@ -25,8 +25,8 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let mut node = ui_node_set_sprite(
         &sheet,
-        operation::div_2(width).wrapping_add(left).wrapping_add(-10),
-        operation::div_2(height).wrapping_add(top),
+        ops::div_2(width).wrapping_add(left).wrapping_add(-10),
+        ops::div_2(height).wrapping_add(top),
         0x78,
     )?;
 

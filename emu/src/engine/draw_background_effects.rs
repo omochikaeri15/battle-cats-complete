@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     bg_param_resolve_int, draw_context, draw_cut, draw_cut_rotated, draw_cut_scaled, draw_model, fill_rect, get_background_id, get_drawable_width, glow_set,
@@ -52,7 +52,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             if lit {
-                let fade = operation::cvttss2si(sin_deg(depth as f32 * 0.45) * 255.0);
+                let fade = ops::cvttss2si(sin_deg(depth as f32 * 0.45) * 255.0);
 
                 ctx.set_i32_at(AppContext::DRAW_TEMP_3, fade)?;
             }
@@ -67,7 +67,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             set_tint_alpha(draw_context(&mut ctx.draw)?, alpha);
 
-            let drift = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(ctx.i32_at(record)?);
+            let drift = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(ctx.i32_at(record)?);
             let x = drift.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c0);
             let y = ctx.i32_at(record + 4)?;
 
@@ -98,18 +98,18 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let fade = ctx.i32_at(base)?;
 
             if fade <= 0x1d {
-                set_alpha(draw_context(&mut ctx.draw)?, operation::div_30((fade << 8).wrapping_sub(fade)));
+                set_alpha(draw_context(&mut ctx.draw)?, ops::div_30((fade << 8).wrapping_sub(fade)));
             }
 
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let left = operation::div_4(operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(operation::div_100(ctx.i32_at(base + 8)?));
+            let left = ops::div_4(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(ops::div_100(ctx.i32_at(base + 8)?));
             let x = left.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c4);
-            let y = operation::div_100(ctx.i32_at(base + 0xc)?);
+            let y = ops::div_100(ctx.i32_at(base + 0xc)?);
             let cut = ctx.i32_at(base + 0x14)?;
-            let span = operation::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
+            let span = ops::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
             let cut = ctx.i32_at(base + 0x14)?;
-            let height = operation::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
+            let height = ops::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
             let cut = ctx.i32_at(base + 0x14)?;
             let angle = ctx.i32_at(base + 0x20)? as f32;
 
@@ -136,19 +136,19 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 0x64i32.wrapping_sub(folded >> 3)
             } else {
-                operation::mul_high(life.wrapping_mul(0x64) as u8 as i32, 0xab) >> 9
+                ops::mul_high(life.wrapping_mul(0x64) as u8 as i32, 0xab) >> 9
             };
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let span = operation::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale));
-            let height = operation::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale));
-            let drift = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
-            let x = operation::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale))
+            let span = ops::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale));
+            let height = ops::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale));
+            let drift = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
+            let x = ops::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale))
                 .wrapping_add(ctx.i32_at(record + 4)?)
                 .wrapping_add(drift)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0);
-            let y = operation::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale)).wrapping_add(ctx.i32_at(record + 8)?);
+            let y = ops::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale)).wrapping_add(ctx.i32_at(record + 8)?);
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, span, height, 0x14);
         }
@@ -214,8 +214,8 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .instances
                 .get(index)
                 .ok_or(Fault::out_of_range())?;
-            let width = operation::cvttss2si(scale * unit as f32 * scale_x);
-            let height = operation::cvttss2si(unit_y as f32 * instance.scale * instance.scale_y);
+            let width = ops::cvttss2si(scale * unit as f32 * scale_x);
+            let height = ops::cvttss2si(unit_y as f32 * instance.scale * instance.scale_y);
 
             set_part_scale(&mut model.parts[part], width, height);
 
@@ -229,7 +229,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             set_part_angle(
                 &mut model.parts[part],
-                operation::cvttss2si(unit as f32 * instance.angle / 360.0),
+                ops::cvttss2si(unit as f32 * instance.angle / 360.0),
             );
 
             let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
@@ -242,7 +242,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             set_part_opacity(
                 &mut model.parts[part],
-                operation::cvttss2si(unit as f32 * instance.alpha / 255.0),
+                ops::cvttss2si(unit as f32 * instance.alpha / 255.0),
             );
 
             let instance = ctx
@@ -299,11 +299,11 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                         .get(index)
                         .ok_or(Fault::out_of_range())?;
                     let placed = origin + spacing.wrapping_mul(step) as f32
-                        - operation::div_10(camera) as f32;
-                    let x = operation::cvttss2si(
-                        operation::div_2(width.wrapping_add(-0x3c0)) as f32 + placed,
+                        - ops::div_10(camera) as f32;
+                    let x = ops::cvttss2si(
+                        ops::div_2(width.wrapping_add(-0x3c0)) as f32 + placed,
                     );
-                    let y = operation::cvttss2si(instance.y);
+                    let y = ops::cvttss2si(instance.y);
 
                     draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
                     step = step.wrapping_add(1);

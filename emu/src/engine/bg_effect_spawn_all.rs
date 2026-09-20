@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, BgEffectRolls, bg_effect_roll_params, bg_param_roll_int, get_background_id,
@@ -9,23 +9,23 @@ use super::{
 
 pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
     let length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
-    let visible = operation::div_1000(
+    let visible = ops::div_1000(
         ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?
             .wrapping_mul(length),
     );
     let span = get_drawable_width(ctx)?
         .wrapping_sub(visible)
         .wrapping_mul(length);
-    let span = operation::idiv(span, visible).ok_or(Fault::divide(visible as i64))?;
-    let half = operation::div_2(span);
-    let left = operation::div_neg_20(span) as f64;
+    let span = ops::idiv(span, visible).ok_or(Fault::divide(visible as i64))?;
+    let half = ops::div_2(span);
+    let left = ops::div_neg_20(span) as f64;
     let left = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5 + left) as f32;
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
-    let lift = operation::div_2(shift)
+    let lift = ops::div_2(shift)
         .wrapping_mul(100)
         .wrapping_add(0xc350);
     let zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
-    let lift = operation::idiv(lift, zoom).ok_or(Fault::divide(zoom as i64))?;
+    let lift = ops::idiv(lift, zoom).ok_or(Fault::divide(zoom as i64))?;
     let top = 0x1e0i32.wrapping_sub(lift) as f32;
     let centre = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5) as f32;
     let scale = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?.wrapping_mul(100) as f32 / 10000.0;
@@ -38,8 +38,8 @@ pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
         + half as f32;
     let y = (-(zero * left + scale * top + down)).floor();
 
-    ctx.bg_effects.origin_x = operation::cvttss2si(x);
-    ctx.bg_effects.origin_y = operation::cvttss2si(y);
+    ctx.bg_effects.origin_x = ops::cvttss2si(x);
+    ctx.bg_effects.origin_y = ops::cvttss2si(y);
     ctx.bg_effects.defs.clear();
 
     let background = get_background_id(ctx)?;

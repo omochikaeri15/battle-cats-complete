@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, Entity, draw_context, draw_model, get_drawable_width, maanim_execute};
 
@@ -32,8 +32,8 @@ pub fn counter_surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Resu
             .counter_surge_events
             .get(index)
             .ok_or(Fault::out_of_range())?;
-        let pos = operation::div_10(event.x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
-        let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pos);
+        let pos = ops::div_10(event.x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pos);
         let y = (ctx.i32_at(AppContext::entity_field(faction, slot, Entity::Z_LAYER))? << 2)
             .wrapping_add(0x1cc);
         let model = if faction == 0 {

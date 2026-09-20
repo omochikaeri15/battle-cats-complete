@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Default)]
 pub struct PointRuleDetail {
@@ -9,6 +9,10 @@ pub struct PointRuleDetail {
 #[derive(Clone, Default)]
 pub struct PointRule {
     pub kind: i32,
+    pub page_headline: Vec<u8>,
+    pub headline_labels: Vec<Vec<u8>>,
+    pub explanation_labels: Vec<Vec<u8>>,
+    pub explanation_types: Vec<i32>,
     pub detail: Option<PointRuleDetail>,
 }
 
@@ -27,7 +31,7 @@ pub struct PointRecord {
 pub struct EventItemStore {
     pub records: BTreeMap<i32, PointRecord>,
     pub point_cap: i32,
-    pub listed: BTreeSet<i32>,
+    pub point_maps: BTreeMap<i32, Vec<i32>>,
     pub stage_points: BTreeMap<i32, i32>,
     pub stage_key: i32,
     pub rule_tables: BTreeMap<i32, PointRuleTable>,
@@ -40,5 +44,5 @@ pub struct EventItemStore {
 }
 
 pub fn event_items_has(store: &EventItemStore, item: i32) -> bool {
-    store.listed.contains(&item)
+    store.point_maps.contains_key(&item)
 }

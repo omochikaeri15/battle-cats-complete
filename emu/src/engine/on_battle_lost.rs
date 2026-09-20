@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, ad_prepare, add_resource, add_stage_record,
@@ -161,7 +161,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(entity + Entity::DEFEAT_FALL, fall)?;
         ctx.set_i32_at(entity + Entity::DEFEAT_ALPHA, 0xff)?;
 
-        let drift = operation::div_10(ctx.i32_at(entity + Entity::SPEED)?);
+        let drift = ops::div_10(ctx.i32_at(entity + Entity::SPEED)?);
         let drift = call_rng(ctx, 0xa).wrapping_add(drift);
 
         ctx.set_i32_at(entity + Entity::DEFEAT_DRIFT, drift)?;
@@ -224,7 +224,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         let row = ctx.i32_at(AppContext::STAGE_ROW)?.wrapping_add(stage_key);
 
         mission_progress(ctx, 1, row, 1, 0, 0)?;
-        mission_progress(ctx, 9, operation::div_1000(map_id), 1, 0, 0)?;
+        mission_progress(ctx, 9, ops::div_1000(map_id), 1, 0, 0)?;
 
         let row = stage_key.wrapping_add(ctx.i32_at(AppContext::STAGE_ROW)?);
         let total = ctx.i32_at(AppContext::SCORE_TOTAL)?;
@@ -328,7 +328,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(
         AppContext::OUTRO_OK_RECT,
-        operation::div_2(width).wrapping_sub(0xbe),
+        ops::div_2(width).wrapping_sub(0xbe),
     )?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;

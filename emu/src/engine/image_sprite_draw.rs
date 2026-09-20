@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Sprite, SpriteKind, draw_context, draw_quad_region, image_sprite_update,
@@ -39,14 +39,14 @@ pub fn image_sprite_draw(ctx: &mut AppContext, sprite: &mut Sprite) -> Result<()
         draw_quad_region(
             draw_context(&mut ctx.draw)?,
             sheet,
-            operation::cvttss2si(sprite.quad[0]),
-            operation::cvttss2si(sprite.quad[1]),
-            operation::cvttss2si(sprite.quad[2]),
-            operation::cvttss2si(sprite.quad[3]),
-            operation::cvttss2si(sprite.quad[4]),
-            operation::cvttss2si(sprite.quad[5]),
-            operation::cvttss2si(sprite.quad[6]),
-            operation::cvttss2si(sprite.quad[7]),
+            ops::cvttss2si(sprite.quad[0]),
+            ops::cvttss2si(sprite.quad[1]),
+            ops::cvttss2si(sprite.quad[2]),
+            ops::cvttss2si(sprite.quad[3]),
+            ops::cvttss2si(sprite.quad[4]),
+            ops::cvttss2si(sprite.quad[5]),
+            ops::cvttss2si(sprite.quad[6]),
+            ops::cvttss2si(sprite.quad[7]),
             sprite.cut[0],
             sprite.cut[1],
             sprite.cut[2],

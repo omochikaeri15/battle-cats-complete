@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, btree_map::Entry};
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, BgParamSpec, bg_param_resolve_int, call_rng, max_i32, min_i32};
 
@@ -57,5 +57,5 @@ pub fn bg_param_roll_int(
     )?);
     let draw = *groups.get(&spec.rand_group).ok_or(Fault::key_not_found(spec.rand_group as i64))?;
 
-    Ok(operation::div_10000(span.wrapping_mul(draw)).wrapping_add(low))
+    Ok(ops::div_10000(span.wrapping_mul(draw)).wrapping_add(low))
 }

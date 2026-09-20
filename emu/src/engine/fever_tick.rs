@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_global_map_id, get_special_rule_params, play_sound, refresh_cat_speeds,
@@ -34,9 +34,9 @@ pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
 
     let needed = *params.get(1).ok_or(Fault::index_out_of_range(1, params.len() as i64))?;
     let baseline = ctx.special_rules.point_baseline;
-    let target = operation::cvttsd2si((points as f64 - baseline as f64) * 294.0 / needed as f64);
+    let target = ops::cvttsd2si((points as f64 - baseline as f64) * 294.0 / needed as f64);
     let fill = ctx.special_rules.gauge_fill;
-    let mid = operation::div_2(fill.wrapping_add(target));
+    let mid = ops::div_2(fill.wrapping_add(target));
     let step = if mid.wrapping_sub(fill) >= 2 {
         mid
     } else {

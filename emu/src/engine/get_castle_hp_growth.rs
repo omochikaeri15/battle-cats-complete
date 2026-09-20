@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, get_cannon_base_level};
 
@@ -21,19 +21,19 @@ pub fn get_castle_hp_growth(ctx: &AppContext, level: i32) -> Result<i32, Fault> 
                 2 => {
                     let ratio = progress as f32 / divisor as f32;
 
-                    Ok(operation::cvttss2si(
+                    Ok(ops::cvttss2si(
                         step.value1 as f32
-                            + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span as f32,
+                            + (ops::powf(ratio + -1.0, 3.0) + 1.0) * span as f32,
                     ))
                 }
                 1 => {
                     let ratio = progress as f32 / divisor as f32;
 
-                    Ok(operation::cvttss2si(
-                        operation::powf(ratio, 3.0) * span as f32 + step.value1 as f32,
+                    Ok(ops::cvttss2si(
+                        ops::powf(ratio, 3.0) * span as f32 + step.value1 as f32,
                     ))
                 }
-                0 => Ok(operation::idiv(span.wrapping_mul(progress), divisor)
+                0 => Ok(ops::idiv(span.wrapping_mul(progress), divisor)
                     .ok_or(Fault::divide(divisor as i64))?
                     .wrapping_add(step.value1)),
                 _ => Ok(0),

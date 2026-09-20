@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, Entity, get_button_unit_form, get_entity_button, get_setting, has_orb};
 
@@ -19,7 +19,7 @@ pub fn get_status_bits(ctx: &AppContext, faction: i32, slot: i32) -> Result<i32,
             Entity::STRENGTHEN_THRESHOLD,
         ))?);
 
-        bits = (hp <= operation::div_100(scaled as i64) as i32) as i32;
+        bits = (hp <= ops::div_100(scaled as i64) as i32) as i32;
     }
 
     if faction != 0 {

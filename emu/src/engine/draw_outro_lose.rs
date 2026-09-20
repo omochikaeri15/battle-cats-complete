@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     button_bank_find, draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_number_plain, draw_surface_aligned, fill_rect,
@@ -26,7 +26,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
     if phase >= 2 {
         let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
         let held = if frame < 0x50 { frame } else { 0x50 };
-        let fade = operation::div_neg_80((held << 8).wrapping_sub(held));
+        let fade = ops::div_neg_80((held << 8).wrapping_sub(held));
 
         glow_set(draw_context(&mut ctx.draw)?, 2);
 
@@ -51,7 +51,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let step = if (frame as u32) >= 0x2b || phase != 1 { 0x2b } else { frame };
         let banner = ctx.img004_sheet.clone();
         let banner = banner.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x98);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x98);
         let lift = *LOSE_BANNER_SLIDE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, LOSE_BANNER_SLIDE_TABLE.len() as i64))?;
@@ -69,17 +69,17 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let popup = ctx.scene_img005_sheet.clone();
         let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
         let grow = *POPUP_GROW_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
         let span = grow.wrapping_mul(0x2b2);
         let rise = grow.wrapping_mul(0xe5);
-        let x = operation::div_neg_200(span).wrapping_add(centre);
-        let y = operation::div_neg_200(rise).wrapping_add(0x1b8);
+        let x = ops::div_neg_200(span).wrapping_add(centre);
+        let y = ops::div_neg_200(rise).wrapping_add(0x1b8);
 
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
 
         if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) >= 4 {
             set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
@@ -110,7 +110,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
 
                     let text = ctx.label_texts.get(index + 2).copied().flatten().ok_or(Fault::null_pointer())?;
-                    let centre = operation::div_2(get_drawable_width(ctx)?);
+                    let centre = ops::div_2(get_drawable_width(ctx)?);
 
                     draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
 
@@ -125,8 +125,8 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let press = *DECK_PRESS_SIZE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
-        let half = operation::div_2(press);
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
+        let half = ops::div_2(press);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
         let y = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
             .wrapping_sub(half)
@@ -137,7 +137,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let label = ctx.img006_sheet.clone();
         let label = label.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
         let y = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
             .wrapping_sub(half)
@@ -156,14 +156,14 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
             let plate = ctx.img101_sheet.clone();
             let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
-            let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+            let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
                 .wrapping_sub(get_bottom_inset_logical(ctx)?)
                 .wrapping_add(0x22e);
             let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-            let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-            let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
+            let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+            let cut = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
         }
@@ -179,17 +179,17 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let popup = ctx.scene_img005_sheet.clone();
     let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-    let centre = operation::div_2(get_drawable_width(ctx)?);
+    let centre = ops::div_2(get_drawable_width(ctx)?);
     let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
     let grow = *POPUP_GROW_TABLE
         .get(step as i64 as usize)
         .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
     let span = grow.wrapping_mul(0x2b2);
     let rise = grow.wrapping_mul(0xe5);
-    let x = operation::div_neg_200(span).wrapping_add(centre);
-    let y = operation::div_neg_200(rise).wrapping_add(0x1ce);
+    let x = ops::div_neg_200(span).wrapping_add(centre);
+    let y = ops::div_neg_200(rise).wrapping_add(0x1ce);
 
-    draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
+    draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
 
     if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) < 4 {
         return Ok(());
@@ -220,7 +220,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         let text = ctx.label_texts.get(line).copied().flatten().ok_or(Fault::null_pointer())?;
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
 
         draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
 
@@ -235,7 +235,7 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let label = ctx.img006_sheet.clone();
     let label = label.as_deref().ok_or(Fault::null_pointer())?;
-    let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 642.0);
+    let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + 642.0);
 
     draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x132, 0x37, 0x2a, 0x15);
 
@@ -253,8 +253,8 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let press = *DECK_PRESS_SIZE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
-        let half = operation::div_2(press);
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
+        let half = ops::div_2(press);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0i32.wrapping_sub(half), press.wrapping_add(0xa8), press.wrapping_add(0x48), cut);
     }
@@ -267,8 +267,8 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let press = *DECK_PRESS_SIZE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
-        let half = operation::div_2(press);
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
+        let half = ops::div_2(press);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, label, x, 0x1e8i32.wrapping_sub(half), press.wrapping_add(0x96), press.wrapping_add(0x37), cut);
     }
@@ -307,10 +307,10 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(offset) = shift {
         let plate = ctx.img101_sheet.clone();
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(offset);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(offset);
         let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
-        let beat = frame.wrapping_sub(operation::div_4(frame) * 4);
-        let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(1) as u8;
+        let beat = frame.wrapping_sub(ops::div_4(frame) * 4);
+        let cut = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(1) as u8;
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, 0x1e0, 0xa8, 0x48, cut as i32);
     }

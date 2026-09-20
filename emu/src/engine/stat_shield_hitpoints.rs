@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, EOC_CHAPTER_HP_MUL, EnemyStats, get_global_map_id, get_star_level,
@@ -27,7 +27,7 @@ pub fn stat_shield_hitpoints(
             .stage_enemies
             .get(enemy_row as usize)
             .ok_or(Fault::index_out_of_range(enemy_row as i64, ctx.stage_enemies.len() as i64))?;
-        let scaled = operation::div_100(
+        let scaled = ops::div_100(
             stage_entry_magnification(row)
                 .wrapping_mul(shield)
                 .wrapping_add(0x32),
@@ -40,7 +40,7 @@ pub fn stat_shield_hitpoints(
         let map_id = get_global_map_id(ctx, 0)?;
         let star = get_star_level(ctx)?;
 
-        return Ok(operation::div_100(
+        return Ok(ops::div_100(
             get_star_multiplier(&ctx.star_multipliers, map_id, star)?.wrapping_mul(scaled),
         ));
     }
@@ -54,7 +54,7 @@ pub fn stat_shield_hitpoints(
         .get(chapter as usize)
         .ok_or(Fault::index_out_of_range(chapter as i64, 3))?;
 
-    Ok(operation::div_10(
+    Ok(ops::div_10(
         bonus.wrapping_add(0xa).wrapping_mul(shield).wrapping_add(5),
     ))
 }

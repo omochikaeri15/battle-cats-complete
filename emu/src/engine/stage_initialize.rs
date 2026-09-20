@@ -3,7 +3,7 @@ use std::{
     hash::{BuildHasher, Hasher},
 };
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER, aku_realm_final_redirect,
@@ -137,7 +137,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_map_type(ctx, 0)? == -11 {
         let stage = get_stage_index(ctx)?;
-        let group = operation::div_100(
+        let group = ops::div_100(
             ctx.i32_at(AppContext::DROP_MAP_STAGES + stage as i64 as usize * 4)?,
         );
         let name = string_format_int(ctx, b"MapStageDataN_%03d.csv", group)?;
@@ -154,7 +154,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let stage = get_stage_index(ctx)?;
                 let packed = ctx.i32_at(AppContext::DROP_MAP_STAGES + stage as i64 as usize * 4)?;
 
-                if row > packed.wrapping_sub(operation::div_100(packed).wrapping_mul(100)) {
+                if row > packed.wrapping_sub(ops::div_100(packed).wrapping_mul(100)) {
                     break;
                 }
 
@@ -362,7 +362,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
         let row =
             ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
+        let unit = ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::UNIT_FORMS + unit as u32 as usize * 4)?;
@@ -436,7 +436,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)),
                     )?;
 
-                    operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32
+                    ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32
                 };
                 let key = ctx.i32_at(AppContext::BATTLE_DECK_KEY)?;
 
@@ -506,7 +506,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let mut tries = 0;
 
                 loop {
-                    slot = operation::irem(slot.wrapping_add(1), deck_count)
+                    slot = ops::irem(slot.wrapping_add(1), deck_count)
                         .ok_or(Fault::divide(deck_count as i64))?;
 
                     if !*picks.entry(slot).or_default() {
@@ -536,7 +536,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 );
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? == 0
+                if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? == 0
                 {
                     continue;
                 }
@@ -923,7 +923,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 AppContext::CAMERA_X,
-                operation::cvttss2si((-9600.0f32 / zoom + length as f32) * 0.5),
+                ops::cvttss2si((-9600.0f32 / zoom + length as f32) * 0.5),
             )?;
         }
 
@@ -933,7 +933,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(
             AppContext::CAMERA_MIN_ZOOM,
-            operation::idiv(0xea600, length)
+            ops::idiv(0xea600, length)
                 .ok_or(Fault::divide(length as i64))?
                 .wrapping_add(1),
         )?;
@@ -973,7 +973,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     let recharge = get_unit_recharge(ctx, 0, slot)?;
                     let cut = get_setting(&ctx.settings, b"battle_sentai_recast", 0x32)?;
                     let value =
-                        operation::div_100(100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64)
+                        ops::div_100(100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64)
                             as i32;
 
                     set_deck_cooldown(ctx, wallet, slot, value, 1)?;
@@ -988,7 +988,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         set_deck_cooldown(ctx, wallet, slot, recharge, 1)?;
                     } else {
                         let cut = *params.get(1).ok_or(Fault::index_out_of_range(1, params.len() as i64))?;
-                        let value = operation::div_100(
+                        let value = ops::div_100(
                             100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64,
                         ) as i32;
 
@@ -1140,7 +1140,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         set_cannon_damage(
             ctx,
             0,
-            operation::div_100(scale.wrapping_mul(base_damage) as i64) as i32,
+            ops::div_100(scale.wrapping_mul(base_damage) as i64) as i32,
         )?;
 
         let recoil = get_cannon_part_rec(ctx)?.recoil;
@@ -1366,7 +1366,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             )?);
             pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGE_RECORD_CHAPTERS_KEY)?);
 
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+            ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                 > 0
         } else {
             false
@@ -1675,13 +1675,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let left = frames.wrapping_sub(frame);
 
                 if left != 0 {
-                    let duck = operation::idiv(left.wrapping_mul(100), frames)
+                    let duck = ops::idiv(left.wrapping_mul(100), frames)
                         .ok_or(Fault::divide(frames as i64))?;
 
                     if duck > 0 {
                         let frames = ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)?;
                         let left = frames.wrapping_sub(ctx.i32_at(AppContext::BGM_SWITCH_FRAME)?);
-                        let duck = operation::idiv(left.wrapping_mul(100), frames)
+                        let duck = ops::idiv(left.wrapping_mul(100), frames)
                             .ok_or(Fault::divide(frames as i64))?;
 
                         set_bgm_duck(sound_manager(ctx)?, duck);
@@ -1745,7 +1745,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(
             rect,
-            operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(*shift),
+            ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(*shift),
         )?;
         ctx.set_i32_at(rect + 4, rest[0])?;
         ctx.set_i32_at(rect + 8, rest[1])?;
@@ -1758,7 +1758,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(
         AppContext::CAT_GOD_BUTTON_RECT,
-        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xf6),
+        ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xf6),
     )?;
     ctx.set_i32_at(
         AppContext::CAT_GOD_BUTTON_RECT + 4,
@@ -1778,7 +1778,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(
             rect,
-            operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(shift),
+            ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(shift),
         )?;
         ctx.set_i32_at(rect + 4, rest[0])?;
         ctx.set_i32_at(rect + 8, rest[1])?;
@@ -1787,7 +1787,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(
         AppContext::CAT_GOD_MIRACLE_RECTS + 0x30,
-        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312),
+        ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312),
     )?;
     ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x34, 0x14f)?;
     ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x38, 0x60)?;
@@ -1798,14 +1798,14 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 0xc, 0x5f)?;
     ctx.set_i32_at(
         AppContext::CAT_GOD_CONFIRM_RECT,
-        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6),
+        ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6),
     )?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 4, 0x139)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 8, 0x17d)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 0xc, 0x58)?;
     ctx.set_i32_at(
         AppContext::CAT_GOD_BACK_RECT,
-        operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323),
+        ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323),
     )?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 4, 0xad)?;
     ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 8, 0x5f)?;
@@ -2048,7 +2048,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     for slot in 0..10usize {
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let row = ctx.bytes_from(AppContext::BATTLE_DECK)?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
+        let unit = ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + slot * 4)?;
 

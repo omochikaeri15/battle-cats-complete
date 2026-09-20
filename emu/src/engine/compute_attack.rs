@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CatStats, EOC_CHAPTER_HP_MUL, EnemyStats, STAT_ATTACK_COLUMNS, ex_redirect_check_a,
@@ -57,7 +57,7 @@ pub fn compute_attack(
                 }
             }
 
-            operation::div_100(scaled.wrapping_add(0x32))
+            ops::div_100(scaled.wrapping_add(0x32))
         };
 
         if skip_mods != 0 {
@@ -66,11 +66,11 @@ pub fn compute_attack(
 
         let treasure = get_treasure_value(ctx, &ctx.treasure_store, 0xa)? as i64;
         let with_treasure =
-            operation::div_100(treasure.wrapping_mul(leveled)).wrapping_add(leveled);
+            ops::div_100(treasure.wrapping_mul(leveled)).wrapping_add(leveled);
 
         let combo =
             get_cat_combo_bonus(ctx, &ctx.combo_store, 0, unit_id)?.wrapping_add(0x64) as i64;
-        let mut hp = operation::div_100(combo.wrapping_mul(with_treasure));
+        let mut hp = ops::div_100(combo.wrapping_mul(with_treasure));
 
         let mut boost = get_talent_value(ctx, faction, unit_id, form, 0x1f, 0)?;
 
@@ -90,7 +90,7 @@ pub fn compute_attack(
         }
 
         if boost > 0 {
-            hp = operation::div_100(hp.wrapping_mul(boost.wrapping_add(0x64) as u32 as i64));
+            hp = ops::div_100(hp.wrapping_mul(boost.wrapping_add(0x64) as u32 as i64));
         }
 
         return Ok(hp as i32);
@@ -108,7 +108,7 @@ pub fn compute_attack(
             .stage_enemies
             .get(mag_slot as usize)
             .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
-        let mut scaled = operation::div_100(
+        let mut scaled = ops::div_100(
             (stage_entry_atk_mag(entry) as i64)
                 .wrapping_mul(base)
                 .wrapping_add(0x32),
@@ -124,7 +124,7 @@ pub fn compute_attack(
                 multiplier = get_star_multiplier(&ctx.star_multipliers, map_id, star)? as i64;
             }
 
-            scaled = operation::div_100(multiplier.wrapping_mul(scaled));
+            scaled = ops::div_100(multiplier.wrapping_mul(scaled));
         }
 
         scaled
@@ -138,7 +138,7 @@ pub fn compute_attack(
             .get(chapter as usize)
             .ok_or(Fault::index_out_of_range(chapter as i64, 3))? as i64;
 
-        operation::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
+        ops::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
     };
 
     let alien = if read_flag(ctx, AppContext::faction_flags(1))? & 1 != 0 {
@@ -201,7 +201,7 @@ pub fn compute_attack(
         let gap =
             uncapped.wrapping_sub(get_treasure_value(ctx, &ctx.treasure_store, effect)?) as i64;
 
-        hp = hp.wrapping_add(operation::div_100(gap.wrapping_mul(hp)));
+        hp = hp.wrapping_add(ops::div_100(gap.wrapping_mul(hp)));
     }
 
     Ok(hp as i32)

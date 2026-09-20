@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_built_deck_rows, get_built_deck_stage_key, get_current_stage_id,
@@ -26,7 +26,7 @@ pub fn unit_meets_restriction(
         (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
     )?);
 
-    let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
+    let mut unit_id = (ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
         .wrapping_add(-2);
     let mut form = get_unit_form(ctx, unit_id)?;
 
@@ -38,7 +38,7 @@ pub fn unit_meets_restriction(
             pair[4..].copy_from_slice(
                 &ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?,
             );
-            unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
+            unit_id = (ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
                 .wrapping_add(-2);
             form =
                 ctx.i32_at(((slot as i64) * 4 + AppContext::BUTTON_UNIT_FORMS as i64) as usize)?;
@@ -82,7 +82,7 @@ pub fn unit_meets_restriction(
         let mut cost = 0i32;
 
         if read_flag(ctx, AppContext::faction_flags(0))? & 1 != 0 {
-            cost = operation::div_100(get_deploy_cost(ctx, unit_id, form, 1, -1)?);
+            cost = ops::div_100(get_deploy_cost(ctx, unit_id, form, 1, -1)?);
         }
 
         if min_cost == 0 || max_cost == 0 {
@@ -125,7 +125,7 @@ pub fn unit_meets_restriction(
     }
 
     let Some(params) =
-        get_special_rule_params(ctx, &ctx.special_rules, operation::div_1000(stage_id), 2)?
+        get_special_rule_params(ctx, &ctx.special_rules, ops::div_1000(stage_id), 2)?
     else {
         return Ok(true);
     };
@@ -145,7 +145,7 @@ pub fn unit_meets_restriction(
                 (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
             )?);
 
-            if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+            if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                 <= 1
             {
                 break;
@@ -161,7 +161,7 @@ pub fn unit_meets_restriction(
                 (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
             )?);
 
-            let listed = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
+            let listed = (ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
                 .wrapping_add(-2);
             let rarity = get_unit_rarity(ctx, listed)?;
             let count = counts.entry(rarity).or_insert(0);

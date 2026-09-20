@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     DrawSink, Surface, draw_context, draw_surface_scaled, set_tint, texture_get_height,
@@ -66,9 +66,9 @@ pub fn text_block_render(
             }
 
             let shift = if align & 1 != 0 {
-                operation::cvttss2si(line.width as f32 * scale * 0.5)
+                ops::cvttss2si(line.width as f32 * scale * 0.5)
             } else if align & 2 != 0 {
-                operation::cvttss2si(line.width as f32 * scale)
+                ops::cvttss2si(line.width as f32 * scale)
             } else {
                 0
             };
@@ -76,33 +76,33 @@ pub fn text_block_render(
             let lift = if align & 4 != 0 {
                 let last = block.lines.last().ok_or(Fault::index_out_of_range(-1, 0))?;
                 let lift =
-                    operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale * 0.5);
+                    ops::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale * 0.5);
 
                 if block.lines.len() & 1 != 0 {
                     lift
                 } else {
-                    operation::cvttsd2si((block.spacing as f32 * scale) as f64 * 0.1 + lift as f64)
+                    ops::cvttsd2si((block.spacing as f32 * scale) as f64 * 0.1 + lift as f64)
                 }
             } else if align & 8 != 0 {
                 let last = block.lines.last().ok_or(Fault::index_out_of_range(-1, 0))?;
 
-                operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale)
+                ops::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale)
             } else {
                 0
             };
 
             let dc = draw_context(sink)?;
-            let across = operation::cvttss2si(glyph.x as f32 * line.scale + left - shift as f32);
+            let across = ops::cvttss2si(glyph.x as f32 * line.scale + left - shift as f32);
             let down = y.wrapping_sub(lift).wrapping_add(line.y);
             let texture = glyph
                 .texture
                 .as_ref()
                 .ok_or(Fault::null_pointer())?;
-            let width = operation::cvttss2si(
+            let width = ops::cvttss2si(
                 texture_get_width(Surface::Label(texture)) as f32 * line.scale * scale,
             );
             let height =
-                operation::cvttss2si(texture_get_height(Surface::Label(texture)) as f32 * scale);
+                ops::cvttss2si(texture_get_height(Surface::Label(texture)) as f32 * scale);
 
             draw_surface_scaled(dc, Surface::Label(texture), across, down, width, height);
         }

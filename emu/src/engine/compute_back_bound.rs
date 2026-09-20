@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, get_castle_id, get_castle_row, get_entity_button, get_unit_model,
@@ -64,13 +64,13 @@ pub fn compute_back_bound(ctx: &mut AppContext, faction: i32, slot: i32) -> Resu
     let base_x = ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_X))?;
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
     let inset =
-        (operation::div_neg_100(size.wrapping_mul(0x49c) as i64) as i32).wrapping_add(base_x);
+        (ops::div_neg_100(size.wrapping_mul(0x49c) as i64) as i32).wrapping_add(base_x);
     let offset_x = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_x;
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
     let shifted =
-        (operation::div_10(size.wrapping_mul(offset_x) as i64) as i32).wrapping_add(inset);
+        (ops::div_10(size.wrapping_mul(offset_x) as i64) as i32).wrapping_add(inset);
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-    let width = operation::div_10((size << 7).wrapping_sub(size) as i64) as i32;
+    let width = ops::div_10((size << 7).wrapping_sub(size) as i64) as i32;
     let bound = shifted
         .wrapping_add(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::BACK_BOUND))?)
         .wrapping_add(width);

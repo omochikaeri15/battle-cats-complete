@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Base, CANNON_SHOT_SPACING, CannonShot, Debris, Entity, KNOCKBACK_Y_ARC,
@@ -265,7 +265,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                     let counter = ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?;
                     let ring = counter
-                        .wrapping_sub((operation::div_5(counter as i64) as i32).wrapping_mul(5))
+                        .wrapping_sub((ops::div_5(counter as i64) as i32).wrapping_mul(5))
                         .wrapping_add(0x32);
                     let record = AppContext::CAT_DEBRIS.wrapping_add(
                         (ring as u32 as usize).wrapping_mul(AppContext::DEBRIS_STRIDE),
@@ -611,7 +611,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     && ctx.i32_at(base.wrapping_add(Base::CANNON_COUNTDOWN))? > 0
                 {
                     let recharge = get_cannon_recharge(ctx, 0)?;
-                    let cut = operation::div_1000(
+                    let cut = ops::div_1000(
                         get_cannon_charge_orb(ctx, 0, slot as i32)?.wrapping_mul(recharge) as i64,
                     ) as i32;
 
@@ -690,7 +690,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                 let remaining =
                     0xci32.wrapping_sub(ctx.i32_at(entity.wrapping_add(Entity::FRAME))?);
-                let cycles = operation::div_12(remaining as i64) as i32;
+                let cycles = ops::div_12(remaining as i64) as i32;
                 let phase = remaining
                     .wrapping_sub(cycles.wrapping_shl(2).wrapping_mul(3))
                     .wrapping_mul(2)
@@ -703,11 +703,11 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 let resisted = 0x64i32
                     .wrapping_sub(get_knockback_resist_pct(ctx, faction, slot as i32)?)
                     .wrapping_mul(push);
-                let push = operation::div_100(resisted as i64) as i32;
+                let push = ops::div_100(resisted as i64) as i32;
                 let resisted = 0x64i32
                     .wrapping_sub(get_sage_kb_resist_pct(ctx, faction, slot as i32)?)
                     .wrapping_mul(push);
-                let push = operation::div_100(resisted as i64) as i32;
+                let push = ops::div_100(resisted as i64) as i32;
                 let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
 
                 ctx.set_i32_at(entity.wrapping_add(Entity::POS_X), x.wrapping_add(push))?;
@@ -775,7 +775,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     cost = get_effective_deploy_cost(ctx, faction, button)?;
                 }
 
-                let refund = operation::div_100(
+                let refund = ops::div_100(
                     get_cash_back_pct(ctx, faction, slot as i32)?.wrapping_mul(cost) as i64,
                 ) as i32;
 

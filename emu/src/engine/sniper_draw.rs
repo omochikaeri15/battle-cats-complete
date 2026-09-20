@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, cos_deg, draw_context, draw_cut_f, draw_cut_rotated, draw_cut_rotated_f,
@@ -12,15 +12,15 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let base_x =
-        operation::div_10(get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?))
+        ops::div_10(get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?))
             .wrapping_add(0x64);
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_1, base_x)?;
 
-    let base_y = operation::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x2ab) as f32;
+    let base_y = ops::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x2ab) as f32;
     let bob = sin_deg(ctx.f32_at(AppContext::SNIPER_BOB_ANGLE)?) * 10.0 + base_y;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_2, operation::cvttss2si(bob))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_2, ops::cvttss2si(bob))?;
 
     let origin = ctx
         .i32_at(AppContext::CAMERA_KICK)?
@@ -231,11 +231,11 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let reach = cos_deg(ctx.f32_at(AppContext::SNIPER_AIM_ANGLE)?) * 47.0;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_3, operation::cvttss2si(reach))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_3, ops::cvttss2si(reach))?;
 
     let lift = sin_deg(ctx.f32_at(AppContext::SNIPER_AIM_ANGLE)?) * 28.0;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_4, operation::cvttss2si(lift))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_4, ops::cvttss2si(lift))?;
 
     if ctx.u8_at(AppContext::SNIPER_CASINGS_LIVE)? != 0 {
         for casing in 0..4usize {
@@ -246,7 +246,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                 .wrapping_sub(ctx.i32_at(AppContext::DRAW_TEMP_3)?)
                 .wrapping_add(ctx.i32_at(base)?)
                 .wrapping_add(0x23) as f64;
-            let x = operation::cvttsd2si(
+            let x = ops::cvttsd2si(
                 get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
             );
             let y = ctx
@@ -254,7 +254,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                 .wrapping_sub(ctx.i32_at(AppContext::DRAW_TEMP_4)?)
                 .wrapping_add(ctx.i32_at(base + 4)?)
                 .wrapping_add(0x100);
-            let cut = operation::div_2(ctx.i32_at(base + 8)?).wrapping_add(8);
+            let cut = ops::div_2(ctx.i32_at(base + 8)?).wrapping_add(8);
 
             draw_cut_scaled(
                 draw_context(&mut ctx.draw)?,
@@ -271,12 +271,12 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let base_x =
-        operation::div_10(get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?))
+        ops::div_10(get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?))
             .wrapping_add(0x99);
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_1, base_x)?;
 
-    let base_y = operation::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(0x2f);
+    let base_y = ops::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(0x2f);
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_2, base_y)?;
 
@@ -303,17 +303,17 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             continue;
         }
 
-        let pos_x = operation::div_10(
+        let pos_x = ops::div_10(
             ctx.i32_at(AppContext::PENDING_STRIKE_TRIGGER_X + strike * 4)?
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         );
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + pos_x as f64,
         );
-        let y = operation::div_10(ctx.i32_at(AppContext::PENDING_STRIKE_Y + strike * 4)?);
+        let y = ops::div_10(ctx.i32_at(AppContext::PENDING_STRIKE_Y + strike * 4)?);
 
         draw_cut_rotated(
             draw_context(&mut ctx.draw)?,
@@ -339,7 +339,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         let timer = ctx.i32_at(base)?;
 
         if timer > 0 {
-            let pos_x = operation::div_10(
+            let pos_x = ops::div_10(
                 ctx.i32_at(base + 4)?
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             );
@@ -347,11 +347,11 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
             if timer != 1 {
-                let x = operation::cvttsd2si(
+                let x = ops::cvttsd2si(
                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + pos_x as f64,
                 );
-                let y = operation::div_10(ctx.i32_at(base + 8)?);
-                let cut = 0xdi32.wrapping_sub(operation::div_2(ctx.i32_at(base)?));
+                let y = ops::div_10(ctx.i32_at(base + 8)?);
+                let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base)?));
 
                 draw_cut_scaled(
                     draw_context(&mut ctx.draw)?,
@@ -368,7 +368,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         if ctx.i32_at(base + 0xc)? > 0 {
-            let pos_x = operation::div_10(
+            let pos_x = ops::div_10(
                 ctx.i32_at(base + 0x10)?
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             );
@@ -376,11 +376,11 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
             if ctx.i32_at(base + 0xc)? >= 2 {
-                let x = operation::cvttsd2si(
+                let x = ops::cvttsd2si(
                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + pos_x as f64,
                 );
-                let y = operation::div_10(ctx.i32_at(base + 0x14)?);
-                let cut = 0xdi32.wrapping_sub(operation::div_2(ctx.i32_at(base + 0xc)?));
+                let y = ops::div_10(ctx.i32_at(base + 0x14)?);
+                let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base + 0xc)?));
 
                 draw_cut_scaled(
                     draw_context(&mut ctx.draw)?,

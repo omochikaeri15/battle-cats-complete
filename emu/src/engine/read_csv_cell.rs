@@ -1,4 +1,4 @@
-use crate::operation;
+use crate::ops;
 
 use super::{AssetStream, get_cell};
 
@@ -7,5 +7,5 @@ pub fn read_csv_cell(stm: &AssetStream<'_>, col: i32) -> i64 {
         return 0;
     };
 
-    operation::strtol(&stm.bytes[cell.at..], 0xa).value
+    ops::strtol(&stm.bytes[cell.at..], 0xa).value
 }

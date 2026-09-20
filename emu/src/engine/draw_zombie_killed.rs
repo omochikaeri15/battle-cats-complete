@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, VfxSlot, draw_context, draw_model, get_drawable_width, maanim_execute};
 
@@ -20,13 +20,13 @@ pub fn draw_zombie_killed(ctx: &mut AppContext) -> Result<(), Fault> {
             0,
         )?;
 
-        let pos_x = operation::div_10(
+        let pos_x = ops::div_10(
             ctx.i32_at(slot.wrapping_add(VfxSlot::POS_X))?
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         );
-        let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pos_x);
+        let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pos_x);
         let y =
-            operation::div_10(ctx.i32_at(slot.wrapping_add(VfxSlot::POS_Y))?).wrapping_add(-0x28);
+            ops::div_10(ctx.i32_at(slot.wrapping_add(VfxSlot::POS_Y))?).wrapping_add(-0x28);
 
         draw_model(
             draw_context(&mut ctx.draw)?,

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, UNIT_BUY,
@@ -274,7 +274,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     let mut xp = ctx.i32_at(AppContext::WIN_XP)?;
 
     if get_global_map_id(ctx, 0)? == 0xbb8 {
-        xp = operation::div_100(
+        xp = ops::div_100(
             server_config_int(ctx, b"CnfGetXpUp", 0x64, 0x1f4)?.wrapping_mul(xp),
         );
         ctx.set_i32_at(AppContext::WIN_XP, xp)?;
@@ -367,7 +367,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             cleared as i32,
             0,
         )?;
-        mission_progress(ctx, 9, operation::div_1000(pair_map), 1, cleared as i32, 0)?;
+        mission_progress(ctx, 9, ops::div_1000(pair_map), 1, cleared as i32, 0)?;
 
         if get_map_type(ctx, 0)? == -0x17 {
             let star = get_star_level(ctx)?;
@@ -433,12 +433,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let cleared_now = get_stages_cleared(ctx, map_type, map_index, star, use_cache)?;
             let data_id = ctx.i32_at(AppContext::MAP_DATA_ID)?;
             let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
-            let size = get_stage_set_size(ctx.map_data.entry(data_id).or_default(), set)?;
+            let size = get_stage_set_size(ctx.map_layouts.entry(data_id).or_default(), set)?;
 
             if cleared_now as i64 as u64 == size {
                 let data_id = ctx.i32_at(AppContext::MAP_DATA_ID)?;
                 let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
-                let size = get_stage_set_size(ctx.map_data.entry(data_id).or_default(), set)?;
+                let size = get_stage_set_size(ctx.map_layouts.entry(data_id).or_default(), set)?;
 
                 set_stage_unlock(
                     ctx,
@@ -581,7 +581,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let records = ctx.bytes_from(
             (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
         )?;
-        let record = operation::xor_row_decode(records, 0x33, stage_row as i64 as usize).ok_or(
+        let record = ops::xor_row_decode(records, 0x33, stage_row as i64 as usize).ok_or(
             Fault::index_out_of_range(stage_row as i64, 0x33),
         )?;
 
@@ -608,7 +608,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             cleared as i32,
             0,
         )?;
-        mission_progress(ctx, 9, operation::div_1000(pair_map), 1, cleared as i32, 0)?;
+        mission_progress(ctx, 9, ops::div_1000(pair_map), 1, cleared as i32, 0)?;
         ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 0)?;
 
         let mut chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -639,7 +639,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             let chapter_now = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
-            let progress = operation::xor_row_decode(progress_row, 10, chapter_now as i64 as usize)
+            let progress = ops::xor_row_decode(progress_row, 10, chapter_now as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter_now as i64, 10))?;
 
             ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, progress as i32)?;
@@ -655,7 +655,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
-            let progress = operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
+            let progress = ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
 
             if progress == 0x30 {
@@ -756,7 +756,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                     let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
                     let progress =
-                        operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
+                        ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                             .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
                     let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
                     let unlock_stage = unit_buy_field(row, 0)?;
@@ -1477,7 +1477,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         if ctx.u8_at(AppContext::TREASURE_FESTIVAL_ENABLED)? != 0 {
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
-            let progress = operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
+            let progress = ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter as i64, 10))? as i32;
 
             if progress >= 0x19
@@ -1518,7 +1518,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 AppContext::TREASURE_LEVELS
                     + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
             )?;
-            let level = operation::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
+            let level = ops::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
                 Fault::index_out_of_range(castle as i64, 0x31),
             )?;
             let tier = match level {
@@ -1542,7 +1542,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     AppContext::TREASURE_LEVELS
                         + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
                 )?;
-                let level = operation::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
+                let level = ops::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
                     Fault::index_out_of_range(castle as i64, 0x31),
                 )?;
                 let tier = if level == 3
@@ -1572,7 +1572,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let levels_at = AppContext::TREASURE_LEVELS
                 + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE;
             let level =
-                operation::xor_row_decode(ctx.bytes_from(levels_at)?, 0x31, castle as i64 as usize)
+                ops::xor_row_decode(ctx.bytes_from(levels_at)?, 0x31, castle as i64 as usize)
                     .ok_or(Fault::index_out_of_range(castle as i64, 0x31))? as i32;
             let tier = ctx.i32_at(AppContext::WIN_TREASURE)?;
 

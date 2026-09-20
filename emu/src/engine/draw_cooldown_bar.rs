@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, DECK_SLOT_X_TABLE, draw_context, fill_rect, get_deck_cooldown,
@@ -16,7 +16,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
         .wrapping_sub(get_deck_cooldown(ctx, wallet, slot)?)
         .wrapping_mul(0x5d);
     let span = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
-    let filled = operation::idiv(elapsed, span).ok_or(Fault::divide(span as i64))?;
+    let filled = ops::idiv(elapsed, span).ok_or(Fault::divide(span as i64))?;
     let filled = if filled < 0x5d { filled } else { 0x5d };
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_3, filled)?;
@@ -25,7 +25,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
         .wrapping_sub(get_deck_cooldown_max(ctx, wallet, slot)?)
         .wrapping_mul(0x5d);
     let span = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
-    let excess = operation::idiv(remaining, span).ok_or(Fault::divide(span as i64))?;
+    let excess = ops::idiv(remaining, span).ok_or(Fault::divide(span as i64))?;
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_4, 0x61)?;
     ctx.set_i32_at(AppContext::DRAW_TEMP_5, 0xe)?;
@@ -36,7 +36,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::DRAW_TEMP_7, 0xa)?;
 
     let two_lines = ctx.u8_at(AppContext::DECK_TWO_LINES)?;
-    let mut column = slot.wrapping_sub(operation::div_5(slot as u32 as i64) as i32 * 5);
+    let mut column = slot.wrapping_sub(ops::div_5(slot as u32 as i64) as i32 * 5);
 
     if two_lines == 0 {
         column = slot;
@@ -59,7 +59,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     let seat = *DECK_SLOT_X_TABLE
         .get(column as i64 as usize)
         .ok_or(Fault::index_out_of_range(column as i64, DECK_SLOT_X_TABLE.len() as i64))?;
-    let x = operation::cvttsd2si(
+    let x = ops::cvttsd2si(
         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + seat.wrapping_add(6) as f64,
     );
     let y = ctx
@@ -77,7 +77,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     {
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0, 0, 0xff);
 
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                 + seat.wrapping_add(8) as f64,
         );
@@ -96,7 +96,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
 
     set_tint(draw_context(&mut ctx.draw)?, 0, 0xff, 0xff, 0xff);
 
-    let x = operation::cvttsd2si(
+    let x = ops::cvttsd2si(
         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + seat.wrapping_add(8) as f64,
     );
     let y = shift

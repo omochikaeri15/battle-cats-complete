@@ -1,4 +1,4 @@
-use crate::operation;
+use crate::ops;
 
 use super::AppContext;
 
@@ -13,7 +13,7 @@ pub fn get_top_inset_offset(ctx: &AppContext) -> i32 {
         return 0;
     }
 
-    let scaled = operation::cvttss2si(
+    let scaled = ops::cvttss2si(
         ((metrics.design_h2 as f32) * (metrics.inset_top as f32) / (metrics.screen_h as f32))
             .ceil(),
     );

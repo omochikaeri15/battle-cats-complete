@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_base_upgrade, get_cat_combo_bonus, get_powerup, get_stage_record,
@@ -38,7 +38,7 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
             let records = ctx.bytes_from(
                 (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
             )?;
-            let cleared = operation::xor_row_decode(records, 0x33, stage as i64 as usize).ok_or(
+            let cleared = ops::xor_row_decode(records, 0x33, stage as i64 as usize).ok_or(
                 Fault::index_out_of_range(stage as i64, 0x33),
             )? as i32;
             let scaled = min_i32(cleared, 0xd).wrapping_mul(xp);
@@ -61,13 +61,13 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
         .wrapping_add(upgrade)
         .wrapping_add(0x64);
     let treasure = if treasure > 0 { treasure } else { 0 };
-    let mut value = operation::div_100(treasure.wrapping_mul(xp));
+    let mut value = ops::div_100(treasure.wrapping_mul(xp));
     let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0xd, -1)?;
 
-    value = operation::div_100(combo.wrapping_add(0x64).wrapping_mul(value));
+    value = ops::div_100(combo.wrapping_add(0x64).wrapping_mul(value));
 
     if get_powerup(ctx, 4)? {
-        value = operation::div_10(value.wrapping_mul(0xf));
+        value = ops::div_10(value.wrapping_mul(0xf));
     }
 
     Ok(if value >= 0 { value } else { 1 })

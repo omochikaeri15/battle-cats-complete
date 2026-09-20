@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Surface, draw_context, draw_cut, draw_surface_aligned, fill_rect,
@@ -17,11 +17,11 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let step = ctx.i32_at(AppContext::COMBO_BANNER_TEXT_STEP)?;
     let sub = ctx.i32_at(AppContext::COMBO_BANNER_SUB)?;
-    let lead = operation::idiv(0x3c, step)
+    let lead = ops::idiv(0x3c, step)
         .ok_or(Fault::divide(step as i64))?
         .wrapping_mul(sub);
     let width = get_drawable_width(ctx)?;
-    let grow = operation::idiv(0x78, step)
+    let grow = ops::idiv(0x78, step)
         .ok_or(Fault::divide(step as i64))?
         .wrapping_mul(sub);
     let (top, height): (i32, i32) = if third {
@@ -54,7 +54,7 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(text) = ctx.combo_banner_texts[0] {
         let x = ctx
             .i32_at(AppContext::COMBO_BANNER_X)?
-            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+            .wrapping_sub(ops::div_2(get_drawable_width(ctx)?));
 
         draw_surface_aligned(
             draw_context(&mut ctx.draw)?,
@@ -66,7 +66,7 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let ticks = ctx.i32_at(AppContext::COMBO_BANNER_TICKS)?;
-    let phase = ticks.wrapping_sub(operation::div_4(ticks) * 4);
+    let phase = ticks.wrapping_sub(ops::div_4(ticks) * 4);
 
     if (phase as u32) <= 1 {
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0, 0xff);
@@ -77,7 +77,7 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(text) = ctx.combo_banner_texts[1] {
         let x = ctx
             .i32_at(AppContext::COMBO_BANNER_X)?
-            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+            .wrapping_sub(ops::div_2(get_drawable_width(ctx)?));
 
         draw_surface_aligned(
             draw_context(&mut ctx.draw)?,
@@ -93,7 +93,7 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let x = ctx
             .i32_at(AppContext::COMBO_BANNER_X)?
-            .wrapping_sub(operation::div_2(get_drawable_width(ctx)?));
+            .wrapping_sub(ops::div_2(get_drawable_width(ctx)?));
 
         draw_surface_aligned(
             draw_context(&mut ctx.draw)?,

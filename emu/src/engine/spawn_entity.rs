@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, Entity, call_rng, compute_attack,
@@ -747,12 +747,12 @@ pub fn spawn_entity(
         if is_boss(ctx, faction, slot)? {
             let base_x = get_base_pos_x(ctx, 1)?;
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let inset = operation::div_neg_100(size.wrapping_mul(0x49c) as i64) as i32;
+            let inset = ops::div_neg_100(size.wrapping_mul(0x49c) as i64) as i32;
             let offset_x = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_x;
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let shift = operation::div_10(size.wrapping_mul(offset_x) as i64) as i32;
+            let shift = ops::div_10(size.wrapping_mul(offset_x) as i64) as i32;
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let width = operation::div_10((size << 7).wrapping_sub(size) as i64) as i32;
+            let width = ops::div_10((size << 7).wrapping_sub(size) as i64) as i32;
 
             set_pos_x(
                 ctx,

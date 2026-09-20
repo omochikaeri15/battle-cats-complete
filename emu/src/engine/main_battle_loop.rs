@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, BUTTON_PRESS_BOUNCE, Base, CatStats, Debris, EffectSprite, EnemyStats, Entity,
@@ -128,7 +128,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                     }
 
                     let column = *ctx.deck_button_x.get(slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as f64;
-                    let x = operation::cvttsd2si(
+                    let x = ops::cvttsd2si(
                         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + column,
                     );
                     let y = ctx
@@ -221,7 +221,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                 pinch_update(ctx, AppContext::PINCH)?;
                 ctx.zero(AppContext::PROC_ROLLS, 0x30)?;
 
-                let zoom_percent = operation::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
+                let zoom_percent = ops::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
 
                 ctx.set_i32_at(AppContext::DRAW_TEMP_1, zoom_percent)?;
                 ctx.set_block_at::<1>(AppContext::BASE_KILL_BLOCKED, [0])?;
@@ -234,7 +234,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                     if get_auto_camera_mode(ctx)? == 1 {
                         let scale = zoom_percent as f32 / 100.0;
                         let stage = ctx.i32_at(AppContext::STAGE_LENGTH)? as f32;
-                        let distance = operation::cvttss2si((stage * scale + -9600.0) / scale)
+                        let distance = ops::cvttss2si((stage * scale + -9600.0) / scale)
                             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
 
                         if get_battle_status(ctx)? == 0 {
@@ -271,14 +271,14 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             }
                         }
 
-                        let x = operation::div_2(distance)
+                        let x = ops::div_2(distance)
                             .wrapping_add(ctx.i32_at(AppContext::CAMERA_X)?);
 
                         ctx.set_i32_at(AppContext::CAMERA_X, x)?;
 
                         let stage_length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
                         let limit =
-                            operation::cvttss2si((stage_length as f32 * scale + -9600.0) / scale);
+                            ops::cvttss2si((stage_length as f32 * scale + -9600.0) / scale);
 
                         if x >= limit {
                             ctx.set_block_at::<1>(AppContext::AUTO_CAMERA_ARRIVED, [1])?;
@@ -328,7 +328,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx.set_i32_at(
                         AppContext::CAMERA_X,
                         ctx.i32_at(AppContext::CAMERA_X)?
-                            .wrapping_sub(operation::div_2(x)),
+                            .wrapping_sub(ops::div_2(x)),
                     )?;
                 }
 
@@ -761,13 +761,13 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         cat_cpu_tick(ctx, 0)?;
 
-                        let half = operation::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                        let half = ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
-                        let column = operation::div_10(half).wrapping_add(-0x41) as f64;
+                        let column = ops::div_10(half).wrapping_add(-0x41) as f64;
                         let x = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0)) as f64 * 0.5
                             + column) as f32;
                         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
-                        let bounce = operation::div_2(
+                        let bounce = ops::div_2(
                             *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(
                                 Fault::index_out_of_range(press as i64, 10),
                             )?,
@@ -791,19 +791,19 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         ctx.set_i32_at(
                             AppContext::CAT_GOD_BUTTON_RECT,
-                            operation::cvttss2si(near[0]),
+                            ops::cvttss2si(near[0]),
                         )?;
                         ctx.set_i32_at(
                             AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(4),
-                            operation::cvttss2si(near[1]),
+                            ops::cvttss2si(near[1]),
                         )?;
                         ctx.set_i32_at(
                             AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(8),
-                            operation::cvttss2si(far[0] - near[0]),
+                            ops::cvttss2si(far[0] - near[0]),
                         )?;
                         ctx.set_i32_at(
                             AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(0xc),
-                            operation::cvttss2si(far[1] - near[1]),
+                            ops::cvttss2si(far[1] - near[1]),
                         )?;
 
                         if touch_is_down(ctx)? != 0 {
@@ -1162,7 +1162,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         .deck_button_x
                                         .get(index as i64 as usize)
                                         .ok_or(Fault::index_out_of_range(index as i64, 10))? as f64;
-                                    let x = operation::cvttsd2si(
+                                    let x = ops::cvttsd2si(
                                         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                                             + column,
                                     );
@@ -1247,7 +1247,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 let column = *ctx.deck_button_x.get(index as i64 as usize).ok_or(
                                     Fault::index_out_of_range(index as i64, 10),
                                 )? as f64;
-                                let x = operation::cvttsd2si(
+                                let x = ops::cvttsd2si(
                                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                                         + column,
                                 );
@@ -1369,14 +1369,14 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                     max
                 };
 
-                ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_100(zoom))?;
+                ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_100(zoom))?;
 
                 let scale = zoom as f32 / 100.0 / 100.0;
                 let right = -9600.0f32 / scale + ctx.i32_at(AppContext::STAGE_LENGTH)? as f32;
                 let camera_x = ctx.i32_at(AppContext::CAMERA_X)?;
 
                 let clamped = if camera_x as f32 > right {
-                    Some(operation::cvttss2si(right))
+                    Some(ops::cvttss2si(right))
                 } else if camera_x < 0 {
                     Some(0)
                 } else {
@@ -1641,7 +1641,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         ctx.i32_at(AppContext::STAGE_ROW)?.wrapping_add(stage_key);
 
                                     mission_progress(ctx, 1, row, 1, 0, 0)?;
-                                    mission_progress(ctx, 9, operation::div_1000(map_id), 1, 0, 0)?;
+                                    mission_progress(ctx, 9, ops::div_1000(map_id), 1, 0, 0)?;
 
                                     let row =
                                         stage_key.wrapping_add(ctx.i32_at(AppContext::STAGE_ROW)?);
@@ -2569,7 +2569,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                         for percent in percents {
                                             let damage = max_i32(
-                                                operation::div_100(percent.wrapping_mul(remaining)),
+                                                ops::div_100(percent.wrapping_mul(remaining)),
                                                 1,
                                             );
 
@@ -2747,7 +2747,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     {
                                         if get_shield_vfx(ctx, faction, slot)? == 0 {
                                             let low = get_shield_hp(ctx, faction, slot)?
-                                                < operation::div_2(get_shield_max(
+                                                < ops::div_2(get_shield_max(
                                                     ctx, faction, slot,
                                                 )?);
 
@@ -2869,7 +2869,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         ctx.i32_at(AppContext::entity_field(1, 0, Entity::MAX_HP))?;
 
                                     if hp.wrapping_sub(damage)
-                                        > operation::div_100(
+                                        > ops::div_100(
                                             stage_entry_base_trigger(&row).wrapping_mul(max),
                                         )
                                     {
@@ -3526,7 +3526,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     cell[2] ^ key[2],
                                     cell[3] ^ key[3],
                                 ]);
-                                let threshold = operation::div_100(percent.wrapping_mul(max));
+                                let threshold = ops::div_100(percent.wrapping_mul(max));
 
                                 if hp_before <= threshold {
                                     continue;
@@ -3580,7 +3580,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                 let span = recharge.wrapping_sub(cooldown);
                                 let refund = max_i32(
-                                    operation::div_neg_100(drained.wrapping_mul(span))
+                                    ops::div_neg_100(drained.wrapping_mul(span))
                                         .wrapping_add(span),
                                     0,
                                 );

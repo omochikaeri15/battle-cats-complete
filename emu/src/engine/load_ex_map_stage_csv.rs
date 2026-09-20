@@ -6,7 +6,7 @@ use super::{
 };
 
 pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fault> {
-    let loaded = ctx.u8_at(AppContext::ALL_MAPS_OPEN)? != 0 || map < 0x53;
+    let loaded = map < 0x53 || ctx.u8_at(AppContext::ALL_MAPS_OPEN)? != 0;
 
     if !loaded {
         return Ok(false);

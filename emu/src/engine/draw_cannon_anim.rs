@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CANNON_SHOT_SPACING, CannonShot, Entity, atan2_deg, cannon_reach_x, draw_context,
@@ -36,19 +36,19 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, travel.wrapping_add(reach))?;
 
         let top =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
+            ops::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
                 .wrapping_add(-0xa0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_3, top)?;
 
         let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-        let start_x = operation::cvttsd2si(
+        let start_x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
         let start_y = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
         let tip = ctx.i32_at(AppContext::DRAW_TEMP_2)? as f64;
         let end_x =
-            operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
+            ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
         let angle = atan2_deg(
             0x1eai32.wrapping_sub(start_y) as f32,
             end_x.wrapping_sub(start_x) as f32,
@@ -68,8 +68,8 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let span = across
             .wrapping_mul(across)
             .wrapping_add(down.wrapping_mul(down));
-        let far = start_x.wrapping_sub(operation::cvttss2si(sqrt_f32(span as f32)));
-        let half = operation::div_2(height);
+        let far = start_x.wrapping_sub(ops::cvttss2si(sqrt_f32(span as f32)));
+        let half = ops::div_2(height);
         let upper = start_y.wrapping_sub(half);
         let lower = half.wrapping_add(start_y);
         let mut shift = [0.0f32; 6];
@@ -117,7 +117,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
         let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let flare = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x1e) as f64;
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + flare,
         );
         let phase = (get_castle_anim_frame(ctx, faction)?.wrapping_rem(4) as i8 / 2).wrapping_add(5)
@@ -140,8 +140,8 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         draw_cut_scaled(
             draw_context(&mut ctx.draw)?,
             beam,
-            start_x.wrapping_sub(operation::div_2(width)),
-            start_y.wrapping_sub(operation::div_2(height)),
+            start_x.wrapping_sub(ops::div_2(width)),
+            start_y.wrapping_sub(ops::div_2(height)),
             width,
             height,
             7,
@@ -181,7 +181,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, travel.wrapping_add(reach))?;
 
         let top =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
+            ops::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
                 .wrapping_add(-0xa0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_3, top)?;
@@ -197,18 +197,18 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         } else if get_castle_anim_frame(ctx, faction)? >= 0x1f {
             let frame = get_castle_anim_frame(ctx, faction)?;
             let scaled = (frame << 8).wrapping_sub(frame);
-            let fade = operation::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
+            let fade = ops::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
                 .wrapping_sub(scaled)
                 .wrapping_add(0x1de2);
 
             set_alpha(
                 draw_context(&mut ctx.draw)?,
-                operation::div_2(fade).wrapping_add(0xff),
+                ops::div_2(fade).wrapping_add(0xff),
             );
         }
 
-        let start_x = operation::cvttsd2si(start);
-        let end_x = operation::cvttsd2si(end);
+        let start_x = ops::cvttsd2si(start);
+        let end_x = ops::cvttsd2si(end);
 
         if get_castle_anim_frame(ctx, faction)? >= 2 {
             let angle = atan2_deg(
@@ -225,17 +225,17 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
             let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let width = imgcut_get_sprite_cut(beam, 5)?[2];
-            let half_width = operation::div_2(width);
+            let half_width = ops::div_2(width);
             let height = imgcut_get_sprite_cut(beam, 5)?[3];
             let across = start_x.wrapping_sub(end_x);
             let down = start_y.wrapping_add(-0x1ea);
-            let length = operation::cvttss2si(sqrt_f32(
+            let length = ops::cvttss2si(sqrt_f32(
                 across
                     .wrapping_mul(across)
                     .wrapping_add(down.wrapping_mul(down)) as f32,
             ));
             let angle = angle + 180.0;
-            let quarter = operation::div_4(width);
+            let quarter = ops::div_4(width);
             let mut covered = 0i32;
 
             loop {
@@ -251,7 +251,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
                     height.wrapping_neg()
                 };
                 let near = start_x.wrapping_sub(covered);
-                let half = operation::div_2(thickness);
+                let half = ops::div_2(thickness);
                 let upper = start_y.wrapping_sub(half);
                 let lower = half.wrapping_add(start_y);
 
@@ -387,8 +387,8 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         draw_cut_scaled(
             draw_context(&mut ctx.draw)?,
             beam,
-            start_x.wrapping_sub(operation::div_2(width)),
-            start_y.wrapping_sub(operation::div_2(height)),
+            start_x.wrapping_sub(ops::div_2(width)),
+            start_y.wrapping_sub(ops::div_2(height)),
             width,
             height,
             3,
@@ -416,7 +416,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, travel.wrapping_add(reach))?;
 
         let top =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
+            ops::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
                 .wrapping_add(-0xa0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_3, top)?;
@@ -432,20 +432,20 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         } else if get_castle_anim_frame(ctx, faction)? >= 0x1f {
             let frame = get_castle_anim_frame(ctx, faction)?;
             let scaled = (frame << 8).wrapping_sub(frame);
-            let fade = operation::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
+            let fade = ops::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
                 .wrapping_sub(scaled)
                 .wrapping_add(0x1de2);
 
             set_alpha(
                 draw_context(&mut ctx.draw)?,
-                operation::div_2(fade).wrapping_add(0xff),
+                ops::div_2(fade).wrapping_add(0xff),
             );
         }
 
         if get_castle_anim_frame(ctx, faction)? >= 2 {
             let start_x =
-                operation::cvttsd2si(near_width.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
-            let end_x = operation::cvttsd2si(far_width.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
+                ops::cvttsd2si(near_width.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+            let end_x = ops::cvttsd2si(far_width.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
             let angle = atan2_deg(
                 0x1eai32.wrapping_sub(start_y) as f32,
                 end_x.wrapping_sub(start_x) as f32,
@@ -463,13 +463,13 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             let height = imgcut_get_sprite_cut(beam, 5)?[3];
             let across = start_x.wrapping_sub(end_x);
             let down = start_y.wrapping_add(-0x1ea);
-            let length = operation::cvttss2si(sqrt_f32(
+            let length = ops::cvttss2si(sqrt_f32(
                 across
                     .wrapping_mul(across)
                     .wrapping_add(down.wrapping_mul(down)) as f32,
             ));
-            let mut seed = operation::div_2(get_castle_anim_frame(ctx, faction)?);
-            let half = operation::div_2(height);
+            let mut seed = ops::div_2(get_castle_anim_frame(ctx, faction)?);
+            let half = ops::div_2(height);
             let upper = start_y.wrapping_sub(half);
             let lower = half.wrapping_add(start_y);
             let angle = angle + 180.0;
@@ -591,32 +591,32 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, travel.wrapping_add(reach))?;
 
         let top =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
+            ops::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
                 .wrapping_add(-0xa0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_3, top)?;
 
         let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-        let start_x = operation::cvttsd2si(
+        let start_x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
         let start_y = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
         let tip = ctx.i32_at(AppContext::DRAW_TEMP_2)? as f64;
         let end_x =
-            operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
+            ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
 
         if get_castle_anim_frame(ctx, faction)? < 2 {
             set_alpha(draw_context(&mut ctx.draw)?, 0x40);
         } else if get_castle_anim_frame(ctx, faction)? >= 0x1f {
             let frame = get_castle_anim_frame(ctx, faction)?;
             let scaled = (frame << 8).wrapping_sub(frame);
-            let fade = operation::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
+            let fade = ops::mul_high(scaled.wrapping_add(-0x1de2), 0x55555555)
                 .wrapping_sub(scaled)
                 .wrapping_add(0x1de2);
 
             set_alpha(
                 draw_context(&mut ctx.draw)?,
-                operation::div_2(fade).wrapping_add(0xff),
+                ops::div_2(fade).wrapping_add(0xff),
             );
         }
 
@@ -636,12 +636,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let height = imgcut_get_sprite_cut(beam, 4)?[3];
         let across = start_x.wrapping_sub(end_x);
         let down = start_y.wrapping_add(-0x1ea);
-        let far = start_x.wrapping_sub(operation::cvttss2si(sqrt_f32(
+        let far = start_x.wrapping_sub(ops::cvttss2si(sqrt_f32(
             across
                 .wrapping_mul(across)
                 .wrapping_add(down.wrapping_mul(down)) as f32,
         )));
-        let half = operation::div_2(height);
+        let half = ops::div_2(height);
         let upper = start_y.wrapping_sub(half);
         let lower = half.wrapping_add(start_y);
         let mut shift = [0.0f32; 6];
@@ -718,8 +718,8 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let pos = ctx
             .i32_at(AppContext::entity_field(faction, 0, Entity::POS_X))?
             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
-        let origin = operation::div_10(pos).wrapping_add(0x55) as f64;
-        let x = operation::cvttsd2si(
+        let origin = ops::div_10(pos).wrapping_add(0x55) as f64;
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
@@ -729,10 +729,10 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
         maanim_execute(&mut ctx.base_models[0], Some(&ctx.base_anims[0]), frame, 0)?;
 
-        let origin = operation::div_10(
+        let origin = ops::div_10(
             get_cannon_strike_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         ) as f64;
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
@@ -745,11 +745,11 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
             let reach = cannon_reach_x(ctx, faction)?;
             let x = reach
-                .wrapping_add(operation::div_2(
+                .wrapping_add(ops::div_2(
                     get_drawable_width(ctx)?.wrapping_add(-0x3c0),
                 ))
                 .wrapping_add(0x14);
-            let y = operation::div_10(ctx.i32_at(AppContext::entity_field(
+            let y = ops::div_10(ctx.i32_at(AppContext::entity_field(
                 faction,
                 0,
                 Entity::POS_Y,
@@ -764,10 +764,10 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
             maanim_execute(&mut ctx.base_models[0], Some(&ctx.base_anims[0]), frame, 0)?;
 
-            let origin = operation::div_10(
+            let origin = ops::div_10(
                 get_cannon_strike_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             ) as f64;
-            let x = operation::cvttsd2si(
+            let x = ops::cvttsd2si(
                 get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
             );
 
@@ -777,10 +777,10 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
             maanim_execute(&mut ctx.base_models[2], Some(&ctx.base_anims[2]), frame, 0)?;
 
-            let origin = operation::div_10(
+            let origin = ops::div_10(
                 get_cannon_strike_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             ) as f64;
-            let x = operation::cvttsd2si(
+            let x = ops::cvttsd2si(
                 get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
             );
 
@@ -789,7 +789,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             let part = mamodel_get_part(&ctx.base_models[2], 0)
                 .ok_or(Fault::null_pointer())?;
             let unit = mamodel_get_scale_unit(&ctx.base_models[2]);
-            let stretch = operation::div_1600(get_cannon_strike_width(ctx, 0)?.wrapping_mul(unit));
+            let stretch = ops::div_1600(get_cannon_strike_width(ctx, 0)?.wrapping_mul(unit));
             let unit = mamodel_get_scale_unit(&ctx.base_models[2]);
 
             set_part_scale(&mut ctx.base_models[2].parts[part], stretch, unit);
@@ -802,8 +802,8 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let pos = ctx
             .i32_at(AppContext::entity_field(faction, 0, Entity::POS_X))?
             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
-        let origin = operation::div_10(pos).wrapping_add(0x55) as f64;
-        let x = operation::cvttsd2si(
+        let origin = ops::div_10(pos).wrapping_add(0x55) as f64;
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
@@ -813,10 +813,10 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
         maanim_execute(&mut ctx.base_models[0], Some(&ctx.base_anims[0]), frame, 0)?;
 
-        let origin = operation::div_10(
+        let origin = ops::div_10(
             get_cannon_strike_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         ) as f64;
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
@@ -827,12 +827,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         ctx.set_i32_at(AppContext::DRAW_TEMP_1, reach)?;
 
         let top =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
+            ops::div_10(ctx.i32_at(AppContext::entity_field(faction, 0, Entity::POS_Y))?)
                 .wrapping_add(-0xa0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_3, top)?;
 
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                 + reach.wrapping_add(-10) as f64,
         );
@@ -854,7 +854,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             continue;
         }
 
-        let pos = operation::div_10(
+        let pos = ops::div_10(
             ctx.i32_at(record.wrapping_add(CannonShot::POS_X))?
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         );
@@ -886,17 +886,17 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let part = mamodel_get_part(&ctx.base_models[model], 0)
             .ok_or(Fault::null_pointer())?;
         let width =
-            operation::cvttss2si(mamodel_get_scale_unit(&ctx.base_models[model]) as f32 * scale);
+            ops::cvttss2si(mamodel_get_scale_unit(&ctx.base_models[model]) as f32 * scale);
         let height =
-            operation::cvttss2si(mamodel_get_scale_unit(&ctx.base_models[model]) as f32 * scale);
+            ops::cvttss2si(mamodel_get_scale_unit(&ctx.base_models[model]) as f32 * scale);
 
         set_part_scale(&mut ctx.base_models[model].parts[part], width, height);
 
         let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-        let x = operation::cvttsd2si(
+        let x = ops::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                 + origin
-                + operation::div_2(CANNON_SHOT_SPACING) as f64,
+                + ops::div_2(CANNON_SHOT_SPACING) as f64,
         );
 
         draw_model(

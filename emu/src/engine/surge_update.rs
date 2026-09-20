@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, SURGE_TIMING, base_shake_start, get_pos_x, is_touchable,
@@ -42,12 +42,12 @@ pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
             continue;
         }
 
-        if operation::irem(elapsed, interval).ok_or(Fault::divide(interval as i64))? == 0 {
+        if ops::irem(elapsed, interval).ok_or(Fault::divide(interval as i64))? == 0 {
             base_shake_start(ctx, 2);
             play_sound_in_battle(ctx, 0x70)?;
         }
 
-        let tick = operation::idiv(elapsed, SURGE_TIMING[2])
+        let tick = ops::idiv(elapsed, SURGE_TIMING[2])
             .ok_or(Fault::divide(SURGE_TIMING[2] as i64))?;
         let faction = ctx.surge_events.get(at).ok_or(missing.clone())?.faction;
         let other = 1i32.wrapping_sub(faction);
@@ -96,7 +96,7 @@ pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_add(SURGE_TIMING[4])
             };
             let event = ctx.surge_events.get(at).ok_or(missing.clone())?;
-            let half = operation::div_2(SURGE_TIMING[0]);
+            let half = ops::div_2(SURGE_TIMING[0]);
 
             if x < event.x.wrapping_sub(half) || x >= half.wrapping_add(event.x) {
                 slot += 1;

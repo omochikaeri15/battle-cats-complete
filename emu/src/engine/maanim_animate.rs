@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{Maanim, Mamodel, deploy_part, std_vector_int_assign};
 
@@ -72,7 +72,7 @@ pub fn maanim_animate(
                 let repeats = track.header[2];
 
                 if repeats == -1 {
-                    time = operation::irem(frame.wrapping_sub(first), span)
+                    time = ops::irem(frame.wrapping_sub(first), span)
                         .ok_or(Fault::divide(span as i64))?
                         .wrapping_add(first);
                 } else {
@@ -80,11 +80,11 @@ pub fn maanim_animate(
 
                     if repeats > 0 {
                         let elapsed = frame.wrapping_sub(first);
-                        let lap = operation::idiv(elapsed, span)
+                        let lap = ops::idiv(elapsed, span)
                             .ok_or(Fault::divide(span as i64))?;
 
                         if lap < repeats {
-                            time = operation::irem(elapsed, span)
+                            time = ops::irem(elapsed, span)
                                 .ok_or(Fault::divide(span as i64))?
                                 .wrapping_add(first);
                         }
@@ -134,7 +134,7 @@ pub fn maanim_animate(
                                 .wrapping_mul(change);
                             let bottom = to_frame.wrapping_sub(from_frame).wrapping_mul(steps);
 
-                            found = operation::idiv(top, bottom)
+                            found = ops::idiv(top, bottom)
                                 .ok_or(Fault::divide(bottom as i64))?
                                 .wrapping_add(from[1]);
                         }
@@ -155,11 +155,11 @@ pub fn maanim_animate(
                                     - (1.0 - progress).powf(power.wrapping_neg() as f64))
                                 .sqrt();
 
-                                found = operation::cvttsd2si(change * eased + start);
+                                found = ops::cvttsd2si(change * eased + start);
                             } else {
                                 let eased = 1.0 - (1.0 - progress.powf(power as f64)).sqrt();
 
-                                found = operation::cvttsd2si(change * eased + start);
+                                found = ops::cvttsd2si(change * eased + start);
                             }
                         }
                         3 => {
@@ -225,7 +225,7 @@ pub fn maanim_animate(
 
                                             let gap = node_frame.wrapping_sub(other_frame);
 
-                                            weight = operation::div_wide(weight, gap)
+                                            weight = ops::div_wide(weight, gap)
                                                 .ok_or(Fault::divide(gap))?;
                                         }
 

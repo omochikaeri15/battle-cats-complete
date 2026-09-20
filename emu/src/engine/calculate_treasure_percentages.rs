@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, treasure_group_at};
 
@@ -25,7 +25,7 @@ pub fn calculate_treasure_percentages(ctx: &mut AppContext) -> Result<(), Fault>
                         AppContext::TREASURE_LEVELS
                             + chapter as usize * AppContext::TREASURE_LEVELS_STRIDE,
                     )?;
-                    let level = operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
+                    let level = ops::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
                         Fault::index_out_of_range(castle as i64, 0x31),
                     )? as i32;
 
@@ -39,7 +39,7 @@ pub fn calculate_treasure_percentages(ctx: &mut AppContext) -> Result<(), Fault>
                     )?;
 
                     sum = sum.wrapping_add(
-                        operation::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
+                        ops::xor_row_decode(row, 0x31, castle as i64 as usize).ok_or(
                             Fault::index_out_of_range(castle as i64, 0x31),
                         )? as i32,
                     );
@@ -59,7 +59,7 @@ pub fn calculate_treasure_percentages(ctx: &mut AppContext) -> Result<(), Fault>
             if sum != 0 {
                 let count = treasure_group_at(&ctx.treasure_store, chapter, group)?.count;
                 let divisor = count.wrapping_mul(3);
-                let percent = operation::idiv(sum.wrapping_mul(100), divisor)
+                let percent = ops::idiv(sum.wrapping_mul(100), divisor)
                     .ok_or(Fault::divide(divisor as i64))?;
 
                 ctx.set_i32_at(cell, percent)?;

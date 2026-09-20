@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, draw_context, draw_cut_scaled, get_map_type};
 
@@ -70,7 +70,7 @@ pub fn draw_deck_preset_mark(
         ((0x6ei32.wrapping_mul(0x10i32.wrapping_sub(step.wrapping_mul(step)))) as u32 >> 4) as i32
     };
     let x = x
-        .wrapping_add(operation::div_2(width))
+        .wrapping_add(ops::div_2(width))
         .wrapping_sub((size as u32 >> 1) as i32);
 
     draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, size, height, cut);

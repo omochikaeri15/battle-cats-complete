@@ -3,7 +3,7 @@ use std::{
     hash::{BuildHasher, Hasher},
 };
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, call_rng, get_stage_index, labyrinth_load_floors};
 
@@ -72,7 +72,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
 
     for slot in 0..10usize {
         let row = ctx.bytes_from(AppContext::BATTLE_LINEUP)?;
-        let value = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))?;
+        let value = ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))?;
 
         lineup.push(value.wrapping_sub(2) as i32);
     }

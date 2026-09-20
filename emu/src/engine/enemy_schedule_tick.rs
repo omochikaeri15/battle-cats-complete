@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, Entity, call_rng, get_battle_status,
@@ -48,7 +48,7 @@ pub fn enemy_schedule_tick(ctx: &mut AppContext) -> Result<(), Fault> {
             let max_hp = ctx.i32_at(AppContext::entity_field(1, 0, Entity::MAX_HP))?;
 
             if hp
-                <= operation::div_100(
+                <= ops::div_100(
                     stage_entry_base_trigger(&enemy_row).wrapping_mul(max_hp) as i64
                 ) as i32
             {

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CatStats, EnemyStats, get_cat_combo_bonus, get_global_map_id,
@@ -19,7 +19,7 @@ pub fn stat_speed(
             .wrapping_mul(2)
             .wrapping_add(base);
 
-        operation::div_100(
+        ops::div_100(
             get_cat_combo_bonus(ctx, &ctx.combo_store, 2, unit_id)?
                 .wrapping_add(0x64)
                 .wrapping_mul(boosted),
@@ -46,7 +46,7 @@ pub fn stat_speed(
                 .get((mode_cell | 1) as i64 as usize)
                 .ok_or(Fault::index_out_of_range((mode_cell | 1) as i64, params.len() as i64))?;
 
-        speed = operation::div_100(speed.wrapping_mul(percent));
+        speed = ops::div_100(speed.wrapping_mul(percent));
     } else if mode == 1 {
         let fixed = *params
             .get((mode_cell | 1) as i64 as usize)

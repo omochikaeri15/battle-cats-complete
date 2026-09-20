@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, JsonNode, json_container_as_int, json_parse_object_document,
@@ -41,7 +41,7 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
         let Some(values) = listed else {
             continue;
         };
-        let unit_id = operation::div_10(unit_key);
+        let unit_id = ops::div_10(unit_key);
         let form = unit_key
             .wrapping_sub(unit_id.wrapping_mul(10))
             .wrapping_sub(1);

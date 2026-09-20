@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc};
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, bg_param_resolve_int, draw_context, draw_model, fill_polygon_colored, fill_rect,
@@ -175,8 +175,8 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     .instances
                     .get(index)
                     .ok_or(Fault::out_of_range())?;
-                let width = operation::cvttss2si(scale * unit as f32);
-                let height = operation::cvttss2si(unit_y as f32 * instance.scale);
+                let width = ops::cvttss2si(scale * unit as f32);
+                let height = ops::cvttss2si(unit_y as f32 * instance.scale);
 
                 set_part_scale(&mut model.parts[part], width, height);
 
@@ -190,7 +190,7 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 set_part_angle(
                     &mut model.parts[part],
-                    operation::cvttss2si(unit as f32 * instance.angle / 360.0),
+                    ops::cvttss2si(unit as f32 * instance.angle / 360.0),
                 );
 
                 let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
@@ -203,7 +203,7 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 set_part_opacity(
                     &mut model.parts[part],
-                    operation::cvttss2si(unit as f32 * instance.alpha / 255.0),
+                    ops::cvttss2si(unit as f32 * instance.alpha / 255.0),
                 );
 
                 let instance = ctx
@@ -257,8 +257,8 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                             .instances
                             .get(index)
                             .ok_or(Fault::out_of_range())?;
-                        let x = operation::cvttss2si(origin + spacing.wrapping_mul(step) as f32);
-                        let y = operation::cvttss2si(instance.y);
+                        let x = ops::cvttss2si(origin + spacing.wrapping_mul(step) as f32);
+                        let y = ops::cvttss2si(instance.y);
 
                         draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
                         step = step.wrapping_add(1);

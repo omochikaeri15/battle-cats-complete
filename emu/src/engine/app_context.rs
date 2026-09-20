@@ -1,6 +1,6 @@
 use std::{
     cell,
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     rc::{Rc, Weak},
 };
 
@@ -8,17 +8,17 @@ use crate::Fault;
 
 use super::{
     AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
-    BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, CharaGroup, ComboStore,
-    CounterSurgeEvent, DialogManager, DojoChestRow, DrawSink, DropRecord, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
-    ExGroup, ExplosionEvent, FixedLineupStore, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
-    Mamodel, MapData, MapOption, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
+    BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, ChangeCondition, CharaGroup, ComboStore,
+    CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DojoScoreBonus, DrawSink, DropRecord, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
+    ExGroup, ExplosionEvent, FixedLineupStore, GatyaDataSet, GatyaItemRow, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
+    Mamodel, MapLayout, Medal, MapOption, OfficersClubRow, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
-    PointEventReward, RealmsRngTable, RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SpecialRuleStore,
+    PointEventReward, RealmsRngTable, RecommendedLevelup, RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SoundState, SpecialRuleStore,
     StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureStore,
-    UiHost, UnlockGroup, UnlockPopupRow, WebPopupEntry, ZombieLotteryRow,
+    UiHost, UnlockGroup, VibrationStore, UnlockPopupRow, WebPopupEntry, ZombieLotteryRow,
 };
 
-pub const SIZE: usize = 0x500000;
+pub const SIZE: usize = 0x475270;
 
 pub const ENTITY_BASE: usize = 0x838f8;
 pub const ENTITY_STRIDE: usize = 0x3e8;
@@ -42,6 +42,9 @@ const FACTION_FLAGS_STRIDE: usize = 0x1f0;
 const RNG_STATE: usize = 0x46f790;
 
 const _: () = assert!(RNG_STATE + 4 <= SIZE);
+const _: () = assert!(UNIT_BUY + UNIT_BUY_STRIDE <= CAT_STATS);
+const _: () = assert!(CAT_STATS < ENEMY_STATS);
+const _: () = assert!(ENTITY_BASE + 2 * FACTION_STRIDE <= CAT_STATS);
 
 pub struct UnitBuy;
 
@@ -801,7 +804,7 @@ pub struct AppContext {
     pub star_multipliers: BTreeMap<i32, Vec<i32>>,
     pub map_options: MapOption,
     pub settings: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub pack_digests: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub failed_packs: BTreeSet<Vec<u8>>,
     pub dojo_chest_rows: Vec<DojoChestRow>,
     pub gold_cpu_rows: Vec<[i32; 4]>,
     pub lock_skip_rows: Vec<[i32; 2]>,
@@ -812,11 +815,31 @@ pub struct AppContext {
     pub event_gatya_settings: BTreeMap<i32, BTreeMap<i32, BTreeMap<i32, i32>>>,
     pub orb_effects: [OrbEffectStore; 2],
     pub catseye_behavior: BTreeMap<i32, BTreeMap<i32, Vec<CatseyeStep>>>,
+    pub ability_data_rows: [[i32; 5]; 10],
+    pub gatya_item_rows: [GatyaItemRow; 275],
+    pub gatya_data_sets: BTreeMap<i32, Vec<GatyaDataSet>>,
+    pub recommended_powerup_rows: Vec<[i32; 4]>,
+    pub recommended_levelups: BTreeMap<i32, RecommendedLevelup>,
+    pub officers_club_rows: BTreeMap<i32, OfficersClubRow>,
+    pub item_pack_rows: BTreeMap<i32, ItemPackRow>,
+    pub autoset_ratings: BTreeMap<i32, BTreeMap<i32, i32>>,
+    pub autoset_abilities: Vec<[i32; 4]>,
+    pub autoset_excluded_enemies: Vec<i32>,
+    pub autoset_groups: BTreeMap<i32, i32>,
+    pub autoset_organizations: BTreeMap<i32, [[i32; 3]; 10]>,
+    pub map_layouts: BTreeMap<i32, MapLayout>,
+    pub vibration: VibrationStore,
+    pub daily_login_grades: BTreeMap<i32, DailyLoginGrade>,
+    pub sound_state: SoundState,
+    pub change_conditions: BTreeMap<i32, ChangeCondition>,
+    pub dojo_score_bonuses: BTreeMap<i32, DojoScoreBonus>,
+    pub hidden_data: HiddenData,
+    pub medals: Vec<Medal>,
+    pub medal_order: Vec<u64>,
     pub treasure_store: TreasureStore,
     pub orb_store: OrbStore,
     pub special_rules: SpecialRuleStore,
     pub equipped_orbs: BTreeMap<i32, BTreeMap<i32, i32>>,
-    pub map_data: BTreeMap<i32, MapData>,
     pub map_data_ids: BTreeMap<i32, Vec<i32>>,
     pub map_stage_sets: BTreeMap<i32, Vec<i32>>,
     pub talent_definitions: BTreeMap<i32, [i32; 0x71]>,
@@ -1357,6 +1380,8 @@ impl AppContext {
     pub const STORY_MAP_COUNTS: usize = 0x3364;
     pub const UNIT_INFO_OVERLAY_OPEN: usize = 0x910;
     pub const CHAPTER_PROGRESS: usize = 0xc94c;
+    pub const ITF_PROGRESS: usize = 0xc95c;
+    pub const COTC_PROGRESS: usize = 0xc968;
     pub const CHAPTER_PROGRESS_KEY: usize = 0xc974;
     pub const ENEMY_GUIDE_SEEN: usize = 0xd968;
     pub const PINCH: usize = 0x33d8;
@@ -1867,7 +1892,7 @@ impl AppContext {
             star_multipliers: Default::default(),
             map_options: Default::default(),
             settings: Default::default(),
-            pack_digests: BTreeMap::new(),
+            failed_packs: BTreeSet::new(),
             dojo_chest_rows: Vec::new(),
             gold_cpu_rows: Vec::new(),
             lock_skip_rows: Vec::new(),
@@ -1878,11 +1903,31 @@ impl AppContext {
             event_gatya_settings: BTreeMap::new(),
             orb_effects: Default::default(),
             catseye_behavior: BTreeMap::new(),
+            ability_data_rows: [[0; 5]; 10],
+            gatya_item_rows: std::array::from_fn(|_| GatyaItemRow::default()),
+            gatya_data_sets: BTreeMap::new(),
+            recommended_powerup_rows: Vec::new(),
+            recommended_levelups: BTreeMap::new(),
+            officers_club_rows: BTreeMap::new(),
+            item_pack_rows: BTreeMap::new(),
+            autoset_ratings: BTreeMap::new(),
+            autoset_abilities: Vec::new(),
+            autoset_excluded_enemies: Vec::new(),
+            autoset_groups: BTreeMap::new(),
+            autoset_organizations: BTreeMap::new(),
+            map_layouts: BTreeMap::new(),
+            vibration: VibrationStore::default(),
+            daily_login_grades: BTreeMap::new(),
+            sound_state: SoundState::default(),
+            change_conditions: BTreeMap::new(),
+            dojo_score_bonuses: BTreeMap::new(),
+            hidden_data: HiddenData::default(),
+            medals: Vec::new(),
+            medal_order: Vec::new(),
             treasure_store: Default::default(),
             orb_store: Default::default(),
             special_rules: Default::default(),
             equipped_orbs: Default::default(),
-            map_data: Default::default(),
             map_data_ids: Default::default(),
             map_stage_sets: Default::default(),
             talent_definitions: Default::default(),

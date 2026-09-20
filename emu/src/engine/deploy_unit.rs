@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats,
@@ -310,8 +310,8 @@ pub fn deploy_unit(
                     let boosted = ctx
                         .i32_at(AppContext::EVENT_POINT_BOOST)?
                         .wrapping_add(2)
-                        .wrapping_mul(operation::div_100(listed_cost as i64) as i32);
-                    let args = [operation::div_2(boosted)];
+                        .wrapping_mul(ops::div_100(listed_cost as i64) as i32);
+                    let args = [ops::div_2(boosted)];
                     let store = ctx
                         .event_items
                         .as_mut()
@@ -409,7 +409,7 @@ pub fn deploy_unit(
                         let saved = get_orb_value_max(ctx, unit_id, 0x13, 0, 0)?;
 
                         recharge = max_i32(
-                            operation::div_100(0x64i32.wrapping_sub(saved).wrapping_mul(recharge)),
+                            ops::div_100(0x64i32.wrapping_sub(saved).wrapping_mul(recharge)),
                             floor,
                         );
                     }
@@ -421,7 +421,7 @@ pub fn deploy_unit(
 
         play_sound(sound_manager(ctx)?, 0x13, None);
 
-        return add_medal_progress(ctx, 0, operation::div_100(cost as i64) as i32);
+        return add_medal_progress(ctx, 0, ops::div_100(cost as i64) as i32);
     }
 
     play_sound(sound_manager(ctx)?, 0xf, None);

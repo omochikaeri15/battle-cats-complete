@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, draw_context, draw_cut_scaled, draw_number_plain, get_drawable_width,
@@ -34,7 +34,7 @@ pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.i32_at(AppContext::DECK_BAR_SLIDE)?
             .wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?),
     ) as f32;
-    let cap = operation::div_100(get_max_money(ctx, AppContext::faction_flags(0))?);
+    let cap = ops::div_100(get_max_money(ctx, AppContext::faction_flags(0))?);
     let sheet = ctx.img001_sheet.clone();
     let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
     let bounds = draw_number_plain(
@@ -57,8 +57,8 @@ pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
     draw_cut_scaled(
         draw_context(&mut ctx.draw)?,
         digits,
-        operation::cvttss2si(bounds.right),
-        operation::cvttss2si(y),
+        ops::cvttss2si(bounds.right),
+        ops::cvttss2si(y),
         0x1e,
         0x2a,
         cut,
@@ -69,8 +69,8 @@ pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
     draw_cut_scaled(
         draw_context(&mut ctx.draw)?,
         digits,
-        operation::cvttss2si(x + -29.0),
-        operation::cvttss2si(y),
+        ops::cvttss2si(x + -29.0),
+        ops::cvttss2si(y),
         0x1e,
         0x2a,
         cut,
@@ -78,7 +78,7 @@ pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let x = x + -28.0;
     let base = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
-    let money = operation::div_100(get_money(ctx, AppContext::faction_flags(0))?);
+    let money = ops::div_100(get_money(ctx, AppContext::faction_flags(0))?);
 
     draw_number_plain(
         draw_context(&mut ctx.draw)?,

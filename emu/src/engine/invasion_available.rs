@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::AppContext;
 
@@ -7,7 +7,7 @@ pub fn invasion_available(ctx: &AppContext, chapter: i32) -> Result<bool, Fault>
         return Ok(false);
     }
 
-    let cleared = operation::xor_row_decode(
+    let cleared = ops::xor_row_decode(
         &ctx.block_at::<8>(AppContext::STAGES_CLEARED_CHAPTERS + 9 * 4)?,
         1,
         0,

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, get_cannon_unit_id, get_scene_id, read_flag, stat_conjure_unit_id};
 
@@ -24,7 +24,7 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
         pair[4..].copy_from_slice(&key);
 
         return Ok(
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
+            ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
         );
     }
 
@@ -69,7 +69,7 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
         pair[4..].copy_from_slice(&key);
 
         return Ok(
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
+            ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
         );
     }
 
@@ -86,6 +86,6 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
     pair[4..].copy_from_slice(&key);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
+        ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
     )
 }

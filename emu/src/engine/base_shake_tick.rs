@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, call_rng, get_battle_status, sin_deg, std_map_int_shake_record_subscript};
 
@@ -48,12 +48,12 @@ pub fn base_shake_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         )
         .wrapping_mul(ctx.base_shake.frame);
     let duration = std_map_int_shake_record_subscript(&mut ctx.base_shake.records, &id).duration;
-    let amplitude = operation::idiv(swing, duration)
+    let amplitude = ops::idiv(swing, duration)
         .ok_or(Fault::divide(duration as i64))?
         .wrapping_add(from);
     let roll = call_rng(ctx, 0x168);
 
-    ctx.base_shake.offset = operation::cvttss2si(sin_deg(roll as f32) * amplitude as f32);
+    ctx.base_shake.offset = ops::cvttss2si(sin_deg(roll as f32) * amplitude as f32);
 
     Ok(())
 }

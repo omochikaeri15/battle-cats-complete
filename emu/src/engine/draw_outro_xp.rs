@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     button_bank_find, dialog_draw, dialog_top, digit_count, draw_context, draw_cut, draw_cut_scaled, draw_labyrinth_gauge, draw_number_plain, draw_panel,
@@ -19,7 +19,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let slide = *OUTRO_SLIDE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
         let row = (AppContext::MAP_STAGE_ROWS as i64 + (ctx.i32_at(AppContext::STAGE_ROW)? as i64) * AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
         let flag = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::index_out_of_range(8, 0x2e))? as i32;
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -70,7 +70,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             fill_rect(draw_context(&mut ctx.draw)?, bar, 0x13b, width, 0x37);
             glow_set(draw_context(&mut ctx.draw)?, 0);
 
-            let across = operation::div_2(get_drawable_width(ctx)?).wrapping_add(origin) as f32;
+            let across = ops::div_2(get_drawable_width(ctx)?).wrapping_add(origin) as f32;
             let digits = ctx.img001_sheet.clone();
             let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let doubled = ctx.u8_at(AppContext::OUTRO_VIDEO_WATCHED)?;
@@ -81,8 +81,8 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, base, value, offset, across, 321.0, -1.0, lead, 1, 0)?;
             let head = imgcut_get_sprite_cut(banner, 1)?[2];
 
-            draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(bounds.left - head as f32 + -20.0), 0x142, 1);
-            draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(20.0 + bounds.right), 0x144, 2);
+            draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(bounds.left - head as f32 + -20.0), 0x142, 1);
+            draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(20.0 + bounds.right), 0x144, 2);
         } else if phase >= 2 {
             let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
             let step = if (frame as u32) >= 0xc || phase != 2 { 0xc } else { frame };
@@ -103,7 +103,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             fill_rect(draw_context(&mut ctx.draw)?, bar, 0x13b, width, 0x37);
             glow_set(draw_context(&mut ctx.draw)?, 0);
 
-            let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
+            let origin = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
             let digits = ctx.img001_sheet.clone();
             let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let scored = get_map_type(ctx, 0)? == -6;
@@ -121,16 +121,16 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, offset, origin, 321.0, -1.0, lead, 1, 0)?;
                 let head = imgcut_get_sprite_cut(banner, head_cut)?[2];
 
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(bounds.left - head as f32 + -20.0), 0x144, head_cut);
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(20.0 + bounds.right), 0x143, 4);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(bounds.left - head as f32 + -20.0), 0x144, head_cut);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(20.0 + bounds.right), 0x143, 4);
 
                 if ctx.i32_at(AppContext::OUTRO_PHASE)? != 2 && ctx.i32_at(AppContext::NEW_BEST_SCORE)? == 1 {
                     let middle = (bounds.right - bounds.left) * 0.5 + bounds.left;
-                    let half = operation::div_2(imgcut_get_sprite_cut(banner, 6)?[2]);
-                    let x = operation::cvttss2si(middle - half as f32);
+                    let half = ops::div_2(imgcut_get_sprite_cut(banner, 6)?[2]);
+                    let x = ops::cvttss2si(middle - half as f32);
                     let ticks = ctx.i32_at(AppContext::OUTRO_TICKS)?;
-                    let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-                    let blink = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
+                    let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+                    let blink = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
 
                     draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0x12c, blink as i32);
                 }
@@ -143,8 +143,8 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, base, value, offset, origin, 321.0, -1.0, lead, 1, 0)?;
                 let head = imgcut_get_sprite_cut(banner, 1)?[2];
 
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(bounds.left - head as f32 + -20.0), 0x142, 1);
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(20.0 + bounds.right), 0x144, 2);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(bounds.left - head as f32 + -20.0), 0x142, 1);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(20.0 + bounds.right), 0x144, 2);
             }
 
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -175,23 +175,23 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
                 let digits = ctx.img001_sheet.clone();
                 let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
-                let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
+                let origin = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
                 let value = ctx.i32_at(AppContext::STAGE_SCORE)?;
                 let offset = imgcut_get_sprite_cut(banner, 5)?[2].wrapping_add(0x14);
                 let lead = imgcut_get_sprite_cut(banner, 4)?[2].wrapping_add(0x14);
                 let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, offset, origin, 261.0, -1.0, lead, 1, 0)?;
                 let head = imgcut_get_sprite_cut(banner, 5)?[2];
 
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(bounds.left - head as f32 + -20.0), 0x108, 5);
-                draw_cut(draw_context(&mut ctx.draw)?, banner, operation::cvttss2si(20.0 + bounds.right), 0x107, 4);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(bounds.left - head as f32 + -20.0), 0x108, 5);
+                draw_cut(draw_context(&mut ctx.draw)?, banner, ops::cvttss2si(20.0 + bounds.right), 0x107, 4);
 
                 if ctx.i32_at(AppContext::OUTRO_PHASE)? != 2 && ctx.i32_at(AppContext::NEW_BEST_SCORE)? == 1 {
                     let middle = (bounds.right - bounds.left) * 0.5 + bounds.left;
-                    let half = operation::div_2(imgcut_get_sprite_cut(banner, 6)?[2]);
-                    let x = operation::cvttss2si(middle - half as f32);
+                    let half = ops::div_2(imgcut_get_sprite_cut(banner, 6)?[2]);
+                    let x = ops::cvttss2si(middle - half as f32);
                     let ticks = ctx.i32_at(AppContext::OUTRO_TICKS)?;
-                    let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-                    let blink = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
+                    let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+                    let blink = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(6) as u8;
 
                     draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0xf0, blink as i32);
                 }
@@ -207,17 +207,17 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         if chapter != 3 && chapter != 0x63 {
             let popup = ctx.scene_img005_sheet.clone();
             let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-            let centre = operation::div_2(get_drawable_width(ctx)?);
+            let centre = ops::div_2(get_drawable_width(ctx)?);
             let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             let grow = *POPUP_GROW_TABLE
                 .get(step as i64 as usize)
                 .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
             let span = grow.wrapping_mul(0x2b2);
             let rise = grow.wrapping_mul(0xb3);
-            let x = operation::div_neg_200(span).wrapping_add(centre);
-            let y = operation::div_neg_200(rise).wrapping_add(0x1ea);
+            let x = ops::div_neg_200(span).wrapping_add(centre);
+            let y = ops::div_neg_200(rise).wrapping_add(0x1ea);
 
-            draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, operation::div_100(span), operation::div_100(rise), 0);
+            draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
 
             if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) >= 4 {
                 let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -233,12 +233,12 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
                 let text = ctx.label_texts.first().copied().flatten().ok_or(Fault::null_pointer())?;
-                let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(operation::div_2(span));
+                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(ops::div_2(span));
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1bc, 0);
 
                 let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
-                let beat = frame.wrapping_sub(operation::div_4(frame) * 4);
+                let beat = frame.wrapping_sub(ops::div_4(frame) * 4);
 
                 if (beat as u32) <= 1 {
                     set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0, 0xff);
@@ -249,14 +249,14 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 let caption = ctx.next_stage_caption.clone();
                 let span = get_text_width(ctx, &caption, 0x1e)?;
                 let text = ctx.label_texts.get(1).copied().flatten().ok_or(Fault::null_pointer())?;
-                let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(operation::div_2(span));
+                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(ops::div_2(span));
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1ec, 0);
             }
         }
     } else if phase >= 8 {
         let held = min_i32(phase.wrapping_add(-7), 0x1e);
-        let alpha = operation::div_30((held << 8).wrapping_sub(held));
+        let alpha = ops::div_30((held << 8).wrapping_sub(held));
 
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, alpha);
 
@@ -268,7 +268,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     }
 
     if get_map_type(ctx, 0)? == -0x15 && ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x26 {
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let plate = ctx.outro_event_sheets[1].clone();
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
 
@@ -299,7 +299,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let span = places.wrapping_mul(14);
         let reach = imgcut_get_sprite_cut(panel, marker)?[2].wrapping_add(span);
         let tail = imgcut_get_sprite_cut(panel, 0xb)?[2];
-        let anchor = operation::div_2(reach.wrapping_add(tail).wrapping_add(8))
+        let anchor = ops::div_2(reach.wrapping_add(tail).wrapping_add(8))
             .wrapping_add(centre)
             .wrapping_add(-0x46)
             .wrapping_sub(imgcut_get_sprite_cut(panel, 0xb)?[2]);
@@ -320,7 +320,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let places = digit_count(best);
         let span = places.wrapping_mul(14);
         let mark = imgcut_get_sprite_cut(small, 0x7c)?[2];
-        let anchor = operation::div_2(span.wrapping_add(mark).wrapping_add(4))
+        let anchor = ops::div_2(span.wrapping_add(mark).wrapping_add(4))
             .wrapping_add(centre)
             .wrapping_add(-0x46)
             .wrapping_sub(imgcut_get_sprite_cut(small, 0x7c)?[2]);
@@ -350,8 +350,8 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let press = *DECK_PRESS_SIZE_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
-        let half = operation::div_2(press);
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
+        let half = ops::div_2(press);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
         let y = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
             .wrapping_sub(half)
@@ -362,7 +362,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
         let label = ctx.img006_sheet.clone();
         let label = label.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
         let y = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
             .wrapping_sub(half)
@@ -381,14 +381,14 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
             let plate = ctx.img101_sheet.clone();
             let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
-            let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+            let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
                 .wrapping_sub(get_bottom_inset_logical(ctx)?)
                 .wrapping_add(0x22e);
             let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-            let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
-            let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
+            let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
+            let cut = (ops::div_2(beat as i8 as i32) as i8).wrapping_add(4) as u8;
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
         }

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, Surface, call_rng, cos_deg, draw_context, draw_surface_scaled,
@@ -41,18 +41,18 @@ pub fn item_drop_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let base_x = get_base_pos_x(ctx, 1)?;
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let inset = operation::div_neg_100(size.wrapping_mul(0x49c));
-            let origin = operation::div_10(
+            let inset = ops::div_neg_100(size.wrapping_mul(0x49c));
+            let origin = ops::div_10(
                 base_x
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)
                     .wrapping_add(inset),
             );
             let offset_x = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_x;
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let shifted = operation::div_100(offset_x.wrapping_mul(size))
-                .wrapping_add(operation::div_10(ctx.i32_at(AppContext::CAMERA_X)?));
+            let shifted = ops::div_100(offset_x.wrapping_mul(size))
+                .wrapping_add(ops::div_10(ctx.i32_at(AppContext::CAMERA_X)?));
             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-            let width = operation::div_200((size << 7).wrapping_sub(size));
+            let width = ops::div_200((size << 7).wrapping_sub(size));
 
             ctx.item_drop_queue[queue].push(width.wrapping_add(shifted).wrapping_add(origin));
             ctx.item_drop_queue[queue].push(0x73);
@@ -77,20 +77,20 @@ pub fn item_drop_particles(ctx: &mut AppContext) -> Result<(), Fault> {
         let turn = ctx.item_drop_queue[queue][2] as f32;
         let base_y = ctx.item_drop_queue[queue][5];
         let launch_x = ctx.item_drop_queue[queue][4] as f32;
-        let across = operation::cvttss2si(cos_deg(turn) * spin as f32 * frame as f32 + launch_x);
+        let across = ops::cvttss2si(cos_deg(turn) * spin as f32 * frame as f32 + launch_x);
         let height;
 
         if spin != 0 {
             let rise = sin_deg(turn) * spin as f32 * frame as f32 + base_y as f32;
             let fall = frame as f64 * -3.0 * frame as f64;
-            let lift = operation::cvttsd2si(fall + rise as f64);
+            let lift = ops::cvttsd2si(fall + rise as f64);
 
             ctx.item_drop_queue[queue][3] = frame.wrapping_add(1);
 
             if lift < 0 {
                 let spin = ctx.item_drop_queue[queue][1];
 
-                ctx.item_drop_queue[queue][1] = operation::div_100((spin << 4).wrapping_mul(5));
+                ctx.item_drop_queue[queue][1] = ops::div_100((spin << 4).wrapping_mul(5));
                 ctx.item_drop_queue[queue][3] = 0;
                 ctx.item_drop_queue[queue][4] = across;
                 ctx.item_drop_queue[queue][5] = 0;
@@ -108,15 +108,15 @@ pub fn item_drop_particles(ctx: &mut AppContext) -> Result<(), Fault> {
         let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
         let wide = imgcut_get_width(icon).wrapping_mul(0x3c);
         let tall = imgcut_get_height(icon).wrapping_mul(0x3c);
-        let width = operation::div_100(wide);
-        let height_scaled = operation::div_100(tall);
-        let camera = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
-        let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
-            .wrapping_add(operation::div_neg_200(wide))
+        let width = ops::div_100(wide);
+        let height_scaled = ops::div_100(tall);
+        let camera = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
+        let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
+            .wrapping_add(ops::div_neg_200(wide))
             .wrapping_add(across)
             .wrapping_add(camera);
         let ground =
-            operation::div_10(ctx.i32_at(AppContext::entity_field(1, 0, Entity::POS_Y))?);
+            ops::div_10(ctx.i32_at(AppContext::entity_field(1, 0, Entity::POS_Y))?);
         let y = ground
             .wrapping_sub(height.wrapping_add(height_scaled))
             .wrapping_add(0x26);

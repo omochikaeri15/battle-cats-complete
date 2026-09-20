@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, scene_ignores_insets};
 
@@ -32,5 +32,5 @@ pub fn get_drawable_width(ctx: &AppContext) -> Result<i32, Fault> {
         .screen_h
         .wrapping_sub(metrics.inset_top.wrapping_add(metrics.inset_bottom));
 
-    operation::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))
+    ops::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))
 }

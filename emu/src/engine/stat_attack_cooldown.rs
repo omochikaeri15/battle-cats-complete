@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, CatStats, EnemyStats, get_talent_value, read_flag};
 
@@ -19,7 +19,7 @@ pub fn stat_attack_cooldown(
     ))?;
     let reduction = get_talent_value(ctx, faction, unit_id, form, 0x3d, 0)?;
 
-    Ok(operation::div_100(
+    Ok(ops::div_100(
         100i32.wrapping_sub(reduction).wrapping_mul(base),
     ))
 }

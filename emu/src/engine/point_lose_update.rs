@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, app_on_draw, back_pressed, button_bank_busy, button_bank_find, check_medals,
@@ -265,7 +265,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         6 => {
             ctx.set_i32_at(
                 AppContext::OUTRO_OK_RECT,
-                operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
+                ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
             )?;
             ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 4, 0x280)?;
             ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;

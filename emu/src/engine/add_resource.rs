@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, ItemDefinition, get_item_count, set_item_count};
 
@@ -26,7 +26,7 @@ pub fn add_resource(ctx: &mut AppContext, item: i32, amount: i32, flag: u8) -> R
     {
         1
     } else {
-        operation::xor_cell_decode(
+        ops::xor_cell_decode(
             &ctx.block_at::<8>(AppContext::ITEM_REDIRECT_SCALES.wrapping_add(record))?,
         ) as i32
     };

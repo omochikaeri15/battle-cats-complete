@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, ItemShopRow, JsonNode, MatatabiRow, format_localized,
@@ -146,7 +146,7 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
         };
 
         for (key, entry) in entries {
-            let map_id = operation::atoi(key);
+            let map_id = ops::atoi(key);
             let JsonNode::Object(fields) = entry else {
                 return Err(Fault::null_pointer());
             };

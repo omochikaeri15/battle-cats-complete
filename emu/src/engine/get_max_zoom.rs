@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, camera_vertical_correction, get_setting};
 
@@ -27,7 +27,7 @@ pub fn get_max_zoom(ctx: &mut AppContext) -> Result<i32, Fault> {
         .wrapping_add(letterbox)
         .wrapping_add(0x8a);
 
-    let quotient = operation::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))?;
+    let quotient = ops::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))?;
     let max_zoom = if quotient < 0x2710 { quotient } else { 0x2710 };
 
     ctx.set_i32_at(AppContext::CAMERA_ZOOM, saved_zoom)?;

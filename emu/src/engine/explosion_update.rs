@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, EXPLOSION_DAMAGE_DEFAULTS, EXPLOSION_WIDTH_DEFAULTS, Entity, explosion_attack,
@@ -19,7 +19,7 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let interval = get_setting(&ctx.settings, b"battle_explosion_frame4", 0xf)?;
         let rings = min_i32(
-            operation::idiv(frame, interval)
+            ops::idiv(frame, interval)
                 .ok_or(Fault::divide(interval as i64))?
                 .wrapping_add(1),
             3,
@@ -87,8 +87,8 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
                     continue;
                 }
 
-                let left = operation::div_2(spread).wrapping_neg();
-                let half = operation::div_2(width);
+                let left = ops::div_2(spread).wrapping_neg();
+                let half = ops::div_2(width);
                 let mut slot = 1i32;
 
                 while slot != 51 {

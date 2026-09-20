@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Debris, draw_context, draw_cut_scaled, get_drawable_width, glow_set, set_color,
@@ -27,7 +27,7 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
                     set_color(draw_context(&mut ctx.draw)?, 0xcc, 0xcc, 0xcc, 0xff);
                 }
 
-                let pos_x = operation::div_10(
+                let pos_x = ops::div_10(
                     ctx.i32_at(base + Debris::POS_X)?
                         .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
                 );
@@ -35,11 +35,11 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
                 ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
                 if ctx.i32_at(base + Debris::TIMER)? >= 2 {
-                    let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
+                    let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
                         .wrapping_add(pos_x);
-                    let y = operation::div_10(ctx.i32_at(base + Debris::POS_Y)?);
+                    let y = ops::div_10(ctx.i32_at(base + Debris::POS_Y)?);
                     let cut =
-                        0xdi32.wrapping_sub(operation::div_2(ctx.i32_at(base + Debris::TIMER)?));
+                        0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base + Debris::TIMER)?));
 
                     draw_cut_scaled(
                         draw_context(&mut ctx.draw)?,
@@ -65,7 +65,7 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
                 set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
             }
 
-            let pos_x = operation::div_10(
+            let pos_x = ops::div_10(
                 ctx.i32_at(base + Debris::POS_X)?
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             );
@@ -73,10 +73,10 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
             if ctx.i32_at(base + Debris::TIMER)? >= 2 {
-                let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
+                let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
                     .wrapping_add(pos_x);
-                let y = operation::div_10(ctx.i32_at(base + Debris::POS_Y)?);
-                let cut = 0xdi32.wrapping_sub(operation::div_2(ctx.i32_at(base + Debris::TIMER)?));
+                let y = ops::div_10(ctx.i32_at(base + Debris::POS_Y)?);
+                let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base + Debris::TIMER)?));
 
                 draw_cut_scaled(
                     draw_context(&mut ctx.draw)?,

@@ -1,4 +1,4 @@
-use crate::operation;
+use crate::ops;
 
 use super::AppContext;
 
@@ -13,7 +13,7 @@ pub fn get_left_inset_logical(ctx: &AppContext) -> i32 {
         return 0;
     }
 
-    operation::cvttss2si(
+    ops::cvttss2si(
         ((metrics.design_w as f32) * (metrics.inset_left as f32) / (metrics.screen_w as f32))
             .ceil(),
     )

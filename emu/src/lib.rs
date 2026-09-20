@@ -1,7 +1,7 @@
 #[allow(clippy::all)]
 pub mod engine;
 mod fault;
-pub mod operation;
+pub mod ops;
 pub mod runtime;
 
 pub use fault::Fault;

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     Mamodel, imgcut_get_cut_count, imgcut_get_height, imgcut_get_sprite_cut, imgcut_get_width,
@@ -21,7 +21,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
 
     if parent == -1 {
         let scale_unit = model.scale_unit;
-        let across = operation::idiv(
+        let across = ops::idiv(
             (own_scale_x as i32).wrapping_mul(part.i32_at(0x64)),
             scale_unit,
         )
@@ -34,14 +34,14 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         };
         part.set_i32_at(0x60, scale_x);
 
-        scale_y = operation::idiv(
+        scale_y = ops::idiv(
             part.i32_at(0x70).wrapping_mul(part.i32_at(0x68)),
             scale_unit,
         )
         .ok_or(Fault::divide(scale_unit as i64))?;
         part.set_i32_at(0x6c, scale_y);
 
-        opacity = operation::idiv(
+        opacity = ops::idiv(
             part.i32_at(0x84).wrapping_mul(part.i32_at(0x7c)),
             model.opacity_unit,
         )
@@ -59,17 +59,17 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             .wrapping_mul(part.i32_at(0x64) as i64)
             .wrapping_mul(own_scale_x);
         let across =
-            operation::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))?;
+            ops::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))?;
         scale_x =
-            operation::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
+            ops::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
         part.set_i32_at(0x60, scale_x);
 
         let down = (above.i32_at(0x6c) as i64)
             .wrapping_mul(part.i32_at(0x70) as i64)
             .wrapping_mul(part.i32_at(0x68) as i64);
-        let down = operation::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))?;
+        let down = ops::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))?;
         scale_y =
-            operation::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
+            ops::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
         part.set_i32_at(0x6c, scale_y);
 
         let opacity_unit = model.opacity_unit as i64;
@@ -77,8 +77,8 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             .wrapping_mul(part.i32_at(0x84) as i64)
             .wrapping_mul(part.i32_at(0x7c) as i64);
         let faded =
-            operation::div_wide(faded, opacity_unit).ok_or(Fault::divide(opacity_unit))?;
-        opacity = operation::div_wide(faded, opacity_unit)
+            ops::div_wide(faded, opacity_unit).ok_or(Fault::divide(opacity_unit))?;
+        opacity = ops::div_wide(faded, opacity_unit)
             .ok_or(Fault::divide(opacity_unit))? as i32;
 
         flip_x = (part.u8_at(0x88) != above.u8_at(0x89)) as u8;
@@ -149,7 +149,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         }
 
         let live_x = part.i32_at(0x60);
-        let left = operation::idiv(
+        let left = ops::idiv(
             part.i32_at(0x54)
                 .wrapping_add(part.i32_at(0x4c))
                 .wrapping_mul(live_x)
@@ -160,14 +160,14 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         part.set_i32_at(0x98, left);
         part.set_i32_at(0x90, left);
 
-        let right = operation::idiv(width.wrapping_mul(live_x), model.scale_unit)
+        let right = ops::idiv(width.wrapping_mul(live_x), model.scale_unit)
             .ok_or(Fault::divide(model.scale_unit as i64))?
             .wrapping_add(left);
         part.set_i32_at(0xa8, right);
         part.set_i32_at(0xa0, right);
 
         let live_y = part.i32_at(0x6c);
-        let top = operation::idiv(
+        let top = ops::idiv(
             part.i32_at(0x58)
                 .wrapping_add(part.i32_at(0x50))
                 .wrapping_mul(live_y)
@@ -178,7 +178,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         part.set_i32_at(0xac, top);
         part.set_i32_at(0x94, top);
 
-        let bottom = operation::idiv(height.wrapping_mul(live_y), model.scale_unit)
+        let bottom = ops::idiv(height.wrapping_mul(live_y), model.scale_unit)
             .ok_or(Fault::divide(model.scale_unit as i64))?
             .wrapping_add(top);
         part.set_i32_at(0xa4, bottom);
@@ -212,14 +212,14 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             above.f32_at(0x18),
         ];
 
-        let across = operation::idiv(
+        let across = ops::idiv(
             part.i32_at(0x44)
                 .wrapping_add(part.i32_at(0x3c))
                 .wrapping_mul(above.i32_at(0x60)),
             model.scale_unit,
         )
         .ok_or(Fault::divide(model.scale_unit as i64))?;
-        let down = operation::idiv(
+        let down = ops::idiv(
             part.i32_at(0x48)
                 .wrapping_add(part.i32_at(0x40))
                 .wrapping_mul(above.i32_at(0x6c)),

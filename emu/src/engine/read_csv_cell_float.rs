@@ -1,4 +1,4 @@
-use crate::operation;
+use crate::ops;
 
 use super::{AssetStream, get_cell};
 
@@ -7,5 +7,5 @@ pub fn read_csv_cell_float(stm: &AssetStream<'_>, col: i32) -> f32 {
         return 0.0;
     };
 
-    operation::strtof(&stm.bytes[cell.at..]).map_or(0.0, |(value, _)| value)
+    ops::strtof(&stm.bytes[cell.at..]).map_or(0.0, |(value, _)| value)
 }

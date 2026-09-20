@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{DrawSink, Imgcut, draw_cut_scaled, draw_number_scaled};
 
@@ -16,12 +16,12 @@ pub fn draw_deploy_cost(
     if style == 1 {
         let alt = alt.ok_or(Fault::null_pointer())?;
         let span = 0x64i32.wrapping_sub(percent);
-        let width = operation::div_100(span.wrapping_mul(0x16));
-        let height = operation::div_100(span.wrapping_mul(0x1a));
+        let width = ops::div_100(span.wrapping_mul(0x16));
+        let height = ops::div_100(span.wrapping_mul(0x1a));
         let across = x
             .wrapping_add(width)
-            .wrapping_add(operation::div_2(0x16i32.wrapping_sub(width)));
-        let down = y.wrapping_add(operation::div_2(0x1ai32.wrapping_sub(height)));
+            .wrapping_add(ops::div_2(0x16i32.wrapping_sub(width)));
+        let down = y.wrapping_add(ops::div_2(0x1ai32.wrapping_sub(height)));
         let scale = percent as f32 / -100.0 + 1.0;
         let box_ = draw_number_scaled(
             dc,
@@ -41,7 +41,7 @@ pub fn draw_deploy_cost(
         draw_cut_scaled(
             dc,
             alt,
-            operation::cvttss2si(box_.right),
+            ops::cvttss2si(box_.right),
             down,
             width,
             height,
@@ -56,15 +56,15 @@ pub fn draw_deploy_cost(
     }
 
     let span = 0x64i32.wrapping_sub(percent);
-    let width = operation::div_100(span.wrapping_mul(0x16));
-    let height = operation::div_100(span.wrapping_mul(0x1a));
-    let down = y.wrapping_add(operation::div_2(0x1ai32.wrapping_sub(height)));
+    let width = ops::div_100(span.wrapping_mul(0x16));
+    let height = ops::div_100(span.wrapping_mul(0x1a));
+    let down = y.wrapping_add(ops::div_2(0x1ai32.wrapping_sub(height)));
     let scale = percent as f32 / -100.0 + 1.0;
 
     if (mode as u32) <= 1 {
         let across = x
             .wrapping_add(width)
-            .wrapping_add(operation::div_2(0x16i32.wrapping_sub(width)))
+            .wrapping_add(ops::div_2(0x16i32.wrapping_sub(width)))
             .wrapping_add(4);
         let base = if mode == 0 { 0x23 } else { 0x2e };
         let icon = if mode == 0 { 0x2d } else { 0x38 };
@@ -86,7 +86,7 @@ pub fn draw_deploy_cost(
         draw_cut_scaled(
             dc,
             sheet,
-            operation::cvttss2si(box_.right),
+            ops::cvttss2si(box_.right),
             down.wrapping_add(0xc),
             width,
             height,
@@ -120,7 +120,7 @@ pub fn draw_deploy_cost(
     draw_cut_scaled(
         dc,
         sheet,
-        operation::cvttss2si(box_.right),
+        ops::cvttss2si(box_.right),
         down,
         width,
         height,

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_base_upgrade, get_button_unit_form, get_button_unit_id, get_cat_combo_bonus,
@@ -19,7 +19,7 @@ pub fn get_unit_recharge(ctx: &mut AppContext, faction: i32, button: i32) -> Res
     let treasure = get_treasure_value(ctx, &ctx.treasure_store, 0xb)?;
     let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0xb, unit_id)?;
     let reduction = treasure.wrapping_add(upgrade.wrapping_mul(2));
-    let reduced = operation::div_neg_100(combo.wrapping_mul(reduction))
+    let reduced = ops::div_neg_100(combo.wrapping_mul(reduction))
         .wrapping_add(cooldown.wrapping_sub(reduction));
     let mut recharge = if reduced >= 0x3d { reduced } else { 0x3c };
     let map_id = get_global_map_id(ctx, 0)?;
@@ -30,7 +30,7 @@ pub fn get_unit_recharge(ctx: &mut AppContext, faction: i32, button: i32) -> Res
             .get(rarity as i64 as usize)
             .ok_or(Fault::index_out_of_range(rarity as i64, params.len() as i64))?;
 
-        recharge = operation::div_100(recharge.wrapping_mul(percent));
+        recharge = ops::div_100(recharge.wrapping_mul(percent));
     }
 
     Ok(recharge)

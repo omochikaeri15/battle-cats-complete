@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, draw_context, draw_model, get_base_pos_x, get_drawable_width, maanim_execute,
@@ -21,8 +21,8 @@ pub fn base_guard_notice_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
     maanim_execute(&mut ctx.guard_e_model, Some(anim), frame, 0)?;
 
-    let x = operation::cvttsd2si(
-        width.wrapping_add(-0x3c0) as f64 * 0.5 + operation::div_10(pos) as f64,
+    let x = ops::cvttsd2si(
+        width.wrapping_add(-0x3c0) as f64 * 0.5 + ops::div_10(pos) as f64,
     );
 
     draw_model(draw_context(&mut ctx.draw)?, &ctx.guard_e_model, x, 0x190);

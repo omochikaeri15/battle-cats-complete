@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, abs_i32, get_stage_record, is_map_cleared, map_type_of_map_id};
 
@@ -86,7 +86,7 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
             let members = groups.get(group).ok_or(Fault::index_out_of_range(group as i64, groups.len() as i64))?;
             let condition = *members.get(element).ok_or(Fault::index_out_of_range(element as i64, members.len() as i64))?;
             let map_id = condition.wrapping_sub(
-                (operation::div_100000(condition as i64) as i32).wrapping_mul(0x186a0),
+                (ops::div_100000(condition as i64) as i32).wrapping_mul(0x186a0),
             );
             let map_type = map_type_of_map_id(map_id);
             let mut map_idx = map_id.wrapping_sub(0xbb8);
@@ -99,7 +99,7 @@ pub fn unlock_group_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
 
                     if map_idx as u32 >= 3 {
                         map_idx =
-                            map_id.wrapping_sub(operation::div_1000(map_id).wrapping_mul(0x3e8));
+                            map_id.wrapping_sub(ops::div_1000(map_id).wrapping_mul(0x3e8));
                     }
                 }
             }

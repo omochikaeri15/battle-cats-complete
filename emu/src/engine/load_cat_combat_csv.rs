@@ -1,5 +1,4 @@
-use crate::Fault;
-use crate::operation::{blend_epi16, slli_epi32};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats,
@@ -57,7 +56,7 @@ pub fn load_cat_combat_csv(
         let quad = ctx.block_at::<16>(form_at + CAT_STATS + CatStats::ATTACK_COOLDOWN)?;
         ctx.set_block_at(
             form_at + CAT_STATS + CatStats::ATTACK_COOLDOWN,
-            blend_epi16(slli_epi32(quad, 1), slli_epi32(quad, 2), 0xc),
+            ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc),
         )?;
 
         let cooldown = ctx.i32_at(form_at + CAT_STATS + CatStats::COOLDOWN)?;
@@ -69,7 +68,7 @@ pub fn load_cat_combat_csv(
         let long_distance = ctx.block_at::<16>(form_at + CAT_STATS + CatStats::LD1_ANCHOR)?;
         ctx.set_block_at(
             form_at + CAT_STATS + CatStats::LD1_ANCHOR,
-            slli_epi32(long_distance, 2),
+            ops::slli_epi32(long_distance, 2),
         )?;
 
         stats += CAT_STATS_FORM_STRIDE;

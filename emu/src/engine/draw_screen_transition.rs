@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     draw_context, fill_polygon, fill_rect, get_design_height2, get_drawable_width, get_left_inset_logical, scene_ignores_insets, set_draw_scale,
@@ -57,7 +57,7 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
                 let width = get_drawable_width(ctx)?;
                 let sweep = ctx.i32_at(AppContext::FADE_FRAME)?;
                 let inset = if scene_ignores_insets(ctx)? != 0 { 0 } else { 0i32.wrapping_sub(get_left_inset_logical(ctx)) };
-                let base = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
+                let base = ops::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
                 let notch = if tall == 0x6e { -0x6e } else { -0x37 };
 
                 ctx.set_i32_at(AppContext::POLYGON_XS, base.wrapping_add(notch))?;
@@ -89,7 +89,7 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
         let width = get_drawable_width(ctx)?;
         let sweep = ctx.i32_at(AppContext::FADE_FRAME)?;
         let inset = if scene_ignores_insets(ctx)? != 0 { 0 } else { 0i32.wrapping_sub(get_left_inset_logical(ctx)) };
-        let x = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
+        let x = ops::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width).wrapping_add(inset);
         let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let span = get_drawable_width(ctx)?.wrapping_mul(2);
         let height = get_design_height2(ctx);
@@ -119,7 +119,7 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
         while row != limit {
             let width = get_drawable_width(ctx)?;
             let sweep = ctx.i32_at(AppContext::FADE_FRAME)?.wrapping_add(-1);
-            let base = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep))
+            let base = ops::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep))
                 .wrapping_add(width)
                 .wrapping_add(width);
 
@@ -151,7 +151,7 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
 
     let width = get_drawable_width(ctx)?;
     let sweep = ctx.i32_at(AppContext::FADE_FRAME)?.wrapping_add(-1);
-    let x = operation::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width);
+    let x = ops::div_neg_10(get_drawable_width(ctx)?.wrapping_mul(sweep)).wrapping_add(width);
     let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let span = get_drawable_width(ctx)?.wrapping_add(0x6e);
     let height = get_design_height2(ctx);

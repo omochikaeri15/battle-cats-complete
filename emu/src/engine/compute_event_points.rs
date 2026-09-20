@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     EventItemStore, find_point_rule_entry, get_kill_point_base, get_point_rule, point_band_lookup,
@@ -29,7 +29,7 @@ pub fn compute_event_points(store: &EventItemStore, kind: i32, args: &[i32]) -> 
             let base = get_kill_point_base(rule);
 
             return Ok(
-                operation::div_100(base.wrapping_mul(second.wrapping_add(first)) as i64) as i32,
+                ops::div_100(base.wrapping_mul(second.wrapping_add(first)) as i64) as i32,
             );
         }
 
@@ -37,14 +37,14 @@ pub fn compute_event_points(store: &EventItemStore, kind: i32, args: &[i32]) -> 
         let base = get_kill_point_base(rule);
         let decay = (2.0 - progress as f64 / cap as f64) * second.wrapping_add(first) as f64;
 
-        return Ok(operation::cvttsd2si(base as f64 * decay / 100.0));
+        return Ok(ops::cvttsd2si(base as f64 * decay / 100.0));
     }
 
     if kind == 0 && args.len() == 1 {
         let value = args[0];
         let percent = point_band_lookup(rule, value)?;
 
-        return Ok(operation::div_100(percent.wrapping_mul(value) as i64) as i32);
+        return Ok(ops::div_100(percent.wrapping_mul(value) as i64) as i32);
     }
 
     Ok(0)

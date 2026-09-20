@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_stage_count, get_stage_record, get_user_rank, is_map_cleared,
@@ -84,7 +84,7 @@ pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault
     pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
+        ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
             >= 0x30,
     )
 }

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CANNON_SHOT_SPACING, CannonShot, Entity, cannon_attack_dispatch,
@@ -117,7 +117,7 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
     if get_castle_anim_state(ctx, faction)? == 3 || get_castle_anim_state(ctx, faction)? == 0xc {
         let origin = cannon_shot_origin_x(ctx, faction)?;
         let step = get_base_level(ctx, faction)?.wrapping_mul(CANNON_SHOT_SPACING);
-        let reach = operation::div_32(
+        let reach = ops::div_32(
             get_castle_anim_frame(ctx, faction)?
                 .wrapping_mul(step)
                 .wrapping_mul(2)
@@ -184,9 +184,9 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 let strike_x = get_cannon_strike_x(ctx, faction)?;
                 let width = get_cannon_strike_width(ctx, 0)?;
                 let offset = if state == 0xb {
-                    operation::div_neg_10(width.wrapping_shl(3) as i64) as i32
+                    ops::div_neg_10(width.wrapping_shl(3) as i64) as i32
                 } else {
-                    operation::div_2(width).wrapping_neg()
+                    ops::div_2(width).wrapping_neg()
                 };
                 let x = pos.wrapping_sub(hitbox);
                 let left = offset.wrapping_add(strike_x);
@@ -223,11 +223,11 @@ pub fn cannon_attack(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 let x =
                     get_pos_x(ctx, other, slot)?.wrapping_sub(get_hitbox_pos(ctx, other, slot)?);
                 let left = get_cannon_strike_x(ctx, faction)?
-                    .wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                    .wrapping_sub(ops::div_2(get_cannon_strike_width(ctx, 0)?));
                 let strike_x = get_cannon_strike_x(ctx, faction)?;
                 let width = get_cannon_strike_width(ctx, 0)?;
 
-                if left > x || x >= operation::div_2(width).wrapping_add(strike_x) {
+                if left > x || x >= ops::div_2(width).wrapping_add(strike_x) {
                     break 'slot;
                 }
 

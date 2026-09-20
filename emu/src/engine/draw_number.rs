@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{DrawSink, Imgcut, digit_count, draw_region_f, imgcut_get_sprite_cut};
 
@@ -38,10 +38,10 @@ pub fn draw_number(
         let mut place = digits.wrapping_sub(1);
 
         loop {
-            let power = operation::cvttss2si(operation::powf(10.0, place as f32));
-            let shifted = operation::idiv(value, power).ok_or(Fault::divide(power as i64))?;
+            let power = ops::cvttss2si(ops::powf(10.0, place as f32));
+            let shifted = ops::idiv(value, power).ok_or(Fault::divide(power as i64))?;
             let digit = shifted
-                .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
+                .wrapping_sub(ops::div_10(shifted).wrapping_mul(10))
                 .wrapping_add(base);
 
             width += imgcut_get_sprite_cut(sheet, digit)?[2] as f32 * scale_x;
@@ -87,10 +87,10 @@ pub fn draw_number(
     let mut cursor = left;
 
     loop {
-        let power = operation::cvttss2si(operation::powf(10.0, place as f32));
-        let shifted = operation::idiv(value, power).ok_or(Fault::divide(power as i64))?;
+        let power = ops::cvttss2si(ops::powf(10.0, place as f32));
+        let shifted = ops::idiv(value, power).ok_or(Fault::divide(power as i64))?;
         let digit = shifted
-            .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
+            .wrapping_sub(ops::div_10(shifted).wrapping_mul(10))
             .wrapping_add(base);
         let cut_width = imgcut_get_sprite_cut(sheet, digit)?[2] as f32 * scale_x;
         let cut_height = imgcut_get_sprite_cut(sheet, digit)?[3] as f32 * scale_y;

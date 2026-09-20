@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_scene_id, get_screen_height, get_screen_width, get_usable_height, has_insets,
@@ -28,7 +28,7 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
     if (width as f32) < tall / 640.0 {
         ctx.screen_metrics.design_w = 0x3c0;
 
-        let scaled = operation::lroundf(tall / width as f32) as i32;
+        let scaled = ops::lroundf(tall / width as f32) as i32;
 
         ctx.screen_metrics.design_h = scaled;
         ctx.screen_metrics.design_h2 = scaled;
@@ -36,7 +36,7 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
         design_h = scaled;
     } else {
         ctx.screen_metrics.design_w =
-            operation::lroundf(width as f32 * 640.0 / height as f32) as i32;
+            ops::lroundf(width as f32 * 640.0 / height as f32) as i32;
         ctx.screen_metrics.design_h2 = 0x280;
         ctx.screen_metrics.design_h = 0x280;
 
@@ -63,12 +63,12 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
         if has_insets(ctx) {
             let scaled = ctx.screen_metrics.screen_h as f32 * ctx.screen_metrics.design_w as f32;
 
-            ctx.screen_metrics.design_w = operation::lroundf(
+            ctx.screen_metrics.design_w = ops::lroundf(
                 scaled / get_usable_height(&ctx.screen_metrics) as f32,
             ) as i32;
 
             let scaled = ctx.screen_metrics.screen_h as f32 * ctx.screen_metrics.design_h2 as f32;
-            let height2 = operation::lroundf(
+            let height2 = ops::lroundf(
                 scaled / get_usable_height(&ctx.screen_metrics) as f32,
             ) as i32;
 
@@ -77,7 +77,7 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
             design_w = ctx.screen_metrics.design_w;
 
             if design_w >= 0x51d {
-                let pad = operation::lroundf(
+                let pad = ops::lroundf(
                     (design_w.wrapping_sub(0x51c) as f32) * 0.5 * ctx.screen_metrics.window_ratio,
                 ) as i32;
                 let widened = pad.wrapping_add(ctx.screen_metrics.inset_left);
@@ -93,17 +93,17 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let width = ctx.screen_metrics.screen_w;
     let height = ctx.screen_metrics.screen_h;
-    let fitted = operation::idiv(width.wrapping_mul(design_h), design_w)
+    let fitted = ops::idiv(width.wrapping_mul(design_h), design_w)
         .ok_or(Fault::divide(design_w as i64))?;
     let span = if fitted > height {
-        operation::lroundf(height as f32 * design_w as f32 / design_h as f32) as f32
+        ops::lroundf(height as f32 * design_w as f32 / design_h as f32) as f32
     } else {
         width as f32
     };
 
     ctx.screen_metrics.scale2 = (span + span) / design_w as f32;
 
-    let shift = operation::lroundf(
+    let shift = ops::lroundf(
         (ctx.screen_metrics.design_h.wrapping_sub(0x280) as f32) * 0.5,
     ) as i32;
 
@@ -115,10 +115,10 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::LETTERBOX_SHIFT, 0x28)?;
 
         let scaled = ctx.screen_metrics.screen_h as f32 * ctx.screen_metrics.design_w as f32;
-        let logical = operation::lroundf(scaled / ctx.screen_metrics.screen_w as f32);
+        let logical = ops::lroundf(scaled / ctx.screen_metrics.screen_w as f32);
 
-        pad = operation::lround(
-            operation::div_2(logical.wrapping_sub(0x2d0)) as f64,
+        pad = ops::lround(
+            ops::div_2(logical.wrapping_sub(0x2d0)) as f64,
         ) as i32;
     }
 

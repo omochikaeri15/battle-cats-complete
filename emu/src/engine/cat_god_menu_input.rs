@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, FormatArg, analytics_record, app_on_draw, back_pressed, bgm_player_switch,
@@ -130,7 +130,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
         }
         2 => {
-            let offset = operation::cvttsd2si(ctx.i32_at(AppContext::CAT_GOD_OFFSET)? as f64 * 0.7);
+            let offset = ops::cvttsd2si(ctx.i32_at(AppContext::CAT_GOD_OFFSET)? as f64 * 0.7);
 
             ctx.set_i32_at(AppContext::CAT_GOD_OFFSET, offset)?;
 
@@ -145,7 +145,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_f32_at(AppContext::CAT_GOD_SPIN, spin)?;
             ctx.set_i32_at(
                 AppContext::CAT_GOD_BOB,
-                operation::cvttss2si(sin_deg(spin) * 10.0),
+                ops::cvttss2si(sin_deg(spin) * 10.0),
             )?;
 
             let step = ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)?;
@@ -938,12 +938,12 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
         };
 
         let old_zoom = zoom as f32;
-        let scale = operation::cvttss2si(old_zoom / 100.0);
+        let scale = ops::cvttss2si(old_zoom / 100.0);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_0, scale)?;
         ctx.set_i32_at(AppContext::DRAW_TEMP_1, scale)?;
 
-        let zoomed = operation::div_neg_200(delta).wrapping_add(zoom);
+        let zoomed = ops::div_neg_200(delta).wrapping_add(zoom);
 
         ctx.set_i32_at(AppContext::CAMERA_ZOOM, zoomed)?;
 
@@ -962,20 +962,20 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         let new_zoom = zoom as f32;
         let percent = new_zoom / 100.0;
-        let scale = operation::cvttss2si(percent);
+        let scale = ops::cvttss2si(percent);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_0, scale)?;
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, scale)?;
 
         let camera_x = ctx.i32_at(AppContext::CAMERA_X)? as f64;
         let centered = ((96000000.0f32 / old_zoom) as f64 * 0.5 + camera_x) as f32 as f64;
-        let camera_x = operation::cvttsd2si(centered - (96000000.0f32 / new_zoom) as f64 * 0.5);
+        let camera_x = ops::cvttsd2si(centered - (96000000.0f32 / new_zoom) as f64 * 0.5);
 
         ctx.set_i32_at(AppContext::CAMERA_X, camera_x)?;
 
         let right = -9600.0f32 / (percent / 100.0) + ctx.i32_at(AppContext::STAGE_LENGTH)? as f32;
         let clamped = if camera_x as f32 > right {
-            Some(operation::cvttss2si(right))
+            Some(ops::cvttss2si(right))
         } else if camera_x < 0 {
             Some(0)
         } else {
@@ -1290,14 +1290,14 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     ctx.set_i32_at(
                         AppContext::CAT_GOD_FLASH_X,
-                        operation::div_2(width).wrapping_sub(0x56),
+                        ops::div_2(width).wrapping_sub(0x56),
                     )?;
 
                     let height = get_design_height2(ctx);
 
                     ctx.set_i32_at(
                         AppContext::CAT_GOD_BOB,
-                        operation::div_2(height).wrapping_sub(0x93),
+                        ops::div_2(height).wrapping_sub(0x93),
                     )?;
                     ctx.i32_at(AppContext::CAT_GOD_FRAMES)?
                 } else {
@@ -1314,8 +1314,8 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let x = ctx.i32_at(AppContext::CAT_GOD_FLASH_X)?;
                     let y = ctx.i32_at(AppContext::CAT_GOD_BOB)?;
 
-                    ctx.set_i32_at(AppContext::CAT_GOD_FLASH_X, operation::div_2(x))?;
-                    ctx.set_i32_at(AppContext::CAT_GOD_BOB, operation::div_2(y))?;
+                    ctx.set_i32_at(AppContext::CAT_GOD_FLASH_X, ops::div_2(x))?;
+                    ctx.set_i32_at(AppContext::CAT_GOD_BOB, ops::div_2(y))?;
 
                     if x <= 1 && y <= 1 {
                         ctx.set_i32_at(AppContext::BABY_BOOM_FRAMES, 0)?;
@@ -1348,18 +1348,18 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
             if ticks == 0 {
                 ctx.set_i32_at(
                     AppContext::CAT_GOD_RETURN_STEP,
-                    operation::div_5(delta).wrapping_mul(2),
+                    ops::div_5(delta).wrapping_mul(2),
                 )?;
             }
 
             let zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
             let old_zoom = zoom as f32;
-            let scale = operation::cvttss2si(old_zoom / 100.0);
+            let scale = ops::cvttss2si(old_zoom / 100.0);
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, scale)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, scale)?;
 
-            let zoomed = operation::div_10(delta).wrapping_add(zoom);
+            let zoomed = ops::div_10(delta).wrapping_add(zoom);
 
             ctx.set_i32_at(AppContext::CAMERA_ZOOM, zoomed)?;
 
@@ -1377,14 +1377,14 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
             };
 
             let new_zoom = zoom as f32;
-            let scale = operation::cvttss2si(new_zoom / 100.0);
+            let scale = ops::cvttss2si(new_zoom / 100.0);
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, scale)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_2, scale)?;
 
             let camera_x = ctx.i32_at(AppContext::CAMERA_X)? as f64;
             let centered = ((96000000.0f32 / old_zoom) as f64 * 0.5 + camera_x) as f32 as f64;
-            let camera_x = operation::cvttsd2si(centered - (96000000.0f32 / new_zoom) as f64 * 0.5);
+            let camera_x = ops::cvttsd2si(centered - (96000000.0f32 / new_zoom) as f64 * 0.5);
 
             ctx.set_i32_at(AppContext::CAMERA_X, camera_x)?;
 
@@ -1403,12 +1403,12 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 }
             };
 
-            ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_100(zoom))?;
+            ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_100(zoom))?;
 
             let scale = zoom as f32 / 100.0 / 100.0;
             let right = -9600.0f32 / scale + ctx.i32_at(AppContext::STAGE_LENGTH)? as f32;
             let clamped = if camera_x as f32 > right {
-                Some(operation::cvttss2si(right))
+                Some(ops::cvttss2si(right))
             } else if camera_x < 0 {
                 Some(0)
             } else {

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, get_setting};
 
@@ -36,14 +36,14 @@ pub fn camera_vertical_correction(ctx: &AppContext) -> Result<i32, Fault> {
     }
 
     let slack = (100.0f64 - (zoom as f64) / 100.0f64) * (anchor as f64) / 100.0f64;
-    let bottom = operation::cvttsd2si((operation::div_10000(scaled as i64) as i32) as f64 + slack);
+    let bottom = ops::cvttsd2si((ops::div_10000(scaled as i64) as i32) as f64 + slack);
 
     if bottom > limit {
         let overshoot = bottom.wrapping_sub(limit).wrapping_mul(0x2710);
         let divisor = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
 
         correction = correction.wrapping_sub(
-            operation::idiv(overshoot, divisor).ok_or(Fault::divide(divisor as i64))?,
+            ops::idiv(overshoot, divisor).ok_or(Fault::divide(divisor as i64))?,
         );
     }
 

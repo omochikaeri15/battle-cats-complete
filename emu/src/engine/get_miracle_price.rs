@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, obf_value_read, xor_row_get};
 
@@ -13,7 +13,7 @@ pub fn get_miracle_price(ctx: &AppContext, miracle: i32) -> Result<i32, Fault> {
         Fault::index_out_of_range(7, 10),
     )? as i32;
 
-    Ok(operation::cvttsd2si(
+    Ok(ops::cvttsd2si(
         (price * DISCOUNT[(chapter >= 0x30) as usize]) as f64 + 0.5,
     ))
 }

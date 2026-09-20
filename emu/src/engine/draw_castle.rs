@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Surface, draw_context, draw_surface_scaled, get_castle_row, get_drawable_width,
@@ -7,7 +7,7 @@ use super::{
 
 pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result<(), Fault> {
     let x =
-        operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x as f64);
+        ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x as f64);
     let flags = read_flag(ctx, AppContext::faction_flags(faction))?;
 
     if flags & 1 != 0 {
@@ -22,9 +22,9 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
 
         let decor = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(decor);
-        let width = operation::div_100((width << 7).wrapping_sub(width));
+        let width = ops::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(decor);
-        let height = operation::div_100((height << 7).wrapping_sub(height));
+        let height = ops::div_100((height << 7).wrapping_sub(height));
 
         draw_surface_scaled(
             draw_context(&mut ctx.draw)?,
@@ -41,9 +41,9 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
 
         let foundation = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(foundation);
-        let width = operation::div_100((width << 7).wrapping_sub(width));
+        let width = ops::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(foundation);
-        let height = operation::div_100((height << 7).wrapping_sub(height));
+        let height = ops::div_100((height << 7).wrapping_sub(height));
 
         draw_surface_scaled(
             draw_context(&mut ctx.draw)?,
@@ -60,9 +60,9 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
 
         let cannon = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(cannon);
-        let width = operation::div_100((width << 7).wrapping_sub(width));
+        let width = ops::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(cannon);
-        let height = operation::div_100((height << 7).wrapping_sub(height));
+        let height = ops::div_100((height << 7).wrapping_sub(height));
 
         draw_surface_scaled(
             draw_context(&mut ctx.draw)?,
@@ -90,7 +90,7 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
         ctx.i32_at(AppContext::CASTLE_ID)?
     };
     let size = get_castle_row(&ctx.enemy_castle, id)?.size;
-    let width = operation::div_100((size << 7).wrapping_sub(size));
+    let width = ops::div_100((size << 7).wrapping_sub(size));
     let id = if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3
         || ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63
     {
@@ -99,7 +99,7 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
         ctx.i32_at(AppContext::CASTLE_ID)?
     };
     let size = get_castle_row(&ctx.enemy_castle, id)?.size;
-    let height = operation::div_100((size << 8).wrapping_sub(size));
+    let height = ops::div_100((size << 8).wrapping_sub(size));
 
     draw_surface_scaled(
         draw_context(&mut ctx.draw)?,

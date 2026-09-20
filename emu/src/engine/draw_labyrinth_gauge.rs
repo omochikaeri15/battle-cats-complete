@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Imgcut, digit_count, draw_context, draw_cut, draw_number_plain, draw_region,
@@ -17,15 +17,15 @@ pub fn draw_labyrinth_gauge(
 
     let map = map_index_of_map_id(get_labyrinth_map_id(ctx)?);
     let total = get_stage_count(ctx, -0x15, map)?.wrapping_add(-1);
-    let across = operation::idiv(floor.wrapping_mul(0x75), total)
+    let across = ops::idiv(floor.wrapping_mul(0x75), total)
         .ok_or(Fault::divide(total as i64))?
         .wrapping_add(x);
     let raised = floor.wrapping_mul(0xd0);
-    let down = operation::div_100(raised).wrapping_add(y);
+    let down = ops::div_100(raised).wrapping_add(y);
     let cut = *imgcut_get_sprite_cut(gauge, 9)?;
     let src_x = cut[0];
     let src_y = cut[1];
-    let src_w = operation::div_100(floor.wrapping_mul(-0x75)).wrapping_add(cut[2]);
+    let src_w = ops::div_100(floor.wrapping_mul(-0x75)).wrapping_add(cut[2]);
     let src_h = cut[3];
 
     draw_region(
@@ -42,7 +42,7 @@ pub fn draw_labyrinth_gauge(
     let edge = imgcut_get_sprite_cut(gauge, 9)?[2].wrapping_add(x);
     let map = map_index_of_map_id(get_labyrinth_map_id(ctx)?);
     let total = get_stage_count(ctx, -0x15, map)?.wrapping_add(-1);
-    let lift = operation::idiv(raised, total).ok_or(Fault::divide(total as i64))?;
+    let lift = ops::idiv(raised, total).ok_or(Fault::divide(total as i64))?;
     let places = digit_count(floor);
 
     draw_cut(

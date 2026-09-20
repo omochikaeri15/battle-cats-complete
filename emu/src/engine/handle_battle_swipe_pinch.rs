@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, atan2_deg, get_max_zoom, get_pinch_delta, get_touch_prev_x, get_touch_start_x,
@@ -12,7 +12,7 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::SWIPE_VELOCITY, 0)?;
 
             let old_zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
-            let old_percent = operation::div_100(old_zoom as i64) as i32;
+            let old_percent = ops::div_100(old_zoom as i64) as i32;
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, old_percent)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, old_percent)?;
@@ -39,21 +39,21 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
                 max_zoom
             };
 
-            let new_percent = operation::div_100(new_zoom as i64) as i32;
+            let new_percent = ops::div_100(new_zoom as i64) as i32;
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, new_percent)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_2, new_percent)?;
 
             let old_span =
-                operation::idiv(0x5b8d800, old_zoom).ok_or(Fault::divide(old_zoom as i64))?;
+                ops::idiv(0x5b8d800, old_zoom).ok_or(Fault::divide(old_zoom as i64))?;
             let camera_x =
-                operation::div_2(old_span).wrapping_add(ctx.i32_at(AppContext::CAMERA_X)?);
+                ops::div_2(old_span).wrapping_add(ctx.i32_at(AppContext::CAMERA_X)?);
             let new_span =
-                operation::idiv(0x5b8d800, new_zoom).ok_or(Fault::divide(new_zoom as i64))?;
+                ops::idiv(0x5b8d800, new_zoom).ok_or(Fault::divide(new_zoom as i64))?;
 
             ctx.set_i32_at(
                 AppContext::CAMERA_X,
-                camera_x.wrapping_sub(operation::div_2(new_span)),
+                camera_x.wrapping_sub(ops::div_2(new_span)),
             )?;
             ctx.set_block_at::<1>(AppContext::PINCH_ZOOMED, [1])?;
         } else if touch_is_down(ctx)? == 0 && touch_released(ctx)? == 0 && touch_began(ctx)? == 0 {
@@ -89,7 +89,7 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let rise = get_touch_y(ctx)?.wrapping_sub(get_touch_start_y(ctx)?) as f32;
         let run = get_touch_x(ctx)?.wrapping_sub(get_touch_start_x(ctx)?) as f32;
-        let angle = operation::cvttss2si(atan2_deg(rise, run));
+        let angle = ops::cvttss2si(atan2_deg(rise, run));
 
         ctx.set_i32_at(AppContext::SWIPE_ANGLE, angle)?;
 
@@ -189,7 +189,7 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(AppContext::SWIPE_VELOCITY, velocity)?;
 
-        if operation::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)? as i64) as i32
+        if ops::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)? as i64) as i32
             > ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?
         {
             let step = get_touch_x(ctx)?.wrapping_sub(get_touch_prev_x(ctx)?);
@@ -209,7 +209,7 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    if operation::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)? as i64) as i32
+    if ops::div_100(ctx.i32_at(AppContext::CAMERA_ZOOM)? as i64) as i32
         > ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?
         && ctx.u8_at(AppContext::CAMERA_DRAGGING)? == 0
     {

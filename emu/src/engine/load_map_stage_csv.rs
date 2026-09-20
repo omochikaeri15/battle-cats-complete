@@ -267,10 +267,17 @@ pub fn load_map_stage_csv(
 
     let map_type = ctx.i32_at(AppContext::SAVED_MAP_TYPE)?;
     let name = if (0..=4).contains(&map_type) {
-        if ctx.u8_at(AppContext::ALL_MAPS_OPEN)? == 0
-            && ctx.i32_at(AppContext::STORY_MAP_COUNTS + map_type as usize * 4)? <= map
-        {
-            return Ok(false);
+        if ctx.u8_at(AppContext::ALL_MAPS_OPEN)? == 0 {
+            let count = ctx.i32_at(AppContext::STORY_MAP_COUNTS + map_type as usize * 4)?;
+            let blocked = if map_type == 0 {
+                count <= map
+            } else {
+                count < map
+            };
+
+            if blocked {
+                return Ok(false);
+            }
         }
 
         let name = string_format_int(ctx, LEGEND_FILES[map_type as usize], map)?;
@@ -398,7 +405,7 @@ pub fn load_map_stage_csv(
     loop {
         let data_id = ctx.i32_at(AppContext::MAP_DATA_ID)?;
         let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
-        let size = get_stage_set_size(ctx.map_data.entry(data_id).or_default(), set)? as i32 as i64;
+        let size = get_stage_set_size(ctx.map_layouts.entry(data_id).or_default(), set)? as i32 as i64;
 
         if row as i64 >= size {
             break;

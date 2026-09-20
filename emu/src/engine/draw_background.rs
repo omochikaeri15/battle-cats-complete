@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, bg_has_upper_layer, camera_vertical_correction, draw_context, draw_cut_scaled,
@@ -81,7 +81,7 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let sheet = ctx.bg_sheet.clone();
     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-    let scenery = operation::div_255(imgcut_get_sprite_cut(sheet, 0)?[3].wrapping_mul(0x280));
+    let scenery = ops::div_255(imgcut_get_sprite_cut(sheet, 0)?[3].wrapping_mul(0x280));
 
     ctx.set_block_at::<8>(AppContext::BG_TINT_XS, [0; 8])?;
 
@@ -111,8 +111,8 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let span = base
         .wrapping_sub(camera_vertical_correction(ctx)?)
         .wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
-    let lift = lift - operation::div_10000(span) as f64;
-    let bottom = operation::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
+    let lift = lift - ops::div_10000(span) as f64;
+    let bottom = ops::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
     ctx.set_i32_at(AppContext::BG_TINT_YS + 8, bottom)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS + 4, bottom)?;
@@ -156,8 +156,8 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let span = camera_vertical_correction(ctx)?
         .wrapping_add(0x280)
         .wrapping_mul(ctx.i32_at(AppContext::CAMERA_ZOOM)?);
-    let lift = operation::div_10000(span) as f64 + lift;
-    let top = operation::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
+    let lift = ops::div_10000(span) as f64 + lift;
+    let top = ops::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
     ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
@@ -202,9 +202,9 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     set_transform(draw_context(&mut ctx.draw)?, scale, &transform);
 
-    let camera = operation::div_10(ctx.i32_at(AppContext::CAMERA_X)?);
-    let tiles = operation::div_960(camera).wrapping_mul(0x3c0);
-    let origin = tiles.wrapping_sub(camera).wrapping_add(operation::div_2(
+    let camera = ops::div_10(ctx.i32_at(AppContext::CAMERA_X)?);
+    let tiles = ops::div_960(camera).wrapping_mul(0x3c0);
+    let origin = tiles.wrapping_sub(camera).wrapping_add(ops::div_2(
         get_drawable_width(ctx)?.wrapping_add(-0x3c0),
     ));
     let floor = 0x280i32.wrapping_sub(scenery);

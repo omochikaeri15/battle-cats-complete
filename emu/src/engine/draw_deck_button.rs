@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, DECK_BASE_Y, DECK_PRESS_SIZE_TABLE, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
@@ -23,7 +23,7 @@ pub fn draw_deck_button(
     let mut bottom = DECK_BASE_Y
         .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?)
         .wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
-    let column = slot.wrapping_sub(operation::div_5(slot) * 5);
+    let column = slot.wrapping_sub(ops::div_5(slot) * 5);
     let mut width = 0x6e;
     let mut height = 0x55;
     let across;
@@ -46,7 +46,7 @@ pub fn draw_deck_button(
 
         span = span.wrapping_add(-0x3c0);
 
-        let base = operation::cvttsd2si(span as f64 * 0.5 + base);
+        let base = ops::cvttsd2si(span as f64 * 0.5 + base);
         let size = {
             let step =
                 ctx.i32_at(AppContext::DECK_PRESS.wrapping_add(((slot as i64) * 4) as usize))?;
@@ -54,7 +54,7 @@ pub fn draw_deck_button(
                 .get(step as i64 as usize)
                 .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
         };
-        let half = operation::div_2(size);
+        let half = ops::div_2(size);
 
         origin = base;
         across = base.wrapping_sub(half);
@@ -87,20 +87,20 @@ pub fn draw_deck_button(
                 }
             }
 
-            origin = operation::cvttsd2si(base);
+            origin = ops::cvttsd2si(base);
             across = origin;
             down = bottom;
         } else if layer == 1 {
             bottom = bottom.wrapping_add(0xc);
-            origin = operation::cvttsd2si(base);
+            origin = ops::cvttsd2si(base);
             across = origin;
             down = bottom;
         } else if layer != 0 {
-            origin = operation::cvttsd2si(base);
+            origin = ops::cvttsd2si(base);
             across = origin;
             down = bottom;
         } else {
-            let base = operation::cvttsd2si(base);
+            let base = ops::cvttsd2si(base);
             let size = {
                 let step = ctx
                     .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
@@ -108,7 +108,7 @@ pub fn draw_deck_button(
                     .get(step as i64 as usize)
                     .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
             };
-            let half = operation::div_2(size);
+            let half = ops::div_2(size);
 
             origin = base;
             across = base.wrapping_sub(half);
@@ -209,7 +209,7 @@ pub fn draw_deck_button(
                 .wrapping_add(((slot as i64) * 4) as usize),
         )?;
 
-        if timer <= 0x22 && timer.wrapping_sub(operation::div_7(timer) * 7) <= 2 {
+        if timer <= 0x22 && timer.wrapping_sub(ops::div_7(timer) * 7) <= 2 {
             glow_set(draw_context(&mut ctx.draw)?, 1);
             set_tint(draw_context(&mut ctx.draw)?, 0x28, 0x28, 0x28, 0xff);
             fill_rect(draw_context(&mut ctx.draw)?, across, down, width, height);
@@ -238,7 +238,7 @@ pub fn draw_deck_button(
             let ticks = ctx.i32_at(AppContext::COMBO_BANNER_TICKS)?;
 
             if (ticks
-                .wrapping_sub(operation::div_4(ticks) * 4)
+                .wrapping_sub(ops::div_4(ticks) * 4)
                 .wrapping_add(1) as u32)
                 > 2
             {
@@ -273,15 +273,15 @@ pub fn draw_deck_button(
                 .wrapping_add(AppContext::WALLET_CONJURE_TIMER)
                 .wrapping_add(((slot as i64) * 4) as usize),
         )?;
-        let glow = operation::cvttss2si(cos_deg(timer.wrapping_mul(10) as f32) * 31.0 + 224.0);
+        let glow = ops::cvttss2si(cos_deg(timer.wrapping_mul(10) as f32) * 31.0 + 224.0);
 
         set_color(draw_context(&mut ctx.draw)?, glow, glow, 0xff, 0xff);
 
         let sheet = ctx.img002_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let cut = imgcut_get_sprite_cut(sheet, 0x35)?;
-        let x = origin.wrapping_add(operation::div_2(0x6ei32.wrapping_sub(cut[2])));
-        let y = bottom.wrapping_add(operation::div_2(0x55i32.wrapping_sub(cut[3])));
+        let x = origin.wrapping_add(ops::div_2(0x6ei32.wrapping_sub(cut[2])));
+        let y = bottom.wrapping_add(ops::div_2(0x55i32.wrapping_sub(cut[3])));
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, x, y, 0x35);
         set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
@@ -290,8 +290,8 @@ pub fn draw_deck_button(
     if overlay != 0 && ctx.i32_at(AppContext::UNIT_INFO_SLOT)? == slot {
         let sheet = ctx.img015_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-        let half = operation::div_2(ctx.i32_at(AppContext::BATTLE_TICKS)?);
-        let phase = half.wrapping_sub(operation::div_2(half) * 2);
+        let half = ops::div_2(ctx.i32_at(AppContext::BATTLE_TICKS)?);
+        let phase = half.wrapping_sub(ops::div_2(half) * 2);
 
         draw_panel(
             draw_context(&mut ctx.draw)?,
@@ -321,7 +321,7 @@ pub fn draw_deck_button(
             draw_context(&mut ctx.draw)?,
             sheet,
             alt.as_deref(),
-            operation::div_100(cost),
+            ops::div_100(cost),
             origin.wrapping_add(0x5a),
             bottom.wrapping_add(0x32),
             mode,
@@ -377,8 +377,8 @@ pub fn draw_deck_button(
             0,
         )?;
 
-        let x = across.wrapping_add(operation::div_2(width));
-        let y = down.wrapping_add(operation::div_2(height));
+        let x = across.wrapping_add(ops::div_2(width));
+        let y = down.wrapping_add(ops::div_2(height));
         let model = std::mem::take(&mut ctx.invoke_equipment_model);
 
         draw_model(draw_context(&mut ctx.draw)?, &model, x, y);

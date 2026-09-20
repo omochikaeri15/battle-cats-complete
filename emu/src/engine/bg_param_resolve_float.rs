@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, get_design_height2, get_drawable_width, maanim_get_max_keyframe};
 
@@ -20,12 +20,12 @@ pub fn bg_param_resolve_float(
                     / 10.0
         }
         3 => {
-            let lift = operation::div_2(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?)
+            let lift = ops::div_2(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?)
                 .wrapping_mul(0x64)
                 .wrapping_add(0xc350);
             let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
             let lift =
-                operation::idiv(lift, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
+                ops::idiv(lift, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
 
             value
                 + ctx
@@ -41,7 +41,7 @@ pub fn bg_param_resolve_float(
                 .wrapping_sub(0xcb20);
             let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
             let span =
-                operation::idiv(span, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
+                ops::idiv(span, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
 
             value + span.wrapping_sub(letterbox).wrapping_add(0x208) as f32
         }

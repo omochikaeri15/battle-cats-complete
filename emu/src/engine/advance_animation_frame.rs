@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, add_entity_frame, get_anim_len, get_entity_button, get_entity_frame,
@@ -34,7 +34,7 @@ pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) ->
             let anim =
                 get_unit_anim(ctx, 0, button, 2)?.ok_or(Fault::null_pointer())?;
             let last = maanim_get_max_keyframe(anim)?;
-            let frame = operation::irem(next, last).ok_or(Fault::divide(last as i64))?;
+            let frame = ops::irem(next, last).ok_or(Fault::divide(last as i64))?;
 
             return set_entity_frame(ctx, 0, slot, frame);
         }
@@ -43,14 +43,14 @@ pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) ->
         let anim =
             get_unit_anim(ctx, faction, button, 2)?.ok_or(Fault::null_pointer())?;
         let length = get_anim_len(anim)?;
-        let frame = operation::irem(next, length).ok_or(Fault::divide(length as i64))?;
+        let frame = ops::irem(next, length).ok_or(Fault::divide(length as i64))?;
 
         return set_entity_frame(ctx, faction, slot, frame);
     }
 
     if get_entity_state(ctx, faction, slot)? == 3 {
         let current = get_entity_frame(ctx, faction, slot)?;
-        let cycles = operation::div_24(current.wrapping_add(1) as i64) as i32;
+        let cycles = ops::div_24(current.wrapping_add(1) as i64) as i32;
         let frame = current
             .wrapping_add(cycles.wrapping_shl(3).wrapping_mul(3).wrapping_neg())
             .wrapping_add(1);
@@ -68,7 +68,7 @@ pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) ->
 
     if get_entity_state(ctx, faction, slot)? == 5 || get_entity_state(ctx, faction, slot)? == 6 {
         let current = get_entity_frame(ctx, faction, slot)?;
-        let cycles = operation::div_12(current.wrapping_add(1) as i64) as i32;
+        let cycles = ops::div_12(current.wrapping_add(1) as i64) as i32;
         let frame = current
             .wrapping_add(cycles.wrapping_shl(2).wrapping_mul(3).wrapping_neg())
             .wrapping_add(1);
@@ -78,7 +78,7 @@ pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) ->
 
     if get_entity_state(ctx, faction, slot)? == 7 {
         let current = get_entity_frame(ctx, faction, slot)?;
-        let cycles = operation::div_48(current.wrapping_add(1) as i64) as i32;
+        let cycles = ops::div_48(current.wrapping_add(1) as i64) as i32;
         let frame = current
             .wrapping_add(cycles.wrapping_shl(4).wrapping_mul(3).wrapping_neg())
             .wrapping_add(1);
@@ -108,7 +108,7 @@ pub fn advance_animation_frame(ctx: &mut AppContext, faction: i32, slot: i32) ->
         }
 
         let next = get_entity_frame(ctx, faction, slot)?.wrapping_add(1);
-        let frame = operation::irem(next, length).ok_or(Fault::divide(length as i64))?;
+        let frame = ops::irem(next, length).ok_or(Fault::divide(length as i64))?;
 
         set_entity_frame(ctx, faction, slot, frame)?;
     }

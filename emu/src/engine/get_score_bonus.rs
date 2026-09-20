@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, find_score_bonus};
 
@@ -10,7 +10,7 @@ pub fn get_score_bonus(ctx: &mut AppContext, kind: i32, divisor: i32) -> Result<
         && divisor != 0
         && let Some(first) = values.first()
     {
-        result = operation::idiv(*first, divisor)
+        result = ops::idiv(*first, divisor)
             .ok_or(Fault::divide(divisor as i64))?;
     }
 

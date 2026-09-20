@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{draw_context, draw_model, get_drawable_width, maanim_execute, AppContext};
 
@@ -11,7 +11,7 @@ pub fn draw_demon_battle_banner(ctx: &mut AppContext) -> Result<(), Fault> {
 
     maanim_execute(&mut ctx.demonbattle_model, Some(&ctx.demon_banner_anim), frame, 0)?;
 
-    let x = operation::div_2(get_drawable_width(ctx)?);
+    let x = ops::div_2(get_drawable_width(ctx)?);
 
     draw_model(draw_context(&mut ctx.draw)?, &ctx.demonbattle_model, x, 0x96);
 

@@ -25,7 +25,7 @@ pub fn get_stage_count(ctx: &AppContext, map_type: i32, map_idx: i32) -> Result<
         .get(map_idx as usize)
         .ok_or(Fault::index_out_of_range(map_idx as i64, 0x1f4))?;
 
-    let map_data = ctx.map_data.get(&data_id).ok_or(Fault::key_not_found(data_id as i64))?;
+    let map_data = ctx.map_layouts.get(&data_id).ok_or(Fault::key_not_found(data_id as i64))?;
 
     let stage_sets = ctx
         .map_stage_sets

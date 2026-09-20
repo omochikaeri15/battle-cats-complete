@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, draw_context, draw_cut, get_cannon_countdown, get_cannon_recharge,
@@ -153,7 +153,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(
         AppContext::DRAW_TEMP_0,
-        operation::idiv(scaled, recharge).ok_or(Fault::divide(recharge as i64))?,
+        ops::idiv(scaled, recharge).ok_or(Fault::divide(recharge as i64))?,
     )?;
 
     for (threshold, offset, cut) in GAUGE {

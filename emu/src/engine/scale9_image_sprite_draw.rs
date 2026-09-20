@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Sprite, SpriteKind, draw_context, draw_panel, image_sprite_draw,
@@ -36,10 +36,10 @@ pub fn scale9_image_sprite_draw(ctx: &mut AppContext, sprite: &mut Sprite) -> Re
             );
         }
 
-        let x = operation::cvttss2si(sprite.quad[0]);
-        let y = operation::cvttss2si(sprite.quad[1]);
-        let width = operation::cvttss2si(sprite.quad[4] - sprite.quad[2]);
-        let height = operation::cvttss2si(sprite.quad[3] - sprite.quad[1]);
+        let x = ops::cvttss2si(sprite.quad[0]);
+        let y = ops::cvttss2si(sprite.quad[1]);
+        let width = ops::cvttss2si(sprite.quad[4] - sprite.quad[2]);
+        let height = ops::cvttss2si(sprite.quad[3] - sprite.quad[1]);
 
         draw_panel(
             draw_context(&mut ctx.draw)?,

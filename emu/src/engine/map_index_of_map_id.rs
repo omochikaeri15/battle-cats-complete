@@ -1,4 +1,4 @@
-use crate::operation;
+use crate::ops;
 
 pub fn map_index_of_map_id(map_id: i32) -> i32 {
     let offset = map_id.wrapping_sub(0xbb8) as u32;
@@ -19,5 +19,5 @@ pub fn map_index_of_map_id(map_id: i32) -> i32 {
         return offset as i32;
     }
 
-    map_id.wrapping_sub(operation::div_1000(map_id).wrapping_mul(0x3e8))
+    map_id.wrapping_sub(ops::div_1000(map_id).wrapping_mul(0x3e8))
 }

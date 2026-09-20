@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, get_special_rule};
 
@@ -20,7 +20,7 @@ pub fn stage_has_restriction(
     store: &BTreeMap<i32, StageRestriction>,
     stage_id: i32,
 ) -> Result<bool, Fault> {
-    let map_id = operation::div_1000(stage_id);
+    let map_id = ops::div_1000(stage_id);
 
     if get_special_rule(ctx, &ctx.special_rules, map_id, 2)? {
         return Ok(true);

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CANNON_SHOT_SPACING, WaveRecord, draw_context, draw_model, get_anim_len,
@@ -39,7 +39,7 @@ pub fn wave_draw(ctx: &mut AppContext, depth: i32, slot: i32, side: i32) -> Resu
             let mini = ctx.u8_at(base + WaveRecord::MINI)?;
             let counter = ctx.i32_at(cell)?;
             let half = get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5;
-            let x = operation::cvttsd2si(half + operation::div_10(pos) as f64);
+            let x = ops::cvttsd2si(half + ops::div_10(pos) as f64);
             let (model, anim) = match (side.wrapping_sub(1), mini) {
                 (0, 0) => (&mut ctx.wave_attack_model, &ctx.wave_anim),
                 (0, _) => (&mut ctx.smallwave_attack_model, &ctx.mini_wave_anim),

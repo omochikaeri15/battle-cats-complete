@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::AppContext;
 
@@ -23,12 +23,12 @@ pub fn get_right_inset_logical(ctx: &AppContext) -> Result<i32, Fault> {
             .screen_h
             .wrapping_sub(metrics.inset_top.wrapping_add(metrics.inset_bottom));
 
-        operation::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))?
+        ops::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))?
     } else {
         metrics.design_w
     };
 
-    let left = operation::cvttss2si(
+    let left = ops::cvttss2si(
         ((width as f32) * (metrics.inset_left as f32) / (metrics.screen_w as f32)).ceil(),
     );
 

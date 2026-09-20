@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, draw_context, draw_model, get_drawable_width, get_setting, maanim_execute,
@@ -58,7 +58,7 @@ pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(
             maanim_execute(model, Some(&ctx.explosion_anims[1]), frame, 0)?;
         }
 
-        let x = operation::div_2(width.wrapping_add(-0x3c0)).wrapping_add(operation::div_10(pos));
+        let x = ops::div_2(width.wrapping_add(-0x3c0)).wrapping_add(ops::div_10(pos));
         let y = (depth << 2).wrapping_add(0x1cc);
         let model = if faction == 0 {
             &ctx.explosion_model

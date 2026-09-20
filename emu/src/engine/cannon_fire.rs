@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats,
@@ -82,7 +82,7 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 set_pos_x(ctx, 0, wall, x)?;
 
                 let full = get_max_hp(ctx, 0, wall)?;
-                let scaled = operation::div_100(get_cannon_wall_hp_pct(ctx, 0)?.wrapping_mul(full));
+                let scaled = ops::div_100(get_cannon_wall_hp_pct(ctx, 0)?.wrapping_mul(full));
 
                 set_max_hp(ctx, 0, wall, scaled)?;
 
@@ -115,7 +115,7 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 set_castle_anim_frame(ctx, 0, 0)?;
 
                 let strike_x =
-                    front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                    front.wrapping_sub(ops::div_2(get_cannon_strike_width(ctx, 0)?));
 
                 set_cannon_strike_x(ctx, 0, strike_x)?;
                 sound_id = 0x25;
@@ -138,7 +138,7 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 set_castle_anim_frame(ctx, 0, 0)?;
 
                 let strike_x =
-                    front.wrapping_sub(operation::div_2(get_cannon_strike_width(ctx, 0)?));
+                    front.wrapping_sub(ops::div_2(get_cannon_strike_width(ctx, 0)?));
 
                 set_cannon_strike_x(ctx, 0, strike_x)?;
                 sound_id = 0x41;

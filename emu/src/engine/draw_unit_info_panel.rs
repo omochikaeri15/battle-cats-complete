@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::{
     ability_icon_is_base, draw_context, draw_cut, get_equipped_orb, get_orb_def, get_orb_slot_count, get_scene_id, get_talent_max_level, get_talent_trait_set,
@@ -58,7 +58,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
     if short {
         let span = narrow.wrapping_mul(0x2a);
-        let half = operation::div_2(span.wrapping_add(-2));
+        let half = ops::div_2(span.wrapping_add(-2));
         let left = panel_x.wrapping_sub(half).wrapping_add(-0x27);
         let shifted = orbs <= 0 || form < 2 || fixed;
         let baseline = if shifted { panel_y.wrapping_add(0x1a) } else { panel_y.wrapping_add(1) };
@@ -67,7 +67,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, left, baseline, 0xfc);
 
-        let base = if narrow < 6 { 0 } else { operation::div_2(span.wrapping_add(-0xd2)) };
+        let base = if narrow < 6 { 0 } else { ops::div_2(span.wrapping_add(-0xd2)) };
 
         icon_y = baseline.wrapping_add(-2);
         mark_y = baseline.wrapping_add(-3);
@@ -169,15 +169,15 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         }
 
         let span = narrow.wrapping_mul(0x2a);
-        let half = operation::div_2(span.wrapping_add(-2));
-        let inset = operation::div_2(orbs.wrapping_mul(0x33).wrapping_add(0x75));
+        let half = ops::div_2(span.wrapping_add(-2));
+        let inset = ops::div_2(orbs.wrapping_mul(0x33).wrapping_add(0x75));
         let left = panel_x.wrapping_sub(half).wrapping_add(-0x27).wrapping_sub(inset);
         let sheet = ctx.img015_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, left, panel_y.wrapping_add(0x38), 0xfc);
 
-        let base = if narrow < 6 { 0 } else { operation::div_2(span.wrapping_add(-0xd2)) };
+        let base = if narrow < 6 { 0 } else { ops::div_2(span.wrapping_add(-0xd2)) };
 
         icon_y = panel_y.wrapping_add(0x36);
         mark_y = panel_y.wrapping_add(0x34);
@@ -287,7 +287,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
             let child = ui_node_get_child(&mut node, 2)?;
 
-            ui_node_set_color(child, operation::div_2(color[0]), operation::div_2(color[1]), operation::div_2(color[2]));
+            ui_node_set_color(child, ops::div_2(color[0]), ops::div_2(color[1]), ops::div_2(color[2]));
         }
 
         node.y = icon_y as f32;

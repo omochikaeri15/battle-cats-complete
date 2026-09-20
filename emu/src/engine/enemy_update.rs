@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Base, Debris, ENEMY_STATS, ENEMY_STATS_STRIDE, EnemyStats, Entity, KNOCKBACK_Y_ARC,
@@ -95,10 +95,10 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let size_again = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
                     let ring =
                         0x32i32.wrapping_sub(counter.wrapping_sub(
-                            (operation::div_5(counter as i64) as i32).wrapping_mul(5),
+                            (ops::div_5(counter as i64) as i32).wrapping_mul(5),
                         ));
-                    let width = operation::div_100(size.wrapping_mul(0x49c) as i64) as i32;
-                    let depth = operation::div_100(size_again.wrapping_mul(offset_x) as i64) as i32;
+                    let width = ops::div_100(size.wrapping_mul(0x49c) as i64) as i32;
+                    let depth = ops::div_100(size_again.wrapping_mul(offset_x) as i64) as i32;
                     let span = depth.wrapping_add(width);
                     let half = (((span as u32) >> 0x1f) as i32).wrapping_add(span) >> 1;
 
@@ -305,7 +305,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     }
 
                     let shield_max = get_shield_max(ctx, faction, slot as i32)?;
-                    let restored = operation::div_100(
+                    let restored = ops::div_100(
                         get_shield_regen(ctx, faction, slot as i32)?.wrapping_mul(shield_max)
                             as i64,
                     ) as i32;
@@ -339,7 +339,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     set_revive_timer(ctx, faction, slot as i32, revive_time)?;
 
                     let max_hp = get_max_hp(ctx, faction, slot as i32)?;
-                    let revived = operation::div_100(
+                    let revived = ops::div_100(
                         get_revive_hp(ctx, faction, slot as i32)?.wrapping_mul(max_hp) as i64,
                     ) as i32;
 
@@ -399,7 +399,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         .wrapping_add(limit)
                         .wrapping_sub(ctx.i32_at(AppContext::SCORE_ELAPSED)?)
                         .wrapping_mul(ctx.i32_at(entity.wrapping_add(Entity::SCORE_VALUE))?);
-                    let time_bonus = operation::idiv(weighted, limit)
+                    let time_bonus = ops::idiv(weighted, limit)
                         .ok_or(Fault::divide(limit as i64))?;
                     let occupant = ctx.i32_at(entity.wrapping_add(Entity::OCCUPANT))? as i64;
                     let drop = ctx.i32_at(
@@ -407,7 +407,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             + (ENEMY_STATS + EnemyStats::CASH_DROP) as i64)
                             as usize,
                     )?;
-                    let score = (operation::div_100(drop as i64) as i32)
+                    let score = (ops::div_100(drop as i64) as i32)
                         .wrapping_add(time_bonus)
                         .wrapping_add(ctx.i32_at(AppContext::SCORE_TOTAL)?);
 
@@ -429,7 +429,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             as usize,
                     )?;
                     let score_value = get_score_value(ctx, faction, slot as i32)?;
-                    let args = [operation::div_100(drop as i64) as i32, score_value];
+                    let args = [ops::div_100(drop as i64) as i32, score_value];
                     let store = ctx
                         .event_items
                         .as_mut()
@@ -781,17 +781,17 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 let combo = get_cat_combo_bonus(ctx, &ctx.combo_store, 0x11, -1)?;
                 let sage_resist = get_sage_kb_resist_pct(ctx, faction, slot as i32)?;
                 let remaining = 0xci32.wrapping_sub(frame);
-                let cycles = operation::div_12(remaining as i64) as i32;
+                let cycles = ops::div_12(remaining as i64) as i32;
                 let phase = remaining
                     .wrapping_sub(cycles.wrapping_shl(2).wrapping_mul(3))
                     .wrapping_mul(2)
                     .wrapping_mul(5);
-                let boosted = (operation::div_1000(strongest.wrapping_mul(phase) as i64) as i32)
+                let boosted = (ops::div_1000(strongest.wrapping_mul(phase) as i64) as i32)
                     .wrapping_add(phase);
                 let comboed =
-                    operation::div_100(combo.wrapping_add(0x64).wrapping_mul(boosted) as i64)
+                    ops::div_100(combo.wrapping_add(0x64).wrapping_mul(boosted) as i64)
                         as i32;
-                let push = operation::div_neg_100(
+                let push = ops::div_neg_100(
                     0x64i32.wrapping_sub(sage_resist).wrapping_mul(comboed) as i64,
                 ) as i32;
                 let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;

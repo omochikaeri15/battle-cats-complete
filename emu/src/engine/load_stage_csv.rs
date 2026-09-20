@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, STAGE_ENEMY_COLUMNS, altar_replacement, get_castle_enemy_row,
@@ -215,7 +215,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
                                     AppContext::DROP_MAP_STAGES
                                         .wrapping_add((stage as i64 as usize).wrapping_mul(4)),
                                 )?;
-                                let group = operation::div_100(packed);
+                                let group = ops::div_100(packed);
 
                                 (group, packed.wrapping_sub(group.wrapping_mul(100)))
                             }

@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, call_rng, get_background_id, get_drawable_width};
 
@@ -15,13 +15,13 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         while particle != 100 {
             let record = AppContext::BG_PARTICLES.wrapping_add(particle * 0x14);
             let roll = call_rng(ctx, 0xc0).wrapping_add((particle * 0xc0) as i32);
-            let span = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+            let span = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
 
             ctx.set_i32_at(
                 record,
-                operation::irem(roll, span).ok_or(Fault::divide(span as i64))?,
+                ops::irem(roll, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             if get_background_id(ctx)? == 2
@@ -82,8 +82,8 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         while drifter != 100 {
             let record = AppContext::BG_DRIFTERS.wrapping_add(drifter * 0x10);
             let roll = call_rng(ctx, 0x38).wrapping_add((drifter * 0x38) as i32);
-            let length = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
-            let x = operation::irem(roll, length).ok_or(Fault::divide(length as i64))?;
+            let length = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
+            let x = ops::irem(roll, length).ok_or(Fault::divide(length as i64))?;
             let x = x
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_mul(100)
@@ -127,13 +127,13 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             let record = AppContext::BG_PARTICLES.wrapping_add(particle * 0x14);
             let rising = call_rng(ctx, 5);
             let roll = call_rng(ctx, 0xc0).wrapping_add((particle * 0xc0) as i32);
-            let span = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+            let span = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_add(-0xf00);
 
             ctx.set_i32_at(
                 record,
-                operation::irem(roll, span).ok_or(Fault::divide(span as i64))?,
+                ops::irem(roll, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             let y = if rising != 0 {
@@ -150,7 +150,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                 if spread > 0x1f3ff {
                     0
                 } else {
-                    call_rng(ctx, operation::div_neg_100(spread).wrapping_add(0x500))
+                    call_rng(ctx, ops::div_neg_100(spread).wrapping_add(0x500))
                 }
             };
 
@@ -188,7 +188,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             let sprite = AppContext::BG_SPRITES.wrapping_add(pair * 0x40);
 
             for half in [0usize, 0x20] {
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(100);
@@ -247,7 +247,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                 let (bound, base) = if first {
                     let reach =
                         (-0x122i32).wrapping_sub(100i32.wrapping_sub(zoom).wrapping_mul(20));
-                    let y = operation::div_100(call_rng(ctx, 100).wrapping_mul(reach))
+                    let y = ops::div_100(call_rng(ctx, 100).wrapping_mul(reach))
                         .wrapping_mul(100)
                         .wrapping_add(0x7148);
 
@@ -263,12 +263,12 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     (0x32, 0x32)
                 } else {
                     let lift =
-                        operation::idiv(0x4e20, zoom).ok_or(Fault::divide(zoom as i64))?;
+                        ops::idiv(0x4e20, zoom).ok_or(Fault::divide(zoom as i64))?;
                     let reach = lift
                         .wrapping_add(100i32.wrapping_sub(zoom).wrapping_mul(20))
                         .wrapping_add(0x1e0)
                         .wrapping_neg();
-                    let y = operation::div_100(call_rng(ctx, 100).wrapping_mul(reach))
+                    let y = ops::div_100(call_rng(ctx, 100).wrapping_mul(reach))
                         .wrapping_add(lift)
                         .wrapping_add(0x1e0)
                         .wrapping_mul(100);
@@ -289,7 +289,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     ctx.set_i32_at(field, ctx.i32_at(field)?.wrapping_add(1))?;
                 }
 
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(100);
@@ -326,7 +326,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             let sprite = AppContext::BG_SPRITES.wrapping_add(pair * 0x40);
 
             for half in [0usize, 0x20] {
-                let width = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
+                let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                     .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(100);

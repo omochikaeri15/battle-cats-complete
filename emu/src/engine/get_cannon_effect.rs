@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct CannonGrowthStep {
@@ -89,22 +89,22 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
                         let span = value2.wrapping_sub(value1) as f32;
                         let ratio = progress as f32 / lv2.wrapping_sub(from_level) as f32;
 
-                        value = operation::cvttss2si(
-                            value1 as f32 + (operation::powf(ratio + -1.0, 3.0) + 1.0) * span,
+                        value = ops::cvttss2si(
+                            value1 as f32 + (ops::powf(ratio + -1.0, 3.0) + 1.0) * span,
                         );
                     }
                     1 => {
                         let span = value2.wrapping_sub(value1) as f32;
                         let ratio = progress as f32 / lv2.wrapping_sub(from_level) as f32;
 
-                        value = operation::cvttss2si(
-                            operation::powf(ratio, 3.0) * span + value1 as f32,
+                        value = ops::cvttss2si(
+                            ops::powf(ratio, 3.0) * span + value1 as f32,
                         );
                     }
                     0 => {
                         let divisor = lv2.wrapping_sub(from_level);
 
-                        value = operation::idiv(
+                        value = ops::idiv(
                             value2.wrapping_sub(value1).wrapping_mul(progress),
                             divisor,
                         )

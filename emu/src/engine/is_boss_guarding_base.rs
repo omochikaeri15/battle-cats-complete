@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, get_base_hp, get_base_max_hp, get_entity_state, is_boss, slot_occupied,
@@ -19,7 +19,7 @@ pub fn is_boss_guarding_base(ctx: &AppContext) -> Result<bool, Fault> {
 
         if stage_entry_is_boss(enemy_row)
             && hp
-                <= operation::div_100(
+                <= ops::div_100(
                     stage_entry_base_trigger(enemy_row).wrapping_mul(max_hp) as i64
                 ) as i32
         {

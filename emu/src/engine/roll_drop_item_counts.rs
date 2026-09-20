@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, call_rng};
 
@@ -34,7 +34,7 @@ pub fn roll_drop_item_counts(
                 .stage_counts
                 .get(stage as i64 as usize)
                 .ok_or(Fault::index_out_of_range(stage as i64, record.stage_counts.len() as i64))?;
-        let rolls = operation::cvttsd2si((mult * count) as f64 + 0.5);
+        let rolls = ops::cvttsd2si((mult * count) as f64 + 0.5);
         let mut roll = 0;
 
         while roll < rolls {

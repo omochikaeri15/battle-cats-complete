@@ -1,7 +1,7 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 pub fn std_stoi(text: &[u8], idx: Option<&mut usize>, base: i32) -> Result<i32, Fault> {
-    let parsed = operation::strtol(text, base);
+    let parsed = ops::strtol(text, base);
 
     if parsed.overflow {
         return Err(Fault::out_of_range());

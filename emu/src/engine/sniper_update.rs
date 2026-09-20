@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, atan2_deg, cos_deg, get_base_pos_x, get_base_pos_y, get_battle_status,
@@ -56,15 +56,15 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             slot += 1;
         }
 
-        let gun_x = operation::div_10(
+        let gun_x = ops::div_10(
             get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
         )
         .wrapping_add(0xcb);
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_1, gun_x)?;
 
-        let rest_y = operation::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x171) as f32;
-        let gun_y = operation::cvttss2si(
+        let rest_y = ops::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x171) as f32;
+        let gun_y = ops::cvttss2si(
             sin_deg(ctx.f32_at(AppContext::SNIPER_BOB_ANGLE)?) * 10.0 + rest_y,
         );
 
@@ -77,14 +77,14 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
     if target > 0 {
         let pos_y = ctx.i32_at(AppContext::entity_field(1, target, Entity::POS_Y))?;
         let z_layer = ctx.i32_at(AppContext::entity_field(1, target, Entity::Z_LAYER))?;
-        let rise = (operation::div_neg_10(pos_y as i64) as i32)
+        let rise = (ops::div_neg_10(pos_y as i64) as i32)
             .wrapping_add(ctx.i32_at(AppContext::DRAW_TEMP_2)?)
             .wrapping_sub(z_layer.wrapping_shl(2))
             .wrapping_add(0x3a) as f32;
         let pos_x = ctx
             .i32_at(AppContext::entity_field(1, target, Entity::POS_X))?
             .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
-        let run = (operation::div_neg_10(pos_x as i64) as i32)
+        let run = (ops::div_neg_10(pos_x as i64) as i32)
             .wrapping_add(ctx.i32_at(AppContext::DRAW_TEMP_1)?) as f32;
         let turn = 360.0f32 - atan2_deg(rise, run);
         let mirrored = -turn;
@@ -124,7 +124,7 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::DRAW_TEMP_1, muzzle_x)?;
 
     let rest_y = get_base_pos_y(ctx, 0)?.wrapping_add(-0xf76) as f32;
-    let muzzle_y = operation::cvttss2si(
+    let muzzle_y = ops::cvttss2si(
         sin_deg(ctx.f32_at(AppContext::SNIPER_BOB_ANGLE)?) * 10.0 * 10.0 + rest_y,
     );
 
@@ -229,7 +229,7 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             )?;
             ctx.set_i32_at(
                 AppContext::PENDING_STRIKE_ANGLE.wrapping_add(free.wrapping_mul(4)),
-                operation::cvttss2si(goal),
+                ops::cvttss2si(goal),
             )?;
             ctx.set_i32_at(
                 AppContext::PENDING_STRIKE_TARGET.wrapping_add(free.wrapping_mul(4)),
@@ -268,11 +268,11 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 ctx.set_i32_at(record.wrapping_add(4), y)?;
                 ctx.set_i32_at(
                     record.wrapping_add(0xc),
-                    operation::cvttsd2si(drift_x as f64 * 0.5),
+                    ops::cvttsd2si(drift_x as f64 * 0.5),
                 )?;
                 ctx.set_i32_at(
                     record.wrapping_add(0x10),
-                    operation::cvttsd2si(drift_y as f64 * 0.5),
+                    ops::cvttsd2si(drift_y as f64 * 0.5),
                 )?;
 
                 let age = ctx.i32_at(record.wrapping_add(8))?;
@@ -310,7 +310,7 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             let speed = ctx.i32_at(AppContext::PENDING_STRIKE_SPEED.wrapping_add(cell))? as f32;
             let across =
                 cos_deg(ctx.i32_at(AppContext::PENDING_STRIKE_ANGLE.wrapping_add(cell))? as f32);
-            let x = operation::cvttss2si(
+            let x = ops::cvttss2si(
                 ctx.i32_at(AppContext::PENDING_STRIKE_TRIGGER_X.wrapping_add(cell))? as f32
                     - across * speed,
             );
@@ -320,13 +320,13 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             let speed = ctx.i32_at(AppContext::PENDING_STRIKE_SPEED.wrapping_add(cell))? as f32;
             let down =
                 sin_deg(ctx.i32_at(AppContext::PENDING_STRIKE_ANGLE.wrapping_add(cell))? as f32);
-            let y = operation::cvttss2si(
+            let y = ops::cvttss2si(
                 ctx.i32_at(AppContext::PENDING_STRIKE_Y.wrapping_add(cell))? as f32 - down * speed,
             );
 
             ctx.set_i32_at(AppContext::PENDING_STRIKE_Y.wrapping_add(cell), y)?;
 
-            if operation::div_10(y) >= get_design_height2(ctx) {
+            if ops::div_10(y) >= get_design_height2(ctx) {
                 ctx.set_block_at::<1>(AppContext::PENDING_STRIKE_ACTIVE.wrapping_add(strike), [0])?;
             }
 

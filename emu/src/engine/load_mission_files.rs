@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, JsonNode, MissionCondition, MissionData, MissionGatyaSetting,
@@ -32,7 +32,7 @@ pub fn load_mission_files(ctx: &mut AppContext) -> Result<(), Fault> {
         };
 
         for (key, entry) in entries {
-            let id = operation::atoi(key);
+            let id = ops::atoi(key);
             let mut record = MissionGatyaSetting::default();
 
             parse_mission_gatya_setting(
@@ -59,7 +59,7 @@ pub fn load_mission_files(ctx: &mut AppContext) -> Result<(), Fault> {
         };
 
         for (key, entry) in entries {
-            let id = operation::atoi(key);
+            let id = ops::atoi(key);
             let mut record = MissionLimitOption::default();
 
             parse_mission_limit_option(

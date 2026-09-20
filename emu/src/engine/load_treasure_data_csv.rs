@@ -6,12 +6,7 @@ use super::{
 };
 
 pub fn load_treasure_data_csv(ctx: &mut AppContext) -> Result<bool, Fault> {
-    let listed = ctx
-        .pack_digests
-        .get(b"DataLocal.pack".as_slice())
-        .is_some_and(|digest| digest.as_slice() == b"7e2daa8236ec08445fa7ddcd7a63f741");
-
-    if !listed {
+    if ctx.failed_packs.contains(b"DataLocal.pack".as_slice()) {
         return Ok(false);
     }
 

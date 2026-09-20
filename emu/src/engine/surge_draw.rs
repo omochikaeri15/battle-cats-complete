@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, SURGE_TIMING, draw_context, draw_model, get_drawable_width, maanim_execute,
@@ -38,7 +38,7 @@ pub fn surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), F
         } else {
             (0, event.frame)
         };
-        let x = operation::div_2(width.wrapping_add(-0x3c0)).wrapping_add(operation::div_10(pos));
+        let x = ops::div_2(width.wrapping_add(-0x3c0)).wrapping_add(ops::div_10(pos));
         let y = (ctx.i32_at(AppContext::entity_field(faction, slot, Entity::Z_LAYER))? << 2)
             .wrapping_add(0x1cc);
         let (model, anims) = match (faction, mini) {

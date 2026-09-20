@@ -1,4 +1,4 @@
-use crate::{operation, Fault};
+use crate::{Fault, ops};
 
 use super::*;
 
@@ -288,19 +288,19 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                         if !has_castle_enemy(ctx)? {
                             let base_x = get_base_pos_x(ctx, 1)?;
                             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-                            let inset = operation::div_neg_100(size.wrapping_mul(0x49c));
-                            let shifted = operation::div_10(base_x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(inset));
+                            let inset = ops::div_neg_100(size.wrapping_mul(0x49c));
+                            let shifted = ops::div_10(base_x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(inset));
                             let offset_x = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_x;
                             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
 
-                            ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_100(offset_x.wrapping_mul(size)).wrapping_add(shifted))?;
+                            ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_100(offset_x.wrapping_mul(size)).wrapping_add(shifted))?;
 
-                            let base_y = operation::div_10(get_base_pos_y(ctx, 1)?);
+                            let base_y = ops::div_10(get_base_pos_y(ctx, 1)?);
                             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-                            let lifted = operation::div_neg_100(size.wrapping_mul(0xff)).wrapping_add(base_y);
+                            let lifted = ops::div_neg_100(size.wrapping_mul(0xff)).wrapping_add(base_y);
                             let offset_y = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_y;
                             let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-                            let y = operation::div_100(offset_y.wrapping_mul(size)).wrapping_add(lifted);
+                            let y = ops::div_100(offset_y.wrapping_mul(size)).wrapping_add(lifted);
 
                             ctx.set_i32_at(AppContext::DRAW_TEMP_2, y)?;
                             ctx.set_i32_at(AppContext::DRAW_TEMP_3, 0)?;
@@ -309,7 +309,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                             if ctx.i32_at(AppContext::entity_field(1, 0, Base::STATE))? != 0 {
                                 let period = ctx.i32_at(AppContext::SPEED)?.wrapping_add(1);
-                                let phase = operation::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
+                                let phase = ops::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
 
                                 if phase == 1 {
                                     ctx.set_i32_at(AppContext::DRAW_TEMP_3, 4)?;
@@ -327,16 +327,16 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                         let mut tint = 0i32;
                         let base_x = get_base_pos_x(ctx, 0)?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
 
-                        ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_10(base_x))?;
+                        ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_10(base_x))?;
 
-                        let y = operation::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x143);
+                        let y = ops::div_10(get_base_pos_y(ctx, 0)?).wrapping_add(-0x143);
 
                         ctx.set_i32_at(AppContext::DRAW_TEMP_2, y)?;
                         ctx.set_i32_at(AppContext::DRAW_TEMP_3, 0)?;
 
                         if ctx.i32_at(AppContext::entity_field(0, 0, Base::STATE))? != 0 {
                             let period = ctx.i32_at(AppContext::SPEED)?.wrapping_add(1);
-                            let phase = operation::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
+                            let phase = ops::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
 
                             if phase == 1 {
                                 ctx.set_i32_at(AppContext::DRAW_TEMP_3, 4)?;
@@ -366,11 +366,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                     let lead = if first { 0x5ci32.wrapping_sub(step) } else { step.wrapping_add(-0x5c) };
                                     let tip = reach.wrapping_add(lead).wrapping_add(-4) as f64;
                                     let tip = get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip;
-                                    let edge = operation::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x60) as f64;
+                                    let edge = ops::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x60) as f64;
                                     let edge = get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + edge;
                                     let arrow = if edge > tip {
-                                        let edge = operation::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x60) as f64;
-                                        let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + edge);
+                                        let edge = ops::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x60) as f64;
+                                        let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + edge);
 
                                         draw_cut(draw_context(&mut ctx.draw)?, ctx.img002_sheet.as_deref().ok_or(Fault::null_pointer())?, x, 0x19a, 0);
                                         set_alpha(draw_context(&mut ctx.draw)?, 0xd8);
@@ -379,13 +379,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                             set_flip(draw_context(&mut ctx.draw)?, 1);
                                         }
 
-                                        operation::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x42)
+                                        ops::div_10(0x12ci32.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(0x42)
                                     } else {
                                         let reach = ctx.i32_at(AppContext::DRAW_TEMP_1)?;
                                         let step = get_base_level(ctx, faction)?.wrapping_mul(CANNON_SHOT_SPACING);
                                         let lead = if first { 0x5ci32.wrapping_sub(step) } else { step.wrapping_add(-0x5c) };
                                         let tip = reach.wrapping_add(lead).wrapping_add(-4) as f64;
-                                        let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
+                                        let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + tip);
 
                                         draw_cut(draw_context(&mut ctx.draw)?, ctx.img002_sheet.as_deref().ok_or(Fault::null_pointer())?, x, 0x19a, 0);
                                         set_alpha(draw_context(&mut ctx.draw)?, 0xd8);
@@ -400,10 +400,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                                         lead.wrapping_add(reach).wrapping_add(-0x22)
                                     };
-                                    let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + arrow as f64);
+                                    let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + arrow as f64);
                                     let bob = sin_deg(ctx.i32_at(AppContext::DRAW_FRAMES)?.wrapping_mul(0x3c) as f32) * 11.0 + 314.0;
 
-                                    draw_cut(draw_context(&mut ctx.draw)?, ctx.img002_sheet.as_deref().ok_or(Fault::null_pointer())?, x, operation::cvttss2si(bob), 1);
+                                    draw_cut(draw_context(&mut ctx.draw)?, ctx.img002_sheet.as_deref().ok_or(Fault::null_pointer())?, x, ops::cvttss2si(bob), 1);
 
                                     if flip {
                                         set_flip(draw_context(&mut ctx.draw)?, 0);
@@ -477,9 +477,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                         let pos_x = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
 
-                        ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_10(pos_x))?;
+                        ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_10(pos_x))?;
 
-                        let pos_y = operation::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
+                        let pos_y = ops::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
                         let depth = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::Z_LAYER))?;
 
                         ctx.set_i32_at(AppContext::DRAW_TEMP_2, pos_y.wrapping_add(depth << 2))?;
@@ -489,7 +489,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                             if ctx.i32_at(AppContext::entity_field(1, 0, Base::STATE))? != 0 || get_hit_flash_timer(ctx, faction, slot)? > 0 {
                                 let period = ctx.i32_at(AppContext::SPEED)?.wrapping_add(1);
-                                let phase = operation::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
+                                let phase = ops::irem(ctx.i32_at(AppContext::BATTLE_FRAME_COUNTER)?, period).ok_or(Fault::divide(period as i64))?;
 
                                 if phase == 1 {
                                     ctx.set_i32_at(AppContext::DRAW_TEMP_3, 4)?;
@@ -536,7 +536,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             }
 
                             let origin = flash.wrapping_add(ctx.i32_at(AppContext::DRAW_TEMP_1)?) as f64;
-                            let origin = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let origin = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let model = &ctx.warp_chara_model;
                             let part = mamodel_get_part(model, 0).ok_or(Fault::null_pointer())?;
                             let body = model.parts.get(part + 1).ok_or(Fault::index_out_of_range((part + 1) as i64, model.parts.len() as i64))?;
@@ -546,7 +546,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let unit_x = mamodel_get_scale_unit(model);
                             let unit_y = mamodel_get_scale_unit(model);
                             let opacity = body.i32_at(0x80);
-                            let alpha = operation::idiv((opacity << 8).wrapping_sub(opacity), model.opacity_unit).ok_or(Fault::divide(model.opacity_unit as i64))?;
+                            let alpha = ops::idiv((opacity << 8).wrapping_sub(opacity), model.opacity_unit).ok_or(Fault::divide(model.opacity_unit as i64))?;
 
                             if alpha > 0 {
                                 let scale = scale_x * scale_y / unit_x as f32 / unit_y as f32;
@@ -589,7 +589,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             if get_revive_timer(ctx, faction, slot)? <= 0 {
                                 let origin = flash.wrapping_add(ctx.i32_at(AppContext::DRAW_TEMP_1)?) as f64;
                                 let anchor = ctx.i32_at(AppContext::ANCHOR_OUT)? as f64;
-                                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin - anchor);
+                                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin - anchor);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
 
                                 draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y);
@@ -603,8 +603,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                     maanim_execute(&mut ctx.zombie_model, Some(&ctx.zombie_down_anim), frame, 0)?;
                                 }
 
-                                let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)?.wrapping_sub(operation::div_2(ctx.i32_at(AppContext::ANCHOR_OUT)?)) as f64;
-                                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                                let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)?.wrapping_sub(ops::div_2(ctx.i32_at(AppContext::ANCHOR_OUT)?)) as f64;
+                                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
                                 draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y);
@@ -624,7 +624,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             *std_map_int_mamodel_subscript(&mut ctx.effect_models, &spawn) = model;
 
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)?.wrapping_sub(anchor).wrapping_add(ctx.i32_at(AppContext::ANCHOR_OUT)?) as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
                             draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &spawn), x, y);
@@ -633,8 +633,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                             maanim_execute(&mut ctx.zombie_model, Some(&ctx.zombie_revive_anim), frame, 0)?;
 
-                            let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)?.wrapping_sub(operation::div_2(ctx.i32_at(AppContext::ANCHOR_OUT)?)) as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)?.wrapping_sub(ops::div_2(ctx.i32_at(AppContext::ANCHOR_OUT)?)) as f64;
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
                             draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y);
@@ -651,7 +651,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                             for badge in 0..4 {
                                 let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin + offset as f64);
+                                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin + offset as f64);
 
                                 if get_proc_badge(ctx, faction, slot, badge)? == 5 {
                                     if get_dodge_vfx_frame(ctx, faction, slot)? > 0
@@ -709,7 +709,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                         if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_VFX_ACTIVE))? > 0 {
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
                             let frame = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_VFX_FRAME))?;
 
@@ -718,7 +718,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                         if ctx.i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_BLOCK_VFX_ACTIVE))? > 0 {
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
                             let frame = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::WAVE_BLOCK_VFX_FRAME))?;
 
@@ -731,7 +731,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             maanim_execute(&mut ctx.skill_effect_invalid_model, Some(&ctx.skill_effect_invalid_anim), frame, 0)?;
 
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
                             draw_model(draw_context(&mut ctx.draw)?, &ctx.skill_effect_invalid_model, x, y);
@@ -743,7 +743,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             maanim_execute(&mut ctx.barrier_model, Some(&ctx.barrier_anims[0]), frame, 0)?;
 
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
                             draw_model(draw_context(&mut ctx.draw)?, &ctx.barrier_model, x, y);
@@ -757,7 +757,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             maanim_execute(&mut ctx.demonshield_model, Some(anim), frame, 0)?;
 
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
                             draw_model(draw_context(&mut ctx.draw)?, &ctx.demonshield_model, x, y);
@@ -781,9 +781,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                         if get_entity_state(ctx, faction, slot)? == 0x15 {
                             let pos_x = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
 
-                            ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_10(pos_x))?;
+                            ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_10(pos_x))?;
 
-                            let pos_y = operation::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
+                            let pos_y = ops::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
                             let depth = ctx.i32_at(AppContext::entity_field(1, slot, Entity::Z_LAYER))?;
 
                             ctx.set_i32_at(AppContext::DRAW_TEMP_2, pos_y.wrapping_add(depth << 2).wrapping_add(-0x61))?;
@@ -794,7 +794,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             maanim_execute(model, Some(&ctx.death_surge_anims[faction as usize]), frame, 0)?;
 
                             let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                            let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                            let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
                             let model = if faction == 0 { &ctx.demonsoul_01_model } else { &ctx.demonsoul_00_model };
 
@@ -817,17 +817,17 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 transform_anchor(part, model, anchor_x, anchor_y, &mut out)?;
                                 ctx.set_block_at::<8>(AppContext::ANCHOR_OUT, out.to_le_bytes())?;
 
-                                let pos_x = operation::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+                                let pos_x = ops::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
 
                                 ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
-                                let pos_y = operation::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
+                                let pos_y = ops::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
                                 let depth = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::Z_LAYER))?;
 
                                 ctx.set_i32_at(AppContext::DRAW_TEMP_2, pos_y.wrapping_add(depth << 2))?;
 
                                 let origin = pos_x.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT)?) as f64;
-                                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
 
                                 draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y);
@@ -837,9 +837,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let soul = get_soul_anim_type(ctx, faction, slot)?.wrapping_add(0x3e8);
                                 let pos_x = ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
 
-                                ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_10(pos_x))?;
+                                ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_10(pos_x))?;
 
-                                let pos_y = operation::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
+                                let pos_y = ops::div_10(ctx.i32_at(AppContext::entity_field(faction, slot, Entity::POS_Y))?);
                                 let depth = ctx.i32_at(AppContext::entity_field(1, slot, Entity::Z_LAYER))?;
 
                                 ctx.set_i32_at(AppContext::DRAW_TEMP_2, pos_y.wrapping_add(depth << 2).wrapping_add(-0x61))?;
@@ -853,7 +853,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 *std_map_int_mamodel_subscript(&mut ctx.effect_models, &soul) = model;
 
                                 let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-                                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
                                 draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &soul), x, y);
@@ -895,20 +895,20 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
     let base_x = get_base_pos_x(ctx, 1)?;
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-    let inset = operation::div_neg_100(size.wrapping_mul(0x49c));
-    let shifted = operation::div_10(base_x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(inset));
+    let inset = ops::div_neg_100(size.wrapping_mul(0x49c));
+    let shifted = ops::div_10(base_x.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(inset));
     let offset_x = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_x;
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_1, operation::div_100(offset_x.wrapping_mul(size)).wrapping_add(shifted))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_1, ops::div_100(offset_x.wrapping_mul(size)).wrapping_add(shifted))?;
 
-    let base_y = operation::div_10(get_base_pos_y(ctx, 1)?);
+    let base_y = ops::div_10(get_base_pos_y(ctx, 1)?);
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
-    let lifted = operation::div_neg_100(size.wrapping_mul(0xff)).wrapping_add(base_y);
+    let lifted = ops::div_neg_100(size.wrapping_mul(0xff)).wrapping_add(base_y);
     let offset_y = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.offset_y;
     let size = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_2, operation::div_100(offset_y.wrapping_mul(size)).wrapping_add(lifted))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_2, ops::div_100(offset_y.wrapping_mul(size)).wrapping_add(lifted))?;
 
     for slot in 0..0x33 {
         if !is_boss(ctx, 1, slot)? {
@@ -924,7 +924,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         maanim_execute(&mut ctx.boss_welcome_model, Some(&ctx.boss_shockwave_anim), frame, 0)?;
 
         let origin = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f64;
-        let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin + 64.0);
+        let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin + 64.0);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(0xe0);
 
         draw_model(draw_context(&mut ctx.draw)?, &ctx.boss_welcome_model, x, y);
@@ -948,8 +948,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         ctx.fever_model.parts[part].set_i32_at(0x7c, opacity);
 
-        let x = operation::div_2(get_drawable_width(ctx)?);
-        let y = operation::div_2(get_design_height2(ctx));
+        let x = ops::div_2(get_drawable_width(ctx)?);
+        let y = ops::div_2(get_design_height2(ctx));
 
         draw_model(draw_context(&mut ctx.draw)?, &ctx.fever_model, x, y);
 
@@ -972,11 +972,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         transform_anchor(part, model, anchor_x, anchor_y, &mut out)?;
         ctx.set_block_at::<8>(AppContext::ANCHOR_OUT, out.to_le_bytes())?;
 
-        let pos_x = operation::div_10(ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let pos_x = ops::div_10(ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_X))?.wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
-        let pos_y = operation::div_10(ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_Y))?);
+        let pos_y = ops::div_10(ctx.i32_at(AppContext::entity_field(1, slot, Entity::POS_Y))?);
         let depth = ctx.i32_at(AppContext::entity_field(1, slot, Entity::Z_LAYER))?;
 
         ctx.set_i32_at(AppContext::DRAW_TEMP_2, pos_y.wrapping_add(depth << 2))?;
@@ -987,7 +987,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let row = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
         let lift = ctx.i32_at(AppContext::ANCHOR_OUT + 4)?;
         let shift_y = get_setting(&ctx.settings, b"battle_castle_y2", 0)?;
-        let x = operation::cvttsd2si(width.wrapping_add(-0x3c0) as f64 * 0.5 + anchor.wrapping_add(pos_x) as f64 + shift_x as f64);
+        let x = ops::cvttsd2si(width.wrapping_add(-0x3c0) as f64 * 0.5 + anchor.wrapping_add(pos_x) as f64 + shift_x as f64);
         let y = lift.wrapping_add(row).wrapping_add(shift_y);
         let sheet = ctx.img001_sheet.clone();
         let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
@@ -1021,10 +1021,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let reach = get_castle_row(&ctx.enemy_castle, get_castle_id(ctx)?)?.size;
         let shift_x = get_setting(&ctx.settings, b"battle_castle_x1", 0)?;
         let shift_y = get_setting(&ctx.settings, b"battle_castle_y1", 0)?;
-        let inset = operation::div_neg_100(size.wrapping_mul(0x49c));
-        let origin = operation::div_10(base_x.wrapping_sub(camera).wrapping_add(inset));
-        let offset = operation::div_100(scale.wrapping_mul(offset_x));
-        let middle = operation::div_200((reach << 7).wrapping_sub(reach));
+        let inset = ops::div_neg_100(size.wrapping_mul(0x49c));
+        let origin = ops::div_10(base_x.wrapping_sub(camera).wrapping_add(inset));
+        let offset = ops::div_100(scale.wrapping_mul(offset_x));
+        let middle = ops::div_200((reach << 7).wrapping_sub(reach));
         let x = shift_x.wrapping_add(middle.wrapping_add(offset).wrapping_add(origin)).wrapping_add(0x96);
         let y = shift_y.wrapping_add(0x89);
         let sheet = ctx.img001_sheet.clone();
@@ -1033,7 +1033,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0x39, hp, 0, left, y as f32, 0.0, 0, 2, 0)?;
 
-        let slash = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x.wrapping_add(-0x40) as f64);
+        let slash = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x.wrapping_add(-0x40) as f64);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, digits, slash, y, 0x12, 0x12, 0x43);
 
@@ -1048,7 +1048,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     let cap = min_i32(ctx.i32_at(AppContext::entity_field(0, 0, Entity::MAX_HP))?, 0x5f5e0ff);
     let shift_x = get_setting(&ctx.settings, b"battle_castle_x0", 0)?;
     let shift_y = get_setting(&ctx.settings, b"battle_castle_y0", 0)?;
-    let x = shift_x.wrapping_add(operation::div_10(base_x.wrapping_sub(camera))).wrapping_add(0x50);
+    let x = shift_x.wrapping_add(ops::div_10(base_x.wrapping_sub(camera))).wrapping_add(0x50);
     let y = shift_y.wrapping_add(0x89);
     let sheet = ctx.img001_sheet.clone();
     let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
@@ -1056,7 +1056,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
     draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0x39, hp, 0, left, y as f32, 0.0, 0, 2, 0)?;
 
-    let slash = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x.wrapping_add(-0x68) as f64);
+    let slash = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x.wrapping_add(-0x68) as f64);
 
     draw_cut_scaled(draw_context(&mut ctx.draw)?, digits, slash, y, 0x12, 0x12, 0x43);
 
@@ -1076,14 +1076,14 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     if !skip_button {
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let centre = operation::div_10(operation::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
-        let origin = centre.wrapping_sub(operation::div_2(bounce)).wrapping_add(-0x41) as f64;
-        let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+        let centre = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let origin = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x41) as f64;
+        let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
         let sink = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
             .wrapping_add(ctx.i32_at(AppContext::CAT_GOD_BUTTON_SINK)?)
             .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?)
-            .wrapping_add(operation::div_2(bounce));
+            .wrapping_add(ops::div_2(bounce));
         let size = bounce.wrapping_add(0x83);
         let spin = ctx.f32_at(AppContext::CAT_GOD_SPIN)?;
         let sheet = ctx.img002_sheet.clone();
@@ -1093,16 +1093,16 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let centre = operation::div_10(operation::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
-        let origin = centre.wrapping_sub(operation::div_2(bounce)).wrapping_add(-0x26) as f64;
-        let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+        let centre = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let origin = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x26) as f64;
+        let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let sink = ctx
             .i32_at(AppContext::CAT_GOD_BUTTON_SINK)?
             .wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?)
             .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?)
-            .wrapping_add(operation::div_2(bounce));
+            .wrapping_add(ops::div_2(bounce));
         let size = bounce.wrapping_add(0x4c);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, icons, x, 1i32.wrapping_sub(sink), size, size, 0x29);
@@ -1155,7 +1155,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::SCORE_ZOOM, tick.wrapping_mul(0xc).wrapping_add(100))?;
 
             let from = ctx.i32_at(AppContext::SCORE_FROM)?;
-            let step = operation::div_4(total.wrapping_sub(from));
+            let step = ops::div_4(total.wrapping_sub(from));
 
             ctx.set_i32_at(AppContext::SCORE_SHOWN, step.wrapping_mul(tick).wrapping_add(from))?;
             ctx.set_i32_at(AppContext::SCORE_ANIM_TICK, tick.wrapping_add(1))?;
@@ -1175,7 +1175,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let sheet = ctx.img001_sheet.clone();
         let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x86);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x86);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let y = 10i32.wrapping_sub(lift);
         let border_x = imgcut_get_sprite_cut(digits, 0x6b)?[0].wrapping_sub(imgcut_get_sprite_cut(digits, 0x6a)?[0]);
@@ -1185,22 +1185,22 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h);
 
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x7a);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x7a);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
         draw_cut(draw_context(&mut ctx.draw)?, digits, x, 0x11i32.wrapping_sub(lift), 0x68);
 
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(0x64);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(0x64);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
         draw_cut(draw_context(&mut ctx.draw)?, digits, x, 0x13i32.wrapping_sub(lift), 0x69);
 
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
-        let y = operation::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let y = ops::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let pitch = imgcut_get_sprite_cut(digits, 0xe)?[2].wrapping_add(-1);
         let span = digit_count(ctx.i32_at(AppContext::SCORE_SHOWN)?).wrapping_mul(pitch);
-        let x = centre.wrapping_sub(operation::div_2(span)).wrapping_add(0x64);
+        let x = centre.wrapping_sub(ops::div_2(span)).wrapping_add(0x64);
         let zoom = ctx.i32_at(AppContext::SCORE_ZOOM)? as f32 / 100.0;
         let shown = ctx.i32_at(AppContext::SCORE_SHOWN)?;
 
@@ -1214,7 +1214,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     } else if is_score_stage(ctx.event_items.as_ref()) {
         let sheet = ctx.img001_sheet.clone();
         let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x86);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x86);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let y = 10i32.wrapping_sub(lift);
         let border_x = imgcut_get_sprite_cut(digits, 0x6b)?[0].wrapping_sub(imgcut_get_sprite_cut(digits, 0x6a)?[0]);
@@ -1224,22 +1224,22 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h);
 
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x77);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x77);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
         draw_cut(draw_context(&mut ctx.draw)?, digits, x, 0xfi32.wrapping_sub(lift), 0x9f);
 
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(0x64);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(0x64);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
         draw_cut(draw_context(&mut ctx.draw)?, digits, x, 0x13i32.wrapping_sub(lift), 0x69);
 
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
-        let y = operation::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
+        let y = ops::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
         let score = get_stage_score(ctx.event_items.as_ref().ok_or(Fault::null_pointer())?);
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let pitch = imgcut_get_sprite_cut(digits, 0xe)?[2].wrapping_add(-1);
-        let x = centre.wrapping_sub(operation::div_2(digit_count(score).wrapping_mul(pitch))).wrapping_add(0x64);
+        let x = centre.wrapping_sub(ops::div_2(digit_count(score).wrapping_mul(pitch))).wrapping_add(0x64);
 
         draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0xe, score, 0, x as f32, y as f32, -1.0, 0, 5, 0)?;
 
@@ -1248,17 +1248,17 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         if get_special_rule(ctx, &ctx.special_rules, map_id, 0xc)? {
             let gauge = ctx.fever_sheet.clone();
             let gauge = gauge.as_deref().ok_or(Fault::null_pointer())?;
-            let left = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(operation::div_2(imgcut_get_sprite_cut(gauge, 8)?[2]));
+            let left = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(ops::div_2(imgcut_get_sprite_cut(gauge, 8)?[2]));
             let lift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
             let top = 0x46i32.wrapping_sub(lift);
             let fill = if is_fever_active(ctx, &ctx.special_rules)? {
                 let frame = get_fever_frame(&ctx.special_rules);
-                let blink = operation::div_3(frame);
+                let blink = ops::div_3(frame);
                 let blink = blink.wrapping_sub((blink.wrapping_add((blink as u32 >> 31) as i32)) & -2).wrapping_add(8);
 
                 draw_cut(draw_context(&mut ctx.draw)?, gauge, left, top, blink);
 
-                let remaining = operation::cvttsd2si((1.0 - fever_time_fraction(ctx)?) * 294.0);
+                let remaining = ops::cvttsd2si((1.0 - fever_time_fraction(ctx)?) * 294.0);
 
                 if remaining > 0 { Some((left.wrapping_sub(remaining).wrapping_add(0x12d), remaining)) } else { None }
             } else {
@@ -1273,8 +1273,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, gauge, x, 0x4di32.wrapping_sub(lift), width, 0x20, 7);
             }
 
-            let x = operation::div_2(imgcut_get_sprite_cut(gauge, 8)?[2]).wrapping_add(left).wrapping_sub(operation::div_2(imgcut_get_sprite_cut(gauge, 6)?[2]));
-            let y = operation::div_2(imgcut_get_sprite_cut(gauge, 8)?[3]).wrapping_add(top).wrapping_sub(operation::div_2(imgcut_get_sprite_cut(gauge, 6)?[3]));
+            let x = ops::div_2(imgcut_get_sprite_cut(gauge, 8)?[2]).wrapping_add(left).wrapping_sub(ops::div_2(imgcut_get_sprite_cut(gauge, 6)?[2]));
+            let y = ops::div_2(imgcut_get_sprite_cut(gauge, 8)?[3]).wrapping_add(top).wrapping_sub(ops::div_2(imgcut_get_sprite_cut(gauge, 6)?[3]));
 
             draw_cut(draw_context(&mut ctx.draw)?, gauge, x, y, 6);
         }
@@ -1359,13 +1359,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let sheet = ctx.img001_sheet.clone();
         let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let pitch = imgcut_get_sprite_cut(digits, 0x8d)?[2];
-        let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pitch).wrapping_add(0x1f1);
+        let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pitch).wrapping_add(0x1f1);
         let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0x8d, left, 0, x as f32, y as f32, -5.0, 0, 2, 0)?;
         let edge = bounds.left + -3.0;
-        let x = operation::cvttss2si(edge - imgcut_get_sprite_cut(digits, 0x97)?[2] as f32);
+        let x = ops::cvttss2si(edge - imgcut_get_sprite_cut(digits, 0x97)?[2] as f32);
 
         draw_cut(draw_context(&mut ctx.draw)?, digits, x, 0x14i32.wrapping_sub(lift), 0x97);
-        draw_cut(draw_context(&mut ctx.draw)?, digits, operation::cvttss2si(bounds.right), 0x12i32.wrapping_sub(lift), 0x98);
+        draw_cut(draw_context(&mut ctx.draw)?, digits, ops::cvttss2si(bounds.right), 0x12i32.wrapping_sub(lift), 0x98);
         set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
     }
 
@@ -1379,10 +1379,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
             if (money >= needed) & untouched {
                 let origin = DECK_SLOT_X_TABLE[0].wrapping_add(7) as f64;
-                let x = operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
+                let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                 let base = 0x192i32.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f32;
                 let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-                let y = operation::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)) as f32) * 10.0 + base);
+                let y = ops::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)) as f32) * 10.0 + base);
 
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, ctx.img039_sheet.as_deref().ok_or(Fault::null_pointer())?, x, y, 0x60, 0x60, 0);
             }
@@ -1400,7 +1400,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             let base = 0x192i32.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f32;
             let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
             let y = sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)) as f32) * 10.0 + base;
-            let y = operation::cvttss2si(get_top_inset_offset(ctx) as f32 + y);
+            let y = ops::cvttss2si(get_top_inset_offset(ctx) as f32 + y);
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, ctx.img039_sheet.as_deref().ok_or(Fault::null_pointer())?, x, y, 0x60, 0x60, 0);
         }
@@ -1415,7 +1415,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let base = 0x192i32.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?) as f32;
         let x = ctx.i32_at(AppContext::CANNON_RECT)?.wrapping_add(0x1e);
         let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-        let y = operation::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)) as f32) * 10.0 + base);
+        let y = ops::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)) as f32) * 10.0 + base);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, ctx.img039_sheet.as_deref().ok_or(Fault::null_pointer())?, x, y, 0x60, 0x60, 0);
     }
@@ -1425,7 +1425,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
     let boom = ctx.i32_at(AppContext::BABY_BOOM_FRAMES)?;
 
-    ctx.set_i32_at(AppContext::DRAW_TEMP_3, operation::div_neg_30(boom.wrapping_mul(100)).wrapping_add(0x1770))?;
+    ctx.set_i32_at(AppContext::DRAW_TEMP_3, ops::div_neg_30(boom.wrapping_mul(100)).wrapping_add(0x1770))?;
 
     if ctx.i32_at(AppContext::BABY_BOOM_ACTIVE)? == 1 {
         if boom >= 0x5dd {
@@ -1442,26 +1442,26 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let sheet = ctx.img001_sheet.clone();
         let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?).wrapping_add(0x2e) as f32;
-        let minutes = operation::div_6000(ctx.i32_at(AppContext::DRAW_TEMP_3)?);
+        let minutes = ops::div_6000(ctx.i32_at(AppContext::DRAW_TEMP_3)?);
         let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0x53, minutes, 0, 8.0, y, 1.0, 0, 0x18, 2)?;
-        let x = operation::cvttss2si(bounds.right);
+        let x = ops::cvttss2si(bounds.right);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, digits, x, y, 0x1b, 0x2e, 0x5d);
 
         let x = x.wrapping_add(0x1b);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?).wrapping_add(0x2e) as f32;
-        let seconds = operation::div_100(ctx.i32_at(AppContext::DRAW_TEMP_3)?);
+        let seconds = ops::div_100(ctx.i32_at(AppContext::DRAW_TEMP_3)?);
         let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0x53, seconds, 0, x as f32, y, 0.0, 0, 0x18, 2)?;
-        let x = operation::cvttss2si(bounds.right);
+        let x = ops::cvttss2si(bounds.right);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?).wrapping_add(0x2e) as f32 + -38.333332;
 
-        draw_cut_f(draw_context(&mut ctx.draw)?, digits, 0x5d, operation::cvttss2si(bounds.right) as f32, y, 22.5, 38.333332);
+        draw_cut_f(draw_context(&mut ctx.draw)?, digits, 0x5d, ops::cvttss2si(bounds.right) as f32, y, 22.5, 38.333332);
 
         let x = x.wrapping_add(0x16);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?).wrapping_add(0x2e) as f32;
         let total = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
-        let hundredths = total.wrapping_sub(operation::div_100(total).wrapping_mul(100));
+        let hundredths = total.wrapping_sub(ops::div_100(total).wrapping_mul(100));
 
         draw_number_scaled(draw_context(&mut ctx.draw)?, digits, 0x53, hundredths, 0, x as f32, y, 0.0, 0.8333333, 0, 0x18, 2)?;
     }
@@ -1470,11 +1470,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
     let press = ctx.i32_at(AppContext::PAUSE_PRESS)?;
     let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
-    let sink = operation::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
+    let sink = ops::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
     let inset = get_left_inset_logical(ctx);
     let press = ctx.i32_at(AppContext::PAUSE_PRESS)?;
     let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
-    let drop = operation::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
+    let drop = ops::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let size = bounce.wrapping_add(0x3a);
 
     draw_cut_scaled(
@@ -1499,7 +1499,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let base = 0xd9i32.wrapping_sub(lift) as f32;
         let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
-        let y = operation::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)).wrapping_add(0xb4) as f32) * 10.0 + base + -80.0);
+        let y = ops::cvttss2si(sin_deg((ticks << 5).wrapping_sub(ticks.wrapping_add(ticks)).wrapping_add(0xb4) as f32) * 10.0 + base + -80.0);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, ctx.img039_sheet.as_deref().ok_or(Fault::null_pointer())?, width.wrapping_add(-0x5c), y, 0x60, 0x60, 0);
         set_flip(draw_context(&mut ctx.draw)?, 0);
@@ -1536,8 +1536,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                 let conjure = stat_conjure_unit_id(ctx, 0, unit, form)?;
                 let grow = *PANEL_GROWTH_TABLE.get(stage as i64 as usize).ok_or(Fault::index_out_of_range(stage as i64, 4))?;
                 let span = grow.wrapping_mul(0x3b2);
-                let width = operation::div_100(span);
-                let height = operation::div_100(grow.wrapping_mul(0xb4));
+                let width = ops::div_100(span);
+                let height = ops::div_100(grow.wrapping_mul(0xb4));
                 let mut rows = 0i32;
                 let mut height = height;
 
@@ -1556,8 +1556,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                 }
 
                 let lead = rows.wrapping_mul(0x27).wrapping_sub(height);
-                let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(operation::div_neg_200(span));
-                let y = operation::div_2(lead.wrapping_add(0xb4)).wrapping_add(0x5d);
+                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(ops::div_neg_200(span));
+                let y = ops::div_2(lead.wrapping_add(0xb4)).wrapping_add(0x5d);
                 let sheet = ctx.img002_sheet.clone();
                 let panel = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
@@ -1570,25 +1570,25 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                     if stage as u32 >= 3 && held >= wait {
                         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
-                        let x = operation::div_2(get_drawable_width(ctx)?);
+                        let x = ops::div_2(get_drawable_width(ctx)?);
                         let line = ctx.unit_info_texts[0];
 
                         draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x6a, 1);
 
                         if rows != 0 {
-                            let x = operation::div_2(get_drawable_width(ctx)?);
+                            let x = ops::div_2(get_drawable_width(ctx)?);
                             let line = ctx.unit_info_texts[1];
 
                             draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x107, 1);
 
                             if rows != 1 {
-                                let x = operation::div_2(get_drawable_width(ctx)?);
+                                let x = ops::div_2(get_drawable_width(ctx)?);
                                 let line = ctx.unit_info_texts[2];
 
                                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x12e, 1);
 
                                 if rows != 2 {
-                                    let x = operation::div_2(get_drawable_width(ctx)?);
+                                    let x = ops::div_2(get_drawable_width(ctx)?);
                                     let line = ctx.unit_info_texts[3];
 
                                     draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x155, 1);
@@ -1606,7 +1606,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                         ctx.ability_icons = abilities;
 
-                        let centre = operation::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
+                        let centre = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
 
                         draw_unit_info_panel(ctx, unit, form, centre, 0x9f)?;
                     }
@@ -1616,12 +1616,12 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     }
 
     if ctx.u8_at(AppContext::CAT_GOD_MENU_IS_OPEN)? == 0 && ctx.i32_at(AppContext::OUTRO_PHASE)? == 7 && flag == 0 {
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
-        let x = centre.wrapping_sub(operation::div_2(bounce)).wrapping_add(-0xbe);
+        let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0xbe);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
-        let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(operation::div_2(bounce));
+        let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x280);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
@@ -1636,12 +1636,12 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             3,
         );
 
-        let centre = operation::div_2(get_drawable_width(ctx)?);
+        let centre = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
-        let x = centre.wrapping_sub(operation::div_2(bounce)).wrapping_add(-0x7f);
+        let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x7f);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
-        let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(operation::div_2(bounce));
+        let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x289);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
@@ -1672,7 +1672,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let bottom = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
 
         if hit_test_rect(ctx, left, top, right, bottom)? && ctx.u8_at(AppContext::OUTRO_BUTTON_LOCK)? == 0 {
-            let centre = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+            let centre = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
             let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
             let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
             let y = shift.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x280);
@@ -1713,7 +1713,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                 for step in [-2i32, -1, 0, 1, 2] {
                     set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
 
-                    let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(step);
+                    let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(step);
                     let label = ctx
                         .restriction_warning_texts
                         .get(banner as i64 as usize)
@@ -1727,7 +1727,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
             set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0, 0xff);
 
-            let x = operation::div_2(get_drawable_width(ctx)?);
+            let x = ops::div_2(get_drawable_width(ctx)?);
             let label = ctx
                 .restriction_warning_texts
                 .get(banner as i64 as usize)
@@ -1788,32 +1788,32 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             height = rows.wrapping_mul(0x27).wrapping_add(0xb4);
         }
 
-        let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0x1d9);
+        let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x1d9);
         let sheet = ctx.img002_sheet.clone();
         let panel = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_panel(draw_context(&mut ctx.draw)?, panel, x, 0x5d, 0x3b2, height, 1.0, 0x30, 0x31);
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
-        let x = operation::div_2(get_drawable_width(ctx)?);
+        let x = ops::div_2(get_drawable_width(ctx)?);
         let line = ctx.unit_info_texts[0];
 
         draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x6a, 1);
 
         if rows != 0 {
-            let x = operation::div_2(get_drawable_width(ctx)?);
+            let x = ops::div_2(get_drawable_width(ctx)?);
             let line = ctx.unit_info_texts[1];
 
             draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x107, 1);
 
             if rows != 1 {
-                let x = operation::div_2(get_drawable_width(ctx)?);
+                let x = ops::div_2(get_drawable_width(ctx)?);
                 let line = ctx.unit_info_texts[2];
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x12e, 1);
 
                 if rows != 2 {
-                    let x = operation::div_2(get_drawable_width(ctx)?);
+                    let x = ops::div_2(get_drawable_width(ctx)?);
                     let line = ctx.unit_info_texts[3];
 
                     draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&line.ok_or(Fault::null_pointer())?), x, 0x155, 1);
@@ -1829,7 +1829,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         ctx.ability_icons = abilities;
 
-        let centre = operation::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
+        let centre = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
 
         draw_unit_info_panel(ctx, unit, form, centre, 0x9f)?;
 

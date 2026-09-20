@@ -1,4 +1,4 @@
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, CannonShot, Entity, attack_dmg_dispatch, attack_proc_dispatch, call_rng,
@@ -133,11 +133,11 @@ pub fn cannon_attack_dispatch(
 
             if is_metal(ctx, other, target)? {
                 damage =
-                    operation::div_1000(get_cannon_metal_permille(ctx, faction)?.wrapping_mul(hp));
+                    ops::div_1000(get_cannon_metal_permille(ctx, faction)?.wrapping_mul(hp));
                 max_i32(damage, 1);
                 get_cannon_metal_permille(ctx, faction)?;
             } else {
-                damage = operation::div_1000(
+                damage = ops::div_1000(
                     get_cannon_nonmetal_permille(ctx, faction)?.wrapping_mul(hp),
                 );
                 max_i32(damage, 1);
@@ -164,12 +164,12 @@ pub fn cannon_attack_dispatch(
                     || get_entity_state(ctx, other, target)? == 0xc
                     || get_entity_state(ctx, other, target)? == 0xd
                 {
-                    damage = operation::div_1000(
+                    damage = ops::div_1000(
                         get_cannon_burrowed_permille(ctx, faction)?.wrapping_mul(hp),
                     );
                     std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93\xe5\x9c\xb0\xe4\xb8\xad");
                 } else {
-                    damage = operation::div_1000(
+                    damage = ops::div_1000(
                         get_cannon_zombie_permille(ctx, faction)?.wrapping_mul(hp),
                     );
                     std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d \xe3\x82\xbe\xe3\x83\xb3\xe3\x83\x93");
@@ -178,7 +178,7 @@ pub fn cannon_attack_dispatch(
                 max_i32(damage, 1);
                 set_zkill_hit(ctx, other, target, 1)?;
             } else {
-                damage = operation::div_1000(
+                damage = ops::div_1000(
                     get_cannon_nonzombie_permille(ctx, faction)?.wrapping_mul(hp),
                 );
                 std_string_from_cstr(b"\xe3\x83\x80\xe3\x83\xa1\xe3\x83\xbc\xe3\x82\xb8:%d");
@@ -213,7 +213,7 @@ pub fn cannon_attack_dispatch(
                 if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 9)? {
                     let percent = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
-                    plain = operation::div_100(plain.wrapping_mul(percent));
+                    plain = ops::div_100(plain.wrapping_mul(percent));
                 }
             }
 

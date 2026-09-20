@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, btree_map::Entry};
 
-use crate::{Fault, operation};
+use crate::{Fault, ops};
 
 use super::{AppContext, BgParamSpec, bg_param_resolve_float, call_rng, max_f32, min_f32};
 
@@ -37,7 +37,7 @@ pub fn bg_param_roll_float(
         let lower = bg_param_resolve_float(ctx, reference, spec.min, spec.min_base)?;
         let upper = bg_param_resolve_float(ctx, reference, spec.max, spec.max_base)?;
         let high = max_f32(lower, upper);
-        let draw = call_rng(ctx, operation::cvttss2si((high - low) * 10000.0 + 1.0));
+        let draw = call_rng(ctx, ops::cvttss2si((high - low) * 10000.0 + 1.0));
 
         return Ok((low * 10000.0 + draw as f32) / 10000.0);
     }
