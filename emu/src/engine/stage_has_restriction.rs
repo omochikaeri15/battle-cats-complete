@@ -6,7 +6,7 @@ use super::{AppContext, get_special_rule};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct StageRestriction {
-    pub unknown_0: i32,
+    pub stage: i32,
     pub rarity_mask: i32,
     pub deploy_limit: i32,
     pub rows: i32,

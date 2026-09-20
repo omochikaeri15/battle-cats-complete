@@ -2,10 +2,11 @@ use std::collections::BTreeMap;
 
 use crate::Fault;
 
-use super::{AppContext, get_equipped_orb, has_fixed_lineup};
+use super::{AppContext, OrbGradeRow, OrbSlotRow, get_equipped_orb, has_fixed_lineup};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct OrbDef {
+    pub id: i32,
     pub grade: i32,
     pub trait_index: i32,
     pub abil: i32,
@@ -15,8 +16,11 @@ pub struct OrbDef {
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct OrbStore {
     pub orbs: Vec<OrbDef>,
+    pub grades: Vec<OrbGradeRow>,
     pub trait_masks: Vec<i32>,
-    pub slot_counts: BTreeMap<i32, i32>,
+    pub slot_counts: BTreeMap<i32, OrbSlotRow>,
+    pub trait_explanations: Vec<[Vec<u8>; 2]>,
+    pub orb_explanations: Vec<[Vec<u8>; 2]>,
     pub ability_flags: BTreeMap<i32, [u8; 2]>,
 }
 
@@ -38,9 +42,10 @@ pub fn get_orb_value_max(
 
     loop {
         let slot_count = if ctx.orb_store.slot_counts.contains_key(&unit_id) {
-            *ctx.orb_store
+            ctx.orb_store
                 .slot_counts
                 .get(&unit_id)
+                .map(|row| row.count)
                 .ok_or(Fault::KeyNotFound {
                     site: "get_orb_value_max",
                     key: unit_id as i64,

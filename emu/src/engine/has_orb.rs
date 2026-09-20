@@ -7,7 +7,7 @@ pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, abil: i32) -> R
 
     loop {
         let slot_count = if store.slot_counts.contains_key(&unit_id) {
-            *store.slot_counts.get(&unit_id).ok_or(Fault::KeyNotFound {
+            store.slot_counts.get(&unit_id).map(|row| row.count).ok_or(Fault::KeyNotFound {
                 site: "has_orb",
                 key: unit_id as i64,
             })?

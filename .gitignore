@@ -21,7 +21,6 @@ crash*
 CL*.md
 ST*.md
 RE*.ms
-DE*.csv
 
 # Extracted Game Data
 /game/

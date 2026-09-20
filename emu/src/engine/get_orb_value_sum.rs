@@ -19,9 +19,10 @@ pub fn get_orb_value_sum(
 
     loop {
         let slot_count = if ctx.orb_store.slot_counts.contains_key(&unit_id) {
-            *ctx.orb_store
+            ctx.orb_store
                 .slot_counts
                 .get(&unit_id)
+                .map(|row| row.count)
                 .ok_or(Fault::KeyNotFound {
                     site: "get_orb_value_sum",
                     key: unit_id as i64,

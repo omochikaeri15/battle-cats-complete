@@ -47,7 +47,7 @@ pub fn get_deploy_cost(
     if apply_rules as u8 != 0 {
         let map_id = get_global_map_id(ctx, 0)?;
 
-        if get_map_cost_multiplier(&ctx.map_cost_multipliers, map_id) != 0 {
+        if get_map_cost_multiplier(&ctx.map_options.cost_multipliers, map_id) != 0 {
             let mut base = 0i32;
 
             if read_flag(ctx, AppContext::faction_flags(0))? & 1 != 0 {
@@ -63,7 +63,7 @@ pub fn get_deploy_cost(
 
             let map_id = get_global_map_id(ctx, 0)?;
 
-            cost = get_map_cost_multiplier(&ctx.map_cost_multipliers, map_id).wrapping_mul(base);
+            cost = get_map_cost_multiplier(&ctx.map_options.cost_multipliers, map_id).wrapping_mul(base);
         }
     }
 
