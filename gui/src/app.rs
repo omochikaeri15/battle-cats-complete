@@ -203,11 +203,12 @@ enum ActivePopup {
     StudioShipout,
     StudioExport,
     SandboxAcknowledge,
+    SandboxFault,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 21] = [
+    const ALL: [Self; 22] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -229,6 +230,7 @@ impl ActivePopup {
         Self::StudioShipout,
         Self::StudioExport,
         Self::SandboxAcknowledge,
+        Self::SandboxFault,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -254,6 +256,7 @@ impl ActivePopup {
             Self::StudioShipout => popup::Kind::StudioShipout,
             Self::StudioExport => popup::Kind::Animator,
             Self::SandboxAcknowledge => popup::Kind::Acknowledgement,
+            Self::SandboxFault => popup::Kind::Fault,
         }
     }
 }
@@ -570,6 +573,7 @@ impl BattleCatsApp {
             Page::Sandbox => {
                 self.sandbox_state.enter(self.app_state.sandbox.acknowledged);
                 self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
+                self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
 
                 Task::none()
             }
@@ -1448,12 +1452,13 @@ impl BattleCatsApp {
                 let disagreed = matches!(msg, sandbox::Message::Disagree);
 
                 if matches!(msg, sandbox::Message::Play) {
-                    self.sandbox_state.start(self.window_size.width, self.window_size.height);
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox);
                 }
 
                 let task = self.sandbox_state.update(msg, &mut self.app_state, &self.vault.vfs).map(Message::Sandbox);
 
                 self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
+                self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
 
                 if disagreed {
                     return Task::batch([task, self.navigate(Page::Home)]);
@@ -1539,7 +1544,7 @@ impl BattleCatsApp {
                 .studio_state
                 .view(&self.settings, &self.app_state.animation)
                 .map(Message::Studio),
-            Page::Sandbox => self.sandbox_state.view().map(Message::Sandbox),
+            Page::Sandbox => self.sandbox_state.view(&self.app_state.sandbox).map(Message::Sandbox),
             Page::Utilities => self.utilities_state.view(&self.settings, &self.app_state).map(Message::Utilities),
             Page::Help => {
                 let ui_theme = self.theme();
@@ -1589,13 +1594,19 @@ impl BattleCatsApp {
 
         let watched = editor::watch(layers, &self.editor, Message::Editor);
 
+        let fault = self.sandbox_state.fault_view(self.window_size).map(|view| view.map(Message::Sandbox));
+
         emu::overlay(
             watched,
-            self.sandbox_state.curtain_frame(),
-            self.sandbox_state.curtain_sheets(),
-            self.sandbox_state.curtain_covered(),
-            self.sandbox_state.design_height(),
-            self.sandbox_state.curtain_touches(),
+            fault,
+            emu::Feed {
+                frame: self.sandbox_state.curtain_frame(),
+                sheets: self.sandbox_state.curtain_sheets(),
+                touches: self.sandbox_state.curtain_touches(),
+                covered: self.sandbox_state.curtain_covered(),
+                frozen: self.sandbox_state.frozen(),
+                design_height: self.sandbox_state.design_height(),
+            },
         )
     }
 
@@ -1749,6 +1760,7 @@ impl BattleCatsApp {
 
                         self.studio_state.export_popup_view(self.window_size).map(|view| view.map(Message::Studio))
                     }
+                    ActivePopup::SandboxFault => None,
                     ActivePopup::SandboxAcknowledge => {
                         if !matches!(self.current_page, Page::Sandbox) {
                             return None;

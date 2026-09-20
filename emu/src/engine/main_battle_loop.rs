@@ -861,8 +861,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         0,
                                     );
                                     let page = ctx.i32_at(AppContext::TOOLTIP_PAGE)? as i64;
-                                    let slot = ctx.tooltip_texts.get_mut(page as usize).ok_or(
-                                        Fault::index_out_of_range(page, 8),
+                                    let limit = ctx.label_texts.len() as i64;
+                                    let slot = ctx.label_texts.get_mut(page as usize).ok_or(
+                                        Fault::index_out_of_range(page, limit),
                                     )?;
 
                                     std_shared_ptr_texture_assign(slot, Some(texture));
@@ -886,8 +887,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                             0,
                                         );
                                         let target = (line.wrapping_add(2)) as usize;
-                                        let slot = ctx.tooltip_texts.get_mut(target).ok_or(
-                                            Fault::index_out_of_range(target as i64, 8),
+                                        let limit = ctx.label_texts.len() as i64;
+                                        let slot = ctx.label_texts.get_mut(target).ok_or(
+                                            Fault::index_out_of_range(target as i64, limit),
                                         )?;
 
                                         std_shared_ptr_texture_assign(slot, Some(texture));

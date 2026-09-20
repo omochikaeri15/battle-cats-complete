@@ -36,19 +36,35 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
         let speed = ctx.i32_at(row_at + ENEMY_STATS + EnemyStats::SPEED)?;
         ctx.set_i32_at(row_at + ENEMY_STATS + EnemyStats::SPEED, speed << 1)?;
 
-        let quad = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN)?;
+        let pair = ctx.block_at::<8>(row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN)?;
+        let mut quad = [0u8; 16];
+
+        quad[..8].copy_from_slice(&pair);
+
+        let quad = ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc);
+        let mut pair = [0u8; 8];
+
+        pair.copy_from_slice(&quad[..8]);
         ctx.set_block_at(
             row_at + ENEMY_STATS + EnemyStats::ATTACK_COOLDOWN,
-            ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc),
+            pair,
         )?;
 
         let width = ctx.i32_at(row_at + ENEMY_STATS + EnemyStats::HITBOX_WIDTH)?;
         ctx.set_i32_at(row_at + ENEMY_STATS + EnemyStats::HITBOX_WIDTH, width << 2)?;
 
-        let long_distance = ctx.block_at::<16>(row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR)?;
+        let pair = ctx.block_at::<8>(row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR)?;
+        let mut long_distance = [0u8; 16];
+
+        long_distance[..8].copy_from_slice(&pair);
+
+        let long_distance = ops::slli_epi32(long_distance, 2);
+        let mut pair = [0u8; 8];
+
+        pair.copy_from_slice(&long_distance[..8]);
         ctx.set_block_at(
             row_at + ENEMY_STATS + EnemyStats::LD1_ANCHOR,
-            ops::slli_epi32(long_distance, 2),
+            pair,
         )?;
 
         stats += ENEMY_STATS_STRIDE;

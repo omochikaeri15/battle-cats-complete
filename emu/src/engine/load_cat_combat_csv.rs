@@ -53,10 +53,18 @@ pub fn load_cat_combat_csv(
         let speed = ctx.i32_at(form_at + CAT_STATS + CatStats::SPEED)?;
         ctx.set_i32_at(form_at + CAT_STATS + CatStats::SPEED, speed << 1)?;
 
-        let quad = ctx.block_at::<16>(form_at + CAT_STATS + CatStats::ATTACK_COOLDOWN)?;
+        let pair = ctx.block_at::<8>(form_at + CAT_STATS + CatStats::ATTACK_COOLDOWN)?;
+        let mut quad = [0u8; 16];
+
+        quad[..8].copy_from_slice(&pair);
+
+        let quad = ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc);
+        let mut pair = [0u8; 8];
+
+        pair.copy_from_slice(&quad[..8]);
         ctx.set_block_at(
             form_at + CAT_STATS + CatStats::ATTACK_COOLDOWN,
-            ops::blend_epi16(ops::slli_epi32(quad, 1), ops::slli_epi32(quad, 2), 0xc),
+            pair,
         )?;
 
         let cooldown = ctx.i32_at(form_at + CAT_STATS + CatStats::COOLDOWN)?;
@@ -65,10 +73,18 @@ pub fn load_cat_combat_csv(
         let width = ctx.i32_at(form_at + CAT_STATS + CatStats::HITBOX_WIDTH)?;
         ctx.set_i32_at(form_at + CAT_STATS + CatStats::HITBOX_WIDTH, width << 2)?;
 
-        let long_distance = ctx.block_at::<16>(form_at + CAT_STATS + CatStats::LD1_ANCHOR)?;
+        let pair = ctx.block_at::<8>(form_at + CAT_STATS + CatStats::LD1_ANCHOR)?;
+        let mut long_distance = [0u8; 16];
+
+        long_distance[..8].copy_from_slice(&pair);
+
+        let long_distance = ops::slli_epi32(long_distance, 2);
+        let mut pair = [0u8; 8];
+
+        pair.copy_from_slice(&long_distance[..8]);
         ctx.set_block_at(
             form_at + CAT_STATS + CatStats::LD1_ANCHOR,
-            ops::slli_epi32(long_distance, 2),
+            pair,
         )?;
 
         stats += CAT_STATS_FORM_STRIDE;

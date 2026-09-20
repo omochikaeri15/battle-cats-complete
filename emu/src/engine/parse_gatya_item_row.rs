@@ -1,58 +1,50 @@
-use super::{AssetStream, get_column_count, obfuscate_value, read_csv_cell, read_csv_row};
+use crate::Fault;
 
-#[derive(Clone, Default, PartialEq, Eq, Debug)]
-pub struct GatyaItemRow {
-    pub rarity: [u8; 8],
-    pub price: [u8; 8],
-    pub stage_drop_item_id: [u8; 8],
-    pub quantity: [u8; 8],
-    pub server_id: i32,
-    pub category: i32,
-    pub index: i32,
-    pub src_item_id: i32,
-    pub main_menu_type: i32,
-    pub gatya_ticket_id: i32,
-    pub img_id: i32,
-    pub reflect_or_storage: u8,
-}
+use super::{
+    AppContext, AssetStream, GatyaItem, get_column_count, obfuscate_value, read_csv_cell,
+    read_csv_row,
+};
 
-pub fn parse_gatya_item_row(row: &mut GatyaItemRow, stm: &mut AssetStream<'_>) {
+pub fn parse_gatya_item_row(
+    ctx: &mut AppContext,
+    row: usize,
+    stm: &mut AssetStream<'_>,
+) -> Result<(), Fault> {
     read_csv_row(stm);
 
     let mut cell = [0u8; 8];
 
     cell[..4].copy_from_slice(&(read_csv_cell(stm, 0) as i32).to_le_bytes());
     obfuscate_value(&mut cell);
-
-    row.rarity = cell;
-    row.reflect_or_storage = u8::from(read_csv_cell(stm, 1) != 0);
+    ctx.set_block_at(row + GatyaItem::RARITY, cell)?;
+    ctx.set_block_at::<1>(
+        row + GatyaItem::REFLECT_OR_STORAGE,
+        [u8::from(read_csv_cell(stm, 1) != 0)],
+    )?;
 
     let mut cell = [0u8; 8];
 
     cell[..4].copy_from_slice(&(read_csv_cell(stm, 2) as i32).to_le_bytes());
     obfuscate_value(&mut cell);
-
-    row.price = cell;
+    ctx.set_block_at(row + GatyaItem::PRICE, cell)?;
 
     let mut cell = [0u8; 8];
 
     cell[..4].copy_from_slice(&(read_csv_cell(stm, 3) as i32).to_le_bytes());
     obfuscate_value(&mut cell);
-
-    row.stage_drop_item_id = cell;
+    ctx.set_block_at(row + GatyaItem::STAGE_DROP_ITEM_ID, cell)?;
 
     let mut cell = [0u8; 8];
 
     cell[..4].copy_from_slice(&(read_csv_cell(stm, 4) as i32).to_le_bytes());
     obfuscate_value(&mut cell);
-
-    row.quantity = cell;
-    row.server_id = read_csv_cell(stm, 5) as i32;
-    row.category = read_csv_cell(stm, 6) as i32;
-    row.index = read_csv_cell(stm, 7) as i32;
-    row.src_item_id = read_csv_cell(stm, 8) as i32;
-    row.main_menu_type = read_csv_cell(stm, 9) as i32;
-    row.gatya_ticket_id = read_csv_cell(stm, 0xa) as i32;
+    ctx.set_block_at(row + GatyaItem::QUANTITY, cell)?;
+    ctx.set_i32_at(row + GatyaItem::SERVER_ID, read_csv_cell(stm, 5) as i32)?;
+    ctx.set_i32_at(row + GatyaItem::CATEGORY, read_csv_cell(stm, 6) as i32)?;
+    ctx.set_i32_at(row + GatyaItem::INDEX, read_csv_cell(stm, 7) as i32)?;
+    ctx.set_i32_at(row + GatyaItem::SRC_ITEM_ID, read_csv_cell(stm, 8) as i32)?;
+    ctx.set_i32_at(row + GatyaItem::MAIN_MENU_TYPE, read_csv_cell(stm, 9) as i32)?;
+    ctx.set_i32_at(row + GatyaItem::GATYA_TICKET_ID, read_csv_cell(stm, 0xa) as i32)?;
 
     let mut img_id = -1i32;
 
@@ -60,5 +52,5 @@ pub fn parse_gatya_item_row(row: &mut GatyaItemRow, stm: &mut AssetStream<'_>) {
         img_id = read_csv_cell(stm, 0xb) as i32;
     }
 
-    row.img_id = img_id;
+    ctx.set_i32_at(row + GatyaItem::IMG_ID, img_id)
 }

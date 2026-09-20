@@ -1,4 +1,7 @@
-use crate::{Fault, engine::AppContext};
+use crate::{
+    Fault,
+    engine::{AppContext, Pinch},
+};
 
 pub fn queue_touch_position(ctx: &mut AppContext, x: i32, y: i32) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::TOUCH_PENDING_X, x)?;
@@ -46,4 +49,16 @@ pub fn pump_touch(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_block_at::<1>(AppContext::TOUCH_RELEASED, [0])?;
     ctx.set_block_at::<1>(AppContext::TOUCH_BEGAN, [0])
+}
+
+pub fn pump_pinch(ctx: &mut AppContext, gap: Option<i32>) -> Result<(), Fault> {
+    let pinch = AppContext::PINCH;
+    let down = gap.is_some() as u8;
+
+    ctx.set_block_at::<1>(pinch + Pinch::FIRST_DOWN, [down])?;
+    ctx.set_block_at::<1>(pinch + Pinch::SECOND_DOWN, [down])?;
+    ctx.set_i32_at(pinch + Pinch::FIRST_X, 0)?;
+    ctx.set_i32_at(pinch + Pinch::FIRST_Y, 0)?;
+    ctx.set_i32_at(pinch + Pinch::SECOND_X, gap.unwrap_or(0))?;
+    ctx.set_i32_at(pinch + Pinch::SECOND_Y, 0)
 }

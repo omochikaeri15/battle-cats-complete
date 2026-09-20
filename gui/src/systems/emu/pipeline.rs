@@ -36,6 +36,13 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 ";
 
+const BLENDS: [(wgpu::BlendFactor, wgpu::BlendFactor); 4] = [
+    (wgpu::BlendFactor::One, wgpu::BlendFactor::OneMinusSrcAlpha),
+    (wgpu::BlendFactor::One, wgpu::BlendFactor::One),
+    (wgpu::BlendFactor::Dst, wgpu::BlendFactor::Zero),
+    (wgpu::BlendFactor::One, wgpu::BlendFactor::OneMinusSrc),
+];
+
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
@@ -46,6 +53,7 @@ pub struct Vertex {
 
 pub struct Run {
     pub sheet: Option<Box<str>>,
+    pub blend: u8,
     pub range: Range<u32>,
 }
 
@@ -54,7 +62,7 @@ struct Binding {
 }
 
 pub struct Pipeline {
-    pipeline: wgpu::RenderPipeline,
+    pipelines: [wgpu::RenderPipeline; 4],
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
     sheets: BTreeMap<Box<str>, Binding>,
@@ -108,48 +116,59 @@ impl Pipeline {
             push_constant_ranges: &[],
         });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("emu_battle"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &module,
-                entry_point: Some("vs_main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<Vertex>() as u64,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4],
-                }],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &module,
-                entry_point: Some("fs_main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                ..wgpu::PrimitiveState::default()
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            multiview: None,
-            cache: None,
+        let pipelines = BLENDS.map(|(source, target)| {
+            let component = wgpu::BlendComponent {
+                src_factor: source,
+                dst_factor: target,
+                operation: wgpu::BlendOperation::Add,
+            };
+
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("emu_battle"),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &module,
+                    entry_point: Some("vs_main"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    buffers: &[wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<Vertex>() as u64,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4],
+                    }],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &module,
+                    entry_point: Some("fs_main"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend: Some(wgpu::BlendState {
+                            color: component,
+                            alpha: component,
+                        }),
+                        write_mask: wgpu::ColorWrites::COLOR,
+                    })],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    ..wgpu::PrimitiveState::default()
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                multiview: None,
+                cache: None,
+            })
         });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("emu_battle"),
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
             ..wgpu::SamplerDescriptor::default()
         });
 
         Self {
-            pipeline,
+            pipelines,
             layout,
             sampler,
             sheets: BTreeMap::new(),
@@ -297,7 +316,6 @@ impl Pipeline {
             occlusion_query_set: None,
         });
 
-        pass.set_pipeline(&self.pipeline);
         pass.set_scissor_rect(clip.x, clip.y, clip.width, clip.height);
         pass.set_vertex_buffer(0, buffer.slice(..));
 
@@ -311,6 +329,11 @@ impl Pipeline {
                 continue;
             };
 
+            let Some(pipeline) = self.pipelines.get(run.blend as usize).or(self.pipelines.first()) else {
+                continue;
+            };
+
+            pass.set_pipeline(pipeline);
             pass.set_bind_group(0, &binding.bind_group, &[]);
             pass.draw(run.range.clone(), 0..1);
         }

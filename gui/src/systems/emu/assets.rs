@@ -16,6 +16,9 @@ pub struct Sheet {
     pub pixels: Arc<[u8]>,
 }
 
+const NATIVE_REGION: &str = "ja";
+const WIDE_COMMA: &str = "\u{ff0c}";
+
 pub type SheetCache = BTreeMap<Box<str>, Sheet>;
 
 pub type FileIndex = BTreeMap<Box<str>, PathBuf>;
@@ -84,6 +87,45 @@ impl DiskAssets {
         std::fs::read(path).ok()
     }
 
+    fn table(&self, name: &str) -> Option<Vec<u8>> {
+        let path = self.files.borrow().get(name).cloned()?;
+        let bytes = std::fs::read(&path).ok()?;
+        let regional = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .and_then(|stem| stem.rsplit_once('_'))
+            .is_some_and(|(_, code)| {
+                code.len() == 2 && code != NATIVE_REGION && code.bytes().all(|letter| letter.is_ascii_lowercase())
+            });
+        let tabular = path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension == "csv");
+
+        if !regional || !tabular {
+            return Some(bytes);
+        }
+
+        let delimiter = if bytes.contains(&b'|') {
+            b'|'
+        } else if bytes.contains(&b'\t') {
+            b'\t'
+        } else {
+            return Some(bytes);
+        };
+        let mut rewritten = Vec::with_capacity(bytes.len());
+
+        for byte in bytes {
+            match byte {
+                b',' => rewritten.extend_from_slice(WIDE_COMMA.as_bytes()),
+                found if found == delimiter => rewritten.push(b','),
+                other => rewritten.push(other),
+            }
+        }
+
+        Some(rewritten)
+    }
+
     fn decode(&mut self, name: &str) -> Option<Sheet> {
         if let Some(sheet) = self.sheets.borrow().get(name) {
             return Some(sheet.clone());
@@ -94,6 +136,16 @@ impl DiskAssets {
             .inspect_err(|error| warn!("emu: {name} failed to decode: {error}"))
             .ok()?
             .to_rgba8();
+        let mut decoded = decoded;
+
+        for pixel in decoded.pixels_mut() {
+            let alpha = u32::from(pixel.0[3]);
+
+            for channel in &mut pixel.0[..3] {
+                *channel = (u32::from(*channel) * alpha / 0xff) as u8;
+            }
+        }
+
         let sheet = Sheet {
             width: decoded.width(),
             height: decoded.height(),
@@ -111,7 +163,7 @@ impl DiskAssets {
 impl AssetSource for DiskAssets {
     fn open(&mut self, name: &[u8], _packed: u8, _encrypted: u8) -> Option<Vec<u8>> {
         let name = std::str::from_utf8(name).ok()?;
-        let found = self.read(name);
+        let found = self.table(name);
 
         if found.is_none() && !self.missing.iter().any(|seen| seen.as_ref() == name) {
             debug!("emu: no file named {name}");

@@ -1845,7 +1845,7 @@ pub use analytics_record::analytics_record;
 pub use app_context::{
     AppContext, Base, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CannonShot,
     CatStats, Debris, ENEMY_STATS, ENEMY_STATS_STRIDE, ENTITY_BASE, ENTITY_STRIDE, EnemyStats,
-    Entity, FACTION_STRIDE, ItemDefinition, PageList, Pinch, SIZE, SLOTS_PER_FACTION,
+    Entity, FACTION_STRIDE, GatyaItem, ItemDefinition, PageList, Pinch, SIZE, SLOTS_PER_FACTION,
     STAGE_ENEMY_COLUMNS, UNIT_BUY, UNIT_BUY_STRIDE, UnitBuy, VfxSlot, WaveRecord, WaveSprite,
 };
 pub use app_on_draw::app_on_draw;
@@ -2900,7 +2900,7 @@ pub use parse_charagroup_row::parse_charagroup_row;
 pub use parse_dojo_chest_row::{DojoChestRow, parse_dojo_chest_row};
 pub use parse_gamatoto_bonus::{GamatotoBonus, parse_gamatoto_bonus};
 pub use parse_gatya_data_set_row::{GatyaDataSet, parse_gatya_data_set_row};
-pub use parse_gatya_item_row::{GatyaItemRow, parse_gatya_item_row};
+pub use parse_gatya_item_row::parse_gatya_item_row;
 pub use parse_lineup_preset::parse_lineup_preset;
 pub use parse_medal_entry::{Medal, parse_medal_entry};
 pub use parse_mission_condition_row::{MissionCondition, parse_mission_condition_row};

@@ -17,6 +17,8 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
 
     set_draw_origin(ctx, x, y)?;
 
+    let mut position = 5i32;
+
     for column in (0..6i32).rev() {
         if !powerup_available(ctx, column)? {
             continue;
@@ -55,7 +57,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
                 .ok_or(Fault::index_out_of_range(press as i64, 6))?;
         let half = bounce / 2;
         let x = width
-            .wrapping_add(column.wrapping_mul(0x58))
+            .wrapping_add(position.wrapping_mul(0x58))
             .wrapping_sub(half)
             .wrapping_add(shift);
         let lift = ctx
@@ -75,6 +77,8 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
             size,
             cut,
         );
+
+        position = position.wrapping_sub(1);
     }
 
     let mut any = false;

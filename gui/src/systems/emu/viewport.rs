@@ -11,6 +11,9 @@ use super::input::{Touch, TouchQueue};
 use super::pipeline::{Pipeline, Run, Vertex};
 use super::sink::Frame as EmuFrame;
 
+const PIXELS_PER_LINE: f32 = 40.0;
+const SPREAD_PER_LINE: f32 = 25.0;
+
 pub struct Viewport {
     frame: Rc<RefCell<EmuFrame>>,
     sheets: Rc<RefCell<SheetCache>>,
@@ -18,11 +21,17 @@ pub struct Viewport {
     touches: TouchQueue,
     active: bool,
     covered: bool,
+    frozen: bool,
+}
+
+#[derive(Default)]
+pub struct Held {
+    pressed: bool,
 }
 
 pub struct Scene {
     vertices: Vec<Vertex>,
-    runs: Vec<(Option<Box<str>>, u32, u32)>,
+    runs: Vec<(Option<Box<str>>, u8, u32, u32)>,
     uploads: Vec<(Box<str>, Sheet)>,
 }
 
@@ -36,10 +45,10 @@ impl std::fmt::Debug for Scene {
 }
 
 impl<Message> shader::Program<Message> for Viewport {
-    type State = ();
+    type State = Held;
     type Primitive = Scene;
 
-    fn draw(&self, _state: &(), _cursor: mouse::Cursor, bounds: Rectangle) -> Scene {
+    fn draw(&self, _state: &Held, _cursor: mouse::Cursor, bounds: Rectangle) -> Scene {
         let frame = self.frame.borrow();
 
         if !self.active || frame.quads.is_empty() || bounds.height <= 0.0 {
@@ -57,15 +66,21 @@ impl<Message> shader::Program<Message> for Viewport {
         };
         let sheets = self.sheets.borrow();
         let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
-        let mut runs: Vec<(Option<Box<str>>, u32, u32)> = Vec::new();
+        let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
         let mut uploads: Vec<(Box<str>, Sheet)> = Vec::new();
 
         let mut absent: Vec<&str> = Vec::new();
 
         for quad in &frame.quads {
-            let sheet = quad.sheet.as_ref().and_then(|name| {
+            let label = quad.label.map(super::text::label_key);
+            let named = quad.sheet.as_ref().or(label.as_ref());
+            let sheet = named.and_then(|name| {
                 sheets.get(name.as_ref()).map(|sheet| (name.clone(), sheet))
             });
+
+            if label.is_some() && sheet.is_none() {
+                continue;
+            }
 
             if let Some(name) = quad.sheet.as_deref()
                 && sheet.is_none()
@@ -101,7 +116,7 @@ impl<Message> shader::Program<Message> for Viewport {
             let corner = |slot: usize| Vertex {
                 position: clip(quad.corners[slot]),
                 uv: uv[slot],
-                color: quad.color,
+                color: quad.colors[slot],
             };
             let start = vertices.len() as u32;
 
@@ -117,8 +132,10 @@ impl<Message> shader::Program<Message> for Viewport {
             let end = vertices.len() as u32;
 
             match runs.last_mut() {
-                Some((last, _, last_end)) if *last == key => *last_end = end,
-                _ => runs.push((key, start, end)),
+                Some((last, blend, _, last_end)) if *last == key && *blend == quad.blend => {
+                    *last_end = end;
+                }
+                _ => runs.push((key, quad.blend, start, end)),
             }
         }
 
@@ -135,7 +152,7 @@ impl<Message> shader::Program<Message> for Viewport {
 
     fn update(
         &self,
-        _state: &mut (),
+        state: &mut Held,
         event: &iced::Event,
         bounds: Rectangle,
         cursor: mouse::Cursor,
@@ -156,14 +173,40 @@ impl<Message> shader::Program<Message> for Viewport {
             )
         });
 
-        if !self.covered && let Some((x, y)) = at {
+        let lifted = matches!(
+            event,
+            iced::Event::Mouse(
+                mouse::Event::ButtonReleased(mouse::Button::Left) | mouse::Event::CursorLeft
+            )
+        );
+
+        if state.pressed && (lifted || at.is_none()) {
+            state.pressed = false;
+            self.touches.borrow_mut().push(Touch::Released);
+
+            return None;
+        }
+
+        if !self.covered && !self.frozen && let Some((x, y)) = at {
             let touch = match event {
                 iced::Event::Mouse(mouse::Event::CursorMoved { .. }) => Some(Touch::Moved { x, y }),
                 iced::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    state.pressed = true;
+
                     Some(Touch::Pressed { x, y })
                 }
                 iced::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                     Some(Touch::Released)
+                }
+                iced::Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
+                    let lines = match delta {
+                        mouse::ScrollDelta::Lines { y, .. } => *y,
+                        mouse::ScrollDelta::Pixels { y, .. } => *y / PIXELS_PER_LINE,
+                    };
+
+                    Some(Touch::Pinched {
+                        spread: (lines * SPREAD_PER_LINE) as i32,
+                    })
                 }
                 _ => None,
             };
@@ -182,7 +225,7 @@ impl<Message> shader::Program<Message> for Viewport {
 
     fn mouse_interaction(
         &self,
-        _state: &(),
+        _state: &Held,
         _bounds: Rectangle,
         _cursor: mouse::Cursor,
     ) -> mouse::Interaction {
@@ -219,8 +262,9 @@ impl shader::Primitive for Scene {
         let runs = self
             .runs
             .iter()
-            .map(|(sheet, start, end)| Run {
+            .map(|(sheet, blend, start, end)| Run {
                 sheet: sheet.clone(),
+                blend: *blend,
                 range: *start..*end,
             })
             .collect();
@@ -239,14 +283,28 @@ impl shader::Primitive for Scene {
     }
 }
 
+pub struct Feed<'a> {
+    pub frame: Option<&'a Rc<RefCell<EmuFrame>>>,
+    pub sheets: Option<&'a Rc<RefCell<SheetCache>>>,
+    pub touches: Option<&'a TouchQueue>,
+    pub covered: bool,
+    pub frozen: bool,
+    pub design_height: f32,
+}
+
 pub fn overlay<'a, Message: 'a>(
     base: Element<'a, Message>,
-    frame: Option<&Rc<RefCell<EmuFrame>>>,
-    sheets: Option<&Rc<RefCell<SheetCache>>>,
-    covered: bool,
-    design_height: f32,
-    touches: Option<&TouchQueue>,
+    above: Option<Element<'a, Message>>,
+    feed: Feed<'_>,
 ) -> Element<'a, Message> {
+    let Feed {
+        frame,
+        sheets,
+        touches,
+        covered,
+        frozen,
+        design_height,
+    } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
     let sheets = sheets.cloned().unwrap_or_default();
@@ -258,9 +316,13 @@ pub fn overlay<'a, Message: 'a>(
         touches,
         active,
         covered,
+        frozen,
     })
     .width(Length::Fill)
     .height(Length::Fill);
 
-    iced::widget::stack![base, painted].into()
+    match above {
+        Some(above) => iced::widget::stack![base, painted, above].into(),
+        None => iced::widget::stack![base, painted].into(),
+    }
 }

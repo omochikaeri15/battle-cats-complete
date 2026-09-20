@@ -51,10 +51,26 @@ pub(crate) struct NoticeState {
     pub acknowledged: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub(crate) struct SandboxState {
     pub acknowledged: bool,
+    pub music_volume: i32,
+    pub effects_volume: i32,
+    pub two_rows: bool,
+    pub vibrate: bool,
+}
+
+impl Default for SandboxState {
+    fn default() -> Self {
+        Self {
+            acknowledged: false,
+            music_volume: 100,
+            effects_volume: 100,
+            two_rows: false,
+            vibrate: false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

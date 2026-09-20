@@ -81,7 +81,7 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let sheet = ctx.bg_sheet.clone();
     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-    let scenery = ops::div_255(imgcut_get_sprite_cut(sheet, 0)?[3].wrapping_mul(0x280));
+    let scenery = ops::div_510(imgcut_get_sprite_cut(sheet, 0)?[3].wrapping_mul(0x280));
 
     ctx.set_block_at::<8>(AppContext::BG_TINT_XS, [0; 8])?;
 

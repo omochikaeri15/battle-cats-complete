@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use emu::runtime::PauseOptions;
 use kore::Vfs;
 use tracing::warn;
 
@@ -14,14 +15,17 @@ const BLACK_FROM: i32 = 0xb;
 const CLOSED_FRAME: i32 = 0xc;
 const LAST_FRAME: i32 = 0x18;
 const FRAME_TIME: Duration = Duration::from_millis(33);
+const STEP_TIME: Duration = Duration::from_millis(30);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
     Idle,
     Covering,
     Loading,
-    Revealing,
     Running,
+    Faulted,
+    Closing,
+    Leaving,
 }
 
 pub struct Session {
@@ -31,6 +35,9 @@ pub struct Session {
     sweep: i32,
     started: Instant,
     entered: bool,
+    frozen: usize,
+    discard: bool,
+    stepped: Instant,
     failure: Option<String>,
 }
 
@@ -46,6 +53,9 @@ impl Session {
             sweep: 0,
             started: Instant::now(),
             entered: false,
+            frozen: 0,
+            discard: false,
+            stepped: Instant::now(),
             failure: None,
         }
     }
@@ -67,7 +77,14 @@ impl Session {
     }
 
     pub fn covered(&self) -> bool {
-        (BLACK_FROM..=CLOSED_FRAME).contains(&self.sweep) && self.phase != Phase::Running
+        match self.phase {
+            Phase::Idle | Phase::Faulted => false,
+            Phase::Running => self.driver.fading(),
+            Phase::Closing => true,
+            Phase::Covering | Phase::Loading | Phase::Leaving => {
+                (BLACK_FROM..=CLOSED_FRAME).contains(&self.sweep)
+            }
+        }
     }
 
     pub fn running(&self) -> bool {
@@ -77,7 +94,7 @@ impl Session {
     fn in_transition(&self) -> bool {
         matches!(
             self.phase,
-            Phase::Covering | Phase::Loading | Phase::Revealing
+            Phase::Covering | Phase::Loading | Phase::Closing | Phase::Leaving
         )
     }
 
@@ -86,12 +103,48 @@ impl Session {
             return;
         }
 
-        self.driver.arm_curtain();
         self.phase = Phase::Covering;
         self.sweep = 0;
         self.started = Instant::now();
         self.entered = false;
         self.failure = None;
+    }
+
+    pub fn configure(&mut self, options: PauseOptions) {
+        self.driver.set_options(options);
+    }
+
+    pub fn take_options(&mut self) -> Option<PauseOptions> {
+        self.driver.take_options()
+    }
+
+    pub fn retune(&mut self, music: i32, effects: i32) {
+        self.driver.set_volumes(music, effects);
+    }
+
+    pub fn faulted(&self) -> bool {
+        self.phase == Phase::Faulted
+    }
+
+    pub fn resume(&mut self) {
+        if self.phase != Phase::Faulted {
+            return;
+        }
+
+        self.failure = None;
+        self.entered = true;
+        self.phase = Phase::Running;
+    }
+
+    pub fn terminate(&mut self) {
+        if self.phase != Phase::Faulted {
+            return;
+        }
+
+        self.phase = Phase::Closing;
+        self.discard = true;
+        self.sweep = 0;
+        self.started = Instant::now();
     }
 
     pub fn failure(&self) -> Option<&str> {
@@ -106,8 +159,22 @@ impl Session {
         let elapsed = self.started.elapsed().div_duration_f32(FRAME_TIME) as i32;
 
         match self.phase {
-            Phase::Idle => (),
-            Phase::Running => self.step(),
+            Phase::Idle | Phase::Faulted => (),
+            Phase::Closing => {
+                self.sweep = elapsed.min(CLOSED_FRAME);
+                self.frame.borrow_mut().quads.truncate(self.frozen);
+                self.driver.draw_curtain_over(self.sweep);
+
+                if self.sweep >= CLOSED_FRAME {
+                    self.phase = Phase::Leaving;
+                    self.started = Instant::now();
+                }
+            }
+            Phase::Running => {
+                if self.stepped.elapsed() >= STEP_TIME {
+                    self.step();
+                }
+            }
             Phase::Covering => {
                 self.sweep = elapsed.min(CLOSED_FRAME);
 
@@ -120,56 +187,77 @@ impl Session {
             Phase::Loading => {
                 self.driver.index_assets(vfs);
                 self.load();
-                self.phase = Phase::Revealing;
-                self.sweep = CLOSED_FRAME;
-                self.started = Instant::now();
-                self.driver.draw_curtain(self.sweep);
+
+                if self.entered {
+                    self.phase = Phase::Running;
+                    self.stepped = Instant::now();
+                } else {
+                    self.phase = Phase::Leaving;
+                    self.started = Instant::now();
+                    self.driver.draw_curtain(self.sweep);
+                }
             }
-            Phase::Revealing => {
-                self.sweep = CLOSED_FRAME + elapsed;
+            Phase::Leaving => {
+                self.sweep = CLOSED_FRAME + 1 + elapsed;
 
                 if self.sweep > LAST_FRAME {
-                    if self.entered {
-                        self.phase = Phase::Running;
-                    } else {
-                        self.phase = Phase::Idle;
-                        self.frame.borrow_mut().clear();
+                    self.phase = Phase::Idle;
+                    self.driver.release_curtain();
+                    self.frame.borrow_mut().clear();
+
+                    if self.discard {
+                        self.discard = false;
+                        self.failure = None;
+                        self.driver = Driver::new();
+                        self.frame = Rc::clone(self.driver.frame());
                     }
 
                     return;
                 }
 
-                if self.entered {
-                    self.step();
-                    self.driver.draw_curtain_over(self.sweep);
-                } else {
-                    self.driver.draw_curtain(self.sweep);
-                }
+                self.driver.draw_curtain(self.sweep);
             }
         }
     }
 
     fn step(&mut self) {
+        self.stepped = Instant::now();
+
         if let Err(reason) = self.driver.advance() {
             self.failure = Some(reason);
-            self.phase = Phase::Idle;
-            self.frame.borrow_mut().clear();
+            self.phase = Phase::Faulted;
+            self.entered = false;
+            self.driver.silence();
+            self.driver.dim();
+            self.frozen = self.frame.borrow().quads.len();
+
+            return;
+        }
+
+        if self.driver.take_quit() {
+            self.entered = false;
+            self.driver.silence();
+            self.driver.dim();
+            self.frozen = self.frame.borrow().quads.len();
+            self.phase = Phase::Closing;
+            self.discard = true;
+            self.sweep = 0;
+            self.started = Instant::now();
 
             return;
         }
 
         if self.entered && !self.driver.in_battle() {
-            self.failure = Some("the battle ended".to_owned());
-            self.phase = Phase::Idle;
-            self.frame.borrow_mut().clear();
+            self.entered = false;
+            self.driver.silence();
+            self.phase = Phase::Leaving;
+            self.sweep = CLOSED_FRAME;
+            self.started = Instant::now();
+            self.driver.draw_curtain(self.sweep);
         }
     }
 
     fn load(&mut self) {
-        if self.entered {
-            return;
-        }
-
         if !self.driver.boot() {
             self.failure = Some(format!(
                 "game data did not load ({} files visible to the emulator)",

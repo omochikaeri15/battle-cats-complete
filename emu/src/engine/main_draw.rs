@@ -79,9 +79,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     set_draw_scale(draw_context(&mut ctx.draw)?, scale);
     draw_background(ctx)?;
     draw_background_effects(ctx)?;
-    ctx.set_block_at::<12>(AppContext::DRAW_LIST, [0; 12])?;
-    ctx.set_i32_at(AppContext::DRAW_LIST + 0xc, 1)?;
-    ctx.set_i32_at(AppContext::DRAW_LIST + 0x10, 0)?;
+    ctx.set_block_at::<0x10>(AppContext::DRAW_LIST, [0; 0x10])?;
+    ctx.set_i32_at(AppContext::DRAW_LIST + 0x10, 1)?;
+    ctx.set_i32_at(AppContext::DRAW_LIST + 0x14, 0)?;
     ctx.set_i32_at(AppContext::DRAW_TEMP_0, 2)?;
 
     let mut slot = 1;

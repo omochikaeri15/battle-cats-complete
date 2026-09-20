@@ -41,9 +41,11 @@ pub fn load_gatya_ability_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut index = 0usize;
 
         while index != 275 {
-            if let Some(row) = ctx.gatya_item_rows.get_mut(index) {
-                parse_gatya_item_row(row, stm);
-            }
+            parse_gatya_item_row(
+                ctx,
+                AppContext::GATYA_ITEM_ROWS + index * AppContext::ITEM_DEFINITION_STRIDE,
+                stm,
+            )?;
 
             index += 1;
         }

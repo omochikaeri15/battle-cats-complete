@@ -10,7 +10,7 @@ use super::{
     AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
     BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, ChangeCondition, CharaGroup, ComboStore,
     CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DojoScoreBonus, DrawSink, DropRecord, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
-    ExGroup, ExplosionEvent, FixedLineupStore, GatyaDataSet, GatyaItemRow, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
+    ExGroup, ExplosionEvent, FixedLineupStore, GatyaDataSet, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
     Mamodel, MapLayout, Medal, MapOption, OfficersClubRow, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
     PointEventReward, RealmsRngTable, RecommendedLevelup, RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SoundState, SpecialRuleStore,
@@ -113,6 +113,23 @@ impl ItemDefinition {
     pub const INDEX: usize = 0x4;
     pub const REDIRECT: usize = 0x8;
     pub const ICON: usize = 0x14;
+}
+
+pub struct GatyaItem;
+
+impl GatyaItem {
+    pub const RARITY: usize = 0x0;
+    pub const PRICE: usize = 0x8;
+    pub const STAGE_DROP_ITEM_ID: usize = 0x10;
+    pub const QUANTITY: usize = 0x18;
+    pub const SERVER_ID: usize = 0x20;
+    pub const CATEGORY: usize = 0x24;
+    pub const INDEX: usize = 0x28;
+    pub const SRC_ITEM_ID: usize = 0x2c;
+    pub const MAIN_MENU_TYPE: usize = 0x30;
+    pub const GATYA_TICKET_ID: usize = 0x34;
+    pub const IMG_ID: usize = 0x38;
+    pub const REFLECT_OR_STORAGE: usize = 0x3c;
 }
 
 pub struct WaveRecord;
@@ -771,7 +788,6 @@ pub struct AppContext {
     pub drop_chara_max_1100: i32,
     pub img039_sheet: Option<Rc<Imgcut>>,
     pub deck_button_x: [i32; 10],
-    pub tooltip_texts: [Option<Texture>; 16],
     pub enemy_kill_counts: BTreeMap<i32, i32>,
     pub best_scores: BTreeMap<i32, BTreeMap<i32, i32>>,
     pub ranking_entries: Vec<Option<RankingRecord>>,
@@ -816,7 +832,6 @@ pub struct AppContext {
     pub orb_effects: [OrbEffectStore; 2],
     pub catseye_behavior: BTreeMap<i32, BTreeMap<i32, Vec<CatseyeStep>>>,
     pub ability_data_rows: [[i32; 5]; 10],
-    pub gatya_item_rows: [GatyaItemRow; 275],
     pub gatya_data_sets: BTreeMap<i32, Vec<GatyaDataSet>>,
     pub recommended_powerup_rows: Vec<[i32; 4]>,
     pub recommended_levelups: BTreeMap<i32, RecommendedLevelup>,
@@ -1223,6 +1238,7 @@ impl AppContext {
     pub const MEDAL_MONEY_4: usize = 0x19d8;
     pub const DEPLOY_LIMIT_RARITY_COUNTS: usize = 0x33b7f0;
     pub const DEPLOY_LIMIT_TOTAL: usize = 0x33b808;
+    pub const GATYA_ITEM_ROWS: usize = 0x38a9b0;
     pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
     pub const ITEM_REDIRECT_SCALES: usize = 0x38a9c8;
     pub const MISSION_CANNON_FIRED: usize = 0x3bb700;
@@ -1745,8 +1761,19 @@ impl AppContext {
     pub const BG_GLINTS: usize = 0x28c6dc;
 
     pub fn new() -> Self {
+        let mut raw = vec![0u8; SIZE].into_boxed_slice();
+
+        for (field, value) in [
+            (Self::COMBO_BANNER_STEP_FRAMES, 0x1ei32),
+            (Self::COMBO_BANNER_LIFETIME, 0x78),
+            (Self::COMBO_BANNER_SPEED, 0xc0),
+            (Self::COMBO_BANNER_TEXT_STEP, 6),
+        ] {
+            raw[field..field + 4].copy_from_slice(&value.to_le_bytes());
+        }
+
         Self {
-            raw: vec![0u8; SIZE].into_boxed_slice(),
+            raw,
             stage_enemies: Vec::new(),
             spawn_states: Vec::new(),
             unit_models: [Vec::new(), Vec::new()],
@@ -1866,7 +1893,6 @@ impl AppContext {
             deck_button_x: [
                 0x9f, 0x121, 0x1a3, 0x225, 0x2a7, 0xab, 0x12d, 0x1af, 0x231, 0x2b3,
             ],
-            tooltip_texts: [None; 16],
             enemy_kill_counts: BTreeMap::new(),
             best_scores: BTreeMap::new(),
             ranking_entries: Vec::new(),
@@ -1911,7 +1937,6 @@ impl AppContext {
             orb_effects: Default::default(),
             catseye_behavior: BTreeMap::new(),
             ability_data_rows: [[0; 5]; 10],
-            gatya_item_rows: std::array::from_fn(|_| GatyaItemRow::default()),
             gatya_data_sets: BTreeMap::new(),
             recommended_powerup_rows: Vec::new(),
             recommended_levelups: BTreeMap::new(),
