@@ -1,37 +1,37 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Fault {
     DivideByZero {
-        site: &'static str,
+        site: Site,
     },
     DivideOverflow {
-        site: &'static str,
+        site: Site,
     },
     IndexOutOfRange {
-        site: &'static str,
+        site: Site,
         index: i64,
         limit: i64,
     },
     KeyNotFound {
-        site: &'static str,
+        site: Site,
         key: i64,
     },
     HostMissing {
-        site: &'static str,
+        site: Site,
     },
     InvalidArgument {
-        site: &'static str,
+        site: Site,
     },
     NullPointer {
-        site: &'static str,
+        site: Site,
     },
     BadFunctionCall {
-        site: &'static str,
+        site: Site,
     },
     OutOfRange {
-        site: &'static str,
+        site: Site,
     },
     Unrepresentable {
-        site: &'static str,
+        site: Site,
         reason: &'static str,
     },
 }
@@ -107,9 +107,26 @@ impl Fault {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Site {
+    file: &'static str,
+    line: u32,
+}
+
+impl std::fmt::Display for Site {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.file, self.line)
+    }
+}
+
 #[track_caller]
-fn here() -> &'static str {
-    site_of(std::panic::Location::caller().file())
+fn here() -> Site {
+    let caller = std::panic::Location::caller();
+
+    Site {
+        file: site_of(caller.file()),
+        line: caller.line(),
+    }
 }
 
 impl std::fmt::Display for Fault {

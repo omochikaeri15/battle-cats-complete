@@ -1455,6 +1455,7 @@ impl AppContext {
     pub const STAGES_CLEARED_NEG6: usize = 0x340748;
     pub const STAGE_RECORD_STORY: usize = 0x340818;
     pub const STAGE_RECORD_NEG6: usize = 0x37b1b0;
+    pub const STAMP_DATA: usize = 0x32b6b8;
     pub const SAVED_MAP_TYPE: usize = 0x3836b4;
     pub const CHAPTER_COST_TIER: usize = 0x388028;
     pub const PROC_ROLLS: usize = 0x3880dc;
@@ -1517,6 +1518,7 @@ impl AppContext {
     pub const TUTORIAL_POPUP_OPEN: usize = 0x32b44c;
     pub const OPTION_WINDOW: usize = 0x469928;
     pub const UNIT_INFO_SLOT: usize = 0x914;
+    pub const BATTLE_ENTRY_RESET: usize = 0x32cbac;
     pub const CURTAIN_ACTIVE: usize = 0x326618;
     pub const CURTAIN_STYLE: usize = 0x326620;
     pub const BATTLE_TICKS: usize = 0x328524;

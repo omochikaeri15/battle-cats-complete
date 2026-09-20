@@ -4,7 +4,7 @@ use super::{AppContext, set_point_total};
 
 pub fn add_stage_score_to_total(ctx: &mut AppContext) -> Result<(), Fault> {
     let store = ctx.event_items.as_ref().ok_or(Fault::null_pointer())?;
-    let Some(point_id) = store.stage_points.get(&store.stage_key).copied() else {
+    let Some(point_id) = store.point_id_by_map.get(&store.stage_key).copied() else {
         return Ok(());
     };
     let value = store

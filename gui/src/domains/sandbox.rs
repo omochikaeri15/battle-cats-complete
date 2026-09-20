@@ -2,8 +2,15 @@ use iced::widget::{column, markdown, row, scrollable, Space};
 use iced::{Alignment, Element, Length, Size, Task, Theme};
 use tracing::warn;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use kore::Vfs;
+
 use crate::app::state::AppState;
 use crate::app::theme;
+use crate::systems::emu::{Frame as EmuFrame, Session};
+use crate::systems::emu::SheetCache;
 use crate::widget::{popup, smooth_scroll};
 
 const ACKNOWLEDGEMENT: &str = r#"
@@ -30,12 +37,16 @@ pub enum Message {
     OpenUrl(String),
     Agree,
     Disagree,
+    Play,
+    Tick,
 }
 
 pub struct State {
     prompt_open: bool,
     prompt: popup::State,
     terms: Vec<markdown::Item>,
+    status: String,
+    session: Option<Session>,
 }
 
 impl Default for State {
@@ -44,6 +55,8 @@ impl Default for State {
             prompt_open: false,
             prompt: popup::State::default(),
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
+            status: String::new(),
+            session: None,
         }
     }
 }
@@ -53,7 +66,45 @@ impl State {
         self.prompt_open = !acknowledged;
     }
 
-    pub fn update(&mut self, message: Message, app_state: &mut AppState) -> Task<Message> {
+    pub fn transitioning(&self) -> bool {
+        self.session.as_ref().is_some_and(Session::running)
+    }
+
+    pub fn curtain_frame(&self) -> Option<&Rc<RefCell<EmuFrame>>> {
+        self.session.as_ref().map(Session::frame)
+    }
+
+    pub fn curtain_covered(&self) -> bool {
+        self.session.as_ref().is_some_and(Session::covered)
+    }
+
+    pub fn curtain_sheets(&self) -> Option<&Rc<RefCell<SheetCache>>> {
+        self.session.as_ref().map(Session::sheets)
+    }
+
+    pub fn design_height(&self) -> f32 {
+        self.session.as_ref().map_or(0.0, Session::design_height)
+    }
+
+    pub fn letterbox_shift(&self) -> f32 {
+        self.session.as_ref().map_or(0.0, Session::letterbox_shift)
+    }
+
+    pub fn resize(&mut self, width: f32, height: f32) {
+        if let Some(session) = self.session.as_mut() {
+            session.resize(width, height);
+        }
+    }
+
+    pub fn start(&mut self, width: f32, height: f32) {
+        let session = self.session.get_or_insert_with(Session::new);
+
+        session.resize(width, height);
+        session.begin();
+        self.status = String::new();
+    }
+
+    pub fn update(&mut self, message: Message, app_state: &mut AppState, vfs: &Vfs) -> Task<Message> {
         match message {
             Message::Popup(msg) => {
                 if self.prompt.update(msg, ACKNOWLEDGE_POPUP) {
@@ -77,6 +128,22 @@ impl State {
             }
             Message::Disagree => {
                 self.prompt_open = false;
+
+                Task::none()
+            }
+            Message::Play => Task::none(),
+            Message::Tick => {
+                if let Some(session) = self.session.as_mut() {
+                    session.tick(vfs);
+
+                    let labels = session.frame().borrow().labels;
+
+                    self.status = match session.failure() {
+                        Some(reason) => reason.to_owned(),
+                        None if labels > 0 => format!("{labels} text labels are not drawn yet"),
+                        None => String::new(),
+                    };
+                }
 
                 Task::none()
             }
@@ -119,6 +186,16 @@ impl State {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        Space::new().width(Length::Fill).height(Length::Fill).into()
+        column![
+            theme::sized_button("Play", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button)
+                .on_press(Message::Play),
+            Space::new().height(CHOICE_GAP),
+            iced::widget::text(self.status.as_str()).size(BODY_SIZE),
+        ]
+            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(BODY_PADDING)
+            .into()
     }
 }

@@ -17,8 +17,19 @@ repository = "https://github.com/omochikaeri15/battle-cats-complete"
 [workspace.dependencies]
 nyanko = { git = "https://github.com/omochikaeri15/nyanko" }
 
+
 #[patch."https://github.com/omochikaeri15/nyanko"]
 #nyanko = { path = "../nyanko" }
+
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.dev.package.emu]
+opt-level = 2
 
 [profile.release]
 strip = true

@@ -40,7 +40,7 @@ pub fn load_point_stage_settings(
                 _ => Ok(json_value_as_int(found)),
             })? as i32;
 
-            store.point_maps.entry(point_id).or_default().push(value);
+            store.point_id_maps.entry(point_id).or_default().push(value);
             index += 1;
         }
     }

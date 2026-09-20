@@ -31,8 +31,8 @@ pub struct PointRecord {
 pub struct EventItemStore {
     pub records: BTreeMap<i32, PointRecord>,
     pub point_cap: i32,
-    pub point_maps: BTreeMap<i32, Vec<i32>>,
-    pub stage_points: BTreeMap<i32, i32>,
+    pub point_id_maps: BTreeMap<i32, Vec<i32>>,
+    pub point_id_by_map: BTreeMap<i32, i32>,
     pub stage_key: i32,
     pub rule_tables: BTreeMap<i32, PointRuleTable>,
     pub rules: Option<PointRuleTable>,
@@ -44,5 +44,5 @@ pub struct EventItemStore {
 }
 
 pub fn event_items_has(store: &EventItemStore, item: i32) -> bool {
-    store.point_maps.contains_key(&item)
+    store.point_id_maps.contains_key(&item)
 }

@@ -27,6 +27,7 @@ use crate::common::feedback::Slot;
 use crate::common::fonts;
 use crate::common::watcher::{self, Asset, Change};
 use crate::domains::{cat, enemy, files, help, home, import, mining, mods, sandbox, settings as gui_settings, stage, studio, utilities};
+use crate::systems::emu;
 use crate::editor;
 use crate::widget::{fade, nightly_label, popup, slide, smooth_scroll, Slide};
 
@@ -497,6 +498,13 @@ impl BattleCatsApp {
             subs.push(window::frames().map(|_| Message::FramePainted));
         }
 
+        if self.sandbox_state.transitioning() {
+            subs.push(
+                iced::time::every(std::time::Duration::from_millis(33))
+                    .map(|_| Message::Sandbox(sandbox::Message::Tick)),
+            );
+        }
+
         Subscription::batch(subs)
     }
 
@@ -958,6 +966,9 @@ impl BattleCatsApp {
             Message::WindowResized(size) => {
                 self.window_size = size;
                 self.window_measured = true;
+
+                self.sandbox_state.resize(size.width, size.height);
+
                 self.settings.window.width = size.width;
                 self.settings.window.height = size.height;
                 Task::none()
@@ -1435,7 +1446,12 @@ impl BattleCatsApp {
             }
             Message::Sandbox(msg) => {
                 let disagreed = matches!(msg, sandbox::Message::Disagree);
-                let task = self.sandbox_state.update(msg, &mut self.app_state).map(Message::Sandbox);
+
+                if matches!(msg, sandbox::Message::Play) {
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height);
+                }
+
+                let task = self.sandbox_state.update(msg, &mut self.app_state, &self.vault.vfs).map(Message::Sandbox);
 
                 self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
 
@@ -1562,12 +1578,25 @@ impl BattleCatsApp {
 
         let popups = popup::layered(popups.into_iter().map(|(_, kind, view)| (kind, view)).collect());
 
-        let layers = match expanded {
-            Some(expanded) => stack![content_container, sidebar_overlay, expanded, popups],
-            None => stack![content_container, popups, sidebar_overlay],
+        let modal = self.active_popups.contains(&ActivePopup::SandboxAcknowledge);
+
+        let layers = match (expanded, modal) {
+            (Some(expanded), true) => stack![content_container, sidebar_overlay, expanded, crate::widget::scrim(), popups],
+            (Some(expanded), false) => stack![content_container, sidebar_overlay, expanded, popups],
+            (None, true) => stack![content_container, sidebar_overlay, crate::widget::scrim(), popups],
+            (None, false) => stack![content_container, popups, sidebar_overlay],
         };
 
-        editor::watch(layers, &self.editor, Message::Editor)
+        let watched = editor::watch(layers, &self.editor, Message::Editor);
+
+        emu::overlay(
+            watched,
+            self.sandbox_state.curtain_frame(),
+            self.sandbox_state.curtain_sheets(),
+            self.sandbox_state.curtain_covered(),
+            self.sandbox_state.design_height(),
+            self.sandbox_state.letterbox_shift(),
+        )
     }
 
     fn sync_popup(&mut self, popup: ActivePopup, open: bool) {
@@ -1868,9 +1897,6 @@ impl BattleCatsApp {
 mod tests {
     use super::*;
 
-    // popup::layered keys its layers by Kind, so two live popups sharing one would trade
-    // widget state. Claiming every kind exactly once makes that unrepresentable: a new popup
-    // bumps KIND_COUNT and fails here until it is registered, and reusing a kind fails too.
     #[test]
     fn every_popup_kind_is_claimed_exactly_once() {
         let mut claimed: Vec<popup::Kind> = ActivePopup::ALL.into_iter().map(ActivePopup::kind).collect();

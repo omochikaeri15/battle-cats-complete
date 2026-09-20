@@ -1,8 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, format_localized, get_column_count, open_asset_stream,
-    query_localizable, read_cell_stream, read_csv_cell, read_csv_row, read_stream_row,
+    AppContext, AssetStream, format_localized, get_column_count, load_nyancombo_filter_tsv, load_nyancombo_param_tsv, open_asset_stream, query_localizable, read_cell_stream, read_csv_cell, read_csv_row, read_stream_row,
 };
 
 pub fn load_nyancombo_files(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -93,6 +92,9 @@ pub fn load_nyancombo_files(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.combo_definitions.push(values);
         }
     }
+
+    load_nyancombo_param_tsv(ctx)?;
+    load_nyancombo_filter_tsv(ctx)?;
 
     ctx.combo_store.states.clear();
 

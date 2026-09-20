@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 nyanko = { workspace = true }
 kore = { path = "../kore" }
+emu = { path = "../emu" }
 bytemuck = "1.25"
 iced = {version = "0.14", features = ["wgpu", "canvas", "markdown", "image", "smol", "advanced"]}
 image = { version = "0.25.10", default-features = false, features = ["png", "ico"] }

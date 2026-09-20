@@ -6,7 +6,7 @@ pub fn get_point_id(store: &EventItemStore) -> i32 {
     }
 
     store
-        .stage_points
+        .point_id_by_map
         .get(&store.stage_key)
         .copied()
         .unwrap_or(0)

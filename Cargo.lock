@@ -1938,6 +1938,7 @@ dependencies = [
  "arboard",
  "bytemuck",
  "directories",
+ "emu",
  "iced",
  "image",
  "kore",

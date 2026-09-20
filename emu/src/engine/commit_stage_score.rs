@@ -6,7 +6,7 @@ pub fn commit_stage_score(ctx: &mut AppContext) -> Result<(), Fault> {
     add_stage_score_to_total(ctx)?;
 
     let store = ctx.event_items.as_mut().ok_or(Fault::null_pointer())?;
-    let Some(point_id) = store.stage_points.get(&store.stage_key).copied() else {
+    let Some(point_id) = store.point_id_by_map.get(&store.stage_key).copied() else {
         return Ok(());
     };
     let (key, stage, total) = (store.stage_key, store.rule_id, store.total);
