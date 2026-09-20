@@ -14,8 +14,6 @@ use super::{
     set_zkill_hit, std_map_int_string_subscript, std_string_concat_cstr, std_string_from_cstr,
 };
 
-const SITE: &str = "cannon_attack_dispatch";
-
 pub fn cannon_attack_dispatch(
     ctx: &mut AppContext,
     faction: i32,
@@ -213,11 +211,7 @@ pub fn cannon_attack_dispatch(
                 let map_id = get_global_map_id(ctx, 0)?;
 
                 if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 9)? {
-                    let percent = *params.first().ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
+                    let percent = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
                     plain = operation::div_100(plain.wrapping_mul(percent));
                 }

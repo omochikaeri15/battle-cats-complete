@@ -12,10 +12,6 @@ pub fn get_unit_guide_order(ctx: &AppContext, unit_id: i32) -> Result<i32, Fault
     pair[4..].copy_from_slice(&key);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "get_unit_guide_order",
-            index: 0,
-            limit: 1,
-        })? as i32,
+        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
     )
 }

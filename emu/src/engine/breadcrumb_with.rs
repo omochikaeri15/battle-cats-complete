@@ -12,9 +12,7 @@ pub fn breadcrumb_with(
     }
 
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "breadcrumb_with",
-        })?
+        .ok_or(Fault::host_missing())?
         .breadcrumb_with(id, params);
 
     Ok(())

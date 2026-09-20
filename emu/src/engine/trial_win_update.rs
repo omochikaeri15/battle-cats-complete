@@ -10,8 +10,6 @@ use super::{
     trial_win_update_lambda_1,
 };
 
-const SITE: &str = "trial_win_update";
-
 pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
@@ -113,18 +111,18 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(true);
         }
 
-        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
         let share =
-            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 0)?;
 
         if labyrinth_active(ctx)? {
             let labyrinth =
-                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, labyrinth, 0)?;
         }
@@ -184,18 +182,18 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(true);
         }
 
-        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 
         let share =
-            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
         if labyrinth_active(ctx)? {
             let labyrinth =
-                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, labyrinth, 1)?;
         }
@@ -278,12 +276,12 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::OUTRO_PHASE, next)?;
 
     if next == 0x44 {
-        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+        let map = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 
         let share =
-            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
@@ -344,7 +342,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
 
-    let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+    let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
 
     dialog_close(ctx, dialog)?;
 

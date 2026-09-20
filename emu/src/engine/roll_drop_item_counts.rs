@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, call_rng};
 
-const SITE: &str = "roll_drop_item_counts";
-
 #[derive(Clone, Default)]
 pub struct DropRecord {
     pub map_id: i32,
@@ -30,20 +28,12 @@ pub fn roll_drop_item_counts(
         let mult = *record
             .star_mults
             .get(star as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: star as i64,
-                limit: record.star_mults.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(star as i64, record.star_mults.len() as i64))?;
         let count =
             *record
                 .stage_counts
                 .get(stage as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: stage as i64,
-                    limit: record.stage_counts.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(stage as i64, record.stage_counts.len() as i64))?;
         let rolls = operation::cvttsd2si((mult * count) as f64 + 0.5);
         let mut roll = 0;
 
@@ -60,11 +50,7 @@ pub fn roll_drop_item_counts(
                     sum = sum.wrapping_add(*weight);
 
                     if pick < sum {
-                        let slot = counts.get_mut(index).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x10,
-                        })?;
+                        let slot = counts.get_mut(index).ok_or(Fault::index_out_of_range(index as i64, 0x10))?;
 
                         *slot = slot.wrapping_add(1);
 

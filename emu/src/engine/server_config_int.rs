@@ -10,8 +10,6 @@ pub fn server_config_int(
 ) -> Result<i32, Fault> {
     Ok(ctx
         .platform()
-        .ok_or(Fault::HostMissing {
-            site: "server_config_int",
-        })?
+        .ok_or(Fault::host_missing())?
         .config_int(key, min, max))
 }

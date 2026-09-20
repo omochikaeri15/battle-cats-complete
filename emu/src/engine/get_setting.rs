@@ -13,19 +13,13 @@ pub fn get_setting(
         return Ok(fallback);
     }
 
-    let value = std_map_string_string_find_equal(store, key).ok_or(Fault::KeyNotFound {
-        site: "get_setting",
-        key: 0,
-    })?;
+    let value = std_map_string_string_find_equal(store, key).ok_or(Fault::key_not_found(0))?;
 
     if value.is_empty() {
         return Ok(fallback);
     }
 
-    let value = std_map_string_string_find_equal(store, key).ok_or(Fault::KeyNotFound {
-        site: "get_setting",
-        key: 0,
-    })?;
+    let value = std_map_string_string_find_equal(store, key).ok_or(Fault::key_not_found(0))?;
 
     std_stoi(value, None, 0xa)
 }

@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use super::{Imgcut, Sprite, make_scale9_image_sprite, ui_node_set_color};
 
-#[allow(clippy::too_many_arguments)]
 pub fn ui_node_set_panel(
     sheet: &Rc<Imgcut>,
     x: i32,

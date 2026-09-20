@@ -28,8 +28,6 @@ use super::{
     xor_row46_get,
 };
 
-const SITE: &str = "game_win_update";
-
 pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
@@ -159,11 +157,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     .get(mode as i64 as usize)
                     .and_then(|names| names.get(unlocked as i64 as usize))
                     .map(|names| names[0].clone())
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: unlocked as i64,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(unlocked as i64, 0))?;
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -194,17 +188,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let kind = *ctx
             .reward_queue
             .first()
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?
+            .ok_or(Fault::index_out_of_range(0, 0))?
             .first()
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            .ok_or(Fault::index_out_of_range(0, 0))?;
 
         if kind as u32 > 0x11 {
             return Ok(true);
@@ -223,46 +209,22 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let item = *ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(1)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 1,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(1, 0))?;
                 let first = ((*ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(2)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 2,
-                        limit: 0,
-                    })?)
+                    .ok_or(Fault::index_out_of_range(2, 0))?)
                     == 1) as u8;
                 let amount = *ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(3)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 3,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(3, 0))?;
 
                 message = drop_popup_text(ctx, item, first, amount)?;
                 dialog_show_alt(ctx, &message, 0, 0x191, 1, Some(game_win_update_lambda_2))?;
@@ -275,24 +237,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let index = *ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(1, 0))?;
 
                     xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x2f,
-                        },
+                        Fault::index_out_of_range(index as i64, 0x2f),
                     )? as i32
                 };
 
@@ -304,24 +254,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let index = *ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(1, 0))?;
 
                     xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x2f,
-                        },
+                        Fault::index_out_of_range(index as i64, 0x2f),
                     )? as i32
                 } <= ctx.drop_chara_max_1000
                 {
@@ -335,24 +273,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let index = *ctx
                             .reward_queue
                             .first()
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0,
-                                limit: 0,
-                            })?
+                            .ok_or(Fault::index_out_of_range(0, 0))?
                             .get(1)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 1,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(1, 0))?;
 
                         xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: index as i64,
-                                limit: 0x2f,
-                            },
+                            Fault::index_out_of_range(index as i64, 0x2f),
                         )? as i32
                     }) >= 0x44c
                         && {
@@ -363,24 +289,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let index = *ctx
                                 .reward_queue
                                 .first()
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?
+                                .ok_or(Fault::index_out_of_range(0, 0))?
                                 .get(1)
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 1,
-                                    limit: 0,
-                                })?;
+                                .ok_or(Fault::index_out_of_range(1, 0))?;
 
                             xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: index as i64,
-                                    limit: 0x2f,
-                                },
+                                Fault::index_out_of_range(index as i64, 0x2f),
                             )? as i32
                         } <= ctx.drop_chara_max_1100
                 };
@@ -403,11 +317,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx.treasure_names
                         .get(treasure)
                         .cloned()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: treasure as i64,
-                            limit: ctx.treasure_names.len() as i64,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(treasure as i64, ctx.treasure_names.len() as i64))?;
                 let map = (ctx.i32_at(AppContext::CHAPTER_MODE)? as i64).wrapping_add(3) as usize;
                 let stage = ctx.i32_at(AppContext::CASTLE_ID)? as i64 as usize;
                 let second = ctx
@@ -415,11 +325,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     .get(map)
                     .and_then(|names| names.get(stage))
                     .cloned()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: stage as i64,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(stage as i64, 0))?;
 
                 message = format_string2(ctx, &text, &first, &second)?;
                 handler = game_win_update_lambda_3;
@@ -455,17 +361,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     if (*ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?)
+                        .ok_or(Fault::index_out_of_range(1, 0))?)
                         > 2
                     {
                         energy = true;
@@ -473,22 +371,10 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let row = (*ctx
                             .reward_queue
                             .first()
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0,
-                                limit: 0,
-                            })?
+                            .ok_or(Fault::index_out_of_range(0, 0))?
                             .get(1)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 1,
-                                limit: 0,
-                            })?) as i64 as usize;
-                        let index = *ZOMBIE_CLEAR_ROWS.get(row).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: row as i64,
-                            limit: 3,
-                        })?;
+                            .ok_or(Fault::index_out_of_range(1, 0))?) as i64 as usize;
+                        let index = *ZOMBIE_CLEAR_ROWS.get(row).ok_or(Fault::index_out_of_range(row as i64, 3))?;
                         let key = string_format_int(ctx, b"zombie_clear%02d", index)?;
 
                         message = query_localizable(ctx, &key);
@@ -498,17 +384,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let kind = *ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(0, 0))?;
 
                 if energy || kind == 5 {
                     let fifty = 0x32.to_string().into_bytes();
@@ -518,33 +396,17 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     if (*ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?)
+                        .ok_or(Fault::index_out_of_range(1, 0))?)
                         == 0
                     {
                         let area = *ctx
                             .reward_queue
                             .first()
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0,
-                                limit: 0,
-                            })?
+                            .ok_or(Fault::index_out_of_range(0, 0))?
                             .get(2)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 2,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(2, 0))?;
                         let first = {
                             let key = string_format_int(ctx, b"zombie_area_%02d", area)?;
 
@@ -553,17 +415,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let area = *ctx
                             .reward_queue
                             .first()
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0,
-                                limit: 0,
-                            })?
+                            .ok_or(Fault::index_out_of_range(0, 0))?
                             .get(2)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 2,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(2, 0))?;
                         let second = {
                             let key = string_format_int(ctx, b"zombie_area_%02d", area)?;
 
@@ -578,48 +432,24 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let map = (*ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?) as i64 as usize;
+                        .ok_or(Fault::index_out_of_range(1, 0))?) as i64 as usize;
                     let order = (*ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(2)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?) as i64 as usize;
+                        .ok_or(Fault::index_out_of_range(2, 0))?) as i64 as usize;
                     let stage = *STAGE_DISPLAY_ORDER
                         .get(order)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: order as i64,
-                            limit: 0x33,
-                        })? as i64 as usize;
+                        .ok_or(Fault::index_out_of_range(order as i64, 0x33))? as i64 as usize;
                     let name = ctx
                         .stage_names
                         .get(map)
                         .and_then(|names| names.get(stage))
                         .cloned()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: stage as i64,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(stage as i64, 0))?;
 
                     message = substitute_tokens(ctx, &message, &[(b"stageName", &name)])?;
                 }
@@ -655,17 +485,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx,
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(1, 0))?,
                 );
                 let name = query_localizable(ctx, &key);
 
@@ -697,77 +519,37 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx,
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(1, 0))?,
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(2)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(2, 0))?,
                 )?
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
                 let map_type = map_type_of_map_id(
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(1, 0))?,
                 );
                 let map_index = map_index_of_map_id(
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(1, 0))?,
                 );
                 let text = query_localizable(ctx, &record.message);
                 let stage = *ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(2)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 2,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(2, 0))?;
                 let first = get_stage_name(ctx, map_type, map_index, stage)?;
                 let second = get_stage_name(ctx, map_type, map_index, record.other_stage)?;
 
@@ -805,17 +587,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let floor = (*ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?)
+                        .ok_or(Fault::index_out_of_range(1, 0))?)
                     .wrapping_add(1);
 
                     string_format_int(ctx, &text, floor)?
@@ -823,17 +597,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let item = *ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(2)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 2,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(2, 0))?;
                 let mut possession = Vec::new();
 
                 if item & !0x10 != 6 {
@@ -845,17 +611,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .wrapping_add(
                             *ctx.reward_queue
                                 .first()
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?
+                                .ok_or(Fault::index_out_of_range(0, 0))?
                                 .get(3)
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 3,
-                                    limit: 0,
-                                })?,
+                                .ok_or(Fault::index_out_of_range(3, 0))?,
                         )
                         .to_string()
                         .into_bytes();
@@ -869,17 +627,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let amount = *ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(3)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 3,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(3, 0))?;
                     let held = ctx.item_possession.entry(item).or_insert(0);
 
                     *held = held.wrapping_add(amount);
@@ -895,17 +645,9 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let amount = (*ctx
                     .reward_queue
                     .first()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(0, 0))?
                     .get(3)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 3,
-                        limit: 0,
-                    })?)
+                    .ok_or(Fault::index_out_of_range(3, 0))?)
                 .to_string()
                 .into_bytes();
 
@@ -960,32 +702,16 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     &ctx.reward_defs,
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(1, 0))?,
                     *ctx.reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(2)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?,
+                        .ok_or(Fault::index_out_of_range(2, 0))?,
                 )
-                .ok_or(Fault::NullPointer { site: SITE })?
+                .ok_or(Fault::null_pointer())?
                 .clone();
 
                 match reward.kind {
@@ -1019,24 +745,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let index = *ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(1, 0))?;
 
                     xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x2f,
-                        },
+                        Fault::index_out_of_range(index as i64, 0x2f),
                     )? as i32
                 };
 
@@ -1048,24 +762,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     let index = *ctx
                         .reward_queue
                         .first()
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0, 0))?
                         .get(1)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(1, 0))?;
 
                     xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x2f,
-                        },
+                        Fault::index_out_of_range(index as i64, 0x2f),
                     )? as i32
                 } <= ctx.drop_chara_max_1000
                 {
@@ -1079,24 +781,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let index = *ctx
                             .reward_queue
                             .first()
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0,
-                                limit: 0,
-                            })?
+                            .ok_or(Fault::index_out_of_range(0, 0))?
                             .get(1)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 1,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(1, 0))?;
 
                         xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: index as i64,
-                                limit: 0x2f,
-                            },
+                            Fault::index_out_of_range(index as i64, 0x2f),
                         )? as i32
                     }) >= 0x44c
                         && {
@@ -1107,24 +797,12 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let index = *ctx
                                 .reward_queue
                                 .first()
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?
+                                .ok_or(Fault::index_out_of_range(0, 0))?
                                 .get(1)
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 1,
-                                    limit: 0,
-                                })?;
+                                .ok_or(Fault::index_out_of_range(1, 0))?;
 
                             xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: index as i64,
-                                    limit: 0x2f,
-                                },
+                                Fault::index_out_of_range(index as i64, 0x2f),
                             )? as i32
                         } <= ctx.drop_chara_max_1100
                 };
@@ -1250,11 +928,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 .get(map)
                 .and_then(|names| names.get(stage))
                 .cloned()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: stage as i64,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(stage as i64, 0))?;
             let first = format_localized(ctx, &text, &name)?;
             let second = query_localizable(ctx, b"exstage_text2");
             let third = query_localizable(ctx, b"exstage_text3");
@@ -1348,13 +1022,13 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         {
             let button =
-                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, button, 0)?;
         }
         {
             let button =
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, button, 0)?;
         }
@@ -1362,7 +1036,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xcb)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, button, 0)?;
             }
@@ -1403,7 +1077,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         {
             let button =
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, button, 1)?;
         }
@@ -1411,7 +1085,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? == 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xc8)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, button, 1)?;
             }
@@ -1420,7 +1094,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
             {
                 let button = button_bank_find(&ctx.buttons, 0xcb)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, button, 1)?;
             }
@@ -1463,7 +1137,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let sheet = Rc::clone(
             ctx.outro_event_sheets[0]
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
         );
         let width = imgcut_get_sprite_cut(&sheet, 0x25)?[2];
         let height = imgcut_get_sprite_cut(&sheet, 0x27)?[3];
@@ -1545,19 +1219,19 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 1)?;
     }
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 1)?;
     }
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 1)?;
     }
@@ -1597,25 +1271,25 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
 
-    let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+    let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
 
     dialog_close(ctx, dialog)?;
 
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 0)?;
     }
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 0)?;
     }
     {
         let button =
-            button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::NullPointer { site: SITE })?;
+            button_bank_find(&ctx.buttons, 0xca).ok_or(Fault::null_pointer())?;
 
         new_button_set_touchable(&mut ctx.buttons, button, 0)?;
     }

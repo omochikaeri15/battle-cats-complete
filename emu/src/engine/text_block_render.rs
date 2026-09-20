@@ -5,8 +5,6 @@ use super::{
     texture_get_width,
 };
 
-const SITE: &str = "text_block_render";
-
 #[derive(Clone, Default, Debug)]
 pub struct TextGlyph {
     pub x: i32,
@@ -76,11 +74,7 @@ pub fn text_block_render(
             };
 
             let lift = if align & 4 != 0 {
-                let last = block.lines.last().ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: -1,
-                    limit: 0,
-                })?;
+                let last = block.lines.last().ok_or(Fault::index_out_of_range(-1, 0))?;
                 let lift =
                     operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale * 0.5);
 
@@ -90,11 +84,7 @@ pub fn text_block_render(
                     operation::cvttsd2si((block.spacing as f32 * scale) as f64 * 0.1 + lift as f64)
                 }
             } else if align & 8 != 0 {
-                let last = block.lines.last().ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: -1,
-                    limit: 0,
-                })?;
+                let last = block.lines.last().ok_or(Fault::index_out_of_range(-1, 0))?;
 
                 operation::cvttss2si(last.y.wrapping_add(block.spacing) as f32 * scale)
             } else {
@@ -107,7 +97,7 @@ pub fn text_block_render(
             let texture = glyph
                 .texture
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
             let width = operation::cvttss2si(
                 texture_get_width(Surface::Label(texture)) as f32 * line.scale * scale,
             );

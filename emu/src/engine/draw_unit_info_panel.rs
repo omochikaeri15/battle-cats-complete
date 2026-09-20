@@ -6,7 +6,6 @@ use super::{
     ui_node_set_color, ui_node_set_sprite, ui_node_set_zoom, AppContext,
 };
 
-const SITE: &str = "draw_unit_info_panel";
 const TRAIT_KEYS: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel_x: i32, panel_y: i32) -> Result<(), Fault> {
@@ -64,7 +63,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         let shifted = orbs <= 0 || form < 2 || fixed;
         let baseline = if shifted { panel_y.wrapping_add(0x1a) } else { panel_y.wrapping_add(1) };
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, left, baseline, 0xfc);
 
@@ -90,9 +89,9 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
                 .get(*key as i64 as usize)
                 .and_then(|columns| columns.get(1))
                 .copied()
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: *key as i64, limit: ctx.picture_book_traits.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(*key as i64, ctx.picture_book_traits.len() as i64))?;
             let sheet = ctx.img015_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = (index as i32).wrapping_mul(0x2b).wrapping_add(base);
 
             draw_cut(draw_context(&mut ctx.draw)?, sheet, x, panel_y, cut);
@@ -100,7 +99,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
             if lit && talented.get(key).copied().unwrap_or(false) {
                 let sheet = ctx.img015_sheet.clone();
-                let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
                 draw_cut(draw_context(&mut ctx.draw)?, sheet, x, panel_y, 0x10f);
             }
@@ -119,7 +118,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         if let Some(cut) = plate {
             let sheet = ctx.img015_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
             draw_cut(draw_context(&mut ctx.draw)?, sheet, panel_x.wrapping_add(0x38), panel_y.wrapping_add(-2), cut);
         }
@@ -127,7 +126,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         set_alpha(draw_context(&mut ctx.draw)?, 0xff);
 
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, panel_x.wrapping_add(0x71), panel_y.wrapping_add(1), 0xf9);
 
@@ -144,7 +143,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
             let cut = ctx.picture_book_abilities[row][4];
             let sheet = ctx.img015_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = column.wrapping_mul(0x2a).wrapping_add(panel_x.wrapping_add(0xbd));
 
             draw_cut(draw_context(&mut ctx.draw)?, sheet, x, panel_y.wrapping_add(-1), cut);
@@ -164,7 +163,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
             let capped = level == get_talent_max_level(ctx, 0, unit_id, abil)?;
             let sheet = ctx.img015_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
             draw_cut(draw_context(&mut ctx.draw)?, sheet, x, panel_y.wrapping_add(-2), 0x110 | i32::from(capped));
         }
@@ -174,7 +173,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         let inset = operation::div_2(orbs.wrapping_mul(0x33).wrapping_add(0x75));
         let left = panel_x.wrapping_sub(half).wrapping_add(-0x27).wrapping_sub(inset);
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, left, panel_y.wrapping_add(0x38), 0xfc);
 
@@ -202,7 +201,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         let cut = ctx.picture_book_abilities[row][4];
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let x = column.wrapping_mul(0x2a).wrapping_add(row_x);
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, x, icon_y, cut);
@@ -222,7 +221,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         let capped = level == get_talent_max_level(ctx, 0, unit_id, abil)?;
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, sheet, x, mark_y, 0x110 | i32::from(capped));
     }
@@ -233,7 +232,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
     let plate_x = narrow.wrapping_mul(0x2a).wrapping_add(row_x).wrapping_add(0x1a);
     let sheet = ctx.img015_sheet.clone();
-    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
     draw_cut(draw_context(&mut ctx.draw)?, sheet, plate_x, icon_y, 0x122);
 
@@ -250,7 +249,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         }
 
         let x = column.wrapping_mul(0x33).wrapping_add(plate_x.wrapping_add(0x71));
-        let sheet = ctx.img015_sheet.clone().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = ctx.img015_sheet.clone().ok_or(Fault::null_pointer())?;
         let mut node = ui_node_set_sprite(&sheet, x, 0, 0x123)?;
 
         ui_node_set_zoom(&mut node, 1.0, 1.0);
@@ -266,7 +265,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             (ctx.equipment_shadow_sheet.clone(), abil),
             (ctx.equipment_grade_sheet.clone(), grade),
         ] {
-            let source = source.ok_or(Fault::NullPointer { site: SITE })?;
+            let source = source.ok_or(Fault::null_pointer())?;
             let child = ui_node_set_sprite(&source, 0, 0, cut)?;
             let placed = ui_node_add_child(&mut node, child);
 

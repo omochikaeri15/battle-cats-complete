@@ -1,9 +1,5 @@
-use super::AppContext;
+use super::MapOption;
 
-pub fn map_guerrilla_set(ctx: &AppContext, map: i32) -> i32 {
-    ctx.map_guerrilla_sets
-        .range(map..)
-        .next()
-        .filter(|(key, _)| **key <= map)
-        .map_or(0, |(_, value)| *value)
+pub fn map_guerrilla_set(store: &MapOption, map_id: i32) -> i32 {
+    store.guerrilla_set.get(&map_id).map_or(0, |bits| *bits)
 }

@@ -6,8 +6,6 @@ use super::{
     set_tint, sin_deg,
 };
 
-const SITE: &str = "sniper_draw";
-
 pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     if !get_powerup(ctx, 5)? {
         return Ok(());
@@ -34,7 +32,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         6,
         x,
         y,
@@ -52,7 +50,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         6,
         x,
         y,
@@ -75,7 +73,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img043_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             5,
             x,
             y,
@@ -89,7 +87,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img043_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             4,
             x,
             y,
@@ -107,7 +105,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         3,
         x,
         y,
@@ -125,7 +123,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         x,
         y,
         93.08,
@@ -148,7 +146,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         1,
         x,
         y,
@@ -166,7 +164,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         0,
         x,
         y,
@@ -184,7 +182,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         0,
         x,
         y,
@@ -207,7 +205,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img043_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             9,
             x,
             y,
@@ -222,7 +220,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img043_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             9,
             x,
             y,
@@ -262,7 +260,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                 draw_context(&mut ctx.draw)?,
                 ctx.effect_a_sheet
                     .as_deref()
-                    .ok_or(Fault::NullPointer { site: SITE })?,
+                    .ok_or(Fault::null_pointer())?,
                 x,
                 y,
                 0x89,
@@ -292,7 +290,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img043_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         7,
         x,
         y,
@@ -321,7 +319,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img043_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             0x35,
@@ -359,7 +357,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                     draw_context(&mut ctx.draw)?,
                     ctx.effect_a_sheet
                         .as_deref()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                     x,
                     y,
                     0x89,
@@ -388,7 +386,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                     draw_context(&mut ctx.draw)?,
                     ctx.effect_a_sheet
                         .as_deref()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                     x,
                     y,
                     0x89,

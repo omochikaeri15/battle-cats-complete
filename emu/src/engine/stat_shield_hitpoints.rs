@@ -26,11 +26,7 @@ pub fn stat_shield_hitpoints(
         let row = ctx
             .stage_enemies
             .get(enemy_row as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "stat_shield_hitpoints",
-                index: enemy_row as i64,
-                limit: ctx.stage_enemies.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(enemy_row as i64, ctx.stage_enemies.len() as i64))?;
         let scaled = operation::div_100(
             stage_entry_magnification(row)
                 .wrapping_mul(shield)
@@ -56,11 +52,7 @@ pub fn stat_shield_hitpoints(
     let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
     let bonus = *EOC_CHAPTER_HP_MUL
         .get(chapter as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "stat_shield_hitpoints",
-            index: chapter as i64,
-            limit: 3,
-        })?;
+        .ok_or(Fault::index_out_of_range(chapter as i64, 3))?;
 
     Ok(operation::div_10(
         bonus.wrapping_add(0xa).wrapping_mul(shield).wrapping_add(5),

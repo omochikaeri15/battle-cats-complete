@@ -8,8 +8,6 @@ use super::{
     is_touchable, wave_hit_cat_side, wave_hit_enemy_side,
 };
 
-const SITE: &str = "wave_apply_hits";
-
 pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut blockers: BTreeMap<i32, i32> = BTreeMap::new();
     let mut hits: Vec<(i32, i32)> = Vec::new();
@@ -332,20 +330,12 @@ pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
                         let entry = *blockers.entry(wave_index as i32).or_insert(0);
                         let blocker =
                             hits.get(entry as i64 as usize)
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: entry as i64,
-                                    limit: hits.len() as i64,
-                                })?;
+                                .ok_or(Fault::index_out_of_range(entry as i64, hits.len() as i64))?;
                         let faction = get_wave_hit_faction(ctx, blocker.0)?;
                         let entry = *blockers.entry(wave_index as i32).or_insert(0);
                         let blocker =
                             hits.get(entry as i64 as usize)
-                                .ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: entry as i64,
-                                    limit: hits.len() as i64,
-                                })?;
+                                .ok_or(Fault::index_out_of_range(entry as i64, hits.len() as i64))?;
 
                         if x < get_pos_x(ctx, faction, blocker.1)? {
                             *blockers.entry(wave_index as i32).or_insert(0) = next;
@@ -366,11 +356,7 @@ pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0usize;
 
     while index != hits.len() {
-        let (wave, slot) = *hits.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: hits.len() as i64,
-        })?;
+        let (wave, slot) = *hits.get(index).ok_or(Fault::index_out_of_range(index as i64, hits.len() as i64))?;
         let record = AppContext::WAVE_RECORDS.wrapping_add(
             (wave as i64).wrapping_mul(AppContext::WAVE_RECORD_STRIDE as i64) as usize,
         );
@@ -381,11 +367,7 @@ pub fn wave_apply_hits(ctx: &mut AppContext) -> Result<(), Fault> {
             let entry = *blockers.entry(wave).or_insert(0);
             let blocker = hits
                 .get(entry as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: hits.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(entry as i64, hits.len() as i64))?;
 
             if blocker.1 != slot {
                 match ctx.i32_at(record.wrapping_add(WaveRecord::IN_USE))? {

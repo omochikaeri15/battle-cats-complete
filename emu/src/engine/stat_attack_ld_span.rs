@@ -12,21 +12,13 @@ pub fn stat_attack_ld_span(
     let cell = if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0 {
         let column = *STAT_ATTACK_COLUMNS
             .get((30 + attack as i64) as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "stat_attack_ld_span",
-                index: attack as i64,
-                limit: 3,
-            })?;
+            .ok_or(Fault::index_out_of_range(attack as i64, 3))?;
 
         AppContext::cat_stat(unit_id, form, ((column as i64) * 4) as usize)
     } else {
         let column = *STAT_ATTACK_COLUMNS
             .get((33 + attack as i64) as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "stat_attack_ld_span",
-                index: attack as i64,
-                limit: 3,
-            })?;
+            .ok_or(Fault::index_out_of_range(attack as i64, 3))?;
 
         AppContext::enemy_stat(unit_id, ((column as i64) * 4) as usize)
     };

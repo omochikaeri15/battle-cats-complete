@@ -5,8 +5,6 @@ use super::{
     get_stage_record, unlock_condition_met,
 };
 
-const SITE: &str = "stage_condition_met";
-
 pub fn stage_condition_met(
     ctx: &mut AppContext,
     map_type: i32,
@@ -29,11 +27,7 @@ pub fn stage_condition_met(
             Ok(get_stage_record(ctx, -19, map_idx, stage, 0, 0)? > 0)
         }
         -11 => {
-            let missing = Fault::IndexOutOfRange {
-                site: SITE,
-                index: stage as i64,
-                limit: ctx.legend_stage_conditions.len() as i64,
-            };
+            let missing = Fault::index_out_of_range(stage as i64, ctx.legend_stage_conditions.len() as i64);
             let mut met = true;
 
             if ctx

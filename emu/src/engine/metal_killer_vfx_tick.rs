@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, get_anim_len};
 
-const SITE: &str = "metal_killer_vfx_tick";
-
 pub fn metal_killer_vfx_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let count = ctx.metal_killer_vfx.len() as i32;
 
@@ -19,21 +17,13 @@ pub fn metal_killer_vfx_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         let frame = ctx
             .metal_killer_vfx
             .get(at)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: at as i64,
-                limit,
-            })?
+            .ok_or(Fault::index_out_of_range(at as i64, limit))?
             .frame
             .wrapping_add(1);
 
         ctx.metal_killer_vfx
             .get_mut(at)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: at as i64,
-                limit,
-            })?
+            .ok_or(Fault::index_out_of_range(at as i64, limit))?
             .frame = frame;
 
         if frame >= get_anim_len(&ctx.metal_killer_vfx_anim)? {

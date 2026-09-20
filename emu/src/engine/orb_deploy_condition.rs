@@ -34,15 +34,11 @@ pub fn orb_deploy_condition(
         let every = get_setting(&ctx.settings, &key, 2)?;
 
         if every == 0 {
-            return Err(Fault::DivideByZero {
-                site: "orb_deploy_condition",
-            });
+            return Err(Fault::divide_by_zero());
         }
 
         if deploys == i32::MIN && every == -1 {
-            return Err(Fault::DivideOverflow {
-                site: "orb_deploy_condition",
-            });
+            return Err(Fault::divide_overflow());
         }
 
         return Ok(deploys % every == 0);

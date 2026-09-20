@@ -24,11 +24,7 @@ pub fn get_stage_record(
             .or_default()
             .get(star as usize)
             .map(|record| *record as i32)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "get_stage_record",
-                index: star as i64,
-                limit: 4,
-            });
+            .ok_or(Fault::index_out_of_range(star as i64, 4));
     }
 
     if map_type as u32 <= 4 {
@@ -56,11 +52,7 @@ pub fn get_stage_record(
                 .and_then(|stars| stars.get(star as usize))
                 .and_then(|stages| stages.get(stage as usize))
                 .map(|record| *record as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: map_idx as i64,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
         0x01 => Ok(ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? as i32),
         0x05 => Ok((get_cleared_count(ctx, 0xad0)? > stage) as i32),
@@ -68,30 +60,18 @@ pub fn get_stage_record(
             let maps = &ctx.stage_record_neg19;
 
             if (maps.len() / 0x31) as u64 <= map_idx as i64 as u64 {
-                return Err(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: map_idx as i64,
-                    limit: (maps.len() / 0x31) as i64,
-                });
+                return Err(Fault::index_out_of_range(map_idx as i64, (maps.len() / 0x31) as i64));
             }
 
             if stage as u32 >= 0x31 || star != 0 {
-                return Err(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: stage as i64,
-                    limit: 0x31,
-                });
+                return Err(Fault::index_out_of_range(stage as i64, 0x31));
             }
 
             let cell = (map_idx as i64) * 0x31 + stage as u32 as i64;
 
             maps.get(cell as usize)
                 .map(|record| *record as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x06 | 0x08..=0x0a | 0x0f => {
             let (maps, cell) = match case {
@@ -119,11 +99,7 @@ pub fn get_stage_record(
 
             maps.get(cell as usize)
                 .map(|record| *record as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x0b => Ok(ctx.u8_at(AppContext::MAP_NEG15_CLEARED)? as i32),
         0x0c..=0x0e => {
@@ -157,11 +133,7 @@ pub fn get_stage_record(
 
             maps.get(cell as usize)
                 .copied()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x12 => {
             let cell =
@@ -179,11 +151,7 @@ pub fn get_stage_record(
 
             xor_row51_get(ctx.bytes_from(row as usize)?, stage as i64 as usize)
                 .map(|record| record as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stage_record",
-                    index: stage as i64,
-                    limit: 0x33,
-                })
+                .ok_or(Fault::index_out_of_range(stage as i64, 0x33))
         }
         0x14 => {
             let cell = (map_idx as i64) * 0x320

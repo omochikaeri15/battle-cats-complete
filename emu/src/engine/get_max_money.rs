@@ -5,20 +5,14 @@ use super::{
     get_map_rules, get_special_rule_params, get_treasure_value,
 };
 
-const SITE: &str = "get_max_money";
-
 pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
 
     if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 0)? {
-        let mut cap = *params.first().ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 0,
-        })?;
+        let mut cap = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
         let map_id = get_global_map_id(ctx, 0)?;
         let first_mode = get_map_rules(&ctx.special_rules, map_id)?
-            .ok_or(Fault::NullPointer { site: SITE })?
+            .ok_or(Fault::null_pointer())?
             .contents_type;
         let mut item = 0xcf;
         let mut second_mode = 0i32;
@@ -27,7 +21,7 @@ pub fn get_max_money(ctx: &mut AppContext, wallet: usize) -> Result<i32, Fault> 
             let map_id = get_global_map_id(ctx, 0)?;
 
             second_mode = get_map_rules(&ctx.special_rules, map_id)?
-                .ok_or(Fault::NullPointer { site: SITE })?
+                .ok_or(Fault::null_pointer())?
                 .contents_type;
             item = 0xf7;
         }

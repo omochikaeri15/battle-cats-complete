@@ -10,8 +10,6 @@ pub fn format_string2(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "format_string2",
-        })?
+        .ok_or(Fault::host_missing())?
         .format(pattern, &[first, second]))
 }

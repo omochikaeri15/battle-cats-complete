@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, DialogUpdateHandler};
 
-const SITE: &str = "dialog_set_on_update";
-
 pub fn dialog_set_on_update(
     ctx: &mut AppContext,
     dialog: u64,
@@ -12,7 +10,7 @@ pub fn dialog_set_on_update(
     ctx.dialogs
         .objects
         .get_mut(&dialog)
-        .ok_or(Fault::NullPointer { site: SITE })?
+        .ok_or(Fault::null_pointer())?
         .on_update = handler;
 
     Ok(dialog)

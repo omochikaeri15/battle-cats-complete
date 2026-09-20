@@ -5,9 +5,7 @@ use super::{AppContext, Imgcut};
 pub fn load_sheet_png(ctx: &mut AppContext, sheet: &mut Imgcut) -> Result<bool, Fault> {
     let Some(image) = ctx
         .assets()
-        .ok_or(Fault::HostMissing {
-            site: "load_sheet_png",
-        })?
+        .ok_or(Fault::host_missing())?
         .load_png(&sheet.png)
     else {
         return Ok(false);

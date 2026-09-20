@@ -10,13 +10,11 @@ use super::{
     unlock_popup_is_unlocked,
 };
 
-const SITE: &str = "battle_create_button";
-
 pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
     let sheet = Rc::clone(
         ctx.img001_sheet
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
     );
     let width = imgcut_get_sprite_cut(&sheet, 0x78)?[2];
     let height = imgcut_get_sprite_cut(&sheet, 0x78)?[3];
@@ -60,7 +58,7 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
     let common = Rc::clone(
         ctx.img039_sheet
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
     );
 
     let mut panel = ui_node_set_panel(

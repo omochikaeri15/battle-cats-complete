@@ -79,7 +79,6 @@ use super::{
     trait_zombie,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_entity(
     ctx: &mut AppContext,
     faction: i32,
@@ -741,11 +740,7 @@ pub fn spawn_entity(
         let enemy_row =
             *ctx.stage_enemies
                 .get(mag_slot as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "spawn_entity",
-                    index: mag_slot as i64,
-                    limit: ctx.stage_enemies.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
 
         set_boss_type(ctx, faction, slot, stage_entry_boss(&enemy_row))?;
 
@@ -809,11 +804,7 @@ pub fn spawn_entity(
         let enemy_row =
             *ctx.stage_enemies
                 .get(mag_slot as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "spawn_entity",
-                    index: mag_slot as i64,
-                    limit: ctx.stage_enemies.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
 
         set_score_value(ctx, faction, slot, stage_entry_col10(&enemy_row))?;
     } else {

@@ -9,9 +9,7 @@ pub fn analytics_params(
     params: &[(&[u8], FormatArg<'_>)],
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "analytics_params",
-        })?
+        .ok_or(Fault::host_missing())?
         .analytics_params(event, value, params);
 
     Ok(())

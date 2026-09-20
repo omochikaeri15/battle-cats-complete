@@ -27,11 +27,7 @@ pub fn wave_hit_cat_side(
     let proc_flags: [u8; 12] = proc_flags
         .get(..12)
         .and_then(|bytes| bytes.try_into().ok())
-        .ok_or(Fault::IndexOutOfRange {
-            site: "wave_hit_cat_side",
-            index: record as i64,
-            limit: 12,
-        })?;
+        .ok_or(Fault::index_out_of_range(record as i64, 12))?;
     let metal_killer_pct = ctx.i32_at(
         AppContext::WAVE_RECORDS
             .wrapping_add(record)

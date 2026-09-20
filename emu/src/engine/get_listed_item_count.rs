@@ -9,11 +9,7 @@ pub fn get_listed_item_count(ctx: &AppContext, index: i32) -> Result<i32, Fault>
         count =
             ctx.listed_item_counts
                 .get(index as u32 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_listed_item_count",
-                    index: index as i64,
-                    limit: ctx.listed_item_counts.len() as i64,
-                })?[1];
+                .ok_or(Fault::index_out_of_range(index as i64, ctx.listed_item_counts.len() as i64))?[1];
     }
 
     Ok(count)

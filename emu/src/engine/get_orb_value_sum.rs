@@ -23,10 +23,7 @@ pub fn get_orb_value_sum(
                 .slot_counts
                 .get(&unit_id)
                 .map(|row| row.count)
-                .ok_or(Fault::KeyNotFound {
-                    site: "get_orb_value_sum",
-                    key: unit_id as i64,
-                })?
+                .ok_or(Fault::key_not_found(unit_id as i64))?
         } else {
             0
         };
@@ -39,20 +36,12 @@ pub fn get_orb_value_sum(
 
         if orb_index != -1 {
             let orb = ctx.orb_store.orbs.get(orb_index as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: "get_orb_value_sum",
-                    index: orb_index as i64,
-                    limit: ctx.orb_store.orbs.len() as i64,
-                },
+                Fault::index_out_of_range(orb_index as i64, ctx.orb_store.orbs.len() as i64),
             )?;
 
             if orb.abil == abil {
                 value = value.wrapping_add(*orb.values.get(param as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: "get_orb_value_sum",
-                        index: param as i64,
-                        limit: orb.values.len() as i64,
-                    },
+                    Fault::index_out_of_range(param as i64, orb.values.len() as i64),
                 )?);
             }
         }

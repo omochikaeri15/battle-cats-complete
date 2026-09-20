@@ -2,9 +2,6 @@ use crate::{Fault, operation};
 
 use super::{DrawSink, Imgcut, draw_cut_scaled, draw_number_scaled};
 
-const SITE: &str = "draw_deploy_cost";
-
-#[allow(clippy::too_many_arguments)]
 pub fn draw_deploy_cost(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,
@@ -17,7 +14,7 @@ pub fn draw_deploy_cost(
     style: i32,
 ) -> Result<(), Fault> {
     if style == 1 {
-        let alt = alt.ok_or(Fault::NullPointer { site: SITE })?;
+        let alt = alt.ok_or(Fault::null_pointer())?;
         let span = 0x64i32.wrapping_sub(percent);
         let width = operation::div_100(span.wrapping_mul(0x16));
         let height = operation::div_100(span.wrapping_mul(0x1a));

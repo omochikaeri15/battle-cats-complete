@@ -9,8 +9,6 @@ pub fn substitute_tokens(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "substitute_tokens",
-        })?
+        .ok_or(Fault::host_missing())?
         .substitute(text, tokens))
 }

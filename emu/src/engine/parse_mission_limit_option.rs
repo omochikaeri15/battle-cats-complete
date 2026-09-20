@@ -5,8 +5,6 @@ use super::{
     json_string_as_string, json_value_as_int, json_value_as_string,
 };
 
-const SITE: &str = "parse_mission_limit_option";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct MissionLimitOption {
     pub item_limit: i32,
@@ -39,18 +37,14 @@ pub fn parse_mission_limit_option(
     out.stage.clear();
 
     let Some(JsonNode::Object(fields)) = node else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     if let Some(JsonNode::Array(values)) = fields.get(b"Map".as_slice()) {
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.map.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -65,11 +59,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.stage.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -108,11 +98,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.rarity_limit.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -127,11 +113,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.slot_limit.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -146,11 +128,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.slot_option_rule.push(match element {
                 JsonNode::String(text) => json_string_as_string(text),
@@ -165,11 +143,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.cost_limit_min.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -184,11 +158,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.cost_limit_max.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -203,11 +173,7 @@ pub fn parse_mission_limit_option(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.chara_limit.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),

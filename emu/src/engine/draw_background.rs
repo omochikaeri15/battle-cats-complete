@@ -7,8 +7,6 @@ use super::{
     imgcut_get_sprite_cut, set_tint, set_transform,
 };
 
-const SITE: &str = "draw_background";
-
 pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let horizon = camera_vertical_correction(ctx)?.wrapping_add(0x208);
     let color = get_bg_sky_bottom(ctx, AppContext::BG_SETUP)?;
@@ -82,7 +80,7 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let sheet = ctx.bg_sheet.clone();
-    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
     let scenery = operation::div_255(imgcut_get_sprite_cut(sheet, 0)?[3].wrapping_mul(0x280));
 
     ctx.set_block_at::<8>(AppContext::BG_TINT_XS, [0; 8])?;

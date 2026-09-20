@@ -7,8 +7,6 @@ use super::{
     page_list_set_page,
 };
 
-const SITE: &str = "combo_list_rebuild";
-
 pub fn combo_list_rebuild(
     ctx: &mut AppContext,
     tab: i32,
@@ -25,11 +23,7 @@ pub fn combo_list_rebuild(
             .combo_store
             .tab_kinds
             .get(tab as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: tab as i64,
-                limit: ctx.combo_store.tab_kinds.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(tab as i64, ctx.combo_store.tab_kinds.len() as i64))?
             .len();
         let mut entry = 0usize;
 
@@ -38,18 +32,10 @@ pub fn combo_list_rebuild(
             let cells = ctx
                 .combo_definitions
                 .get(definition)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: definition as i64,
-                    limit: ctx.combo_definitions.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(definition as i64, ctx.combo_definitions.len() as i64))?;
 
             if kind
-                != *cells.get(13).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 13,
-                    limit: cells.len() as i64,
-                })?
+                != *cells.get(13).ok_or(Fault::index_out_of_range(13, cells.len() as i64))?
             {
                 entry += 1;
                 continue;
@@ -62,7 +48,7 @@ pub fn combo_list_rebuild(
                 .combo_store
                 .records
                 .last_mut()
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
 
             record.unit_count = 5;
 
@@ -99,11 +85,7 @@ pub fn combo_list_rebuild(
                             3..=5 => &mut record.power[slot - 3],
                             6 => &mut record.effect_count,
                             _ => {
-                                return Err(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: cell as i64,
-                                    limit: 19,
-                                });
+                                return Err(Fault::index_out_of_range(cell as i64, 19));
                             }
                         };
 
@@ -121,11 +103,7 @@ pub fn combo_list_rebuild(
                 *ctx.combo_store
                     .states
                     .get(definition)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: definition as i64,
-                        limit: ctx.combo_store.states.len() as i64,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(definition as i64, ctx.combo_store.states.len() as i64))?;
 
             let revealed = *ctx
                 .combo_store
@@ -136,7 +114,7 @@ pub fn combo_list_rebuild(
                 .combo_store
                 .records
                 .last_mut()
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
 
             record.reveal_badge = revealed;
             record.revealed = revealed;
@@ -145,7 +123,7 @@ pub fn combo_list_rebuild(
                 .combo_store
                 .records
                 .last()
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
 
             if !combo_unlocked(ctx, record)? {
                 ctx.combo_store.records.pop();
@@ -157,17 +135,13 @@ pub fn combo_list_rebuild(
                     .combo_store
                     .records
                     .last_mut()
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 record.state = 0;
                 *ctx.combo_store
                     .states
                     .get_mut(definition)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: definition as i64,
-                        limit: 0,
-                    })? = 0;
+                    .ok_or(Fault::index_out_of_range(definition as i64, 0))? = 0;
                 ctx.combo_store.unlock_notices.insert(definition as i32, 1);
                 ctx.combo_store.revealed.insert(definition as i32, 1);
 
@@ -175,7 +149,7 @@ pub fn combo_list_rebuild(
                     .combo_store
                     .records
                     .last_mut()
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 record.revealed = 1;
                 record.reveal_badge = 1;
@@ -200,7 +174,7 @@ pub fn combo_list_rebuild(
                     .combo_store
                     .records
                     .last()
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 if record.unit[1..].iter().all(|&member| member != unit) && record.unit[0] != unit {
                     ctx.combo_store.records.pop();

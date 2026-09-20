@@ -24,11 +24,7 @@ pub fn treasure_festival_active(ctx: &AppContext) -> Result<bool, Fault> {
     pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
 
     Ok(
-        (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "treasure_festival_active",
-            index: 0,
-            limit: 1,
-        })? as i32)
+        (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
             > 0,
     )
 }

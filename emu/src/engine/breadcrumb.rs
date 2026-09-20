@@ -8,7 +8,7 @@ pub fn breadcrumb(ctx: &mut AppContext, id: i32) -> Result<(), Fault> {
     }
 
     ctx.meta()
-        .ok_or(Fault::HostMissing { site: "breadcrumb" })?
+        .ok_or(Fault::host_missing())?
         .breadcrumb(id);
 
     Ok(())

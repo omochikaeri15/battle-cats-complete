@@ -23,20 +23,12 @@ pub fn record_stage_played(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut row = 0usize;
 
     while row < ctx.stage_enemies.len() {
-        let entry = ctx.stage_enemies.get(row).ok_or(Fault::IndexOutOfRange {
-            site: "record_stage_played",
-            index: row as i64,
-            limit: 0,
-        })?;
+        let entry = ctx.stage_enemies.get(row).ok_or(Fault::index_out_of_range(row as i64, 0))?;
         let seen = ((stage_entry_enemy_id(entry) as i64) * 4 + AppContext::ENEMY_GUIDE_SEEN as i64)
             as usize;
 
         if ctx.i32_at(seen)? == 0 {
-            let entry = ctx.stage_enemies.get(row).ok_or(Fault::IndexOutOfRange {
-                site: "record_stage_played",
-                index: row as i64,
-                limit: 0,
-            })?;
+            let entry = ctx.stage_enemies.get(row).ok_or(Fault::index_out_of_range(row as i64, 0))?;
             let seen = ((stage_entry_enemy_id(entry) as i64) * 4
                 + AppContext::ENEMY_GUIDE_SEEN as i64) as usize;
 

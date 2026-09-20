@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, call_rng, collect_lose_tip_candidates};
 
-const SITE: &str = "pick_lose_tip";
-
 pub fn pick_lose_tip(ctx: &mut AppContext) -> Result<i32, Fault> {
     let candidates = collect_lose_tip_candidates(ctx)?;
     let count = candidates.len() as i32;
@@ -17,9 +15,5 @@ pub fn pick_lose_tip(ctx: &mut AppContext) -> Result<i32, Fault> {
     candidates
         .get(pick as i64 as usize)
         .copied()
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: pick as i64,
-            limit: count as i64,
-        })
+        .ok_or(Fault::index_out_of_range(pick as i64, count as i64))
 }

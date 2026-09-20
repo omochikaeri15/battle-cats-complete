@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, get_cannon_base_level};
 
-const SITE: &str = "get_castle_hp_growth";
-
 pub fn get_castle_hp_growth(ctx: &AppContext, level: i32) -> Result<i32, Fault> {
     let level = if level == -1 {
         get_cannon_base_level(ctx)?.wrapping_add(1)
@@ -36,7 +34,7 @@ pub fn get_castle_hp_growth(ctx: &AppContext, level: i32) -> Result<i32, Fault> 
                     ))
                 }
                 0 => Ok(operation::idiv(span.wrapping_mul(progress), divisor)
-                    .ok_or(Fault::divide(SITE, divisor as i64))?
+                    .ok_or(Fault::divide(divisor as i64))?
                     .wrapping_add(step.value1)),
                 _ => Ok(0),
             };

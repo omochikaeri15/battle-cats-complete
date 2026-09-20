@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, draw_context, draw_cut_scaled, get_map_type};
 
-const SITE: &str = "draw_deck_preset_mark";
-
 pub fn draw_deck_preset_mark(
     ctx: &mut AppContext,
     slot: i32,
@@ -44,7 +42,7 @@ pub fn draw_deck_preset_mark(
     }
 
     let sheet = ctx.img002_sheet.clone();
-    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
     draw_cut_scaled(
         draw_context(&mut ctx.draw)?,

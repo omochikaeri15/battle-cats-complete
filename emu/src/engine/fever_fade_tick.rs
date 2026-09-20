@@ -31,11 +31,7 @@ pub fn fever_fade_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         return Ok(());
     }
 
-    let length = *params.get(2).ok_or(Fault::IndexOutOfRange {
-        site: "fever_fade_tick",
-        index: 2,
-        limit: params.len() as i64,
-    })?;
+    let length = *params.get(2).ok_or(Fault::index_out_of_range(2, params.len() as i64))?;
 
     ctx.special_rules.fade_phase = if length.wrapping_sub(remaining) >= length.wrapping_add(-5) {
         6i32.wrapping_sub(remaining)

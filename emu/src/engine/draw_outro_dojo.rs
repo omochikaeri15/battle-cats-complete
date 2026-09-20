@@ -6,8 +6,6 @@ use super::{
     new_button_draw, ranking_rank_by_id, set_tint, touch_is_down, AppContext, DECK_PRESS_SIZE_TABLE, OUTRO_SLIDE_TABLE,
 };
 
-const SITE: &str = "draw_outro_dojo";
-
 pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     let phase = ctx.i32_at(AppContext::OUTRO_PHASE)?;
 
@@ -15,10 +13,10 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
         let step = if (frame as u32) >= 0xc || phase != 1 { 0xc } else { frame };
         let banner = ctx.img004_sheet.clone();
-        let banner = banner.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let banner = banner.as_deref().ok_or(Fault::null_pointer())?;
         let slide = *OUTRO_SLIDE_TABLE
             .get(step as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+            .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
         let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
 
         draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0xbe, 0);
@@ -34,7 +32,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let slide = *OUTRO_SLIDE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
             let left = 0i32.wrapping_sub(slide);
             let width = get_drawable_width(ctx)?;
 
@@ -42,7 +40,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             glow_set(draw_context(&mut ctx.draw)?, 0);
 
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
             let score = ctx.i32_at(AppContext::SCORE_TOTAL)?;
             let offset = imgcut_get_sprite_cut(banner, 5)?[2].wrapping_add(0x14);
@@ -89,7 +87,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
     if get_map_type(ctx, 0)? == 4 && ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x26 {
         let plate = ctx.outro_event_sheets[1].clone();
-        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_sprite_cut(plate, 0)?[2].wrapping_mul(0x86);
         let height = imgcut_get_sprite_cut(plate, 0)?[3].wrapping_mul(0x86);
         let centre = operation::div_2(get_drawable_width(ctx)?);
@@ -99,12 +97,12 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0xff, 0xff);
 
         let title = ctx.stage_name_sheet.clone();
-        let title = title.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let title = title.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(draw_context(&mut ctx.draw)?, title, left.wrapping_add(0x2e), 0x48, 0);
 
         let panel = ctx.outro_event_sheets[0].clone();
-        let panel = panel.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let panel = panel.as_deref().ok_or(Fault::null_pointer())?;
         let inset = left.wrapping_add(0x2b);
 
         draw_cut(draw_context(&mut ctx.draw)?, panel, inset, 0x95, 0xb);
@@ -122,7 +120,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         draw_cut(draw_context(&mut ctx.draw)?, panel, row, 0x11a, 0xc);
 
         let small = ctx.img001_second_sheet.clone();
-        let small = small.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let small = small.as_deref().ok_or(Fault::null_pointer())?;
         let map = ctx.i32_at(AppContext::MAP_INDEX)?;
         let entry = entry_find_by_id(&ctx.ranking_entries, map);
 
@@ -136,19 +134,19 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let span = 0x64i32.wrapping_sub(ranking_rank_by_id(&ctx.ranking_entries, map));
         let percent = operation::div_900(held.wrapping_mul(held).wrapping_mul(span)).wrapping_add(rank);
         let gauge = ctx.outro_event_sheets[0].clone();
-        let gauge = gauge.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let gauge = gauge.as_deref().ok_or(Fault::null_pointer())?;
         let small = ctx.img001_second_sheet.clone();
-        let small = small.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let small = small.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_percent_number(ctx, gauge, small, left.wrapping_add(0x143), 0x50, percent)?;
 
         if ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x44 && hidden == 0 {
             let plate = ctx.img101_sheet.clone();
-            let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
             let step = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
             let bounce = *DECK_PRESS_SIZE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
             let half = operation::div_2(bounce);
             let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
             let y = ctx
@@ -160,7 +158,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, bounce.wrapping_add(0x17d), bounce.wrapping_add(0x48), 3);
 
             let label = ctx.img006_sheet.clone();
-            let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let label = label.as_deref().ok_or(Fault::null_pointer())?;
             let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
@@ -179,7 +177,7 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                 let plate = ctx.img101_sheet.clone();
-                let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
                 let y = ctx
                     .i32_at(AppContext::LETTERBOX_SHIFT)?
@@ -192,18 +190,18 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, 0x17d, 0x48, cut as i32);
             }
 
-            let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+            let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_draw(ctx, ok, 0, 0)?;
 
-            let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+            let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
             new_button_draw(ctx, share, 0, 0)?;
         }
     }
 
     if dialog_top(ctx).is_some() {
-        let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+        let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
 
         dialog_draw(ctx, dialog, 1)?;
     }
@@ -216,11 +214,11 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         return Ok(());
     }
 
-    let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+    let ok = button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
     new_button_draw(ctx, ok, 0, 0)?;
 
-    let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+    let share = button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
     new_button_draw(ctx, share, 0, 0)
 }

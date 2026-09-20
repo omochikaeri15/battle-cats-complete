@@ -5,8 +5,6 @@ use super::{
     open_asset_stream, orb_parse_record,
 };
 
-const SITE: &str = "load_orb_database_json";
-
 pub fn load_orb_database_json(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.orb_store.orbs.clear();
 
@@ -17,14 +15,14 @@ pub fn load_orb_database_json(ctx: &mut AppContext) -> Result<(), Fault> {
     let source = json_source_from_string(&bytes);
     let document = json_parse_object_document(Some(source))?;
     let Some(JsonNode::Object(root)) = document.as_ref() else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     let mut index = 0usize;
 
     loop {
         let Some(JsonNode::Array(entries)) = root.get(b"ID".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         if index >= entries.len() {
@@ -37,19 +35,15 @@ pub fn load_orb_database_json(ctx: &mut AppContext) -> Result<(), Fault> {
             .orb_store
             .orbs
             .last_mut()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         record.id = index as i32;
 
         let Some(JsonNode::Array(entries)) = root.get(b"ID".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
-        let element = entries.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: entries.len() as i64,
-        })?;
+        let element = entries.get(index).ok_or(Fault::index_out_of_range(index as i64, entries.len() as i64))?;
 
         orb_parse_record(
             record,

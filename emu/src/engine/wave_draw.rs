@@ -5,8 +5,6 @@ use super::{
     get_drawable_width, maanim_execute,
 };
 
-const SITE: &str = "wave_draw";
-
 pub fn wave_draw(ctx: &mut AppContext, depth: i32, slot: i32, side: i32) -> Result<(), Fault> {
     let y = depth.wrapping_add(0x1cc);
 
@@ -51,11 +49,7 @@ pub fn wave_draw(ctx: &mut AppContext, depth: i32, slot: i32, side: i32) -> Resu
                     &ctx.smallwave_attack_e_anim,
                 ),
                 (index, _) => {
-                    return Err(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 2,
-                    });
+                    return Err(Fault::index_out_of_range(index as i64, 2));
                 }
             };
             let frame = get_anim_len(anim)?.wrapping_add(!counter);

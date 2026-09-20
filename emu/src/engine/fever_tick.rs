@@ -5,8 +5,6 @@ use super::{
     sound_manager,
 };
 
-const SITE: &str = "fever_tick";
-
 pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
     let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 0xc)?.cloned()
@@ -28,21 +26,13 @@ pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
         return refresh_cat_speeds(ctx);
     }
 
-    let fever_rule = *params.first().ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 0,
-        limit: params.len() as i64,
-    })?;
+    let fever_rule = *params.first().ok_or(Fault::index_out_of_range(0, params.len() as i64))?;
 
     if fever_rule != 0 {
         return Ok(());
     }
 
-    let needed = *params.get(1).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 1,
-        limit: params.len() as i64,
-    })?;
+    let needed = *params.get(1).ok_or(Fault::index_out_of_range(1, params.len() as i64))?;
     let baseline = ctx.special_rules.point_baseline;
     let target = operation::cvttsd2si((points as f64 - baseline as f64) * 294.0 / needed as f64);
     let fill = ctx.special_rules.gauge_fill;
@@ -59,11 +49,7 @@ pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
         return Ok(());
     }
 
-    let length = *params.get(2).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 2,
-        limit: params.len() as i64,
-    })?;
+    let length = *params.get(2).ok_or(Fault::index_out_of_range(2, params.len() as i64))?;
 
     ctx.special_rules.fever_count = length;
     ctx.special_rules.fever_frame = 0;

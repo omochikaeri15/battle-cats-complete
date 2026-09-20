@@ -5,8 +5,6 @@ use super::{
     get_drawable_width, get_right_inset_logical, get_stage_record, get_top_inset_offset,
 };
 
-const SITE: &str = "draw_cannon";
-
 const GAUGE: [(i32, i32, i32); 9] = [
     (0xd, 0x76, 0xb),
     (0x1a, 0x6a, 0xc),
@@ -35,7 +33,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
                 draw_context(&mut ctx.draw)?,
                 ctx.img002_sheet
                     .as_deref()
-                    .ok_or(Fault::NullPointer { site: SITE })?,
+                    .ok_or(Fault::null_pointer())?,
                 x,
                 y,
                 7,
@@ -55,7 +53,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
                 draw_context(&mut ctx.draw)?,
                 ctx.img002_sheet
                     .as_deref()
-                    .ok_or(Fault::NullPointer { site: SITE })?,
+                    .ok_or(Fault::null_pointer())?,
                 x,
                 y,
                 0xa,
@@ -72,7 +70,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             0xb,
@@ -89,7 +87,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
                 draw_context(&mut ctx.draw)?,
                 ctx.img002_sheet
                     .as_deref()
-                    .ok_or(Fault::NullPointer { site: SITE })?,
+                    .ok_or(Fault::null_pointer())?,
                 x,
                 y,
                 *cut,
@@ -105,7 +103,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             0x14,
@@ -125,7 +123,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             9,
@@ -143,7 +141,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img002_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         x,
         y,
         8,
@@ -155,7 +153,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(
         AppContext::DRAW_TEMP_0,
-        operation::idiv(scaled, recharge).ok_or(Fault::divide(SITE, recharge as i64))?,
+        operation::idiv(scaled, recharge).ok_or(Fault::divide(recharge as i64))?,
     )?;
 
     for (threshold, offset, cut) in GAUGE {
@@ -173,7 +171,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             cut,

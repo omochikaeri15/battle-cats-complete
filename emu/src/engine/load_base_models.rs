@@ -8,8 +8,6 @@ use super::{
     string_format_int2, string_format_int3, texture_cache_load,
 };
 
-const SITE: &str = "load_base_models";
-
 pub fn load_base_models(
     ctx: &mut AppContext,
     faction: i32,
@@ -31,11 +29,7 @@ pub fn load_base_models(
 
                 ctx.base_sheets
                     .get(1)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 1,
-                        limit: ctx.base_sheets.len() as i64,
-                    })?
+                    .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
                     .set(sheet);
 
                 let mut variant = 0;
@@ -63,11 +57,7 @@ pub fn load_base_models(
                     let slot = variant as usize;
                     let limit = ctx.base_models.len() as i64;
                     let mut model = std::mem::take(ctx.base_models.get_mut(slot).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: slot as i64,
-                            limit,
-                        },
+                        Fault::index_out_of_range(slot as i64, limit),
                     )?);
 
                     mamodel_load(ctx, &mut model, &name)?;
@@ -82,11 +72,7 @@ pub fn load_base_models(
                     )?;
                     let limit = ctx.base_anims.len() as i64;
                     let mut anim = std::mem::take(ctx.base_anims.get_mut(slot).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: slot as i64,
-                            limit,
-                        },
+                        Fault::index_out_of_range(slot as i64, limit),
                     )?);
 
                     maanim_load(ctx, &mut anim, &name)?;
@@ -106,11 +92,7 @@ pub fn load_base_models(
 
                 ctx.base_sheets
                     .get(part as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: part as i64,
-                        limit: ctx.base_sheets.len() as i64,
-                    })?
+                    .ok_or(Fault::index_out_of_range(part as i64, ctx.base_sheets.len() as i64))?
                     .set(sheet);
             }
         }

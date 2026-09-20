@@ -26,10 +26,7 @@ pub fn get_orb_value_vs_trait(
                 .slot_counts
                 .get(&unit_id)
                 .map(|row| row.count)
-                .ok_or(Fault::KeyNotFound {
-                    site: "get_orb_value_vs_trait",
-                    key: unit_id as i64,
-                })?
+                .ok_or(Fault::key_not_found(unit_id as i64))?
         } else {
             0
         };
@@ -42,11 +39,7 @@ pub fn get_orb_value_vs_trait(
 
         if orb_index != -1 {
             let orb = ctx.orb_store.orbs.get(orb_index as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: "get_orb_value_vs_trait",
-                    index: orb_index as i64,
-                    limit: ctx.orb_store.orbs.len() as i64,
-                },
+                Fault::index_out_of_range(orb_index as i64, ctx.orb_store.orbs.len() as i64),
             )?;
 
             if orb.abil == abil {
@@ -59,19 +52,11 @@ pub fn get_orb_value_vs_trait(
                         .orb_store
                         .trait_masks
                         .get(orb.trait_index as i64 as usize)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: "get_orb_value_vs_trait",
-                            index: orb.trait_index as i64,
-                            limit: ctx.orb_store.trait_masks.len() as i64,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(orb.trait_index as i64, ctx.orb_store.trait_masks.len() as i64))?;
 
                     if trait_bit & trait_mask != 0 {
                         value = value.wrapping_add(*orb.values.get(param as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: "get_orb_value_vs_trait",
-                                index: param as i64,
-                                limit: orb.values.len() as i64,
-                            },
+                            Fault::index_out_of_range(param as i64, orb.values.len() as i64),
                         )?);
                         break;
                     }

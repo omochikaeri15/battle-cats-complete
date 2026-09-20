@@ -11,7 +11,5 @@ pub trait SoundManager {
 }
 
 pub fn sound_manager(ctx: &mut AppContext) -> Result<&mut (dyn SoundManager + 'static), Fault> {
-    ctx.sound().ok_or(Fault::HostMissing {
-        site: "sound_manager",
-    })
+    ctx.sound().ok_or(Fault::host_missing())
 }

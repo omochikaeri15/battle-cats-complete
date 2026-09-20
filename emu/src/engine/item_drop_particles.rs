@@ -7,8 +7,6 @@ use super::{
     std_string_from_cstr, string_format_int, texture_cache_load,
 };
 
-const SITE: &str = "item_drop_particles";
-
 pub fn item_drop_particles(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut queue = 0usize;
 
@@ -107,7 +105,7 @@ pub fn item_drop_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let item = ctx.item_drop_queue[queue][0];
         let icon = ctx.drop_icons.entry(item).or_default().clone();
-        let icon = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
         let wide = imgcut_get_width(icon).wrapping_mul(0x3c);
         let tall = imgcut_get_height(icon).wrapping_mul(0x3c);
         let width = operation::div_100(wide);

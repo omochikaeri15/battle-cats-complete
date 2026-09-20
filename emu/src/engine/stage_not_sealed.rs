@@ -10,8 +10,5 @@ pub fn stage_not_sealed(ctx: &AppContext, enemy_id: i32) -> Result<bool, Fault> 
     Ok(*ctx
         .altar_unsealed
         .get(&enemy_id)
-        .ok_or(Fault::KeyNotFound {
-            site: "stage_not_sealed",
-            key: enemy_id as i64,
-        })?)
+        .ok_or(Fault::key_not_found(enemy_id as i64))?)
 }

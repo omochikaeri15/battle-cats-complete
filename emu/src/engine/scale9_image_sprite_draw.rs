@@ -5,14 +5,12 @@ use super::{
     scale9_image_sprite_update, set_color, set_tint,
 };
 
-const SITE: &str = "scale9_image_sprite_draw";
-
 pub fn scale9_image_sprite_draw(ctx: &mut AppContext, sprite: &mut Sprite) -> Result<(), Fault> {
     scale9_image_sprite_update(sprite, None);
 
     if sprite.visible != 0 {
         let sheet = sprite.sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let labelled = sheet.whole != 0;
         let saved = if labelled {
             draw_context(&mut ctx.draw)?.tint()

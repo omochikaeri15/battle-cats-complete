@@ -15,8 +15,6 @@ use super::{
     stage_not_sealed, stat_conjure_unit_id,
 };
 
-const SITE: &str = "deploy_unit";
-
 pub fn deploy_unit(
     ctx: &mut AppContext,
     faction: i32,
@@ -235,11 +233,7 @@ pub fn deploy_unit(
                         ctx.fixed_lineup_store
                             .units
                             .get(listed)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: listed as i64,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(listed as i64, 0))?;
                     let (unit_id, fixed_level) =
                         (unit.unit_id, unit.plus_level.wrapping_add(unit.level));
 
@@ -279,31 +273,19 @@ pub fn deploy_unit(
                 if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 8)? {
                     let params = params.to_vec();
                     let rarity = get_unit_rarity(ctx, get_button_unit_id(ctx, 0, slot)?)?;
-                    let mask = *params.first().ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
+                    let mask = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
                     if (mask as u32 >> (rarity as u32 & 0x1f)) & 1 != 0 {
                         let mut queued = 0i32;
 
                         loop {
                             if queued
-                                >= *params.get(1).ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 1,
-                                    limit: params.len() as i64,
-                                })?
+                                >= *params.get(1).ok_or(Fault::index_out_of_range(1, params.len() as i64))?
                             {
                                 break;
                             }
 
-                            let gap = *params.get(2).ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 2,
-                                limit: params.len() as i64,
-                            })?;
+                            let gap = *params.get(2).ok_or(Fault::index_out_of_range(2, params.len() as i64))?;
 
                             queued = queued.wrapping_add(1);
                             ctx.deploy_queue.push(
@@ -333,7 +315,7 @@ pub fn deploy_unit(
                     let store = ctx
                         .event_items
                         .as_mut()
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
 
                     award_event_points(store, 0, &args)?;
                 }

@@ -11,9 +11,7 @@ pub fn config_json_int(
 ) -> Result<i32, Fault> {
     let value = ctx
         .platform()
-        .ok_or(Fault::HostMissing {
-            site: "config_json_int",
-        })?
+        .ok_or(Fault::host_missing())?
         .config_json_int(section, name);
     let Some(value) = value else {
         return Ok(min);

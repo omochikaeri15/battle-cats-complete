@@ -10,9 +10,7 @@ pub fn analytics_record(
     params: &[(&[u8], FormatArg<'_>)],
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "analytics_record",
-        })?
+        .ok_or(Fault::host_missing())?
         .analytics_record(code, value, flag, params);
 
     Ok(())

@@ -20,18 +20,12 @@ pub fn get_special_rule_params<'a>(
             .fever
             .get(&rule)
             .map(Some)
-            .ok_or(Fault::KeyNotFound {
-                site: "get_special_rule_params",
-                key: rule as i64,
-            });
+            .ok_or(Fault::key_not_found(rule as i64));
     }
 
     special_rules_at(store, &map_id)?
         .normal
         .get(&rule)
         .map(Some)
-        .ok_or(Fault::KeyNotFound {
-            site: "get_special_rule_params",
-            key: rule as i64,
-        })
+        .ok_or(Fault::key_not_found(rule as i64))
 }

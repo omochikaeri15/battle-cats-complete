@@ -4,8 +4,6 @@ use crate::Fault;
 
 use super::{AppContext, call_rng};
 
-const SITE: &str = "ex_group_pick";
-
 #[derive(Clone, Default)]
 pub struct ExGroup {
     pub group: i32,
@@ -25,35 +23,26 @@ pub fn ex_group_pick(ctx: &mut AppContext, map: i32, stage: i32) -> Result<i32, 
     let mut index = 0usize;
 
     loop {
-        let group = groups.get(&key).ok_or(Fault::KeyNotFound {
-            site: SITE,
-            key: key as i64,
-        })?;
+        let group = groups.get(&key).ok_or(Fault::key_not_found(key as i64))?;
 
         if group.thresholds.len() <= index {
             return Ok(-1);
         }
 
-        let group = groups.get(&key).ok_or(Fault::KeyNotFound {
-            site: SITE,
-            key: key as i64,
-        })?;
+        let group = groups.get(&key).ok_or(Fault::key_not_found(key as i64))?;
         let threshold = *group
             .thresholds
             .get(index)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if roll < threshold {
-            let group = groups.get(&key).ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: key as i64,
-            })?;
+            let group = groups.get(&key).ok_or(Fault::key_not_found(key as i64))?;
 
             return group
                 .indices
                 .get(index)
                 .copied()
-                .ok_or(Fault::OutOfRange { site: SITE });
+                .ok_or(Fault::out_of_range());
         }
 
         index += 1;

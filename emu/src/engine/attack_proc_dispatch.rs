@@ -16,7 +16,6 @@ use super::{
     start_immune_vfx, turn_on_proc_badge,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn attack_proc_dispatch(
     ctx: &mut AppContext,
     faction: i32,

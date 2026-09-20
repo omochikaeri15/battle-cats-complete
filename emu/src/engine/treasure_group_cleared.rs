@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, treasure_group_at};
 
-const SITE: &str = "treasure_group_cleared";
-
 pub fn treasure_group_cleared(
     ctx: &mut AppContext,
     chapter: i32,
@@ -23,11 +21,7 @@ pub fn treasure_group_cleared(
         }
 
         let castles = treasure_group_at(&ctx.treasure_store, chapter, group)?.castles;
-        let castle = *castles.get(index as usize).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index,
-            limit: castles.len() as i64,
-        })?;
+        let castle = *castles.get(index as usize).ok_or(Fault::index_out_of_range(index, castles.len() as i64))?;
         let stage = if castle > 0x2d { castle } else { 0x2d - castle };
 
         if !*ctx

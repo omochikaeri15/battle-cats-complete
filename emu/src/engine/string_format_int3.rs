@@ -11,9 +11,7 @@ pub fn string_format_int3(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "string_format_int3",
-        })?
+        .ok_or(Fault::host_missing())?
         .format_args(
             pattern,
             &[

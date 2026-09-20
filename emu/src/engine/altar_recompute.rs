@@ -2,13 +2,11 @@ use crate::Fault;
 
 use super::{AppContext, get_stage_record, map_index_of_map_id, map_type_of_map_id};
 
-const SITE: &str = "altar_recompute";
-
 #[derive(Clone, Copy, Default)]
 pub struct AltarReward {
     pub amount: i32,
+    pub unseal: i32,
     pub enemy: i32,
-    pub unseal: u8,
 }
 
 pub fn altar_recompute(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -38,20 +36,14 @@ pub fn altar_recompute(ctx: &mut AppContext) -> Result<(), Fault> {
             let cap = ctx
                 .altar_level_caps
                 .get_mut(&reward.enemy)
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: reward.enemy as i64,
-                })?;
+                .ok_or(Fault::key_not_found(reward.enemy as i64))?;
 
             *cap = cap.wrapping_add(reward.amount);
 
             let unsealed = ctx
                 .altar_unsealed
                 .get_mut(&reward.enemy)
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: reward.enemy as i64,
-                })?;
+                .ok_or(Fault::key_not_found(reward.enemy as i64))?;
 
             *unsealed |= reward.unseal != 0;
         }

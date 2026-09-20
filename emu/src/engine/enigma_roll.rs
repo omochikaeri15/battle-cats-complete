@@ -7,8 +7,6 @@ use super::{
     event_schedule_active, get_stage_record, map_index_of_map_id, map_type_of_map_id, now_seconds,
 };
 
-const SITE: &str = "enigma_roll";
-
 pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
     if ctx.enigma.active.len() > 3 {
         return Ok(0);
@@ -68,7 +66,7 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
     let group = picked as i64 as usize;
 
     if ctx.enigma.groups.len() <= group {
-        return Err(Fault::OutOfRange { site: SITE });
+        return Err(Fault::out_of_range());
     }
 
     let mut total = 0i32;
@@ -79,7 +77,7 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
             .enigma
             .groups
             .get(group)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if slot >= entry.stage_ids.len() {
             break;
@@ -88,20 +86,16 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
         let id = *entry
             .stage_ids
             .get(slot)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if !*excluded.entry(id).or_insert(false) {
             let entry = ctx
                 .enigma
                 .groups
                 .get(group)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
-            total = total.wrapping_add(*entry.weights.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: entry.weights.len() as i64,
-            })?);
+            total = total.wrapping_add(*entry.weights.get(slot).ok_or(Fault::index_out_of_range(slot as i64, entry.weights.len() as i64))?);
         }
 
         slot += 1;
@@ -117,7 +111,7 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
             .enigma
             .groups
             .get(group)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if slot >= entry.stage_ids.len() {
             return Ok(result);
@@ -126,30 +120,26 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
         let id = *entry
             .stage_ids
             .get(slot)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if !*excluded.entry(id).or_insert(false) {
             let entry = ctx
                 .enigma
                 .groups
                 .get(group)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
-            sum = sum.wrapping_add(*entry.weights.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: entry.weights.len() as i64,
-            })?);
+            sum = sum.wrapping_add(*entry.weights.get(slot).ok_or(Fault::index_out_of_range(slot as i64, entry.weights.len() as i64))?);
 
             if roll < sum {
                 let map = *ctx
                     .enigma
                     .groups
                     .get(group)
-                    .ok_or(Fault::OutOfRange { site: SITE })?
+                    .ok_or(Fault::out_of_range())?
                     .stage_ids
                     .get(slot)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
                 let time = now_seconds(ctx)?;
 
                 ctx.enigma.active.push(EnigmaActive {
@@ -160,7 +150,7 @@ pub fn enigma_roll(ctx: &mut AppContext) -> Result<i32, Fault> {
                 });
 
                 ctx.meta()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .enigma_opened(map, time);
 
                 return Ok(result);

@@ -19,7 +19,5 @@ pub fn point_band_lookup(rule: &PointRuleDetail, value: i32) -> Result<i32, Faul
         .values()
         .next_back()
         .copied()
-        .ok_or(Fault::NullPointer {
-            site: "point_band_lookup",
-        })
+        .ok_or(Fault::null_pointer())
 }

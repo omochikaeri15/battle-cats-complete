@@ -1,6 +1,5 @@
 use super::{DrawSink, Imgcut};
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_cut_rotated_f(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,

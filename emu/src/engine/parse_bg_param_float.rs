@@ -8,8 +8,6 @@ use super::{
     json_value_as_double, json_value_as_int, json_value_as_string, parse_bg_param_bound_float,
 };
 
-const SITE: &str = "parse_bg_param_float";
-
 pub fn parse_bg_param_float(
     spec: &mut BgParamSpec<f32>,
     node: Option<&BTreeMap<Vec<u8>, JsonNode>>,
@@ -43,7 +41,7 @@ pub fn parse_bg_param_float(
 
         loop {
             let Some(JsonNode::Array(values)) = node.get(b"values".as_slice()) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
 
             if index >= values.len() {

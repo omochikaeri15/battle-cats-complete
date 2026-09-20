@@ -15,47 +15,26 @@ pub fn get_stage_count(ctx: &AppContext, map_type: i32, map_idx: i32) -> Result<
         }
     }
 
-    let data_ids = ctx.map_data_ids.get(&map_type).ok_or(Fault::KeyNotFound {
-        site: "get_stage_count",
-        key: map_type as i64,
-    })?;
+    let data_ids = ctx.map_data_ids.get(&map_type).ok_or(Fault::key_not_found(map_type as i64))?;
 
     if map_idx as u32 >= 0x1f4 {
-        return Err(Fault::IndexOutOfRange {
-            site: "get_stage_count",
-            index: map_idx as i64,
-            limit: 0x1f4,
-        });
+        return Err(Fault::index_out_of_range(map_idx as i64, 0x1f4));
     }
 
     let data_id = *data_ids
         .get(map_idx as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "get_stage_count",
-            index: map_idx as i64,
-            limit: 0x1f4,
-        })?;
+        .ok_or(Fault::index_out_of_range(map_idx as i64, 0x1f4))?;
 
-    let map_data = ctx.map_data.get(&data_id).ok_or(Fault::KeyNotFound {
-        site: "get_stage_count",
-        key: data_id as i64,
-    })?;
+    let map_data = ctx.map_data.get(&data_id).ok_or(Fault::key_not_found(data_id as i64))?;
 
     let stage_sets = ctx
         .map_stage_sets
         .get(&map_type)
-        .ok_or(Fault::KeyNotFound {
-            site: "get_stage_count",
-            key: map_type as i64,
-        })?;
+        .ok_or(Fault::key_not_found(map_type as i64))?;
 
     let set = *stage_sets
         .get(map_idx as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "get_stage_count",
-            index: map_idx as i64,
-            limit: 0x1f4,
-        })?;
+        .ok_or(Fault::index_out_of_range(map_idx as i64, 0x1f4))?;
 
     Ok(get_stage_set_size(map_data, set)? as i32)
 }

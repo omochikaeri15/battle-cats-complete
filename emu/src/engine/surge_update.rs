@@ -5,18 +5,12 @@ use super::{
     play_sound_in_battle, slot_occupied, surge_attack,
 };
 
-const SITE: &str = "surge_update";
-
 pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0i32;
 
     while (index as i64 as usize) < ctx.surge_events.len() {
         let at = index as i64 as usize;
-        let missing = Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: ctx.surge_events.len() as i64,
-        };
+        let missing = Fault::index_out_of_range(index as i64, ctx.surge_events.len() as i64);
         let event = ctx.surge_events.get_mut(at).ok_or(missing.clone())?;
         let before = event.frame;
 
@@ -48,13 +42,13 @@ pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
             continue;
         }
 
-        if operation::irem(elapsed, interval).ok_or(Fault::divide(SITE, interval as i64))? == 0 {
+        if operation::irem(elapsed, interval).ok_or(Fault::divide(interval as i64))? == 0 {
             base_shake_start(ctx, 2);
             play_sound_in_battle(ctx, 0x70)?;
         }
 
         let tick = operation::idiv(elapsed, SURGE_TIMING[2])
-            .ok_or(Fault::divide(SITE, SURGE_TIMING[2] as i64))?;
+            .ok_or(Fault::divide(SURGE_TIMING[2] as i64))?;
         let faction = ctx.surge_events.get(at).ok_or(missing.clone())?.faction;
         let other = 1i32.wrapping_sub(faction);
         let mut slot = 1i32;
@@ -77,10 +71,7 @@ pub fn surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
             let hit_ticks = &ctx.surge_events.get(at).ok_or(missing.clone())?.hit_ticks;
 
             if hit_ticks.contains_key(&slot)
-                && *hit_ticks.get(&slot).ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: slot as i64,
-                })? == tick
+                && *hit_ticks.get(&slot).ok_or(Fault::key_not_found(slot as i64))? == tick
             {
                 slot += 1;
 

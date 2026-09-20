@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, draw_context, draw_model, maanim_execute};
 
-const SITE: &str = "skill_curse_draw";
-
 pub fn skill_curse_draw(
     ctx: &mut AppContext,
     x: i32,
@@ -12,7 +10,7 @@ pub fn skill_curse_draw(
     faction: i32,
 ) -> Result<(), Fault> {
     if faction as u32 >= 2 {
-        return Err(Fault::OutOfRange { site: SITE });
+        return Err(Fault::out_of_range());
     }
 
     let (model, anim) = if faction == 0 {

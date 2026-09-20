@@ -9,8 +9,6 @@ pub fn format_localized(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "format_localized",
-        })?
+        .ok_or(Fault::host_missing())?
         .format_args(pattern, &[FormatArg::Text(first)]))
 }

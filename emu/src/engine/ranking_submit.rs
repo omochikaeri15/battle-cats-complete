@@ -6,9 +6,7 @@ pub fn ranking_submit(ctx: &mut AppContext, entry: usize, score: i32) -> Result<
     let id = ctx.ranking_entries.get(entry).map_or(0, ranking_entry_id);
 
     ctx.platform()
-        .ok_or(Fault::HostMissing {
-            site: "ranking_submit",
-        })?
+        .ok_or(Fault::host_missing())?
         .ranking_submit(id, score);
 
     Ok(())

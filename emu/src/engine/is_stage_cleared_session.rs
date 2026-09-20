@@ -57,7 +57,7 @@ pub fn is_stage_cleared_session(
         return Ok(true);
     }
 
-    if is_conditioned_map(ctx, map)
+    if is_conditioned_map(&ctx.map_options, map)
         && stage_condition_met(
             ctx,
             map_type_of_map_id(map),

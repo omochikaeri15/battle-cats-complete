@@ -37,7 +37,6 @@ pub trait DrawSink {
         cut: i32,
     );
     fn draw_cut_f(&mut self, sheet: &Imgcut, cut: i32, x: f32, y: f32, width: f32, height: f32);
-    #[allow(clippy::too_many_arguments)]
     fn draw_region(
         &mut self,
         sheet: &Imgcut,
@@ -48,7 +47,6 @@ pub trait DrawSink {
         src_w: i32,
         src_h: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_region_f(
         &mut self,
         sheet: &Imgcut,
@@ -69,9 +67,7 @@ pub trait DrawSink {
         width: i32,
         height: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_model(&mut self, model: &Mamodel, x: i32, y: i32);
-    #[allow(clippy::too_many_arguments)]
     fn draw_model_scaled(
         &mut self,
         model: &Mamodel,
@@ -84,7 +80,6 @@ pub trait DrawSink {
         first: i32,
         second: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_cut_rotated(
         &mut self,
         sheet: &Imgcut,
@@ -99,7 +94,6 @@ pub trait DrawSink {
         pivot_align: i32,
         cut: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_cut_rotated_f(
         &mut self,
         sheet: &Imgcut,
@@ -114,7 +108,6 @@ pub trait DrawSink {
         pivot_align: i32,
         cut: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_cut_spun(
         &mut self,
         sheet: &Imgcut,
@@ -127,7 +120,6 @@ pub trait DrawSink {
         pivot_align: i32,
         cut: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_image_rotated(
         &mut self,
         sheet: &Imgcut,
@@ -141,7 +133,6 @@ pub trait DrawSink {
         pivot_y: i32,
         pivot_align: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_panel(
         &mut self,
         sheet: &Imgcut,
@@ -153,7 +144,6 @@ pub trait DrawSink {
         cut_a: i32,
         cut_b: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_nine_slice(
         &mut self,
         sheet: &Imgcut,
@@ -168,7 +158,6 @@ pub trait DrawSink {
         inner_w: i32,
         inner_h: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_quad_cut(
         &mut self,
         sheet: &Imgcut,
@@ -182,7 +171,6 @@ pub trait DrawSink {
         y3: i32,
         cut: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_quad_region(
         &mut self,
         sheet: &Imgcut,
@@ -199,7 +187,6 @@ pub trait DrawSink {
         src_w: i32,
         src_h: i32,
     );
-    #[allow(clippy::too_many_arguments)]
     fn draw_sprite_cut(
         &mut self,
         sheet: &Imgcut,
@@ -218,7 +205,5 @@ pub trait DrawSink {
 pub fn draw_context(
     sink: &mut Option<Box<dyn DrawSink>>,
 ) -> Result<&mut (dyn DrawSink + 'static), Fault> {
-    sink.as_deref_mut().ok_or(Fault::HostMissing {
-        site: "draw_context",
-    })
+    sink.as_deref_mut().ok_or(Fault::host_missing())
 }

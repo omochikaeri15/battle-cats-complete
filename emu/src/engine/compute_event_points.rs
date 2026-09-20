@@ -4,13 +4,11 @@ use super::{
     EventItemStore, find_point_rule_entry, get_kill_point_base, get_point_rule, point_band_lookup,
 };
 
-const SITE: &str = "compute_event_points";
-
 pub fn compute_event_points(store: &EventItemStore, kind: i32, args: &[i32]) -> Result<i32, Fault> {
     let table = store
         .rules
         .as_ref()
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
     let Some(entry) = find_point_rule_entry(table, store.rule_id)? else {
         return Ok(0);
     };

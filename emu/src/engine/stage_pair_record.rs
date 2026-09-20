@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::AppContext;
 
-const SITE: &str = "stage_pair_record";
-
 #[derive(Clone, Default)]
 pub struct StagePairRecord {
     pub other_stage: i32,
@@ -24,10 +22,7 @@ pub fn stage_pair_record(
     Ok(Some(
         ctx.stage_pair_records
             .get(&key)
-            .ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: key as i64,
-            })?
+            .ok_or(Fault::key_not_found(key as i64))?
             .clone(),
     ))
 }

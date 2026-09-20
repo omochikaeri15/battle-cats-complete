@@ -22,11 +22,7 @@ pub fn event_reward_set(
             .or_default();
         let byte = cell
             .get_mut(slot as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "event_reward_set",
-                index: slot as i64,
-                limit: 4,
-            })?;
+            .ok_or(Fault::index_out_of_range(slot as i64, 4))?;
 
         *byte = value;
 

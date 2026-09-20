@@ -8,8 +8,6 @@ use super::{
     parse_bg_param_bound_int,
 };
 
-const SITE: &str = "parse_bg_param_int";
-
 pub fn parse_bg_param_int(
     spec: &mut BgParamSpec<i32>,
     node: Option<&BTreeMap<Vec<u8>, JsonNode>>,
@@ -43,7 +41,7 @@ pub fn parse_bg_param_int(
 
         loop {
             let Some(JsonNode::Array(values)) = node.get(b"values".as_slice()) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
 
             if index >= values.len() {

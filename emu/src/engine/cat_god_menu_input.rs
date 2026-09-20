@@ -10,8 +10,6 @@ use super::{
     sound_manager, spend_cat_food, text_texture_cache, touch_is_down, touch_released, xor_row_get,
 };
 
-const SITE: &str = "cat_god_menu_input";
-
 const MIRACLE_ANIM_SLOT: [i32; 4] = [1, 2, 0, 3];
 
 pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
@@ -52,11 +50,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .god_intro_texts
                         .first()
                         .map(|row| row[0].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(0, 0))?;
 
                     Some(get_text_texture(
                         text_texture_cache(ctx)?,
@@ -73,11 +67,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .god_intro_texts
                         .first()
                         .map(|row| row[1].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(0, 0))?;
 
                     Some(get_text_texture(
                         text_texture_cache(ctx)?,
@@ -104,11 +94,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.label_texts[6] = {
                     let font = ctx.default_font.clone();
                     let text = ctx.god_intro_texts.get(2).map(|row| row[0].clone()).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 3,
-                        },
+                        Fault::index_out_of_range(2, 3),
                     )?;
 
                     Some(get_text_texture(
@@ -247,11 +233,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         ctx.label_texts[3] = {
                             let font = ctx.default_font.clone();
                             let text = ctx.god_item_names.get(selected).cloned().ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: selected as i64,
-                                    limit: 4,
-                                },
+                                Fault::index_out_of_range(selected as i64, 4),
                             )?;
 
                             Some(get_text_texture(
@@ -272,11 +254,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 .god_item_texts
                                 .get(selected)
                                 .map(|row| row[0].clone())
-                                .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: selected as i64,
-                                limit: 4,
-                            })?;
+                                .ok_or(Fault::index_out_of_range(selected as i64, 4))?;
 
                             Some(get_text_texture(
                                 text_texture_cache(ctx)?,
@@ -296,11 +274,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 .god_item_texts
                                 .get(selected)
                                 .map(|row| row[1].clone())
-                                .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: selected as i64,
-                                limit: 4,
-                            })?;
+                                .ok_or(Fault::index_out_of_range(selected as i64, 4))?;
 
                             Some(get_text_texture(
                                 text_texture_cache(ctx)?,
@@ -331,11 +305,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             {
                                 let font = ctx.default_font.clone();
                                 let text = ctx.battle_texts.get(5).cloned().ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: 5,
-                                        limit: 0x35,
-                                    },
+                                    Fault::index_out_of_range(5, 0x35),
                                 )?;
 
                                 Some(get_text_texture(
@@ -352,11 +322,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             ctx.label_texts[1 + label] = {
                                 let font = ctx.default_font.clone();
                                 let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: (4 + label) as i64,
-                                        limit: 0x24,
-                                    },
+                                    Fault::index_out_of_range((4 + label) as i64, 0x24),
                                 )?;
 
                                 Some(get_text_texture(
@@ -374,11 +340,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             ctx.label_texts[10 + label] = {
                                 let font = ctx.default_font.clone();
                                 let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: (3 + label) as i64,
-                                        limit: 9,
-                                    },
+                                    Fault::index_out_of_range((3 + label) as i64, 9),
                                 )?;
 
                                 Some(get_text_texture(
@@ -469,11 +431,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
                             let chapter =
                                 xor_row_get(ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?, 7)
-                                    .ok_or(Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: 7,
-                                        limit: 10,
-                                    })? as i32;
+                                    .ok_or(Fault::index_out_of_range(7, 10))? as i32;
 
                             log_analytics_event(
                                 ctx,
@@ -541,11 +499,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         .god_chatter_texts
                                         .get(line)
                                         .map(|row| row[0].clone())
-                                        .ok_or(Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: line as i64,
-                                            limit: 0x21,
-                                        })?;
+                                        .ok_or(Fault::index_out_of_range(line as i64, 0x21))?;
 
                                     Some(get_text_texture(
                                         text_texture_cache(ctx)?,
@@ -562,11 +516,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         .god_chatter_texts
                                         .get(line)
                                         .map(|row| row[1].clone())
-                                        .ok_or(Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: line as i64,
-                                            limit: 0x21,
-                                        })?;
+                                        .ok_or(Fault::index_out_of_range(line as i64, 0x21))?;
 
                                     Some(get_text_texture(
                                         text_texture_cache(ctx)?,
@@ -930,11 +880,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     .god_chatter_texts
                     .get(line)
                     .map(|row| row[0].clone())
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: line as i64,
-                        limit: 0x21,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(line as i64, 0x21))?;
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -951,11 +897,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     .god_chatter_texts
                     .get(line)
                     .map(|row| row[1].clone())
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: line as i64,
-                        limit: 0x21,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(line as i64, 0x21))?;
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -1081,29 +1023,17 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
         let slot =
             *MIRACLE_ANIM_SLOT
                 .get(selected as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: selected as i64,
-                    limit: 4,
-                })?;
+                .ok_or(Fault::index_out_of_range(selected as i64, 4))?;
         let anim = ctx
             .miracle_anims
             .get(slot as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: 4,
-            })?;
+            .ok_or(Fault::index_out_of_range(slot as i64, 4))?;
         let length = get_anim_len(&anim[0])?.wrapping_add(lead);
         let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
         let slot =
             *MIRACLE_ANIM_SLOT
                 .get(selected as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: selected as i64,
-                    limit: 4,
-                })?;
+                .ok_or(Fault::index_out_of_range(selected as i64, 4))?;
 
         let reached =
             frame >= length || (slot == 3 && ctx.i32_at(AppContext::CAT_GOD_ANIM_FRAME)? >= 0x17c);
@@ -1120,11 +1050,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
         let anim = ctx
             .miracle_anims
             .get(slot as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: 4,
-            })?;
+            .ok_or(Fault::index_out_of_range(slot as i64, 4))?;
 
         ctx.set_i32_at(AppContext::CAT_GOD_ANIM_FRAME, get_anim_len(&anim[0])?)?;
 
@@ -1537,11 +1463,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx.label_texts[1 + label] = {
                         let font = ctx.default_font.clone();
                         let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: (4 + label) as i64,
-                                limit: 0x24,
-                            },
+                            Fault::index_out_of_range((4 + label) as i64, 0x24),
                         )?;
 
                         Some(get_text_texture(
@@ -1559,11 +1481,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx.label_texts[10 + label] = {
                         let font = ctx.default_font.clone();
                         let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: (3 + label) as i64,
-                                limit: 9,
-                            },
+                            Fault::index_out_of_range((3 + label) as i64, 9),
                         )?;
 
                         Some(get_text_texture(
@@ -1579,11 +1497,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
                 let slot = *MIRACLE_ANIM_SLOT.get(selected as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: selected as i64,
-                        limit: 4,
-                    },
+                    Fault::index_out_of_range(selected as i64, 4),
                 )?;
 
                 if slot as u32 <= 3 && slot != 2 {

@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, new_button_hit_test, web_view_is_open};
 
-const SITE: &str = "button_bank_process";
-
 pub fn button_bank_process(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.buttons.enabled == 0 {
         return Ok(());
@@ -20,7 +18,7 @@ pub fn button_bank_process(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut busy = 0u8;
 
     for slot in ctx.buttons.buttons.values() {
-        let button = slot.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let button = slot.as_deref().ok_or(Fault::null_pointer())?;
 
         if button.enabled != 0 && button.state == 1 {
             busy = 1;
@@ -43,7 +41,7 @@ pub fn button_bank_process(ctx: &mut AppContext) -> Result<(), Fault> {
             .entry(id)
             .or_insert(None)
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?
+            .ok_or(Fault::null_pointer())?
             .state;
 
         if state == 1 {

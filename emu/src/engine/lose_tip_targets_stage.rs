@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::AppContext;
 
-const SITE: &str = "lose_tip_targets_stage";
-
 pub fn lose_tip_targets_stage(
     ctx: &AppContext,
     id: i32,
@@ -20,7 +18,7 @@ pub fn lose_tip_targets_stage(
     loop {
         let first = *ctx.lose_text_settings[row]
             .first()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         if first == id {
             break;
@@ -34,11 +32,7 @@ pub fn lose_tip_targets_stage(
     }
 
     let cells = &ctx.lose_text_settings[row];
-    let mode = *cells.get(0x1b).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 0x1b,
-        limit: cells.len() as i64,
-    })?;
+    let mode = *cells.get(0x1b).ok_or(Fault::index_out_of_range(0x1b, cells.len() as i64))?;
 
     let target = match mode {
         1 => key,

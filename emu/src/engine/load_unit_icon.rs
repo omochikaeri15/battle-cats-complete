@@ -24,11 +24,7 @@ pub fn load_unit_icon(
             &ctx.block_at::<4>((row + (UNIT_BUY + UnitBuy::KEY) as i64) as usize)?,
         );
 
-        let art = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "load_unit_icon",
-            index: 0,
-            limit: 1,
-        })? as i32;
+        let art = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32;
 
         if art != -1 {
             let png = string_format_int2(ctx, b"uni%03d_m%02d.png", art, form)?;

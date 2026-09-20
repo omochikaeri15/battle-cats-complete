@@ -7,8 +7,6 @@ use super::{
     get_surge_anchor, get_surge_level, get_surge_span, set_counter_surge, set_counter_surge_once,
 };
 
-const SITE: &str = "surge_attack";
-
 pub fn surge_attack(
     ctx: &mut AppContext,
     event_index: i32,
@@ -16,11 +14,7 @@ pub fn surge_attack(
     attack: i32,
 ) -> Result<(), Fault> {
     let index = event_index as i64 as usize;
-    let missing = Fault::IndexOutOfRange {
-        site: SITE,
-        index: event_index as i64,
-        limit: ctx.surge_events.len() as i64,
-    };
+    let missing = Fault::index_out_of_range(event_index as i64, ctx.surge_events.len() as i64);
     let event = ctx.surge_events.get(index).ok_or(missing.clone())?;
     let faction = event.faction;
     let slot = event.slot;
@@ -126,11 +120,7 @@ pub fn surge_attack(
     let counter = ctx
         .counter_surge_events
         .last_mut()
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 0,
-        })?;
+        .ok_or(Fault::index_out_of_range(0, 0))?;
 
     counter.frame = 0;
     counter.faction = other;

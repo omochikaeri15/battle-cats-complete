@@ -4,8 +4,6 @@ use super::{
     AppContext, Entity, draw_context, draw_model, get_drawable_width, get_setting, maanim_execute,
 };
 
-const SITE: &str = "explosion_draw";
-
 pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), Fault> {
     if ctx.explosion_events.is_empty() {
         return Ok(());
@@ -26,7 +24,7 @@ pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(
         let frame = ctx
             .explosion_events
             .get(index)
-            .ok_or(Fault::OutOfRange { site: SITE })?
+            .ok_or(Fault::out_of_range())?
             .frame;
 
         if frame < 0 {
@@ -41,11 +39,7 @@ pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(
                 0 => &mut ctx.explosion_model,
                 1 => &mut ctx.explosion_e_model,
                 _ => {
-                    return Err(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: faction as i64,
-                        limit: 2,
-                    });
+                    return Err(Fault::index_out_of_range(faction as i64, 2));
                 }
             };
 
@@ -57,11 +51,7 @@ pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(
                 0 => &mut ctx.explosion_model,
                 1 => &mut ctx.explosion_e_model,
                 _ => {
-                    return Err(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: faction as i64,
-                        limit: 2,
-                    });
+                    return Err(Fault::index_out_of_range(faction as i64, 2));
                 }
             };
 

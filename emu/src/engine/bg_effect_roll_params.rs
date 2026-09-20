@@ -7,8 +7,6 @@ use super::{
     bg_param_roll_int,
 };
 
-const SITE: &str = "bg_effect_roll_params";
-
 #[derive(Clone, Default, PartialEq, Debug)]
 pub struct BgEffectDef {
     pub count: BgParamSpec<i32>,
@@ -93,11 +91,7 @@ pub fn bg_effect_roll_params(
             .instances
             .get(instance)
             .cloned()
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: instance as i64,
-                limit: ctx.bg_effects.instances.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(instance as i64, ctx.bg_effects.instances.len() as i64))?;
 
     rolls.groups.clear();
 
@@ -105,11 +99,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.model) != 0 {
         let spec = def.model.clone();
@@ -121,11 +111,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_x) != 0 {
             def.start_x.clone()
@@ -146,11 +132,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_y) != 0 {
             def.start_y.clone()
@@ -171,11 +153,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.z) != 0 {
         let spec = def.z.clone();
@@ -187,11 +165,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale) != 0 {
             def.start_scale.clone()
@@ -212,11 +186,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale_x) != 0 {
             def.start_scale_x.clone()
@@ -237,11 +207,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale_y) != 0 {
             def.start_scale_y.clone()
@@ -262,11 +228,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.angle) != 0 {
         let spec = def.angle.clone();
@@ -278,11 +240,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.angular_v) != 0 {
         let spec = def.angular_v.clone();
@@ -294,11 +252,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.alpha) != 0 {
         let spec = def.alpha.clone();
@@ -310,11 +264,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_v) != 0 {
             def.start_v.clone()
@@ -335,11 +285,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.move_angle) != 0 {
         let spec = def.move_angle.clone();
@@ -351,11 +297,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_vx) != 0 {
             def.start_vx.clone()
@@ -376,11 +318,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_vy) != 0 {
             def.start_vy.clone()
@@ -401,11 +339,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.destroy_left) != 0 {
         let spec = def.destroy_left.clone();
@@ -417,11 +351,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.destroy_right) != 0 {
         let spec = def.destroy_right.clone();
@@ -433,11 +363,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.destroy_top) != 0 {
         let spec = def.destroy_top.clone();
@@ -449,11 +375,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.destroy_bottom) != 0 {
         let spec = def.destroy_bottom.clone();
@@ -466,11 +388,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.frame) != 0 {
         let spec = def.frame.clone();
@@ -482,11 +400,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.wait) != 0 {
         let spec = def.wait.clone();
@@ -498,11 +412,7 @@ pub fn bg_effect_roll_params(
         .bg_effects
         .defs
         .get(rolls.def_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rolls.def_index as i64,
-            limit: ctx.bg_effects.defs.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
     if first_spawn != 0 || bg_param_enabled(&def.life_time) != 0 {
         let spec = def.life_time.clone();

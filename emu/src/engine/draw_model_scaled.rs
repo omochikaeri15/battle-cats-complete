@@ -1,6 +1,5 @@
 use super::{DrawSink, Mamodel};
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_model_scaled(
     dc: &mut dyn DrawSink,
     model: &Mamodel,

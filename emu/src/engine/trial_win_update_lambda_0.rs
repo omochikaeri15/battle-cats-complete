@@ -6,8 +6,6 @@ use super::{
     sound_manager, trial_win_update_lambda_0_0,
 };
 
-const SITE: &str = "trial_win_update_lambda_0";
-
 pub fn trial_win_update_lambda_0(
     ctx: &mut AppContext,
     status: i32,
@@ -22,7 +20,7 @@ pub fn trial_win_update_lambda_0(
             dialog_show_alt(ctx, &text, 0, 0, 4, Some(trial_win_update_lambda_0_0))?;
         }
         0 => {
-            if ranking_record_rank(record.ok_or(Fault::NullPointer { site: SITE })?) <= 0x63 {
+            if ranking_record_rank(record.ok_or(Fault::null_pointer())?) <= 0x63 {
                 let sound = if scored_map_pays_money(ctx)? {
                     0xbe
                 } else {

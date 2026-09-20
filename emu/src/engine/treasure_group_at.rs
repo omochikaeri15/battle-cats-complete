@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{TreasureGroup, TreasureStore};
 
-const SITE: &str = "treasure_group_at";
-
 pub fn treasure_group_at(
     store: &TreasureStore,
     chapter: i32,
@@ -11,18 +9,10 @@ pub fn treasure_group_at(
 ) -> Result<TreasureGroup, Fault> {
     let groups = store
         .get(chapter as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: chapter as i64,
-            limit: 10,
-        })?;
+        .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
 
     groups
         .get(index as i64 as usize)
         .cloned()
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: groups.len() as i64,
-        })
+        .ok_or(Fault::index_out_of_range(index as i64, groups.len() as i64))
 }

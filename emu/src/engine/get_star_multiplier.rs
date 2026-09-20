@@ -14,9 +14,5 @@ pub fn get_star_multiplier(
     multipliers
         .get(star as usize)
         .copied()
-        .ok_or(Fault::IndexOutOfRange {
-            site: "get_star_multiplier",
-            index: star as i64,
-            limit: multipliers.len() as i64,
-        })
+        .ok_or(Fault::index_out_of_range(star as i64, multipliers.len() as i64))
 }

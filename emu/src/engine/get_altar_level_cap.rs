@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::AppContext;
 
-const SITE: &str = "get_altar_level_cap";
-
 pub fn get_altar_level_cap(ctx: &AppContext, enemy_id: i32) -> Result<i32, Fault> {
     if !ctx.altar_level_caps.contains_key(&enemy_id) {
         return Ok(-1);
@@ -16,10 +14,7 @@ pub fn get_altar_level_cap(ctx: &AppContext, enemy_id: i32) -> Result<i32, Fault
     if *ctx
         .altar_unsealed
         .get(&enemy_id)
-        .ok_or(Fault::KeyNotFound {
-            site: SITE,
-            key: enemy_id as i64,
-        })?
+        .ok_or(Fault::key_not_found(enemy_id as i64))?
     {
         return Ok(-1);
     }
@@ -27,8 +22,5 @@ pub fn get_altar_level_cap(ctx: &AppContext, enemy_id: i32) -> Result<i32, Fault
     ctx.altar_level_caps
         .get(&enemy_id)
         .copied()
-        .ok_or(Fault::KeyNotFound {
-            site: SITE,
-            key: enemy_id as i64,
-        })
+        .ok_or(Fault::key_not_found(enemy_id as i64))
 }

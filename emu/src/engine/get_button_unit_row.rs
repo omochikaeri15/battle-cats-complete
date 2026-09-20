@@ -24,11 +24,7 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
         pair[4..].copy_from_slice(&key);
 
         return Ok(
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: "get_button_unit_row",
-                index: 0,
-                limit: 1,
-            })? as i32,
+            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
         );
     }
 
@@ -73,11 +69,7 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
         pair[4..].copy_from_slice(&key);
 
         return Ok(
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: "get_button_unit_row",
-                index: 0,
-                limit: 1,
-            })? as i32,
+            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
         );
     }
 
@@ -94,10 +86,6 @@ pub fn get_button_unit_row(ctx: &AppContext, faction: i32, slot: i32) -> Result<
     pair[4..].copy_from_slice(&key);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "get_button_unit_row",
-            index: 0,
-            limit: 1,
-        })? as i32,
+        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
     )
 }

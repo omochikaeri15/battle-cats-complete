@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, map_type_base_id, set_cleared_count};
 
-const SITE: &str = "set_stages_cleared";
-
 pub fn set_stages_cleared(
     ctx: &mut AppContext,
     map_type: i32,
@@ -17,11 +15,7 @@ pub fn set_stages_cleared(
         let stars = ctx.stages_cleared_cache.entry(map_id).or_default();
         let cell = stars
             .get_mut(star as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: star as i64,
-                limit: 4,
-            })?;
+            .ok_or(Fault::index_out_of_range(star as i64, 4))?;
 
         *cell = value as i16;
 
@@ -51,11 +45,7 @@ pub fn set_stages_cleared(
             let cell = maps
                 .get_mut(map_idx as i64 as usize)
                 .and_then(|stars| stars.get_mut(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_idx as i64,
-                    limit,
-                })?;
+                .ok_or(Fault::index_out_of_range(map_idx as i64, limit))?;
 
             *cell = value as i8;
 
@@ -83,11 +73,7 @@ pub fn set_stages_cleared(
                 ),
             };
             let limit = maps.len() as i64;
-            let slot = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let slot = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *slot = value as i8;
 
@@ -101,11 +87,7 @@ pub fn set_stages_cleared(
             };
             let cell = (map_idx as i64) * 4 + star as i64;
             let limit = maps.len() as i64;
-            let slot = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let slot = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *slot = value;
 

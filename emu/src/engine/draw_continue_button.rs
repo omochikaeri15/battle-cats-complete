@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, DECK_PRESS_SIZE_TABLE, Imgcut, draw_context, draw_cut_scaled};
 
-const SITE: &str = "draw_continue_button";
-
 pub fn draw_continue_button(
     ctx: &mut AppContext,
     sheet: &Imgcut,
@@ -15,11 +13,7 @@ pub fn draw_continue_button(
     let bounce = DECK_PRESS_SIZE_TABLE
         .get(step as i64 as usize)
         .copied()
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: step as i64,
-            limit: DECK_PRESS_SIZE_TABLE.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
     let origin = if anchored == 0 {
         0
     } else {

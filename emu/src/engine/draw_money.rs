@@ -5,8 +5,6 @@ use super::{
     get_max_money, get_money, get_right_inset_logical, set_draw_origin,
 };
 
-const SITE: &str = "draw_money";
-
 pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
     let inset = get_right_inset_logical(ctx)?.wrapping_neg();
     let top = ctx
@@ -38,7 +36,7 @@ pub fn draw_money(ctx: &mut AppContext) -> Result<(), Fault> {
     ) as f32;
     let cap = operation::div_100(get_max_money(ctx, AppContext::faction_flags(0))?);
     let sheet = ctx.img001_sheet.clone();
-    let digits = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let digits = sheet.as_deref().ok_or(Fault::null_pointer())?;
     let bounds = draw_number_plain(
         draw_context(&mut ctx.draw)?,
         digits,

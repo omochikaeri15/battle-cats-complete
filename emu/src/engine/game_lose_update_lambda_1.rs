@@ -5,8 +5,6 @@ use super::{
     show_rewarded_ad, sound_manager,
 };
 
-const SITE: &str = "game_lose_update_lambda_1";
-
 pub fn game_lose_update_lambda_1(
     ctx: &mut AppContext,
     _button: i32,
@@ -15,7 +13,7 @@ pub fn game_lose_update_lambda_1(
     match event {
         4 => {
             let video =
-                button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, video, 0)?;
             ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [0])?;

@@ -15,9 +15,6 @@ use super::{
     texture_context_init, validate_map_type,
 };
 
-const SITE: &str = "load_battle_assets";
-
-#[allow(clippy::if_same_then_else)]
 pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     texture_context_init(ctx)?;
 
@@ -443,11 +440,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.skill_sheets
             .get(skill as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: skill as i64,
-                limit: ctx.skill_sheets.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(skill as i64, ctx.skill_sheets.len() as i64))?
             .set(sheet);
     }
 
@@ -1157,7 +1150,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     let text = query_localizable(ctx, b"sealed_announce");
     let lines = string_split(&text, b"<br>");
     let font = ctx.default_font.clone();
-    let first = lines.first().ok_or(Fault::NullPointer { site: SITE })?;
+    let first = lines.first().ok_or(Fault::null_pointer())?;
     let label = get_text_texture(text_texture_cache(ctx)?, first, &font, 0x1e, 0, 0);
 
     ctx.sealed_announce_sheets[0] = Some(Rc::new(Imgcut {
@@ -1170,11 +1163,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let enemy = get_castle_enemy_row(ctx)?.wrapping_add(-2);
     let cap = get_altar_level_cap(ctx, enemy)?.wrapping_add(1);
-    let second = lines.get(1).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 1,
-        limit: lines.len() as i64,
-    })?;
+    let second = lines.get(1).ok_or(Fault::index_out_of_range(1, lines.len() as i64))?;
     let line = string_format_int(ctx, second, cap)?;
     let label = get_text_texture(text_texture_cache(ctx)?, &line, &font, 0x1e, 0, 0);
 
@@ -1195,61 +1184,45 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         ]),
     );
 
-    let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+    let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
 
     model
         .parts
         .get_mut(part + 7)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: (part + 7) as i64,
-            limit: 0,
-        })?
+        .ok_or(Fault::index_out_of_range((part + 7) as i64, 0))?
         .set_i32_at(0x24, 0);
 
-    let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+    let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
 
     model
         .parts
         .get_mut(part + 8)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: (part + 8) as i64,
-            limit: 0,
-        })?
+        .ok_or(Fault::index_out_of_range((part + 8) as i64, 0))?
         .set_i32_at(0x24, 1);
 
     let width = imgcut_get_width(
         ctx.sealed_announce_sheets[0]
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
     );
-    let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+    let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
     let target = model
         .parts
         .get_mut(part + 7)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: (part + 7) as i64,
-            limit: 0,
-        })?;
+        .ok_or(Fault::index_out_of_range((part + 7) as i64, 0))?;
 
     target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
 
     let width = imgcut_get_width(
         ctx.sealed_announce_sheets[1]
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
     );
-    let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+    let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
     let target = model
         .parts
         .get_mut(part + 8)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: (part + 8) as i64,
-            limit: 0,
-        })?;
+        .ok_or(Fault::index_out_of_range((part + 8) as i64, 0))?;
 
     target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
     ctx.demonbattle_model = model;

@@ -5,13 +5,11 @@ use super::{
     texture_get_width,
 };
 
-const SITE: &str = "ui_node_set_cut";
-
 pub fn ui_node_set_cut(sprite: &mut Sprite, cut: i32) -> Result<(), Fault> {
     let sheet = sprite
         .sheet
         .clone()
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
 
     if cut == -1 {
         sprite.cut[0] = 0;

@@ -27,8 +27,6 @@ use super::{
     std_map_int_vector_subscript, std_vector_int_push_back, std_vector_int_push_back_2,
 };
 
-const SITE: &str = "enemy_update";
-
 #[derive(Default)]
 pub struct CounterSurgeEvent {
     pub faction: i32,
@@ -281,11 +279,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let lift =
                         *KNOCKBACK_Y_ARC
                             .get(frame as usize)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: frame,
-                                limit: 24,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(frame, 24))?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -406,7 +400,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         .wrapping_sub(ctx.i32_at(AppContext::SCORE_ELAPSED)?)
                         .wrapping_mul(ctx.i32_at(entity.wrapping_add(Entity::SCORE_VALUE))?);
                     let time_bonus = operation::idiv(weighted, limit)
-                        .ok_or(Fault::divide(SITE, limit as i64))?;
+                        .ok_or(Fault::divide(limit as i64))?;
                     let occupant = ctx.i32_at(entity.wrapping_add(Entity::OCCUPANT))? as i64;
                     let drop = ctx.i32_at(
                         (occupant * ENEMY_STATS_STRIDE as i64
@@ -439,7 +433,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let store = ctx
                         .event_items
                         .as_mut()
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
 
                     award_event_points(store, 1, &args)?;
                 }
@@ -554,7 +548,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if get_gudetama_soul(ctx, faction, slot as i32)? {
                         let button = get_entity_button(ctx, faction, slot as i32)?;
                         let anim = get_unit_anim(ctx, faction, button, 8)?
-                            .ok_or(Fault::NullPointer { site: SITE })?;
+                            .ok_or(Fault::null_pointer())?;
                         let length = get_anim_len(anim)?;
 
                         limit = if length < 2 { 1 } else { length };
@@ -578,11 +572,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if get_entity_state(ctx, faction, slot as i32)? == 0x15 {
                         let delay = get_setting(&ctx.settings, b"battle_death_volcano_time", 0x1e)?;
                         let anim = ctx.death_surge_anims.get(faction as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: faction as i64,
-                                limit: 2,
-                            },
+                            Fault::index_out_of_range(faction as i64, 2),
                         )?;
 
                         limit = max_i32(delay, get_anim_len(anim)?);
@@ -606,11 +596,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             ctx.surge_events.push(SurgeEvent::default());
 
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.faction = faction;
                             event.slot = slot as i32;
@@ -622,11 +608,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             let drawn = call_rng(ctx, reach);
                             let span = get_death_surge_span(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
                             let spread = if span > 0 {
                                 drawn
                             } else {
@@ -637,11 +619,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                             let level = get_death_surge_level(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.level = level;
                             event.attack = 0;
@@ -663,11 +641,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                             let mini = get_death_surge_mini(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.mini = mini != 0;
                             event.kind = 2;
@@ -706,11 +680,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))? as i64;
                     let lift = *RECOIL_Y_ARC
                         .get(frame as usize)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: frame,
-                            limit: 12,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(frame, 12))?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -799,7 +769,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                 std_vector_int_push_back(&mut treasures, &alien);
 
-                let mut strongest = *treasures.first().ok_or(Fault::NullPointer { site: SITE })?;
+                let mut strongest = *treasures.first().ok_or(Fault::null_pointer())?;
 
                 for &candidate in treasures.iter().skip(1) {
                     if strongest < candidate {

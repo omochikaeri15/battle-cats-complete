@@ -12,11 +12,7 @@ pub fn explosion_attack(
     let event = ctx
         .explosion_events
         .get(event_index as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "explosion_attack",
-            index: event_index as i64,
-            limit: ctx.explosion_events.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(event_index as i64, ctx.explosion_events.len() as i64))?;
     let slot = event.slot;
     let proc_flags = event.proc_flags;
 

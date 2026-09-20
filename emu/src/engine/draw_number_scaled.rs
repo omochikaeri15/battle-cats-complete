@@ -2,7 +2,6 @@ use crate::Fault;
 
 use super::{DrawSink, Imgcut, NumberBox, draw_number};
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_number_scaled(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,

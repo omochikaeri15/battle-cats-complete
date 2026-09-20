@@ -11,7 +11,7 @@ pub fn get_score_bonus(ctx: &mut AppContext, kind: i32, divisor: i32) -> Result<
         && let Some(first) = values.first()
     {
         result = operation::idiv(*first, divisor)
-            .ok_or(Fault::divide("get_score_bonus", divisor as i64))?;
+            .ok_or(Fault::divide(divisor as i64))?;
     }
 
     Ok(result)

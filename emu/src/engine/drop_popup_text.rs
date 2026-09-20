@@ -10,8 +10,6 @@ pub fn drop_popup_text(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .meta()
-        .ok_or(Fault::HostMissing {
-            site: "drop_popup_text",
-        })?
+        .ok_or(Fault::host_missing())?
         .drop_popup_text(item, first, amount))
 }

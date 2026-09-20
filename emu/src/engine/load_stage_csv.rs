@@ -8,8 +8,6 @@ use super::{
     stage_entry_enemy_id, stage_entry_row, stage_not_sealed, string_format_int, string_format_int2,
 };
 
-const SITE: &str = "load_stage_csv";
-
 const LEGEND_FILES: [&[u8]; 5] = [
     b"stageRN%03d_%02d.csv",
     b"stageRS%03d_%02d.csv",
@@ -121,11 +119,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
         let energy = read_csv_cell(&stm, 6) as i32;
 
         if stage as u32 >= 0x64 {
-            return Err(Fault::IndexOutOfRange {
-                site: SITE,
-                index: stage as i64,
-                limit: 0x64,
-            });
+            return Err(Fault::index_out_of_range(stage as i64, 0x64));
         }
 
         ctx.set_i32_at(
@@ -317,11 +311,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
         let row =
             ctx.play_dungeon_rows
                 .get(stage as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: stage as i64,
-                    limit: ctx.play_dungeon_rows.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(stage as i64, ctx.play_dungeon_rows.len() as i64))?;
 
         ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, row[8] as u8 as i32)?;
     }

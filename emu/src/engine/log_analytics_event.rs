@@ -42,9 +42,7 @@ pub fn log_analytics_event(
     fourth: i32,
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "log_analytics_event",
-        })?
+        .ok_or(Fault::host_missing())?
         .analytics_event(event, first, second, third, fourth);
 
     Ok(())

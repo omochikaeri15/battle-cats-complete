@@ -14,11 +14,7 @@ pub fn get_user_rank(ctx: &AppContext) -> Result<i32, Fault> {
         );
         pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
 
-        if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "get_user_rank",
-            index: 0,
-            limit: 1,
-        })? as i32
+        if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
             > 0
         {
             let cell = AppContext::UNIT_LEVELS.wrapping_add(unit.wrapping_mul(8));

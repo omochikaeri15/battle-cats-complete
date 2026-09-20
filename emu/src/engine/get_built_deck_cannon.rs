@@ -39,10 +39,7 @@ pub fn get_built_deck_cannon(ctx: &mut AppContext, stage_key: i32) -> Result<i32
     let record = ctx
         .built_deck_records
         .get(&(deck_id as i16))
-        .ok_or(Fault::KeyNotFound {
-            site: "get_built_deck_cannon",
-            key: deck_id as i64,
-        })?;
+        .ok_or(Fault::key_not_found(deck_id as i64))?;
 
     Ok(((record.cannon_type as u32) << 0x10 | record.cannon_parts as u32) as i32)
 }

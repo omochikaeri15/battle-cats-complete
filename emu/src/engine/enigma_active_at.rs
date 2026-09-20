@@ -7,7 +7,5 @@ pub fn enigma_active_at(enigma: &Enigma, index: i32) -> Result<EnigmaActive, Fau
         .active
         .get(index as i64 as usize)
         .copied()
-        .ok_or(Fault::OutOfRange {
-            site: "enigma_active_at",
-        })
+        .ok_or(Fault::out_of_range())
 }

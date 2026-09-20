@@ -245,11 +245,7 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             while cell != 20 {
                 ctx.set_i32_at(
                     AppContext::SNIPER_CASINGS.wrapping_add(cell.wrapping_mul(4)),
-                    *seeded.get(cell).ok_or(Fault::IndexOutOfRange {
-                        site: "sniper_update",
-                        index: cell as i64,
-                        limit: 20,
-                    })?,
+                    *seeded.get(cell).ok_or(Fault::index_out_of_range(cell as i64, 20))?,
                 )?;
                 cell += 1;
             }

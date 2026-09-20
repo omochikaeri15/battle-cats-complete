@@ -8,8 +8,6 @@ use super::{
     roll_procs,
 };
 
-const SITE: &str = "enemy_hit_executor";
-
 pub fn enemy_hit_executor(
     ctx: &mut AppContext,
     slot: i32,
@@ -33,11 +31,7 @@ pub fn enemy_hit_executor(
     let mut index = 0usize;
 
     while index < targets.len() {
-        let target = *targets.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: targets.len() as i64,
-        })?;
+        let target = *targets.get(index).ok_or(Fault::index_out_of_range(index as i64, targets.len() as i64))?;
 
         if enemy_attack_dispatch(
             ctx,
@@ -182,11 +176,7 @@ pub fn enemy_hit_executor(
             };
             let level = get_surge_level(ctx, 1, slot)?;
             let mini = get_mini_surge(ctx, 1, slot)? != 0;
-            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let event = ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
             event.faction = 1;
             event.slot = slot;
@@ -220,11 +210,7 @@ pub fn enemy_hit_executor(
             let event = ctx
                 .explosion_events
                 .last_mut()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(0, 0))?;
 
             event.faction = 1;
             event.slot = slot;

@@ -16,8 +16,6 @@ use super::{
     web_popup_open, web_popup_pending,
 };
 
-const SITE: &str = "game_lose_update";
-
 pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
@@ -89,11 +87,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .warning2_rows
                         .get(2)
                         .map(|row| row[label].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(2, 0))?;
                     let font = ctx.default_font.clone();
 
                     ctx.label_texts[label] = Some(get_text_texture(
@@ -174,11 +168,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     ctx.warning2_rows
                         .get(0x62)
                         .map(|row| row[0].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0x62,
-                            limit: 0,
-                        })?
+                        .ok_or(Fault::index_out_of_range(0x62, 0))?
                 };
 
                 if percent != 0 {
@@ -209,11 +199,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 if found && label == 2 {
                     let line = ctx.warning2_rows.get(2).map(|row| row[2].clone()).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        },
+                        Fault::index_out_of_range(2, 0),
                     )?;
                     let boss = query_localizable(ctx, b"boss_hp");
                     let text = string_format_boss_hp_line(
@@ -239,11 +225,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .warning2_rows
                         .get(2)
                         .map(|row| row[label].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(2, 0))?;
 
                     ctx.label_texts[label] = Some(get_text_texture(
                         text_texture_cache(ctx)?,
@@ -283,7 +265,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let sheet = Rc::clone(
                 ctx.img004_sheet
                     .as_ref()
-                    .ok_or(Fault::NullPointer { site: SITE })?,
+                    .ok_or(Fault::null_pointer())?,
             );
             let width = imgcut_get_sprite_cut(&sheet, 0xa)?[2];
             let height = imgcut_get_sprite_cut(&sheet, 0xa)?[3];
@@ -352,7 +334,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let video = button_bank_find(&ctx.buttons, 0xcb)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, video, 0)?;
             }
@@ -413,11 +395,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 loop {
                     let tip = ctx.i32_at(AppContext::LOSE_TIP)? as i64 as usize;
-                    let row = ctx.lose_rows.get(tip).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: tip as i64,
-                        limit: ctx.lose_rows.len() as i64,
-                    })?;
+                    let row = ctx.lose_rows.get(tip).ok_or(Fault::index_out_of_range(tip as i64, ctx.lose_rows.len() as i64))?;
 
                     if line >= row.len() as i32 as i64 {
                         break;
@@ -431,11 +409,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     *ctx.label_texts
                         .get_mut(slot)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: slot as i64,
-                            limit: 0x434,
-                        })? = Some(texture);
+                        .ok_or(Fault::index_out_of_range(slot as i64, 0x434))? = Some(texture);
 
                     line += 1;
                 }
@@ -491,7 +465,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let video = button_bank_find(&ctx.buttons, 0xcb)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, video, 1)?;
             }
@@ -668,7 +642,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 4)?;
 
             let map =
-                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
@@ -707,7 +681,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let map =
-                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 

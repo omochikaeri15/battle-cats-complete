@@ -5,8 +5,6 @@ use super::{
     map_index_of_map_id, map_type_of_map_id, unlock_group_met,
 };
 
-const SITE: &str = "unlock_condition_met";
-
 pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
     let slot = match id {
         -1 => return Ok(true),
@@ -86,11 +84,7 @@ pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault
     pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 1,
-        })? as i32
+        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
             >= 0x30,
     )
 }

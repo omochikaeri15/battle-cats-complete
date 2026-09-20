@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, scene_ignores_insets};
 
-const SITE: &str = "get_drawable_width";
-
 pub fn get_drawable_width(ctx: &AppContext) -> Result<i32, Fault> {
     let metrics = &ctx.screen_metrics;
 
@@ -34,5 +32,5 @@ pub fn get_drawable_width(ctx: &AppContext) -> Result<i32, Fault> {
         .screen_h
         .wrapping_sub(metrics.inset_top.wrapping_add(metrics.inset_bottom));
 
-    operation::idiv(dividend, divisor).ok_or(Fault::divide(SITE, divisor as i64))
+    operation::idiv(dividend, divisor).ok_or(Fault::divide(divisor as i64))
 }

@@ -33,10 +33,7 @@ pub fn deploy_limit_reached(ctx: &mut AppContext) -> Result<bool, Fault> {
     let limit = ctx
         .stage_restrictions
         .get(&stage_id)
-        .ok_or(Fault::KeyNotFound {
-            site: "deploy_limit_reached",
-            key: stage_id as i64,
-        })?
+        .ok_or(Fault::key_not_found(stage_id as i64))?
         .deploy_limit;
 
     Ok(limit != 0 && deployed >= limit)

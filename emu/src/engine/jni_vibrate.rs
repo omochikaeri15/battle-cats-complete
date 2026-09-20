@@ -9,9 +9,7 @@ pub fn jni_vibrate(
     strength: f64,
 ) -> Result<(), Fault> {
     ctx.platform()
-        .ok_or(Fault::HostMissing {
-            site: "jni_vibrate",
-        })?
+        .ok_or(Fault::host_missing())?
         .vibrate(gate, duration, strength);
 
     Ok(())

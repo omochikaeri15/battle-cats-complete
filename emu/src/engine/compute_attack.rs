@@ -7,7 +7,6 @@ use super::{
     get_treasure_value, is_ex_map_68, read_flag, stage_entry_atk_mag,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn compute_attack(
     ctx: &mut AppContext,
     faction: i32,
@@ -26,11 +25,7 @@ pub fn compute_attack(
             let column =
                 *STAT_ATTACK_COLUMNS
                     .get(atk_idx as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: "compute_attack",
-                        index: atk_idx as i64,
-                        limit: 3,
-                    })? as i64;
+                    .ok_or(Fault::index_out_of_range(atk_idx as i64, 3))? as i64;
             let mut scaled =
                 (ctx.i32_at(AppContext::cat_stat(unit_id, form, (column * 4) as usize))? as i64)
                     .wrapping_mul(0x64);
@@ -41,11 +36,7 @@ pub fn compute_attack(
                 loop {
                     if step as u32 <= 0xc7 {
                         let column = *STAT_ATTACK_COLUMNS.get(atk_idx as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: "compute_attack",
-                                index: atk_idx as i64,
-                                limit: 3,
-                            },
+                            Fault::index_out_of_range(atk_idx as i64, 3),
                         )? as i64;
                         let base =
                             ctx.i32_at(AppContext::cat_stat(unit_id, form, (column * 4) as usize))?
@@ -111,20 +102,12 @@ pub fn compute_attack(
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let column = *STAT_ATTACK_COLUMNS
             .get((3 + atk_idx as i64) as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_attack",
-                index: atk_idx as i64,
-                limit: 3,
-            })? as i64;
+            .ok_or(Fault::index_out_of_range(atk_idx as i64, 3))? as i64;
         let base = ctx.i32_at(AppContext::enemy_stat(unit_id, (column * 4) as usize))? as i64;
         let entry = ctx
             .stage_enemies
             .get(mag_slot as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_attack",
-                index: mag_slot as i64,
-                limit: ctx.stage_enemies.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
         let mut scaled = operation::div_100(
             (stage_entry_atk_mag(entry) as i64)
                 .wrapping_mul(base)
@@ -148,20 +131,12 @@ pub fn compute_attack(
     } else {
         let column = *STAT_ATTACK_COLUMNS
             .get((3 + atk_idx as i64) as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_attack",
-                index: atk_idx as i64,
-                limit: 3,
-            })? as i64;
+            .ok_or(Fault::index_out_of_range(atk_idx as i64, 3))? as i64;
         let base = ctx.i32_at(AppContext::enemy_stat(unit_id, (column * 4) as usize))? as i64;
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let bonus = *EOC_CHAPTER_HP_MUL
             .get(chapter as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_attack",
-                index: chapter as i64,
-                limit: 3,
-            })? as i64;
+            .ok_or(Fault::index_out_of_range(chapter as i64, 3))? as i64;
 
         operation::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
     };

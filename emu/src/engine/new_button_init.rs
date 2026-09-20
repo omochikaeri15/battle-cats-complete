@@ -27,7 +27,6 @@ pub struct Button {
     pub press_scales: Vec<f32>,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn new_button_init(
     button: &mut Button,
     id: i32,

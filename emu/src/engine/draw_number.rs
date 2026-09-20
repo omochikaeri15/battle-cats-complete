@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{DrawSink, Imgcut, digit_count, draw_region_f, imgcut_get_sprite_cut};
 
-const SITE: &str = "draw_number";
-
 #[derive(Clone, Copy, Default, Debug)]
 pub struct NumberBox {
     pub left: f32,
@@ -13,7 +11,6 @@ pub struct NumberBox {
     pub digits: i32,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_number(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,
@@ -42,7 +39,7 @@ pub fn draw_number(
 
         loop {
             let power = operation::cvttss2si(operation::powf(10.0, place as f32));
-            let shifted = operation::idiv(value, power).ok_or(Fault::divide(SITE, power as i64))?;
+            let shifted = operation::idiv(value, power).ok_or(Fault::divide(power as i64))?;
             let digit = shifted
                 .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
                 .wrapping_add(base);
@@ -91,7 +88,7 @@ pub fn draw_number(
 
     loop {
         let power = operation::cvttss2si(operation::powf(10.0, place as f32));
-        let shifted = operation::idiv(value, power).ok_or(Fault::divide(SITE, power as i64))?;
+        let shifted = operation::idiv(value, power).ok_or(Fault::divide(power as i64))?;
         let digit = shifted
             .wrapping_sub(operation::div_10(shifted).wrapping_mul(10))
             .wrapping_add(base);

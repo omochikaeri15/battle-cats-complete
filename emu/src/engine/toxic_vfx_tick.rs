@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, get_anim_len, play_sound_in_battle};
 
-const SITE: &str = "toxic_vfx_tick";
-
 pub fn toxic_vfx_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let count = ctx.toxic_vfx.len() as i32;
 
@@ -19,11 +17,7 @@ pub fn toxic_vfx_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut frame = ctx
             .toxic_vfx
             .get(at)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: at as i64,
-                limit,
-            })?
+            .ok_or(Fault::index_out_of_range(at as i64, limit))?
             .frame;
 
         if frame == 0 {
@@ -31,22 +25,14 @@ pub fn toxic_vfx_tick(ctx: &mut AppContext) -> Result<(), Fault> {
             frame = ctx
                 .toxic_vfx
                 .get(at)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: at as i64,
-                    limit,
-                })?
+                .ok_or(Fault::index_out_of_range(at as i64, limit))?
                 .frame;
         }
 
         frame = frame.wrapping_add(1);
         ctx.toxic_vfx
             .get_mut(at)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: at as i64,
-                limit,
-            })?
+            .ok_or(Fault::index_out_of_range(at as i64, limit))?
             .frame = frame;
 
         if frame >= get_anim_len(&ctx.toxic_vfx_anim)? {

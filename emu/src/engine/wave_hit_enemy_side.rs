@@ -27,11 +27,7 @@ pub fn wave_hit_enemy_side(
     let proc_flags: [u8; 12] = proc_flags
         .get(..12)
         .and_then(|bytes| bytes.try_into().ok())
-        .ok_or(Fault::IndexOutOfRange {
-            site: "wave_hit_enemy_side",
-            index: record as i64,
-            limit: 12,
-        })?;
+        .ok_or(Fault::index_out_of_range(record as i64, 12))?;
 
     if enemy_attack_dispatch(
         ctx,

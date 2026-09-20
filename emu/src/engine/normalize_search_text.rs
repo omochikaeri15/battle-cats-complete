@@ -1,7 +1,5 @@
 use crate::Fault;
 
-const SITE: &str = "normalize_search_text";
-
 pub fn normalize_search_text(text: &[u8]) -> Result<Vec<u8>, Fault> {
     let mut points: Vec<u32> = Vec::new();
     let mut at = 0usize;
@@ -17,11 +15,11 @@ pub fn normalize_search_text(text: &[u8]) -> Result<Vec<u8>, Fault> {
         } else if lead & 0xf8 == 0xf0 {
             (4, u32::from(lead & 0x07))
         } else {
-            return Err(Fault::InvalidArgument { site: SITE });
+            return Err(Fault::invalid_argument());
         };
 
         if at + width > text.len() {
-            return Err(Fault::InvalidArgument { site: SITE });
+            return Err(Fault::invalid_argument());
         }
 
         let mut extra = 1usize;
@@ -30,7 +28,7 @@ pub fn normalize_search_text(text: &[u8]) -> Result<Vec<u8>, Fault> {
             let byte = text[at + extra];
 
             if byte & 0xc0 != 0x80 {
-                return Err(Fault::InvalidArgument { site: SITE });
+                return Err(Fault::invalid_argument());
             }
 
             point = point << 6 | u32::from(byte & 0x3f);
@@ -38,7 +36,7 @@ pub fn normalize_search_text(text: &[u8]) -> Result<Vec<u8>, Fault> {
         }
 
         if point > 0x10ffff {
-            return Err(Fault::InvalidArgument { site: SITE });
+            return Err(Fault::invalid_argument());
         }
 
         points.push(point);

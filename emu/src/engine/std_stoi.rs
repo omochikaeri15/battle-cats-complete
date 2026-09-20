@@ -4,11 +4,11 @@ pub fn std_stoi(text: &[u8], idx: Option<&mut usize>, base: i32) -> Result<i32, 
     let parsed = operation::strtol(text, base);
 
     if parsed.overflow {
-        return Err(Fault::OutOfRange { site: "std_stoi" });
+        return Err(Fault::out_of_range());
     }
 
     if parsed.end == 0 {
-        return Err(Fault::InvalidArgument { site: "std_stoi" });
+        return Err(Fault::invalid_argument());
     }
 
     if let Some(idx) = idx {
@@ -16,7 +16,7 @@ pub fn std_stoi(text: &[u8], idx: Option<&mut usize>, base: i32) -> Result<i32, 
     }
 
     if parsed.value as i32 as i64 != parsed.value {
-        return Err(Fault::OutOfRange { site: "std_stoi" });
+        return Err(Fault::out_of_range());
     }
 
     Ok(parsed.value as i32)

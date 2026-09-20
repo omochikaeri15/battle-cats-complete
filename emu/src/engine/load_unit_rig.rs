@@ -10,8 +10,6 @@ use super::{
     texture_cache_load, trait_zombie,
 };
 
-const SITE: &str = "load_unit_rig";
-
 pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
     let buttons = if faction == 0 { 0x15 } else { 0xa };
     let side = if faction == 0 { 0usize } else { 1usize };
@@ -50,31 +48,23 @@ pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
         let cut = query_localizable(ctx, &name);
         let sheet = texture_cache_load(ctx, &png, &cut, 0x2601)?;
         let table =
-            get_sheet_table(ctx, faction, button)?.ok_or(Fault::NullPointer { site: SITE })?;
+            get_sheet_table(ctx, faction, button)?.ok_or(Fault::null_pointer())?;
         let slot = get_button_unit_row(ctx, faction, button)?.wrapping_add(-2);
 
         table
             .get(slot as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: table.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(slot as i64, table.len() as i64))?
             .set(sheet);
 
         if faction != 0 && faction != 1 {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         }
 
         let name = format_localized(ctx, b"%s.mamodel", &base)?;
         let path = query_localizable(ctx, &name);
         let limit = ctx.unit_models[side].len() as i64;
         let mut model = std::mem::take(ctx.unit_models[side].get_mut(button as usize).ok_or(
-            Fault::IndexOutOfRange {
-                site: SITE,
-                index: button as i64,
-                limit,
-            },
+            Fault::index_out_of_range(button as i64, limit),
         )?);
 
         mamodel_load(ctx, &mut model, &path)?;
@@ -91,11 +81,7 @@ pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let anims =
                 ctx.unit_anims[side]
                     .get_mut(button as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: button as i64,
-                        limit,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(button as i64, limit))?;
             let mut anim = std::mem::take(std_map_int_maanim_subscript(anims, &index));
 
             maanim_load(ctx, &mut anim, &path)?;
@@ -147,17 +133,13 @@ pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             let mut part = 0;
 
             while part < mamodel_get_part_count(model) {
-                let first = mamodel_get_part(model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+                let first = mamodel_get_part(model, 0).ok_or(Fault::null_pointer())?;
                 let limit = model.parts.len() as i64;
                 let target =
                     model
                         .parts
                         .get_mut(first + part as usize)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: part as i64,
-                            limit,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(part as i64, limit))?;
 
                 if target.i32_at(0x24) != -1 {
                     target.set_i32_at(0x24, unit);

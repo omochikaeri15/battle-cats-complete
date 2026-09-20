@@ -2,9 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, ENTITY_BASE, get_battle_status, set_keep_awake, stage_initialize};
 
-const SITE: &str = "set_scene";
-
-#[allow(clippy::if_same_then_else)]
 pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
     ctx.set_block_at::<0x28>(AppContext::DRAW_TEMP_0, [0; 0x28])?;
     ctx.set_i32_at(AppContext::SCENE_ID, scene)?;
@@ -31,7 +28,7 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
         0x12c => stage_initialize(ctx),
         0x3e7 => {
             ctx.scene_host()
-                .ok_or(Fault::HostMissing { site: SITE })?
+                .ok_or(Fault::host_missing())?
                 .scene_setup(current);
 
             Ok(())
@@ -52,7 +49,7 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
         }
         4 | 5 | 0x5a | 0x61 | 0x62 | 0x63 | 0x65 | 0x66 | 0x68 => {
             ctx.scene_host()
-                .ok_or(Fault::HostMissing { site: SITE })?
+                .ok_or(Fault::host_missing())?
                 .scene_setup(current);
 
             Ok(())

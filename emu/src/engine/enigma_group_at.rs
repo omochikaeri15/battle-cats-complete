@@ -6,7 +6,5 @@ pub fn enigma_group_at(enigma: &Enigma, index: i32) -> Result<&EnigmaGroup, Faul
     enigma
         .groups
         .get(index as i64 as usize)
-        .ok_or(Fault::OutOfRange {
-            site: "enigma_group_at",
-        })
+        .ok_or(Fault::out_of_range())
 }

@@ -4,8 +4,6 @@ use crate::Fault;
 
 use super::{AppContext, call_rng, get_global_map_id, get_stage_index};
 
-const SITE: &str = "enigma_pick_by_table";
-
 pub fn enigma_pick_by_table(
     ctx: &mut AppContext,
     mut eligible: BTreeMap<i32, bool>,
@@ -32,10 +30,7 @@ pub fn enigma_pick_by_table(
             .table
             .get(&map)
             .and_then(|stages| stages.get(&stage))
-            .ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: map as i64,
-            })?;
+            .ok_or(Fault::key_not_found(map as i64))?;
 
         if index >= entry.groups.len() {
             break;
@@ -44,7 +39,7 @@ pub fn enigma_pick_by_table(
         let group = *entry
             .groups
             .get(index)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if *eligible.entry(group).or_insert(false) {
             let mut slot = 0usize;
@@ -54,14 +49,14 @@ pub fn enigma_pick_by_table(
                     .enigma
                     .groups
                     .get(group as i64 as usize)
-                    .ok_or(Fault::OutOfRange { site: SITE })?
+                    .ok_or(Fault::out_of_range())?
                     .stage_ids;
 
                 if slot >= stages.len() {
                     break;
                 }
 
-                let id = *stages.get(slot).ok_or(Fault::OutOfRange { site: SITE })?;
+                let id = *stages.get(slot).ok_or(Fault::out_of_range())?;
 
                 if !*excluded.entry(id).or_insert(false) {
                     candidates.insert(group, true);
@@ -88,10 +83,7 @@ pub fn enigma_pick_by_table(
             .table
             .get(&map)
             .and_then(|stages| stages.get(&stage))
-            .ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: map as i64,
-            })?;
+            .ok_or(Fault::key_not_found(map as i64))?;
 
         if index >= entry.chances.len() {
             return Ok(-1);
@@ -100,7 +92,7 @@ pub fn enigma_pick_by_table(
         let group = *entry
             .groups
             .get(index)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if *candidates.entry(group).or_insert(false) {
             let roll = call_rng(ctx, 0x64);
@@ -109,14 +101,11 @@ pub fn enigma_pick_by_table(
                 .table
                 .get(&map)
                 .and_then(|stages| stages.get(&stage))
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: map as i64,
-                })?;
+                .ok_or(Fault::key_not_found(map as i64))?;
             let chance = *entry
                 .chances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
             if roll < chance {
                 return Ok(group);

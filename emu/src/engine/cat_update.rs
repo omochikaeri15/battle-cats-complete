@@ -22,8 +22,6 @@ use super::{
     sound_manager, spawn_warp_tick, std_map_int_maanim_subscript_2,
 };
 
-const SITE: &str = "cat_update";
-
 #[derive(Default)]
 pub struct SurgeEvent {
     pub faction: i32,
@@ -377,11 +375,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let lift =
                         *KNOCKBACK_Y_ARC
                             .get(frame as usize)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: frame,
-                                limit: 24,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(frame, 24))?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -467,7 +461,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if get_gudetama_soul(ctx, faction, slot as i32)? {
                         let button = get_entity_button(ctx, faction, slot as i32)?;
                         let anim = get_unit_anim(ctx, faction, button, 8)?
-                            .ok_or(Fault::NullPointer { site: SITE })?;
+                            .ok_or(Fault::null_pointer())?;
                         let length = get_anim_len(anim)?;
 
                         limit = if length < 2 { 1 } else { length };
@@ -491,11 +485,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     if get_entity_state(ctx, faction, slot as i32)? == 0x15 {
                         let delay = get_setting(&ctx.settings, b"battle_death_volcano_time", 0x1e)?;
                         let anim = ctx.death_surge_anims.get(faction as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: faction as i64,
-                                limit: 2,
-                            },
+                            Fault::index_out_of_range(faction as i64, 2),
                         )?;
 
                         limit = max_i32(delay, get_anim_len(anim)?);
@@ -521,11 +511,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             ctx.surge_events.push(SurgeEvent::default());
 
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.faction = faction;
                             event.slot = slot as i32;
@@ -537,11 +523,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             let drawn = call_rng(ctx, reach);
                             let span = get_death_surge_span(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
                             let spread = if span <= 0 {
                                 drawn
                             } else {
@@ -552,11 +534,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                             let level = get_death_surge_level(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.level = level;
                             event.attack = 0;
@@ -578,11 +556,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
 
                             let mini = get_death_surge_mini(ctx, faction, slot as i32)?;
                             let event =
-                                ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: 0,
-                                    limit: 0,
-                                })?;
+                                ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
                             event.mini = mini != 0;
                             event.kind = 2;
@@ -682,11 +656,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))? as i64;
                     let lift = *RECOIL_Y_ARC
                         .get(frame as usize)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: frame,
-                            limit: 12,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(frame, 12))?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 
                     ctx.set_i32_at(entity.wrapping_add(Entity::POS_Y), y.wrapping_add(lift))?;
@@ -763,11 +733,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     let frame = ctx.i32_at(entity.wrapping_add(Entity::FRAME))?;
                     let half = (((frame as u32) >> 0x1f) as i32).wrapping_add(frame) >> 1;
                     let lift = *KNOCKBACK_Y_ARC.get(half as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: half as i64,
-                            limit: 24,
-                        },
+                        Fault::index_out_of_range(half as i64, 24),
                     )?;
                     let y = ctx.i32_at(entity.wrapping_add(Entity::POS_Y))?;
 

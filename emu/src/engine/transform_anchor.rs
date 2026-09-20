@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{Mamodel, MamodelPart, transform_point};
 
-const SITE: &str = "transform_anchor";
-
 pub fn transform_anchor(
     part: &MamodelPart,
     model: &Mamodel,
@@ -22,14 +20,14 @@ pub fn transform_anchor(
         .wrapping_mul(part.i32_at(0x6c)) as i64;
 
     if scale_unit == 0 {
-        return Err(Fault::DivideByZero { site: SITE });
+        return Err(Fault::divide_by_zero());
     }
 
     let scaled_x = spread_x / scale_unit as i64;
     let scaled_y = spread_y / scale_unit as i64;
 
     if scaled_x != scaled_x as i32 as i64 || scaled_y != scaled_y as i32 as i64 {
-        return Err(Fault::DivideOverflow { site: SITE });
+        return Err(Fault::divide_overflow());
     }
 
     let mat = [

@@ -5,8 +5,6 @@ use super::{
     texture_cache_load,
 };
 
-const SITE: &str = "scene_background_setup";
-
 pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
     match get_scene_id(ctx)? {
         0x61 => {
@@ -17,7 +15,7 @@ pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
         }
         0x64 => {
             ctx.scene_host()
-                .ok_or(Fault::HostMissing { site: SITE })?
+                .ok_or(Fault::host_missing())?
                 .scene_background_setup();
 
             Ok(())
@@ -33,11 +31,7 @@ pub fn scene_background_setup(ctx: &mut AppContext) -> Result<(), Fault> {
                 pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK + slot * 4)?);
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::BATTLE_DECK_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 1,
-                })? as i32
+                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                     == -1
                 {
                     let png = query_localizable(ctx, b"uni.png");

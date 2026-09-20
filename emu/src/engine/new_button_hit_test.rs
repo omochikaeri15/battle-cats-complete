@@ -5,15 +5,13 @@ use super::{
     touch_is_down, touch_released, ui_node_set_scale, web_view_is_open,
 };
 
-const SITE: &str = "new_button_hit_test";
-
 pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<(), Fault> {
     let this: &mut Button = ctx
         .buttons
         .buttons
         .get_mut(&id)
         .and_then(|slot| slot.as_deref_mut())
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
 
     if this.enabled == 0 {
         return Ok(());
@@ -35,7 +33,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                     .buttons
                     .get_mut(&id)
                     .and_then(|slot| slot.as_deref_mut())
-                    .ok_or(Fault::NullPointer { site: SITE })?
+                    .ok_or(Fault::null_pointer())?
                     .state
                     != 1
                 {
@@ -48,22 +46,18 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                 .buttons
                 .get_mut(&id)
                 .and_then(|slot| slot.as_deref_mut())
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
 
             let finished = if this.animated != 0 {
                 let frame = this.frame;
                 let scale = *this.press_scales.get(frame as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: frame as i64,
-                        limit: this.press_scales.len() as i64,
-                    },
+                    Fault::index_out_of_range(frame as i64, this.press_scales.len() as i64),
                 )?;
 
                 ui_node_set_scale(
                     this.node
                         .as_deref_mut()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                     scale,
                     scale,
                 );
@@ -104,7 +98,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                         .buttons
                         .get_mut(&id)
                         .and_then(|slot| slot.as_deref_mut())
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
                     this.offset_x.wrapping_add(this.x)
                 } {
                     break 'outside;
@@ -116,7 +110,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                         .buttons
                         .get_mut(&id)
                         .and_then(|slot| slot.as_deref_mut())
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
                     this.offset_x.wrapping_add(this.x).wrapping_add(this.width)
                 } {
                     break 'outside;
@@ -128,7 +122,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                         .buttons
                         .get_mut(&id)
                         .and_then(|slot| slot.as_deref_mut())
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
                     this.offset_y.wrapping_add(this.y)
                 } {
                     break 'outside;
@@ -140,7 +134,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                         .buttons
                         .get_mut(&id)
                         .and_then(|slot| slot.as_deref_mut())
-                        .ok_or(Fault::NullPointer { site: SITE })?;
+                        .ok_or(Fault::null_pointer())?;
                     this.offset_y.wrapping_add(this.y).wrapping_add(this.height)
                 } {
                     break 'inside;
@@ -152,7 +146,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                 .buttons
                 .get_mut(&id)
                 .and_then(|slot| slot.as_deref_mut())
-                .ok_or(Fault::NullPointer { site: SITE })?
+                .ok_or(Fault::null_pointer())?
                 .back_key
                 == 0
             {
@@ -178,7 +172,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                 .buttons
                 .get_mut(&id)
                 .and_then(|slot| slot.as_deref_mut())
-                .ok_or(Fault::NullPointer { site: SITE })?
+                .ok_or(Fault::null_pointer())?
                 .back_key
                 != 0
                 && back_pressed(ctx)? != 0);
@@ -189,7 +183,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
                 .buttons
                 .get_mut(&id)
                 .and_then(|slot| slot.as_deref_mut())
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
 
             this.state = 1;
             this.frame = 0;
@@ -208,7 +202,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
             .buttons
             .get_mut(&id)
             .and_then(|slot| slot.as_deref_mut())
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         if this.touching != 0 {
             let handler = this.handler;
@@ -228,7 +222,7 @@ pub fn new_button_hit_test(ctx: &mut AppContext, id: i32, busy: u8) -> Result<()
         .buttons
         .get_mut(&id)
         .and_then(|slot| slot.as_deref_mut())
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
 
     if this.touching != 0 {
         this.touching = 0;

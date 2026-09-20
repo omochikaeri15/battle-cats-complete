@@ -5,8 +5,6 @@ use super::{
     imgcut_get_height, imgcut_get_width, read_flag,
 };
 
-const SITE: &str = "draw_castle";
-
 pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result<(), Fault> {
     let x =
         operation::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + x as f64);
@@ -17,16 +15,12 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
         let sheet = ctx
             .base_sheets
             .get(3)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 3,
-                limit: ctx.base_sheets.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(3, ctx.base_sheets.len() as i64))?
             .take();
 
         ctx.base_sheets[3].set(sheet.clone());
 
-        let decor = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let decor = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(decor);
         let width = operation::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(decor);
@@ -45,7 +39,7 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
 
         ctx.base_sheets[2].set(sheet.clone());
 
-        let foundation = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let foundation = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(foundation);
         let width = operation::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(foundation);
@@ -64,7 +58,7 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
 
         ctx.base_sheets[0].set(sheet.clone());
 
-        let cannon = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let cannon = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_width(cannon);
         let width = operation::div_100((width << 7).wrapping_sub(width));
         let height = imgcut_get_height(cannon);
@@ -87,7 +81,7 @@ pub fn draw_castle(ctx: &mut AppContext, faction: i32, x: i32, y: i32) -> Result
     }
 
     let sheet = ctx.enemy_castle_sheet.clone();
-    let castle = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let castle = sheet.as_deref().ok_or(Fault::null_pointer())?;
     let id = if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3
         || ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63
     {

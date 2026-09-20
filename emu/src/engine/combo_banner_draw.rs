@@ -5,8 +5,6 @@ use super::{
     get_drawable_width, glow_set, set_tint,
 };
 
-const SITE: &str = "combo_banner_draw";
-
 pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.i32_at(AppContext::COMBO_BANNER_PHASE)? <= 0 {
         return Ok(());
@@ -20,11 +18,11 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     let step = ctx.i32_at(AppContext::COMBO_BANNER_TEXT_STEP)?;
     let sub = ctx.i32_at(AppContext::COMBO_BANNER_SUB)?;
     let lead = operation::idiv(0x3c, step)
-        .ok_or(Fault::divide(SITE, step as i64))?
+        .ok_or(Fault::divide(step as i64))?
         .wrapping_mul(sub);
     let width = get_drawable_width(ctx)?;
     let grow = operation::idiv(0x78, step)
-        .ok_or(Fault::divide(SITE, step as i64))?
+        .ok_or(Fault::divide(step as i64))?
         .wrapping_mul(sub);
     let (top, height): (i32, i32) = if third {
         (-0xf, grow.wrapping_add(0x1e))
@@ -41,7 +39,7 @@ pub fn combo_banner_draw(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     let sheet = ctx.img004_sheet.clone();
-    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
     let x = get_drawable_width(ctx)?.wrapping_add(-0x57);
 
     draw_cut(

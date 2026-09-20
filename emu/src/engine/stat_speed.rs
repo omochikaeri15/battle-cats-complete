@@ -38,31 +38,19 @@ pub fn stat_speed(
     let mode_cell = faction.wrapping_add(faction);
     let mode = *params
         .get(mode_cell as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "stat_speed",
-            index: mode_cell as i64,
-            limit: params.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(mode_cell as i64, params.len() as i64))?;
 
     if mode == 2 {
         let percent =
             *params
                 .get((mode_cell | 1) as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "stat_speed",
-                    index: (mode_cell | 1) as i64,
-                    limit: params.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range((mode_cell | 1) as i64, params.len() as i64))?;
 
         speed = operation::div_100(speed.wrapping_mul(percent));
     } else if mode == 1 {
         let fixed = *params
             .get((mode_cell | 1) as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "stat_speed",
-                index: (mode_cell | 1) as i64,
-                limit: params.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range((mode_cell | 1) as i64, params.len() as i64))?;
 
         speed = fixed.wrapping_add(fixed);
     }

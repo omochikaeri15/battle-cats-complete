@@ -93,7 +93,7 @@ pub fn dialog_new(
     );
 
     ctx.ui()
-        .ok_or(Fault::HostMissing { site: "dialog_new" })?
+        .ok_or(Fault::host_missing())?
         .dialog_create(dialog, kind, text, first_button, second_button, flags);
 
     Ok(dialog)

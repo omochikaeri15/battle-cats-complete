@@ -2,7 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, get_battle_status, set_keep_awake};
 
-#[allow(clippy::if_same_then_else)]
 pub fn update_keep_awake(ctx: &mut AppContext, enable: u8) -> Result<(), Fault> {
     let scene = ctx.i32_at(AppContext::SCENE_ID)?;
     let menu = scene.wrapping_sub(0x61) as u32;

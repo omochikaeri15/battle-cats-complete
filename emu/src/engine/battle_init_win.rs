@@ -37,8 +37,6 @@ use super::{
     web_popup_request, web_popup_stage_match, xor_row46_get,
 };
 
-const SITE: &str = "battle_init_win";
-
 pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
     let map_text = string_format_int(ctx, b"%d", map_id)?;
@@ -146,11 +144,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     .or_default()
                     .victory_voices
                     .get(index)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
                 if voice != -1 {
                     play_sound(sound_manager(ctx)?, voice, None);
@@ -174,7 +168,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let voices = &ctx.map_records.entry(first).or_default().victory_voices;
         let voice = *voices
             .get(pick as usize)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
 
         if voice != -1 {
             play_sound(sound_manager(ctx)?, voice, None);
@@ -245,7 +239,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let store = ctx
             .event_items
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let total = get_point_total(store);
 
         ctx.set_block_at::<1>(
@@ -256,13 +250,13 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let score = get_stage_score(
             ctx.event_items
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
         );
         let stage = get_stage_index(ctx)?;
         let best = get_stage_best_score(
             ctx.event_items
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             stage,
         );
 
@@ -308,11 +302,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 .combo_store
                 .records
                 .get(index)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: index as i64,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(index as i64, 0))?;
             let (enabled, kind) = (record.enabled, record.kind[0]);
 
             if enabled != 0 {
@@ -392,7 +382,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             )?;
         }
 
-        let bits = map_guerrilla_set(ctx, pair_map);
+        let bits = map_guerrilla_set(&ctx.map_options, pair_map);
 
         if bits > 0 {
             let mut bit = 0i32;
@@ -547,11 +537,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             && ctx.i32_at(AppContext::STAR_LEVEL)? == 0
             && aku.len() == 1
         {
-            let only = *aku.first().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let only = *aku.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
             if only == ctx.i32_at(AppContext::STAGE_ROW)? && (only == 0x30 || only == 0) {
                 aku_timer_set(ctx, 0, 0.0);
@@ -596,11 +582,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
         )?;
         let record = operation::xor_row_decode(records, 0x33, stage_row as i64 as usize).ok_or(
-            Fault::IndexOutOfRange {
-                site: SITE,
-                index: stage_row as i64,
-                limit: 0x33,
-            },
+            Fault::index_out_of_range(stage_row as i64, 0x33),
         )?;
 
         if record == 0 {
@@ -658,11 +640,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let chapter_now = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
             let progress = operation::xor_row_decode(progress_row, 10, chapter_now as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: chapter_now as i64,
-                    limit: 10,
-                })?;
+                .ok_or(Fault::index_out_of_range(chapter_now as i64, 10))?;
 
             ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, progress as i32)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
@@ -678,11 +656,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
             let progress = operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: chapter as i64,
-                    limit: 10,
-                })?;
+                .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
 
             if progress == 0x30 {
                 ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
@@ -783,11 +757,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
                     let progress =
                         operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: chapter as i64,
-                                limit: 10,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
                     let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
                     let unlock_stage = unit_buy_field(row, 0)?;
 
@@ -878,7 +848,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         mission_progress(ctx, 9, 4, 1, cleared as i32, 0)?;
 
         let ex_now = ctx.i32_at(AppContext::EX_MAP)?;
-        let bits = map_guerrilla_set(ctx, ex_now.wrapping_add(0xfa0));
+        let bits = map_guerrilla_set(&ctx.map_options, ex_now.wrapping_add(0xfa0));
 
         pair_map = ex_map.wrapping_add(0xfa0);
 
@@ -907,7 +877,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         ctx.reward_queue.push(vec![0xa, map_key, pair_stage]);
 
         let other = stage_pair_record(ctx, map_key, pair_stage)?
-            .ok_or(Fault::NullPointer { site: SITE })?
+            .ok_or(Fault::null_pointer())?
             .other_stage;
 
         stage_pair_progress_set(ctx, map_key, pair_stage, other);
@@ -930,11 +900,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
     let row = (AppContext::MAP_STAGE_ROWS as i64
         + (pair_stage as i64) * AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
-    let selector = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 8,
-        limit: 0x2e,
-    })?;
+    let selector = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::index_out_of_range(8, 0x2e))?;
 
     'drops: {
         if selector & 0xfffffffe != 0xfffffffc {
@@ -943,11 +909,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? == 0;
 
             if outbreak_chapter
-                || xor_row46_get(ctx.bytes_from(row)?, 5).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 5,
-                    limit: 0x2e,
-                })? == 0xffffffff
+                || xor_row46_get(ctx.bytes_from(row)?, 5).ok_or(Fault::index_out_of_range(5, 0x2e))? == 0xffffffff
                 || ctx.u8_at(AppContext::BATTLE_IS_INVASION)? != 0
             {
                 if invasion_available(ctx, chapter)?
@@ -987,19 +949,11 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let mut tiers = 1;
 
             if (selector as i32) >= 0
-                && (xor_row46_get(ctx.bytes_from(row)?, 9).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 9,
-                    limit: 0x2e,
-                })? as i32)
+                && (xor_row46_get(ctx.bytes_from(row)?, 9).ok_or(Fault::index_out_of_range(9, 0x2e))? as i32)
                     >= 0
             {
                 tiers =
-                    ((xor_row46_get(ctx.bytes_from(row)?, 0xc).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0xc,
-                        limit: 0x2e,
-                    })? as i32)
+                    ((xor_row46_get(ctx.bytes_from(row)?, 0xc).ok_or(Fault::index_out_of_range(0xc, 0x2e))? as i32)
                         >= 0) as i32
                         | 2;
             }
@@ -1020,11 +974,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                 if let Some((field, base)) = rate_field {
                     let rate = xor_row46_get(ctx.bytes_from(row)?, field).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: field as i64,
-                            limit: 0x2e,
-                        },
+                        Fault::index_out_of_range(field as i64, 0x2e),
                     )? as i32;
 
                     ctx.set_i32_at(AppContext::DROP_RATE, rate)?;
@@ -1054,11 +1004,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         }
 
                         let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 8,
-                                limit: 0x2e,
-                            },
+                            Fault::index_out_of_range(8, 0x2e),
                         )?;
 
                         if kind.wrapping_sub(1) > 1 {
@@ -1075,11 +1021,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
                                     let star = get_star_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
-                                        Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: 8,
-                                            limit: 0x2e,
-                                        },
+                                        Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     !event_reward_received(
@@ -1091,11 +1033,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
                                     let star = get_star_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
-                                        Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: 8,
-                                            limit: 0x2e,
-                                        },
+                                        Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     event_reward_set(
@@ -1121,11 +1059,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
                                     let star = get_star_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
-                                        Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: 8,
-                                            limit: 0x2e,
-                                        },
+                                        Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     event_reward_set(
@@ -1266,11 +1200,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         loop {
             let slot = if count == 0 { field } else { field + 1 };
             let chance = xor_row46_get(ctx.bytes_from(row)?, slot as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: slot as i64,
-                    limit: 0x2e,
-                },
+                Fault::index_out_of_range(slot as i64, 0x2e),
             )?;
 
             if chance == 0xffffffff {
@@ -1304,11 +1234,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         while step != count.wrapping_mul(3) {
             let base = if step == 0 { 0 } else { step + 1 };
             let chance = xor_row46_get(ctx.bytes_from(row)?, (base + 5) as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: base as i64 + 5,
-                    limit: 0x2e,
-                },
+                Fault::index_out_of_range(base as i64 + 5, 0x2e),
             )?;
 
             sum = sum.wrapping_add(chance as i32);
@@ -1320,11 +1246,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                 let taken = stage_reward_taken(ctx, pair_map, pair_stage);
                 let kind =
-                    xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 8,
-                        limit: 0x2e,
-                    })?;
+                    xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::index_out_of_range(8, 0x2e))?;
 
                 if taken || kind != 0xfffffffd {
                     if kind != 0xfffffffc {
@@ -1372,11 +1294,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::NEW_BEST_SCORE, 0)?;
         }
 
-        if xor_row46_get(ctx.bytes_from(row)?, 0xf).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0xf,
-            limit: 0x2e,
-        })? == 1
+        if xor_row46_get(ctx.bytes_from(row)?, 0xf).ok_or(Fault::index_out_of_range(0xf, 0x2e))? == 1
         {
             let group = ctx.i32_at(AppContext::CHAPTER_MODE)?.wrapping_sub(4);
             let ranking = ctx.i32_at(AppContext::RANKING_ID)?;
@@ -1428,11 +1346,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         .enumerate()
                     {
                         if xor_row46_get(ctx.bytes_from(stage_at)?, field).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: field as i64,
-                                limit: 0x2e,
-                            },
+                            Fault::index_out_of_range(field as i64, 0x2e),
                         )? == 0xffffffff
                         {
                             ranks = index as i64 + 1;
@@ -1443,11 +1357,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         if index == 7 {
                             ranks = 9
                                 + (xor_row46_get(ctx.bytes_from(stage_at)?, 0x2b).ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: 0x2b,
-                                        limit: 0x2e,
-                                    },
+                                    Fault::index_out_of_range(0x2b, 0x2e),
                                 )? != 0xffffffff) as i64;
                         }
                     }
@@ -1457,11 +1367,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                     while step != ranks * 3 {
                         let threshold = xor_row46_get(ctx.bytes_from(row)?, (0x10 + step) as usize)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: 0x10 + step,
-                                limit: 0x2e,
-                            })? as i32;
+                            .ok_or(Fault::index_out_of_range(0x10 + step, 0x2e))? as i32;
 
                         if ctx.i32_at(AppContext::STAGE_SCORE)? >= threshold && threshold > best {
                             let status = grant_stage_reward(ctx, step as i32 + 0x11, 1)?;
@@ -1572,11 +1478,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
             let progress = operation::xor_row_decode(progress_row, 10, chapter as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: chapter as i64,
-                    limit: 10,
-                })? as i32;
+                .ok_or(Fault::index_out_of_range(chapter as i64, 10))? as i32;
 
             if progress >= 0x19
                 && ctx.i32_at(AppContext::FIRST_STAGE_WON)? > 0
@@ -1617,11 +1519,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
             )?;
             let level = operation::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: castle as i64,
-                    limit: 0x31,
-                },
+                Fault::index_out_of_range(castle as i64, 0x31),
             )?;
             let tier = match level {
                 1 => ((grade < 0x46) as i32) ^ 3,
@@ -1645,11 +1543,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
                 )?;
                 let level = operation::xor_row_decode(levels, 0x31, castle as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: castle as i64,
-                        limit: 0x31,
-                    },
+                    Fault::index_out_of_range(castle as i64, 0x31),
                 )?;
                 let tier = if level == 3
                     || (get_global_map_id(ctx, 0)? == 0xbb8 && get_stage_index(ctx)? <= 2)
@@ -1679,11 +1573,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE;
             let level =
                 operation::xor_row_decode(ctx.bytes_from(levels_at)?, 0x31, castle as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: castle as i64,
-                        limit: 0x31,
-                    })? as i32;
+                    .ok_or(Fault::index_out_of_range(castle as i64, 0x31))? as i32;
             let tier = ctx.i32_at(AppContext::WIN_TREASURE)?;
 
             if level < tier {
@@ -1705,11 +1595,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 let groups = ctx
                     .treasure_store
                     .get(chapter as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: chapter as i64,
-                        limit: 10,
-                    })?
+                    .ok_or(Fault::index_out_of_range(chapter as i64, 10))?
                     .len() as i32;
 
                 if groups > 0 {
@@ -1729,11 +1615,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                 let groups = ctx
                                     .treasure_store
                                     .get(chapter as i64 as usize)
-                                    .ok_or(Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: chapter as i64,
-                                        limit: 10,
-                                    })?
+                                    .ok_or(Fault::index_out_of_range(chapter as i64, 10))?
                                     .len() as i32;
 
                                 if group < groups {
@@ -1744,11 +1626,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                             }
 
                             let castle = *record.castles.get(index as usize).ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index,
-                                    limit: record.castles.len() as i64,
-                                },
+                                Fault::index_out_of_range(index, record.castles.len() as i64),
                             )?;
 
                             index += 1;
@@ -1831,21 +1709,13 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     let mut counts = roll_drop_item_counts(ctx, drop_map, drop_stage, star)?;
 
     'items: for index in 0..counts.len() {
-        if *counts.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: 0x10,
-        })? == 0
+        if *counts.get(index).ok_or(Fault::index_out_of_range(index as i64, 0x10))? == 0
         {
             continue;
         }
 
         for item in 0..counts.len() {
-            let count = *counts.get(item).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: item as i64,
-                limit: 0x10,
-            })?;
+            let count = *counts.get(item).ok_or(Fault::index_out_of_range(item as i64, 0x10))?;
 
             for _ in 0..count.max(0) {
                 ctx.item_drop_queue.push(vec![item as i32]);
@@ -1859,11 +1729,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let mut granted = 0i32;
 
             for item in 1..counts.len() {
-                let amount = *counts.get(item).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: item as i64,
-                    limit: 0x11,
-                })?;
+                let amount = *counts.get(item).ok_or(Fault::index_out_of_range(item as i64, 0x11))?;
 
                 if amount != 0 {
                     if granted > 3 {
@@ -1933,11 +1799,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         if (rewards.len() as u64) > lineups as i64 as u64 {
             let item = rewards
                 .get(lineups as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: lineups as i64,
-                    limit: rewards.len() as i64,
-                })?[0];
+                .ok_or(Fault::index_out_of_range(lineups as i64, rewards.len() as i64))?[0];
 
             if item != -1 {
                 item_index = find_item_index(ctx, item)?;
@@ -1962,11 +1824,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                 if rewards
                     .get(at as u32 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: at as i64,
-                        limit: rewards.len() as i64,
-                    })?[0]
+                    .ok_or(Fault::index_out_of_range(at as i64, rewards.len() as i64))?[0]
                     == -1
                 {
                     continue;
@@ -1984,11 +1842,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             if item_index != -1 {
                 let amount = rewards
                     .get(lineups as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: lineups as i64,
-                        limit: rewards.len() as i64,
-                    })?[1];
+                    .ok_or(Fault::index_out_of_range(lineups as i64, rewards.len() as i64))?[1];
 
                 add_resource(ctx, item_index, amount, 0)?;
                 ctx.reward_queue
@@ -2016,7 +1870,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let store = ctx
             .event_items
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let point_id = get_point_id(store);
         let total = get_point_total(store);
         let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.reward_defs, point_id)
@@ -2104,7 +1958,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 let sheet = Rc::clone(
                     ctx.img039_sheet
                         .as_ref()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                 );
                 let width = get_drawable_width(ctx)?;
                 let x = width.wrapping_sub(0xfa) / 2;
@@ -2138,9 +1992,9 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 let sheet = Rc::clone(
                     ctx.map_ui_sheet
                         .as_ref()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                 );
-                let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+                let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
                 let (origin_x, origin_y) = dialog_origin(ctx, dialog)?;
                 let mut panel = ui_node_set_panel(
                     &sheet,

@@ -11,8 +11,6 @@ use super::{
     touch_released, xor_row46_get,
 };
 
-const SITE: &str = "point_lose_update";
-
 pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::SPEED, 1)?;
 
@@ -116,11 +114,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let head = match ctx.reward_queue.first() {
-                Some(entry) => Some(*entry.first().ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 0,
-                })?),
+                Some(entry) => Some(*entry.first().ok_or(Fault::index_out_of_range(0, 0))?),
                 None => None,
             };
 
@@ -138,23 +132,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             play_sound(sound_manager(ctx)?, 0x1d, None);
 
             let mut message = Vec::new();
-            let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
-            let group = *entry.get(1).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: entry.len() as i64,
-            })?;
-            let id = *entry.get(2).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 2,
-                limit: entry.len() as i64,
-            })?;
+            let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
+            let group = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
+            let id = *entry.get(2).ok_or(Fault::index_out_of_range(2, entry.len() as i64))?;
             let reward = reward_def_lookup(&ctx.reward_defs, group, id)
-                .ok_or(Fault::NullPointer { site: SITE })?
+                .ok_or(Fault::null_pointer())?
                 .clone();
 
             match reward.kind {
@@ -185,23 +167,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
                         .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
                 );
-                let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 0,
-                })?;
-                let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: entry.len() as i64,
-                })?;
+                let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
+                let index = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
 
                 xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0x2f,
-                    },
+                    Fault::index_out_of_range(index as i64, 0x2f),
                 )? as i32
             };
 
@@ -210,23 +180,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
                         .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
                 );
-                let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 0,
-                })?;
-                let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: entry.len() as i64,
-                })?;
+                let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
+                let index = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
 
                 xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0x2f,
-                    },
+                    Fault::index_out_of_range(index as i64, 0x2f),
                 )? as i32
             } <= ctx.drop_chara_max_1000
             {
@@ -237,23 +195,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
                             .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
                     );
-                    let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
-                    let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 1,
-                        limit: entry.len() as i64,
-                    })?;
+                    let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
+                    let index = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
 
                     xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: index as i64,
-                            limit: 0x2f,
-                        },
+                        Fault::index_out_of_range(index as i64, 0x2f),
                     )? as i32
                 }) >= 0x44c
                     && {
@@ -261,23 +207,11 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                             (ctx.i32_at(AppContext::STAGE_ROW)? as i64 as usize)
                                 .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
                         );
-                        let entry = ctx.reward_queue.first().ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?;
-                        let index = *entry.get(1).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: entry.len() as i64,
-                        })?;
+                        let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
+                        let index = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
 
                         xor_row46_get(ctx.bytes_from(row)?, index as i64 as usize).ok_or(
-                            Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: index as i64,
-                                limit: 0x2f,
-                            },
+                            Fault::index_out_of_range(index as i64, 0x2f),
                         )? as i32
                     } <= ctx.drop_chara_max_1100
             };
@@ -423,18 +357,18 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let map =
-                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 0)?;
 
             let share =
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, share, 0)?;
 
             if ctx.u8_at(AppContext::OUTRO_VIDEO_BUTTON)? != 0 {
                 let third = button_bank_find(&ctx.buttons, 0xcb)
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 new_button_set_touchable(&mut ctx.buttons, third, 0)?;
             }
@@ -473,7 +407,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let share =
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, share, 1)?;
 
@@ -482,7 +416,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let map =
-                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::NullPointer { site: SITE })?;
+                button_bank_find(&ctx.buttons, 0xc8).ok_or(Fault::null_pointer())?;
 
             new_button_set_touchable(&mut ctx.buttons, map, 1)?;
 

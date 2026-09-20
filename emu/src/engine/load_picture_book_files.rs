@@ -5,8 +5,6 @@ use super::{
     query_localizable, read_cell_stream, read_csv_cell, read_csv_row, read_stream_row, read_tsv_row,
 };
 
-const SITE: &str = "load_picture_book_files";
-
 pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
     let lang = query_localizable(ctx, b"lang");
     let name = format_localized(ctx, b"EnemyPictureBook_%@.csv", &lang)?;
@@ -221,21 +219,13 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get(right as usize)
                 .and_then(|row| row.first())
                 .copied()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: right as i64,
-                    limit: ctx.picture_book_traits.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(right as i64, ctx.picture_book_traits.len() as i64))?;
             let left_key = ctx
                 .picture_book_traits
                 .get(left as usize)
                 .and_then(|row| row.first())
                 .copied()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: left as i64,
-                    limit: ctx.picture_book_traits.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(left as i64, ctx.picture_book_traits.len() as i64))?;
 
             if right_key >= left_key {
                 sorted += 1;
@@ -263,21 +253,13 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
                     .get(below as usize)
                     .and_then(|row| row.first())
                     .copied()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: below as i64,
-                        limit: ctx.picture_book_traits.len() as i64,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(below as i64, ctx.picture_book_traits.len() as i64))?;
                 let key_value = ctx
                     .picture_book_traits
                     .get(key as usize)
                     .and_then(|row| row.first())
                     .copied()
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: key as i64,
-                        limit: ctx.picture_book_traits.len() as i64,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(key as i64, ctx.picture_book_traits.len() as i64))?;
 
                 slot -= 1;
 

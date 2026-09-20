@@ -5,18 +5,12 @@ use super::{
     get_setting, play_sound, roll_procs, sound_manager,
 };
 
-const SITE: &str = "counter_surge_update";
-
 pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut index = 0i32;
 
     while (index as i64 as usize) < ctx.counter_surge_events.len() {
         let at = index as i64 as usize;
-        let missing = Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: ctx.counter_surge_events.len() as i64,
-        };
+        let missing = Fault::index_out_of_range(index as i64, ctx.counter_surge_events.len() as i64);
 
         if ctx
             .counter_surge_events
@@ -77,11 +71,7 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.surge_events.push(SurgeEvent::default());
 
-            let surge = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let surge = ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
             surge.faction = faction;
             surge.slot = slot;
@@ -110,11 +100,7 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
             })
             .wrapping_add(anchor);
             let level = event.level;
-            let surge = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let surge = ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
             surge.x = (if faction == 1 {
                 offset
@@ -132,11 +118,7 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get(at)
                 .ok_or(missing.clone())?
                 .mini;
-            let surge = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let surge = ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
             surge.metal_killer_pct = metal_killer_pct;
             surge.mini = mini;
@@ -155,11 +137,7 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 .ok_or(missing.clone())?
                 .frame;
             let anim = ctx.counter_surge_anims.get(faction as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: faction as i64,
-                    limit: 2,
-                },
+                Fault::index_out_of_range(faction as i64, 2),
             )?;
 
             if frame >= get_anim_len(anim)? {

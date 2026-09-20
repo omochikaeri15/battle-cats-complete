@@ -6,8 +6,6 @@ use super::{
     json_value_as_int, json_value_as_string, open_asset_stream, string_to_int,
 };
 
-const SITE: &str = "load_special_rules_json";
-
 pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.special_rules.maps.clear();
     ctx.special_rules.invalid_nyancombo_ids.clear();
@@ -16,14 +14,14 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
         let source = json_source_from_string(&bytes);
         let document = json_parse_object_document(Some(source))?;
         let Some(JsonNode::Object(root)) = document.as_ref() else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         if let Some(JsonNode::Object(entries)) = root.get(b"MapID".as_slice()) {
             for (key, entry) in entries {
                 let map_id = string_to_int(key)?;
                 let JsonNode::Object(map_entry) = entry else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
                 let Some(JsonNode::Object(rule_types)) = map_entry.get(b"RuleType".as_slice())
                 else {
@@ -33,7 +31,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 for (rule_key, rule_entry) in rule_types {
                     let rule = string_to_int(rule_key)?;
                     let JsonNode::Object(rule_entry) = rule_entry else {
-                        return Err(Fault::NullPointer { site: SITE });
+                        return Err(Fault::null_pointer());
                     };
                     let Some(JsonNode::Array(params)) =
                         rule_entry.get(b"Parameters".as_slice())
@@ -58,11 +56,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                                 .entry(rule)
                                 .or_default();
                             let element =
-                                params.get(slot).ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: slot as i64,
-                                    limit: params.len() as i64,
-                                })?;
+                                params.get(slot).ok_or(Fault::index_out_of_range(slot as i64, params.len() as i64))?;
 
                             let value = match element {
                                 JsonNode::String(text) => json_string_as_int(text),
@@ -76,11 +70,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                             slot += 1;
                         }
 
-                        let element = params.get(3).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 3,
-                            limit: params.len() as i64,
-                        })?;
+                        let element = params.get(3).ok_or(Fault::index_out_of_range(3, params.len() as i64))?;
                         let fever = match element {
                             JsonNode::String(text) => json_string_as_int(text),
                             JsonNode::Array(_) | JsonNode::Object(_) => {
@@ -105,11 +95,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                                 .entry(fever)
                                 .or_default();
                             let element =
-                                params.get(slot).ok_or(Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: slot as i64,
-                                    limit: params.len() as i64,
-                                })?;
+                                params.get(slot).ok_or(Fault::index_out_of_range(slot as i64, params.len() as i64))?;
 
                             let value = match element {
                                 JsonNode::String(text) => json_string_as_int(text),
@@ -143,11 +129,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                             .normal
                             .entry(rule)
                             .or_default();
-                        let element = params.get(slot).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: slot as i64,
-                            limit: params.len() as i64,
-                        })?;
+                        let element = params.get(slot).ok_or(Fault::index_out_of_range(slot as i64, params.len() as i64))?;
 
                         let value = match element {
                             JsonNode::String(text) => json_string_as_int(text),
@@ -274,7 +256,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
     let source = json_source_from_string(&bytes);
     let document = json_parse_object_document(Some(source))?;
     let Some(JsonNode::Object(root)) = document.as_ref() else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
     let Some(JsonNode::Object(rule_types)) = root.get(b"RuleType".as_slice()) else {
         return Ok(());
@@ -283,10 +265,10 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
     for (rule_key, rule_entry) in rule_types {
         let rule = string_to_int(rule_key)?;
         let JsonNode::Object(rule_entry) = rule_entry else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Array(ids)) = rule_entry.get(b"InvalidNyancomboID".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         if ids.is_empty() {
@@ -301,11 +283,7 @@ pub fn load_special_rules_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 .invalid_nyancombo_ids
                 .entry(rule)
                 .or_default();
-            let element = ids.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: ids.len() as i64,
-            })?;
+            let element = ids.get(slot).ok_or(Fault::index_out_of_range(slot as i64, ids.len() as i64))?;
 
             let value = match element {
                 JsonNode::String(text) => json_string_as_int(text),

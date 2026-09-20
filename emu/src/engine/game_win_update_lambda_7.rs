@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, dialog_close, play_sound, sound_manager};
 
-const SITE: &str = "game_win_update_lambda_7";
-
 pub fn game_win_update_lambda_7(
     ctx: &mut AppContext,
     dialog: u64,
@@ -23,7 +21,7 @@ pub fn game_win_update_lambda_7(
     let head = ctx
         .reward_queue
         .first_mut()
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
 
     if head.len() as i32 >= 2 {
         let mut cleared = 0;
@@ -46,7 +44,7 @@ pub fn game_win_update_lambda_7(
     let head = ctx
         .reward_queue
         .first()
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
     let mut remaining = false;
 
     if head.len() as i32 >= 2 {

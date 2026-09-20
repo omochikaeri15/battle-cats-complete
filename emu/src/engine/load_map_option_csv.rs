@@ -21,7 +21,7 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.map_options.double_xp_ad_maps.clear();
     ctx.map_options.cost_multipliers.clear();
     ctx.map_options.no_energy_maps.clear();
-    ctx.map_options.show_all_stages_maps.clear();
+    ctx.map_options.conditioned_maps.clear();
 
     let Some(bytes) = open_asset_stream(ctx, b"Map_option.csv", 0, 0)? else {
         return Ok(());
@@ -118,7 +118,7 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             && cell_is_int(stm, 0x12)
             && read_csv_cell(stm, 0x12) != 0
         {
-            ctx.map_options.show_all_stages_maps.push(map_id);
+            ctx.map_options.conditioned_maps.push(map_id);
         }
     }
 

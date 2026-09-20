@@ -11,11 +11,7 @@ pub fn set_ld_span(
 ) -> Result<(), Fault> {
     let field = *ATTACK_LD_SPAN_FIELDS
         .get(attack as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "set_ld_span",
-            index: attack as i64,
-            limit: 3,
-        })?;
+        .ok_or(Fault::index_out_of_range(attack as i64, 3))?;
 
     ctx.set_i32_at(
         AppContext::entity_field(faction, slot, 0).wrapping_add((field as usize).wrapping_mul(4)),

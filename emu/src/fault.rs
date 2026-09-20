@@ -37,13 +37,79 @@ pub enum Fault {
 }
 
 impl Fault {
-    pub fn divide(site: &'static str, divisor: i64) -> Self {
+    #[track_caller]
+    pub fn divide(divisor: i64) -> Self {
         if divisor == 0 {
-            Self::DivideByZero { site }
+            Self::DivideByZero { site: here() }
         } else {
-            Self::DivideOverflow { site }
+            Self::DivideOverflow { site: here() }
         }
     }
+
+    #[track_caller]
+    pub fn divide_by_zero() -> Self {
+        Self::DivideByZero { site: here() }
+    }
+
+    #[track_caller]
+    pub fn divide_overflow() -> Self {
+        Self::DivideOverflow { site: here() }
+    }
+
+    #[track_caller]
+    pub fn index_out_of_range(index: i64, limit: i64) -> Self {
+        Self::IndexOutOfRange {
+            site: here(),
+            index,
+            limit,
+        }
+    }
+
+    #[track_caller]
+    pub fn key_not_found(key: i64) -> Self {
+        Self::KeyNotFound {
+            site: here(),
+            key,
+        }
+    }
+
+    #[track_caller]
+    pub fn host_missing() -> Self {
+        Self::HostMissing { site: here() }
+    }
+
+    #[track_caller]
+    pub fn invalid_argument() -> Self {
+        Self::InvalidArgument { site: here() }
+    }
+
+    #[track_caller]
+    pub fn null_pointer() -> Self {
+        Self::NullPointer { site: here() }
+    }
+
+    #[track_caller]
+    pub fn bad_function_call() -> Self {
+        Self::BadFunctionCall { site: here() }
+    }
+
+    #[track_caller]
+    pub fn out_of_range() -> Self {
+        Self::OutOfRange { site: here() }
+    }
+
+    #[track_caller]
+    pub fn unrepresentable(reason: &'static str) -> Self {
+        Self::Unrepresentable {
+            site: here(),
+            reason,
+        }
+    }
+}
+
+#[track_caller]
+fn here() -> &'static str {
+    site_of(std::panic::Location::caller().file())
 }
 
 impl std::fmt::Display for Fault {
@@ -79,3 +145,30 @@ impl std::fmt::Display for Fault {
 }
 
 impl std::error::Error for Fault {}
+
+const fn site_of(path: &'static str) -> &'static str {
+    let bytes = path.as_bytes();
+    let mut start = 0;
+    let mut at = 0;
+
+    while at < bytes.len() {
+        if bytes[at] == b'/' || bytes[at] == b'\\' {
+            start = at + 1;
+        }
+
+        at += 1;
+    }
+
+    let (_, name) = bytes.split_at(start);
+
+    if name.len() < 4 {
+        return path;
+    }
+
+    let (stem, _) = name.split_at(name.len() - 3);
+
+    match str::from_utf8(stem) {
+        Ok(text) => text,
+        Err(_) => path,
+    }
+}

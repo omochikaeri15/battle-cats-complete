@@ -11,10 +11,6 @@ pub fn stage_reward_item(ctx: &AppContext, stage: i32, slot: i32) -> Result<i32,
         .wrapping_add(6) as i64 as usize;
 
     Ok(
-        xor_row46_get(ctx.bytes_from(row as usize)?, field).ok_or(Fault::IndexOutOfRange {
-            site: "stage_reward_item",
-            index: field as i64,
-            limit: 0x2e,
-        })? as i32,
+        xor_row46_get(ctx.bytes_from(row as usize)?, field).ok_or(Fault::index_out_of_range(field as i64, 0x2e))? as i32,
     )
 }

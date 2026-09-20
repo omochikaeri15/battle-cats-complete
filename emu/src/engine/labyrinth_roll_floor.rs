@@ -7,8 +7,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, call_rng, get_stage_index, labyrinth_load_floors};
 
-const SITE: &str = "labyrinth_roll_floor";
-
 #[derive(Clone, Default)]
 pub struct LabyrinthFloor {
     pub min: i32,
@@ -49,11 +47,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
 
     while index < ctx.labyrinth_floors.entry(key).or_default().results.len() {
         let floor = ctx.labyrinth_floors.entry(key).or_default();
-        let weight = *floor.weights.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: floor.weights.len() as i64,
-        })?;
+        let weight = *floor.weights.get(index).ok_or(Fault::index_out_of_range(index as i64, floor.weights.len() as i64))?;
 
         sum = sum.wrapping_add(weight);
 
@@ -64,11 +58,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
                 .or_default()
                 .results
                 .get(index)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: index as i64,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
             ctx.set_i32_at(AppContext::LABYRINTH_FLOOR_RESULT, result)?;
 
@@ -82,11 +72,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
 
     for slot in 0..10usize {
         let row = ctx.bytes_from(AppContext::BATTLE_LINEUP)?;
-        let value = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: 10,
-        })?;
+        let value = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))?;
 
         lineup.push(value.wrapping_sub(2) as i32);
     }
@@ -110,11 +96,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
     let mut taken = 0i64;
 
     while taken < count as i64 {
-        let unit = *lineup.get(taken as usize).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: taken,
-            limit: 10,
-        })?;
+        let unit = *lineup.get(taken as usize).ok_or(Fault::index_out_of_range(taken, 10))?;
 
         ctx.labyrinth_units.push(unit);
         taken += 1;

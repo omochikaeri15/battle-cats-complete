@@ -7,8 +7,6 @@ use super::{
     get_deploy_cost, get_special_rule_params, get_unit_form, get_unit_rarity, read_flag,
 };
 
-const SITE: &str = "unit_meets_restriction";
-
 pub fn unit_meets_restriction(
     ctx: &mut AppContext,
     slot: i32,
@@ -28,11 +26,7 @@ pub fn unit_meets_restriction(
         (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
     )?);
 
-    let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-        site: SITE,
-        index: 0,
-        limit: 1,
-    })? as i32)
+    let mut unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
         .wrapping_add(-2);
     let mut form = get_unit_form(ctx, unit_id)?;
 
@@ -44,11 +38,7 @@ pub fn unit_meets_restriction(
             pair[4..].copy_from_slice(
                 &ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?,
             );
-            unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 1,
-            })? as i32)
+            unit_id = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
                 .wrapping_add(-2);
             form =
                 ctx.i32_at(((slot as i64) * 4 + AppContext::BUTTON_UNIT_FORMS as i64) as usize)?;
@@ -57,11 +47,7 @@ pub fn unit_meets_restriction(
             let rows = get_built_deck_rows(ctx, stage_key)?;
             let row = rows
                 .get(slot as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: slot as i64,
-                    limit: 10,
-                })?;
+                .ok_or(Fault::index_out_of_range(slot as i64, 10))?;
 
             unit_id = (row.0 as i32).wrapping_add(-2);
             form = row.1 as i32;
@@ -159,11 +145,7 @@ pub fn unit_meets_restriction(
                 (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
             )?);
 
-            if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 1,
-            })? as i32
+            if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                 <= 1
             {
                 break;
@@ -179,11 +161,7 @@ pub fn unit_meets_restriction(
                 (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
             )?);
 
-            let listed = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 1,
-            })? as i32)
+            let listed = (operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
                 .wrapping_add(-2);
             let rarity = get_unit_rarity(ctx, listed)?;
             let count = counts.entry(rarity).or_insert(0);
@@ -197,11 +175,7 @@ pub fn unit_meets_restriction(
     let have = *counts.entry(rarity).or_insert(0);
     let cap = *params
         .get(rarity as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: rarity as i64,
-            limit: params.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(rarity as i64, params.len() as i64))?;
 
     Ok(have < cap)
 }

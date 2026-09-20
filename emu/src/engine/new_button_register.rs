@@ -8,7 +8,6 @@ pub struct ButtonBank {
     pub enabled: u8,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn new_button_register(
     bank: &mut ButtonBank,
     id: i32,

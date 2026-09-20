@@ -5,8 +5,6 @@ use super::{
     get_labyrinth_map_id, get_stage_count, imgcut_get_sprite_cut, map_index_of_map_id,
 };
 
-const SITE: &str = "draw_labyrinth_gauge";
-
 pub fn draw_labyrinth_gauge(
     ctx: &mut AppContext,
     gauge: &Imgcut,
@@ -20,7 +18,7 @@ pub fn draw_labyrinth_gauge(
     let map = map_index_of_map_id(get_labyrinth_map_id(ctx)?);
     let total = get_stage_count(ctx, -0x15, map)?.wrapping_add(-1);
     let across = operation::idiv(floor.wrapping_mul(0x75), total)
-        .ok_or(Fault::divide(SITE, total as i64))?
+        .ok_or(Fault::divide(total as i64))?
         .wrapping_add(x);
     let raised = floor.wrapping_mul(0xd0);
     let down = operation::div_100(raised).wrapping_add(y);
@@ -44,7 +42,7 @@ pub fn draw_labyrinth_gauge(
     let edge = imgcut_get_sprite_cut(gauge, 9)?[2].wrapping_add(x);
     let map = map_index_of_map_id(get_labyrinth_map_id(ctx)?);
     let total = get_stage_count(ctx, -0x15, map)?.wrapping_add(-1);
-    let lift = operation::idiv(raised, total).ok_or(Fault::divide(SITE, total as i64))?;
+    let lift = operation::idiv(raised, total).ok_or(Fault::divide(total as i64))?;
     let places = digit_count(floor);
 
     draw_cut(

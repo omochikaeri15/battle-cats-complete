@@ -16,9 +16,5 @@ pub fn get_castle_row(castle_vec: &[CastleRow], castle_id: i32) -> Result<Castle
     castle_vec
         .get(castle_id as i64 as usize)
         .copied()
-        .ok_or(Fault::IndexOutOfRange {
-            site: "get_castle_row",
-            index: castle_id as i64,
-            limit: castle_vec.len() as i64,
-        })
+        .ok_or(Fault::index_out_of_range(castle_id as i64, castle_vec.len() as i64))
 }

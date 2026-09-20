@@ -8,7 +8,6 @@ use super::{
     mamodel_set_sheet_table, set_alpha, set_part_angle, set_part_opacity, set_part_scale, set_tint, set_tint_alpha, sin_deg, AppContext,
 };
 
-const SITE: &str = "draw_background_effects";
 const PARTICLE_RED: [i32; 6] = [255, 180, 180, 255, 255, 180];
 const PARTICLE_GREEN: [i32; 6] = [180, 255, 180, 255, 180, 255];
 const PARTICLE_BLUE: [i32; 6] = [180, 180, 255, 180, 255, 255];
@@ -83,7 +82,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         for glint in 0..0x1eusize {
             let record = AppContext::BG_GLINTS.wrapping_add(glint * 0x10);
             let sheet = ctx.effect_a_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ctx.i32_at(record)?;
             let y = ctx.i32_at(record + 4)?;
 
@@ -103,7 +102,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             let sheet = ctx.bg_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let left = operation::div_4(operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(operation::div_100(ctx.i32_at(base + 8)?));
             let x = left.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c4);
             let y = operation::div_100(ctx.i32_at(base + 0xc)?);
@@ -140,7 +139,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 operation::mul_high(life.wrapping_mul(0x64) as u8 as i32, 0xab) >> 9
             };
             let sheet = ctx.bg_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let span = operation::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale));
             let height = operation::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale));
             let drift = operation::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
@@ -172,21 +171,15 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .bg_effects
                 .model_names
                 .get(&key)
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })?
+                .ok_or(Fault::key_not_found(key as i64))?
                 .clone();
             let mut model =
-                std::mem::take(ctx.bg_models.get_mut(&name).ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })?);
+                std::mem::take(ctx.bg_models.get_mut(&name).ok_or(Fault::key_not_found(key as i64))?);
             let instance = ctx
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
             if instance.model < 0 {
                 let key = instance.model;
@@ -194,17 +187,11 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                     .bg_effects
                     .image_names
                     .get(&key)
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?;
+                    .ok_or(Fault::key_not_found(key as i64))?;
                 let sheet = ctx
                     .bg_effect_sheets
                     .get(image)
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?
+                    .ok_or(Fault::key_not_found(key as i64))?
                     .clone();
 
                 mamodel_set_sheet(&mut model, sheet);
@@ -212,13 +199,13 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 mamodel_set_sheet_table(&mut model, &Rc::from([Cell::new(ctx.bg_sheet.clone())]));
             }
 
-            let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+            let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
             let unit = mamodel_get_scale_unit(&model);
             let instance = ctx
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
             let scale = instance.scale;
             let scale_x = instance.scale_x;
             let unit_y = mamodel_get_scale_unit(&model);
@@ -226,32 +213,32 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
             let width = operation::cvttss2si(scale * unit as f32 * scale_x);
             let height = operation::cvttss2si(unit_y as f32 * instance.scale * instance.scale_y);
 
             set_part_scale(&mut model.parts[part], width, height);
 
-            let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+            let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
             let unit = mamodel_get_angle_unit(&model);
             let instance = ctx
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
             set_part_angle(
                 &mut model.parts[part],
                 operation::cvttss2si(unit as f32 * instance.angle / 360.0),
             );
 
-            let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+            let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
             let unit = mamodel_get_opacity_unit(&model);
             let instance = ctx
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
             set_part_opacity(
                 &mut model.parts[part],
@@ -262,25 +249,19 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
             let key = instance.model;
             let anim_name = ctx
                 .bg_effects
                 .model_anims
                 .get(&key)
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })?;
-            let anim = ctx.bg_anim_cache.get(anim_name).ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: key as i64,
-            })?;
+                .ok_or(Fault::key_not_found(key as i64))?;
+            let anim = ctx.bg_anim_cache.get(anim_name).ok_or(Fault::key_not_found(key as i64))?;
             let instance = ctx
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
 
             maanim_execute(&mut model, Some(anim), instance.frame, 0)?;
 
@@ -288,14 +269,10 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 .bg_effects
                 .instances
                 .get(index)
-                .ok_or(Fault::OutOfRange { site: SITE })?;
+                .ok_or(Fault::out_of_range())?;
             let def_index = instance.def_index;
             let def = ctx.bg_effects.defs.get(def_index as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: def_index as i64,
-                    limit: ctx.bg_effects.defs.len() as i64,
-                },
+                Fault::index_out_of_range(def_index as i64, ctx.bg_effects.defs.len() as i64),
             )?;
             let first = def.equally_spaced.pos1;
             let last = def.equally_spaced.pos2;
@@ -311,7 +288,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                         .bg_effects
                         .instances
                         .get(index)
-                        .ok_or(Fault::OutOfRange { site: SITE })?
+                        .ok_or(Fault::out_of_range())?
                         .x;
                     let spacing = bg_param_resolve_int(ctx, -1, value, base)?;
                     let camera = ctx.i32_at(AppContext::CAMERA_X)?;
@@ -320,7 +297,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                         .bg_effects
                         .instances
                         .get(index)
-                        .ok_or(Fault::OutOfRange { site: SITE })?;
+                        .ok_or(Fault::out_of_range())?;
                     let placed = origin + spacing.wrapping_mul(step) as f32
                         - operation::div_10(camera) as f32;
                     let x = operation::cvttss2si(
@@ -337,10 +314,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
             }
 
-            *ctx.bg_models.get_mut(&name).ok_or(Fault::KeyNotFound {
-                site: SITE,
-                key: key as i64,
-            })? = model;
+            *ctx.bg_models.get_mut(&name).ok_or(Fault::key_not_found(key as i64))? = model;
         }
 
         index += 1;

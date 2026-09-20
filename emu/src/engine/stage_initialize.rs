@@ -53,8 +53,6 @@ use super::{
     validate_map_type, vibration_clear,
 };
 
-const SITE: &str = "stage_initialize";
-
 pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::DECK_HOLD_RELEASE, 0)?;
     ctx.set_i32_at(AppContext::DECK_HOLD_FRAMES, 0)?;
@@ -364,11 +362,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
         let row =
             ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: 10,
-        })? as i32;
+        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::UNIT_FORMS + unit as u32 as usize * 4)?;
@@ -442,11 +436,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)),
                     )?;
 
-                    operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: slot as i64,
-                        limit: 10,
-                    })? as i32
+                    operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32
                 };
                 let key = ctx.i32_at(AppContext::BATTLE_DECK_KEY)?;
 
@@ -470,18 +460,10 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get(map_index as i64 as usize)
                 .and_then(|map| map.get(stage as i64 as usize))
                 .and_then(|stage| stage.get(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_index as i64,
-                    limit: ctx.dungeon_clear_counts.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(map_index as i64, ctx.dungeon_clear_counts.len() as i64))?;
             let pick = min_i32(last, clears as i32);
             let weights = *ctx.random_dungeon_rows.get(pick as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: pick as i64,
-                    limit: ctx.random_dungeon_rows.len() as i64,
-                },
+                Fault::index_out_of_range(pick as i64, ctx.random_dungeon_rows.len() as i64),
             )?;
             let total = weights[..8]
                 .iter()
@@ -525,7 +507,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 loop {
                     slot = operation::irem(slot.wrapping_add(1), deck_count)
-                        .ok_or(Fault::divide(SITE, deck_count as i64))?;
+                        .ok_or(Fault::divide(deck_count as i64))?;
 
                     if !*picks.entry(slot).or_default() {
                         *picks.entry(slot).or_default() = true;
@@ -554,11 +536,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 );
                 pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
 
-                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 1,
-                })? == 0
+                if operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? == 0
                 {
                     continue;
                 }
@@ -615,11 +593,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 .get_mut(map_index as i64 as usize)
                 .and_then(|map| map.get_mut(stage as i64 as usize))
                 .and_then(|stage| stage.get_mut(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_index as i64,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(map_index as i64, 0))?;
 
             if *cell <= 0x270e {
                 *cell = cell.wrapping_add(1);
@@ -663,11 +637,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     record.power[2],
                     record.effect_count,
                 ];
-                let kind = *effects.get(index).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: index as i64,
-                    limit: 7,
-                })?;
+                let kind = *effects.get(index).ok_or(Fault::index_out_of_range(index as i64, 7))?;
 
                 if banned.contains(&kind) {
                     record.banner_pending = 0;
@@ -855,19 +825,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
 
                     let groups = ctx.treasure_store.get(chapter as i64 as usize).ok_or(
-                        Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: chapter as i64,
-                            limit: 10,
-                        },
+                        Fault::index_out_of_range(chapter as i64, 10),
                     )?;
                     let effect = groups
                         .get(group)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: group as i64,
-                            limit: groups.len() as i64,
-                        })?
+                        .ok_or(Fault::index_out_of_range(group as i64, groups.len() as i64))?
                         .effect;
 
                     if (effect.wrapping_sub(7) as u32) < 2 {
@@ -946,11 +908,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         } else {
             *STAGE_DISPLAY_ORDER
                 .get(row as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: row as i64,
-                    limit: 0x33,
-                })?
+                .ok_or(Fault::index_out_of_range(row as i64, 0x33))?
         };
 
         ctx.set_i32_at(AppContext::CASTLE_ID, display)?;
@@ -976,7 +934,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(
             AppContext::CAMERA_MIN_ZOOM,
             operation::idiv(0xea600, length)
-                .ok_or(Fault::divide(SITE, length as i64))?
+                .ok_or(Fault::divide(length as i64))?
                 .wrapping_add(1),
         )?;
 
@@ -1008,7 +966,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             } else {
                 let map_id = get_global_map_id(ctx, 0)?;
                 let item = get_map_rules(&ctx.special_rules, map_id)?
-                    .ok_or(Fault::NullPointer { site: SITE })?
+                    .ok_or(Fault::null_pointer())?
                     .contents_type;
 
                 if item == 2 {
@@ -1029,11 +987,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     if params.len() * 4 < 5 {
                         set_deck_cooldown(ctx, wallet, slot, recharge, 1)?;
                     } else {
-                        let cut = *params.get(1).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 1,
-                            limit: params.len() as i64,
-                        })?;
+                        let cut = *params.get(1).ok_or(Fault::index_out_of_range(1, params.len() as i64))?;
                         let value = operation::div_100(
                             100i32.wrapping_sub(cut).wrapping_mul(recharge) as i64,
                         ) as i32;
@@ -1333,20 +1287,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.spawn_states.push(state);
 
             let start = stage_entry_start_frame(ctx.stage_enemies.get(entry).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: 0,
-                },
+                Fault::index_out_of_range(entry as i64, 0),
             )?);
 
             ctx.spawn_states
                 .get_mut(entry)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: 0,
-                })?[0] = start;
+                .ok_or(Fault::index_out_of_range(entry as i64, 0))?[0] = start;
         }
 
         for slot in (0..0x380usize).step_by(0x10) {
@@ -1420,11 +1366,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             )?);
             pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGE_RECORD_CHAPTERS_KEY)?);
 
-            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 1,
-            })? as i32
+            operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
                 > 0
         } else {
             false
@@ -1451,11 +1393,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         for entry in 0..ctx.stage_enemies.len() {
             let row =
-                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: 0,
-                })?);
+                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::index_out_of_range(entry as i64, 0))?);
 
             for slot in 0..10usize {
                 let current = ctx.i32_at(AppContext::FACTION_1_BUTTON_ROWS + slot * 4)?;
@@ -1546,11 +1484,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             .battle_texts
             .get(5)
             .cloned()
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 5,
-                limit: 0x35,
-            })?;
+            .ok_or(Fault::index_out_of_range(5, 0x35))?;
 
         Some(get_text_texture(
             text_texture_cache(ctx)?,
@@ -1595,11 +1529,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             {
                 let font = ctx.default_font.clone();
                 let text = ctx.battle_menu_texts.get(4 + label).cloned().ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: (4 + label) as i64,
-                        limit: 0x24,
-                    },
+                    Fault::index_out_of_range((4 + label) as i64, 0x24),
                 )?;
 
                 Some(get_text_texture(
@@ -1618,11 +1548,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             {
                 let font = ctx.default_font.clone();
                 let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: (3 + label) as i64,
-                        limit: 9,
-                    },
+                    Fault::index_out_of_range((3 + label) as i64, 9),
                 )?;
 
                 Some(get_text_texture(
@@ -1750,13 +1676,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 if left != 0 {
                     let duck = operation::idiv(left.wrapping_mul(100), frames)
-                        .ok_or(Fault::divide(SITE, frames as i64))?;
+                        .ok_or(Fault::divide(frames as i64))?;
 
                     if duck > 0 {
                         let frames = ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)?;
                         let left = frames.wrapping_sub(ctx.i32_at(AppContext::BGM_SWITCH_FRAME)?);
                         let duck = operation::idiv(left.wrapping_mul(100), frames)
-                            .ok_or(Fault::divide(SITE, frames as i64))?;
+                            .ok_or(Fault::divide(frames as i64))?;
 
                         set_bgm_duck(sound_manager(ctx)?, duck);
                     } else {
@@ -1943,11 +1869,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         .warning2_rows
                         .get(2)
                         .map(|row| row[label].clone())
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 2,
-                            limit: 0,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(2, 0))?;
                     let font = ctx.default_font.clone();
 
                     Some(get_text_texture(
@@ -1972,11 +1894,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     .god_intro_texts
                     .first()
                     .map(|row| row[0].clone())
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(0, 0))?;
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -1993,11 +1911,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     .god_intro_texts
                     .first()
                     .map(|row| row[1].clone())
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: 0,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(0, 0))?;
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -2056,21 +1970,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.i32_at(AppContext::BATTLE_RESUMED)? == 0 && has_castle_enemy(ctx)? {
         for entry in 0..ctx.stage_enemies.len() {
             let row =
-                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: 0,
-                })?);
+                stage_entry_row(ctx.stage_enemies.get(entry).ok_or(Fault::index_out_of_range(entry as i64, 0))?);
 
             if row != get_castle_enemy_row(ctx)? {
                 continue;
             }
 
-            let enemy = ctx.stage_enemies.get(entry).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: entry as i64,
-                limit: 0,
-            })?;
+            let enemy = ctx.stage_enemies.get(entry).ok_or(Fault::index_out_of_range(entry as i64, 0))?;
             let row = stage_entry_row(enemy);
             let z_min = stage_entry_z_min(enemy);
             let z_max = stage_entry_z_max(enemy);
@@ -2080,11 +1986,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let state = ctx
                 .spawn_states
                 .get_mut(entry)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: entry as i64,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(entry as i64, 0))?;
 
             state[0] = 1;
             state[1] = state[1].wrapping_add(1);
@@ -2146,11 +2048,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     for slot in 0..10usize {
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let row = ctx.bytes_from(AppContext::BATTLE_DECK)?;
-        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: 10,
-        })? as i32;
+        let unit = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
         let value = if unit > 0 {
             let form = ctx.i32_at(AppContext::BUTTON_UNIT_FORMS + slot * 4)?;
 

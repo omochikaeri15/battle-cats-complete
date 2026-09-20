@@ -10,8 +10,6 @@ pub fn get_stage_name(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "get_stage_name",
-        })?
+        .ok_or(Fault::host_missing())?
         .stage_name(map_type, map_index, stage))
 }

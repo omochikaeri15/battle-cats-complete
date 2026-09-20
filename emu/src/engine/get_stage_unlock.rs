@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, get_cleared_count, get_stage_count, map_type_base_id, min_i32};
 
-const SITE: &str = "get_stage_unlock";
-
 pub fn get_stage_unlock(
     ctx: &mut AppContext,
     map_type: i32,
@@ -24,11 +22,7 @@ pub fn get_stage_unlock(
             .or_default()
             .get(star as i64 as usize)
             .map(|cell| *cell as i32)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: star as i64,
-                limit: 4,
-            });
+            .ok_or(Fault::index_out_of_range(star as i64, 4));
     }
 
     if map_type as u32 <= 4 {
@@ -54,11 +48,7 @@ pub fn get_stage_unlock(
             maps.get(map_idx as i64 as usize)
                 .and_then(|stars| stars.get(star as i64 as usize))
                 .map(|cell| *cell as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_idx as i64,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
         0x05 => {
             let cleared = get_cleared_count(ctx, AppContext::LABYRINTH)?;
@@ -78,11 +68,7 @@ pub fn get_stage_unlock(
 
             maps.get(cell as usize)
                 .map(|value| *value as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x10 | 0x11 | 0x16 => {
             let maps = match case {
@@ -94,11 +80,7 @@ pub fn get_stage_unlock(
 
             maps.get(cell as usize)
                 .copied()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x14 => {
             let cell =

@@ -10,8 +10,6 @@ use super::{
     mamodel_set_sheet_table, set_part_angle, set_part_opacity, set_part_scale, set_tint,
 };
 
-const SITE: &str = "draw_background_overlay";
-
 pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 0xd
         || get_background_id(ctx)? == 0xf
@@ -132,21 +130,15 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     .bg_effects
                     .model_names
                     .get(&key)
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?
+                    .ok_or(Fault::key_not_found(key as i64))?
                     .clone();
                 let mut model =
-                    std::mem::take(ctx.bg_models.get_mut(&name).ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?);
+                    std::mem::take(ctx.bg_models.get_mut(&name).ok_or(Fault::key_not_found(key as i64))?);
                 let instance = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
 
                 if instance.model < 0 {
                     let key = instance.model;
@@ -154,17 +146,11 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                         .bg_effects
                         .image_names
                         .get(&key)
-                        .ok_or(Fault::KeyNotFound {
-                            site: SITE,
-                            key: key as i64,
-                        })?;
+                        .ok_or(Fault::key_not_found(key as i64))?;
                     let sheet = ctx
                         .bg_effect_sheets
                         .get(image)
-                        .ok_or(Fault::KeyNotFound {
-                            site: SITE,
-                            key: key as i64,
-                        })?
+                        .ok_or(Fault::key_not_found(key as i64))?
                         .clone();
 
                     mamodel_set_sheet(&mut model, sheet);
@@ -175,45 +161,45 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     );
                 }
 
-                let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+                let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
                 let unit = mamodel_get_scale_unit(&model);
                 let scale = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?
+                    .ok_or(Fault::out_of_range())?
                     .scale;
                 let unit_y = mamodel_get_scale_unit(&model);
                 let instance = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
                 let width = operation::cvttss2si(scale * unit as f32);
                 let height = operation::cvttss2si(unit_y as f32 * instance.scale);
 
                 set_part_scale(&mut model.parts[part], width, height);
 
-                let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+                let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
                 let unit = mamodel_get_angle_unit(&model);
                 let instance = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
 
                 set_part_angle(
                     &mut model.parts[part],
                     operation::cvttss2si(unit as f32 * instance.angle / 360.0),
                 );
 
-                let part = mamodel_get_part(&model, 0).ok_or(Fault::NullPointer { site: SITE })?;
+                let part = mamodel_get_part(&model, 0).ok_or(Fault::null_pointer())?;
                 let unit = mamodel_get_opacity_unit(&model);
                 let instance = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
 
                 set_part_opacity(
                     &mut model.parts[part],
@@ -224,25 +210,19 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
                 let key = instance.model;
                 let anim_name = ctx
                     .bg_effects
                     .model_anims
                     .get(&key)
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?;
-                let anim = ctx.bg_anim_cache.get(anim_name).ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })?;
+                    .ok_or(Fault::key_not_found(key as i64))?;
+                let anim = ctx.bg_anim_cache.get(anim_name).ok_or(Fault::key_not_found(key as i64))?;
                 let instance = ctx
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
 
                 maanim_execute(&mut model, Some(anim), instance.frame, 0)?;
 
@@ -250,14 +230,10 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     .bg_effects
                     .instances
                     .get(index)
-                    .ok_or(Fault::OutOfRange { site: SITE })?;
+                    .ok_or(Fault::out_of_range())?;
                 let def_index = instance.def_index;
                 let def = ctx.bg_effects.defs.get(def_index as i64 as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: def_index as i64,
-                        limit: ctx.bg_effects.defs.len() as i64,
-                    },
+                    Fault::index_out_of_range(def_index as i64, ctx.bg_effects.defs.len() as i64),
                 )?;
                 let first = def.equally_spaced.pos1;
                 let last = def.equally_spaced.pos2;
@@ -273,14 +249,14 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                             .bg_effects
                             .instances
                             .get(index)
-                            .ok_or(Fault::OutOfRange { site: SITE })?
+                            .ok_or(Fault::out_of_range())?
                             .x;
                         let spacing = bg_param_resolve_int(ctx, -1, value, base)?;
                         let instance = ctx
                             .bg_effects
                             .instances
                             .get(index)
-                            .ok_or(Fault::OutOfRange { site: SITE })?;
+                            .ok_or(Fault::out_of_range())?;
                         let x = operation::cvttss2si(origin + spacing.wrapping_mul(step) as f32);
                         let y = operation::cvttss2si(instance.y);
 
@@ -293,10 +269,7 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
                 }
 
-                *ctx.bg_models.get_mut(&name).ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })? = model;
+                *ctx.bg_models.get_mut(&name).ok_or(Fault::key_not_found(key as i64))? = model;
             }
 
             index += 1;

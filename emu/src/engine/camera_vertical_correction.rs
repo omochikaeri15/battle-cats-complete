@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, get_setting};
 
-const SITE: &str = "camera_vertical_correction";
-
 pub fn camera_vertical_correction(ctx: &AppContext) -> Result<i32, Fault> {
     let slot_y = get_setting(&ctx.settings, b"battle_zoom_slot_y", 0x208)?;
 
@@ -45,7 +43,7 @@ pub fn camera_vertical_correction(ctx: &AppContext) -> Result<i32, Fault> {
         let divisor = ctx.i32_at(AppContext::CAMERA_ZOOM)?;
 
         correction = correction.wrapping_sub(
-            operation::idiv(overshoot, divisor).ok_or(Fault::divide(SITE, divisor as i64))?,
+            operation::idiv(overshoot, divisor).ok_or(Fault::divide(divisor as i64))?,
         );
     }
 

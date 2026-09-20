@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, map_type_as_index, map_type_base_id};
 
-const SITE: &str = "set_stage_record";
-
 pub fn set_stage_record(
     ctx: &mut AppContext,
     map_type: i32,
@@ -23,11 +21,7 @@ pub fn set_stage_record(
             .or_default();
         let record = stars
             .get_mut(star as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: star as i64,
-                limit: 4,
-            })?;
+            .ok_or(Fault::index_out_of_range(star as i64, 4))?;
 
         *record = value as i16;
 
@@ -59,11 +53,7 @@ pub fn set_stage_record(
                 .get_mut(map_idx as i64 as usize)
                 .and_then(|stars| stars.get_mut(star as i64 as usize))
                 .and_then(|stages| stages.get_mut(stage as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_idx as i64,
-                    limit,
-                })?;
+                .ok_or(Fault::index_out_of_range(map_idx as i64, limit))?;
 
             *record = value as i16;
 
@@ -73,28 +63,16 @@ pub fn set_stage_record(
             let maps = &mut ctx.stage_record_neg19;
 
             if (maps.len() / 0x31) as u64 <= map_idx as i64 as u64 {
-                return Err(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_idx as i64,
-                    limit: (maps.len() / 0x31) as i64,
-                });
+                return Err(Fault::index_out_of_range(map_idx as i64, (maps.len() / 0x31) as i64));
             }
 
             if stage as u32 >= 0x31 || star != 0 {
-                return Err(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: stage as i64,
-                    limit: 0x31,
-                });
+                return Err(Fault::index_out_of_range(stage as i64, 0x31));
             }
 
             let cell = (map_idx as i64) * 0x31 + stage as u32 as i64;
             let limit = maps.len() as i64;
-            let record = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let record = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *record = value as i16;
 
@@ -124,11 +102,7 @@ pub fn set_stage_record(
                 ),
             };
             let limit = maps.len() as i64;
-            let record = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let record = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *record = value as i16;
 
@@ -150,11 +124,7 @@ pub fn set_stage_record(
                 ),
             };
             let limit = maps.len() as i64;
-            let record = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let record = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *record = value;
 

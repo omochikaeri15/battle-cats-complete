@@ -17,7 +17,7 @@ pub struct MapOption {
     pub double_xp_ad_maps: Vec<i32>,
     pub cost_multipliers: BTreeMap<i32, i32>,
     pub no_energy_maps: Vec<i32>,
-    pub show_all_stages_maps: Vec<i32>,
+    pub conditioned_maps: Vec<i32>,
 }
 
 pub fn get_map_max_star(store: &MapOption, map_id: i32) -> i32 {

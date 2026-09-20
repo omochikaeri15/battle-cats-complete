@@ -17,8 +17,5 @@ pub fn get_orb_slot_count(store: &OrbStore, unit_id: i32) -> Result<i32, Fault> 
         .slot_counts
         .get(&unit_id)
         .map(|row| row.count)
-        .ok_or(Fault::KeyNotFound {
-            site: "get_orb_slot_count",
-            key: unit_id as i64,
-        })
+        .ok_or(Fault::key_not_found(unit_id as i64))
 }

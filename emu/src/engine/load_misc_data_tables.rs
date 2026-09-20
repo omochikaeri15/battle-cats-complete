@@ -14,8 +14,6 @@ use super::{
     string_format_rank_comment,
 };
 
-const SITE: &str = "load_misc_data_tables";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct EventDisplayRow {
     pub images: Vec<Vec<u8>>,
@@ -141,27 +139,23 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
         let source = json_source_from_string(&bytes);
         let document = json_parse_object_document(Some(source))?;
         let Some(JsonNode::Object(root)) = document.as_ref() else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Object(entries)) = root.get(b"MapSet".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         for (key, entry) in entries {
             let map_id = operation::atoi(key);
             let JsonNode::Object(fields) = entry else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
 
             if let Some(JsonNode::Array(values)) = fields.get(b"FusumaSE".as_slice()) {
                 let mut slot = 0usize;
 
                 while slot < values.len() {
-                    let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: slot as i64,
-                        limit: values.len() as i64,
-                    })?;
+                    let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
                     let value = match element {
                         JsonNode::String(text) => json_string_as_int(text),
                         JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
@@ -415,11 +409,7 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
                 let mut slot = 0usize;
 
                 while slot < values.len() {
-                    let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: slot as i64,
-                        limit: values.len() as i64,
-                    })?;
+                    let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
                     let value = match element {
                         JsonNode::String(text) => json_string_as_int(text),
                         JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),

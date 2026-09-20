@@ -2,8 +2,6 @@ use std::collections::BTreeMap;
 
 use crate::{Fault, operation};
 
-const SITE: &str = "get_cannon_effect";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct CannonGrowthStep {
     pub kind: i32,
@@ -46,11 +44,7 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
         let progress = level.wrapping_sub(from_level);
 
         if level >= from_level {
-            let out_of_range = Fault::IndexOutOfRange {
-                site: SITE,
-                index: step as i64,
-                limit: steps.len() as i64,
-            };
+            let out_of_range = Fault::index_out_of_range(step as i64, steps.len() as i64);
 
             if part
                 .growth
@@ -114,7 +108,7 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
                             value2.wrapping_sub(value1).wrapping_mul(progress),
                             divisor,
                         )
-                        .ok_or(Fault::divide(SITE, divisor as i64))?
+                        .ok_or(Fault::divide(divisor as i64))?
                         .wrapping_add(value1);
                     }
                     _ => value = 0,
@@ -129,11 +123,7 @@ pub fn get_cannon_effect(part: &mut CannonPart, effect: i32, level: i32) -> Resu
             .entry(effect)
             .or_default()
             .get(step)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: step as i64,
-                limit: 0,
-            })?
+            .ok_or(Fault::index_out_of_range(step as i64, 0))?
             .lv2;
         step += 1;
     }

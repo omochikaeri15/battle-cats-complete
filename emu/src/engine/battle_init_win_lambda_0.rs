@@ -6,8 +6,6 @@ use super::{
     sound_manager, substitute_tokens,
 };
 
-const SITE: &str = "battle_init_win_lambda_0";
-
 pub fn battle_init_win_lambda_0(
     ctx: &mut AppContext,
     button: i32,
@@ -34,7 +32,7 @@ pub fn battle_init_win_lambda_0(
     let flags = if cleared != 0 {
         new_button_set_touchable(&mut ctx.buttons, button, 0)?;
 
-        let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+        let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
 
         dialog_close(ctx, dialog)?;
 

@@ -5,8 +5,6 @@ use super::{
     read_flag,
 };
 
-const SITE: &str = "get_effective_deploy_cost";
-
 pub fn get_effective_deploy_cost(
     ctx: &mut AppContext,
     faction: i32,
@@ -26,11 +24,7 @@ pub fn get_effective_deploy_cost(
         && ctx.i32_at(escalating)? != 0
     {
         let params = params.to_vec();
-        let mode = *params.first().ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 0,
-        })?;
+        let mode = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
         let mut total = ctx.i32_at(escalating)?;
         let scaled;
 
@@ -54,21 +48,13 @@ pub fn get_effective_deploy_cost(
             let cost = get_deploy_cost(ctx, unit_id, rule_form, 1, button)?;
 
             if params.len() <= 1 {
-                return Err(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: params.len() as i64,
-                });
+                return Err(Fault::index_out_of_range(1, params.len() as i64));
             }
 
             scaled = Some(cost as i64);
         } else if mode == 1 {
             if params.len() <= 1 {
-                return Err(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: params.len() as i64,
-                });
+                return Err(Fault::index_out_of_range(1, params.len() as i64));
             }
 
             scaled = Some(ctx.i32_at(escalating)? as i64);
@@ -85,11 +71,7 @@ pub fn get_effective_deploy_cost(
         }
 
         if params.len() <= 2 {
-            return Err(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 2,
-                limit: params.len() as i64,
-            });
+            return Err(Fault::index_out_of_range(2, params.len() as i64));
         }
 
         let cap = params[2].wrapping_mul(0x64);

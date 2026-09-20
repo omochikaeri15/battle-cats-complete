@@ -17,10 +17,6 @@ pub fn get_unit_alt_art(ctx: &AppContext, unit_id: i32, form: i32) -> Result<i32
         .copy_from_slice(&ctx.block_at::<4>((row + (UNIT_BUY + UnitBuy::KEY) as i64) as usize)?);
 
     Ok(
-        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "get_unit_alt_art",
-            index: 0,
-            limit: 1,
-        })? as i32,
+        operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32,
     )
 }

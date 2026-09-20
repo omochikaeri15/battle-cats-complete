@@ -10,9 +10,7 @@ pub fn jni_share_image(
     height: i32,
 ) -> Result<(), Fault> {
     ctx.platform()
-        .ok_or(Fault::HostMissing {
-            site: "jni_share_image",
-        })?
+        .ok_or(Fault::host_missing())?
         .share_image(x, y, width, height);
 
     Ok(())

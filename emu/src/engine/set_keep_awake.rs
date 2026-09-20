@@ -35,9 +35,7 @@ pub trait Platform {
 
 pub fn set_keep_awake(ctx: &mut AppContext, awake: u8) -> Result<(), Fault> {
     ctx.platform()
-        .ok_or(Fault::HostMissing {
-            site: "set_keep_awake",
-        })?
+        .ok_or(Fault::host_missing())?
         .set_keep_awake(awake != 0);
 
     Ok(())

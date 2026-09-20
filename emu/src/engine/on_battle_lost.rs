@@ -13,8 +13,6 @@ use super::{
     web_popup_request,
 };
 
-const SITE: &str = "on_battle_lost";
-
 pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     breadcrumb(ctx, 0x49)?;
     ctx.set_block_at::<2>(AppContext::OUTRO_VIDEO_BUTTON, [0; 2])?;
@@ -31,7 +29,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         let store = ctx
             .event_items
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let total = get_point_total(store);
 
         ctx.set_block_at::<1>(
@@ -42,13 +40,13 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         let score = get_stage_score(
             ctx.event_items
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
         );
         let stage = get_stage_index(ctx)?;
         let best = get_stage_best_score(
             ctx.event_items
                 .as_ref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             stage,
         );
 
@@ -109,11 +107,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                             .or_default()
                             .defeat_voices
                             .get(index)
-                            .ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: index as i64,
-                                limit: 0,
-                            })?;
+                            .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
                         if voice != -1 {
                             play_sound(sound_manager(ctx)?, voice, None);
@@ -135,11 +129,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                     let voices = &ctx.map_records.entry(map_id).or_default().defeat_voices;
 
                     if (voices.len() as u64) > pick as u64 {
-                        sound = *voices.get(pick as usize).ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: pick,
-                            limit: voices.len() as i64,
-                        })?;
+                        sound = *voices.get(pick as usize).ok_or(Fault::index_out_of_range(pick, voices.len() as i64))?;
                         silent = sound == -1;
                     }
                 }
@@ -284,7 +274,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         let store = ctx
             .event_items
             .as_ref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let point_id = get_point_id(store);
         let total = get_point_total(store);
         let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.reward_defs, point_id)

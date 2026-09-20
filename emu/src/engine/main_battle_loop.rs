@@ -63,7 +63,6 @@ use super::{
     worker_unlocked, zkill_vfx_tick,
 };
 
-const SITE: &str = "main_battle_loop";
 const BGM_SWITCH_RESET: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff];
 const SNIPER_BOB_STEP: f32 = 6.0;
 
@@ -128,11 +127,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         break 'button;
                     }
 
-                    let column = *ctx.deck_button_x.get(slot).ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: slot as i64,
-                        limit: 10,
-                    })? as f64;
+                    let column = *ctx.deck_button_x.get(slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as f64;
                     let x = operation::cvttsd2si(
                         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + column,
                     );
@@ -774,11 +769,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
                         let bounce = operation::div_2(
                             *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: press as i64,
-                                    limit: 10,
-                                },
+                                Fault::index_out_of_range(press as i64, 10),
                             )?,
                         );
                         let lift = ctx
@@ -871,11 +862,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     );
                                     let page = ctx.i32_at(AppContext::TOOLTIP_PAGE)? as i64;
                                     let slot = ctx.tooltip_texts.get_mut(page as usize).ok_or(
-                                        Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: page,
-                                            limit: 8,
-                                        },
+                                        Fault::index_out_of_range(page, 8),
                                     )?;
 
                                     std_shared_ptr_texture_assign(slot, Some(texture));
@@ -900,11 +887,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         );
                                         let target = (line.wrapping_add(2)) as usize;
                                         let slot = ctx.tooltip_texts.get_mut(target).ok_or(
-                                            Fault::IndexOutOfRange {
-                                                site: SITE,
-                                                index: target as i64,
-                                                limit: 8,
-                                            },
+                                            Fault::index_out_of_range(target as i64, 8),
                                         )?;
 
                                         std_shared_ptr_texture_assign(slot, Some(texture));
@@ -1178,11 +1161,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     let column = *ctx
                                         .deck_button_x
                                         .get(index as i64 as usize)
-                                        .ok_or(Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: index as i64,
-                                            limit: 10,
-                                        })? as f64;
+                                        .ok_or(Fault::index_out_of_range(index as i64, 10))? as f64;
                                     let x = operation::cvttsd2si(
                                         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
                                             + column,
@@ -1266,11 +1245,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                             if touch_released(ctx)? != 0 {
                                 let column = *ctx.deck_button_x.get(index as i64 as usize).ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: index as i64,
-                                        limit: 10,
-                                    },
+                                    Fault::index_out_of_range(index as i64, 10),
                                 )? as f64;
                                 let x = operation::cvttsd2si(
                                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5
@@ -1433,11 +1408,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 let capped = match cap {
                     Some(values) => {
-                        let first = *values.first().ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: 0,
-                            limit: 0,
-                        })?;
+                        let first = *values.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
                         ctx.i32_at(AppContext::DEPLOY_LIMIT_TOTAL)? >= first
                     }
@@ -1527,11 +1498,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                             while index >= 1 {
                                 let entry = *ctx.deploy_queue.get(index - 1).ok_or(
-                                    Fault::IndexOutOfRange {
-                                        site: SITE,
-                                        index: index as i64 - 1,
-                                        limit: queued as i64,
-                                    },
+                                    Fault::index_out_of_range(index as i64 - 1, queued as i64),
                                 )?;
                                 let button = entry as u32 as i32;
                                 let delay = (entry >> 32) as u32 as i32;
@@ -2579,11 +2546,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     let frame = get_shield_vfx_frame(ctx, faction, slot)?;
                                     let kind = get_shield_vfx(ctx, faction, slot)?.wrapping_sub(1);
                                     let anim = ctx.shield_anims.get(kind as i64 as usize).ok_or(
-                                        Fault::IndexOutOfRange {
-                                            site: SITE,
-                                            index: kind as i64,
-                                            limit: 5,
-                                        },
+                                        Fault::index_out_of_range(kind as i64, 5),
                                     )?;
 
                                     if frame >= get_anim_len(anim)? {
@@ -2917,11 +2880,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 if stage_entry_count(&row) != 0 {
                                     let spawned =
                                         ctx.spawn_states.get(entry).map(|state| state[1]).ok_or(
-                                            Fault::IndexOutOfRange {
-                                                site: SITE,
-                                                index: entry as i64,
-                                                limit: ctx.spawn_states.len() as i64,
-                                            },
+                                            Fault::index_out_of_range(entry as i64, ctx.spawn_states.len() as i64),
                                         )?;
 
                                     if spawned >= stage_entry_count(&row) {

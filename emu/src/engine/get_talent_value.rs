@@ -41,11 +41,7 @@ pub fn get_talent_value(
         return definition
             .get(min_cell)
             .copied()
-            .ok_or(Fault::IndexOutOfRange {
-                site: "get_talent_value",
-                index: param as i64,
-                limit: 4,
-            });
+            .ok_or(Fault::index_out_of_range(param as i64, 4));
     }
 
     let levels = ctx.talent_levels.entry(unit_id).or_default();
@@ -53,25 +49,13 @@ pub fn get_talent_value(
     let level = *levels.entry(definition[talent_slot * 0xe + 1]).or_default();
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let min = *definition.get(min_cell).ok_or(Fault::IndexOutOfRange {
-        site: "get_talent_value",
-        index: param as i64,
-        limit: 4,
-    })?;
+    let min = *definition.get(min_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?;
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let max = *definition.get(max_cell).ok_or(Fault::IndexOutOfRange {
-        site: "get_talent_value",
-        index: param as i64,
-        limit: 4,
-    })?;
+    let max = *definition.get(max_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?;
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
-    let span = max.wrapping_sub(*definition.get(min_cell).ok_or(Fault::IndexOutOfRange {
-        site: "get_talent_value",
-        index: param as i64,
-        limit: 4,
-    })?);
+    let span = max.wrapping_sub(*definition.get(min_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?);
     let scaled = level.wrapping_sub(1).wrapping_mul(span);
 
     let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
@@ -79,9 +63,7 @@ pub fn get_talent_value(
 
     let quotient = (scaled as i64)
         .checked_div(steps as i64)
-        .ok_or(Fault::DivideByZero {
-            site: "get_talent_value",
-        })? as i32;
+        .ok_or(Fault::divide_by_zero())? as i32;
 
     Ok(quotient.wrapping_add(min))
 }

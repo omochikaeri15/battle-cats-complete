@@ -6,8 +6,6 @@ use super::{
     set_alpha, set_color, set_tint, sin_deg, touch_is_down, xor_row_get, AppContext, Surface, DECK_PRESS_SIZE_TABLE,
 };
 
-const SITE: &str = "draw_cat_god_menu";
-
 pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
     let fade = ctx.i32_at(AppContext::CAT_GOD_FADE)?;
 
@@ -21,24 +19,24 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if ctx.i32_at(AppContext::CAT_GOD_STATE)? >= 2 {
         let sheet = ctx.castle_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1d);
         let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(ctx.i32_at(AppContext::CAT_GOD_BOB)?).wrapping_add(0x10);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, 0x224, 0x1fc, 0);
 
         let sheet = ctx.img040_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xac);
         let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x11b);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, 0x300, 0x100, 0);
 
-        let progress = xor_row_get(ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?, 7).ok_or(Fault::IndexOutOfRange { site: SITE, index: 7, limit: 10 })? as i32;
+        let progress = xor_row_get(ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?, 7).ok_or(Fault::index_out_of_range(7, 10))? as i32;
 
         if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 4 && progress >= 0x30 {
             let sheet = ctx.img041_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x2b7);
             let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x10e);
 
@@ -52,11 +50,11 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
             for (slot, dx, cut) in [(0usize, 0xf6, 0), (1, 0x1aa, 1), (2, 0x25e, 2)] {
                 let sheet = ctx.img042_sheet.clone();
-                let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES.wrapping_add(slot * 4))?;
                 let size = *DECK_PRESS_SIZE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
                 let half = operation::div_2(size);
                 let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(dx).wrapping_sub(half);
                 let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_sub(half).wrapping_add(0x159);
@@ -68,7 +66,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
             if ctx.u8_at(AppContext::CAT_GOD_CONFIRM_OPEN)? == 0 && ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 2 {
                 let sheet = ctx.img039_sheet.clone();
-                let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312);
                 let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
                 let y = operation::cvttss2si(sin_deg(ticks.wrapping_mul(30) as f32) * 10.0 + 235.0);
@@ -79,7 +77,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 2 {
                 set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0, 0xff);
 
-                let text = ctx.label_texts.get(6).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+                let text = ctx.label_texts.get(6).copied().flatten().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x342);
                 let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x1f9);
 
@@ -88,11 +86,11 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             let sheet = ctx.img042_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0xc)?;
             let size = *DECK_PRESS_SIZE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
             let half = operation::div_2(size);
             let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312).wrapping_sub(half);
             let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_sub(half).wrapping_add(0x159);
@@ -100,12 +98,12 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, size.wrapping_add(0x60), size.wrapping_add(0x60), 3);
         } else {
             let sheet = ctx.img042_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
             let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES.wrapping_add(((selected as i64) * 4) as usize))?;
             let size = *DECK_PRESS_SIZE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
             let half = operation::div_2(size);
             let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
                 .wrapping_add(selected.wrapping_mul(0xb4))
@@ -136,10 +134,10 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     obf_value_read(&ctx.miracle_levels[slot]) as i32
                 };
                 let digits = ctx.img001_sheet.clone();
-                let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
                 let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0, x as f32, y as f32, 0.0, 0x37, 2, 1)?;
                 let icon = ctx.img006_sheet.clone();
-                let icon = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
                 let across = operation::cvttss2si(bounds.left + -55.0);
 
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, icon, across, y, 0x37, 0x2a, 0x15);
@@ -153,7 +151,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             set_alpha(draw_context(&mut ctx.draw)?, 0xa5);
 
             let sheet = ctx.img042_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xd4);
             let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x21);
 
@@ -162,25 +160,25 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
             for (slot, dy) in [(0usize, 0x37), (1, 0x5b)] {
-                let text = ctx.label_texts.get(slot).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+                let text = ctx.label_texts.get(slot).copied().flatten().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x243);
                 let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(dy);
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, y, 1);
             }
 
-            let text = ctx.label_texts.get(2).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+            let text = ctx.label_texts.get(2).copied().flatten().ok_or(Fault::null_pointer())?;
             let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x22b);
 
             draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x12b, 1);
 
             if ctx.i32_at(AppContext::CAT_GOD_STATE)? <= 4 {
                 let sheet = ctx.img042_sheet.clone();
-                let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?;
                 let size = *DECK_PRESS_SIZE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
                 let half = operation::div_2(size);
 
                 draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, 4, 0x21di32.wrapping_sub(half), size.wrapping_add(0x5f), size.wrapping_add(0x5f), 9);
@@ -195,7 +193,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                     let sheet = ctx.img042_sheet.clone();
-                    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let ticks = ctx.i32_at(AppContext::CAT_GOD_TICKS)?;
                     let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
                     let cut = (operation::div_2(beat as i8 as i32) as i8).wrapping_add(0xc) as u8;
@@ -204,15 +202,15 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
 
                 let frame = ctx.img024_sheet.clone();
-                let frame = frame.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let frame = frame.as_deref().ok_or(Fault::null_pointer())?;
                 let x = get_drawable_width(ctx)?.wrapping_sub(imgcut_get_sprite_cut(frame, 0xb)?[2]);
                 let label_sheet = ctx.img006_sheet.clone();
-                let label_sheet = label_sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let label_sheet = label_sheet.as_deref().ok_or(Fault::null_pointer())?;
 
                 draw_continue_button(ctx, label_sheet, x, 2, 0)?;
 
                 let digits = ctx.img001_sheet.clone();
-                let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
                 let x = get_drawable_width(ctx)?.wrapping_add(-6) as f32;
                 let purse = obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32;
 
@@ -220,17 +218,17 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 4 {
                     let sheet = ctx.img040_sheet.clone();
-                    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x71);
 
                     draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0xc5, 0x300, 0x180, 0);
 
                     let sheet = ctx.img042_sheet.clone();
-                    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)?;
                     let size = *DECK_PRESS_SIZE_TABLE
                         .get(step as i64 as usize)
-                        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                        .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
                     let half = operation::div_2(size);
                     let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323).wrapping_sub(half);
 
@@ -249,7 +247,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                     if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                         let sheet = ctx.img042_sheet.clone();
-                        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x322);
                         let ticks = ctx.i32_at(AppContext::CAT_GOD_TICKS)?;
                         let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
@@ -259,7 +257,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
 
                     let sheet = ctx.img042_sheet.clone();
-                    let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
                     let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xdc);
 
@@ -268,7 +266,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x14)?;
                     let size = *DECK_PRESS_SIZE_TABLE
                         .get(step as i64 as usize)
-                        .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+                        .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
                     let half = operation::div_2(size);
                     let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6).wrapping_sub(half);
 
@@ -287,7 +285,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                         set_alpha(draw_context(&mut ctx.draw)?, 0x7f);
 
                         let sheet = ctx.img042_sheet.clone();
-                        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6).wrapping_sub(half);
 
                         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x141i32.wrapping_sub(half), size.wrapping_add(0x17d), size.wrapping_add(0x48), 3);
@@ -306,7 +304,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                     if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                         let sheet = ctx.img042_sheet.clone();
-                        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6);
                         let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
                         let beat = ticks.wrapping_sub(operation::div_4(ticks) * 4);
@@ -323,17 +321,17 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                         obf_value_read(&ctx.miracle_levels[selected as i64 as usize]) as i32
                     };
                     let digits = ctx.img001_sheet.clone();
-                    let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
                     let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x10c) as f32;
                     let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0, x, 388.0, -1.0, 0x37, 1, 0)?;
                     let icon = ctx.img006_sheet.clone();
-                    let icon = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                    let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
                     let across = operation::cvttss2si(bounds.left + -55.0);
 
                     draw_cut_scaled(draw_context(&mut ctx.draw)?, icon, across, 0x185, 0x37, 0x2a, 0x15);
 
                     for (slot, dx, y) in [(3usize, 0x1f4, 0xe6), (4, 0x1f3, 0x1d4), (5, 0x1f3, 0x1f8)] {
-                        let text = ctx.label_texts.get(slot).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+                        let text = ctx.label_texts.get(slot).copied().flatten().ok_or(Fault::null_pointer())?;
                         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(dx);
 
                         draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, y, 1);
@@ -341,7 +339,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                     if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 5 {
                         let sheet = ctx.img039_sheet.clone();
-                        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = operation::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x234);
                         let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
                         let y = operation::cvttss2si(sin_deg(ticks.wrapping_mul(30) as f32) * 10.0 + 211.0);
@@ -485,7 +483,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             set_alpha(draw_context(&mut ctx.draw)?, alpha);
 
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let across = ctx.i32_at(AppContext::DRAW_TEMP_1)? as f32;
             let baseline = ctx
                 .i32_at(AppContext::DRAW_TEMP_2)?
@@ -508,7 +506,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             )?;
             let mut edge = operation::cvttss2si(bounds.right);
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, digits, edge, baseline, 0x1b, 0x2e, 0x5d);
 
@@ -517,7 +515,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             let total = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
             let seconds = operation::div_100(total).wrapping_sub(operation::div_60(operation::div_100(total)).wrapping_mul(0x3c));
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let bounds = draw_number_plain(
                 draw_context(&mut ctx.draw)?,
                 digits,
@@ -533,7 +531,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             )?;
             let mut edge = operation::cvttss2si(bounds.right);
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
 
             draw_cut_f(
                 draw_context(&mut ctx.draw)?,
@@ -550,7 +548,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             let total = ctx.i32_at(AppContext::DRAW_TEMP_3)?;
             let hundredths = total.wrapping_sub(operation::div_100(total).wrapping_mul(0x64));
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
 
             draw_number_scaled(
                 draw_context(&mut ctx.draw)?,

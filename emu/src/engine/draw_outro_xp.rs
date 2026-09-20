@@ -8,8 +8,6 @@ use super::{
     touch_is_down, xor_row46_get, AppContext, Surface, DECK_PRESS_SIZE_TABLE, OUTRO_SLIDE_TABLE, POPUP_GROW_TABLE,
 };
 
-const SITE: &str = "draw_outro_xp";
-
 pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     let phase = ctx.i32_at(AppContext::OUTRO_PHASE)?;
 
@@ -17,19 +15,19 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
         let step = if (frame as u32) >= 0xc || phase != 1 { 0xc } else { frame };
         let banner = ctx.img004_sheet.clone();
-        let banner = banner.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let banner = banner.as_deref().ok_or(Fault::null_pointer())?;
         let slide = *OUTRO_SLIDE_TABLE
             .get(step as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+            .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
         let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide).wrapping_add(-0xef);
         let row = (AppContext::MAP_STAGE_ROWS as i64 + (ctx.i32_at(AppContext::STAGE_ROW)? as i64) * AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
-        let flag = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::IndexOutOfRange { site: SITE, index: 8, limit: 0x2e })? as i32;
+        let flag = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::index_out_of_range(8, 0x2e))? as i32;
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
         if chapter == 3 || chapter == 0x63 {
             if flag == -2 {
                 draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0x7d, 0);
-            } else if is_score_stage(ctx.event_items.as_ref()) && has_point_decay(ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?) {
+            } else if is_score_stage(ctx.event_items.as_ref()) && has_point_decay(ctx.event_items.as_ref().ok_or(Fault::null_pointer())?) {
                 draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0xbe, 0xc);
             } else {
                 draw_cut(draw_context(&mut ctx.draw)?, banner, x, 0xbe, 0);
@@ -52,7 +50,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let bar = 0i32.wrapping_sub(
                 *OUTRO_SLIDE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?,
+                    .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?,
             );
             let mut origin = bar;
 
@@ -61,7 +59,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
                 origin = *OUTRO_SLIDE_TABLE
                     .get(reach as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: reach as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+                    .ok_or(Fault::index_out_of_range(reach as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
             }
 
             glow_set(draw_context(&mut ctx.draw)?, 2);
@@ -74,7 +72,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let across = operation::div_2(get_drawable_width(ctx)?).wrapping_add(origin) as f32;
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let doubled = ctx.u8_at(AppContext::OUTRO_VIDEO_WATCHED)?;
             let base = if doubled != 0 { 0x7d } else { 0 };
             let value = ctx.i32_at(AppContext::WIN_XP)? << doubled;
@@ -90,13 +88,13 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let step = if (frame as u32) >= 0xc || phase != 2 { 0xc } else { frame };
             let slide = *OUTRO_SLIDE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
 
             glow_set(draw_context(&mut ctx.draw)?, 2);
             set_tint(draw_context(&mut ctx.draw)?, 0x28, 0x28, 0x4d, 0xff);
 
             let bar = if is_score_stage(ctx.event_items.as_ref()) {
-                *OUTRO_SLIDE_TABLE.get(0xc).ok_or(Fault::IndexOutOfRange { site: SITE, index: 0xc, limit: OUTRO_SLIDE_TABLE.len() as i64 })?
+                *OUTRO_SLIDE_TABLE.get(0xc).ok_or(Fault::index_out_of_range(0xc, OUTRO_SLIDE_TABLE.len() as i64))?
             } else {
                 0i32.wrapping_sub(slide)
             };
@@ -107,7 +105,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
             let digits = ctx.img001_sheet.clone();
-            let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
             let scored = get_map_type(ctx, 0)? == -6;
             let stage = is_score_stage(ctx.event_items.as_ref());
 
@@ -115,7 +113,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 let value = if scored {
                     ctx.i32_at(AppContext::SCORE_TOTAL)?
                 } else {
-                    get_stage_score(ctx.event_items.as_ref().ok_or(Fault::NullPointer { site: SITE })?)
+                    get_stage_score(ctx.event_items.as_ref().ok_or(Fault::null_pointer())?)
                 };
                 let head_cut = if scored { 5 } else { 0xb };
                 let offset = imgcut_get_sprite_cut(banner, 5)?[2].wrapping_add(0x14);
@@ -157,14 +155,14 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 _ => false,
             };
             let row = (AppContext::MAP_STAGE_ROWS as i64 + (ctx.i32_at(AppContext::STAGE_ROW)? as i64) * AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
-            let flag = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::IndexOutOfRange { site: SITE, index: 8, limit: 0x2e })? as i32;
+            let flag = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(Fault::index_out_of_range(8, 0x2e))? as i32;
 
             if show && flag == -2 {
                 let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
                 let step = if (frame as u32) >= 0xc || ctx.i32_at(AppContext::OUTRO_PHASE)? != 2 { 0xc } else { frame };
                 let slide = *OUTRO_SLIDE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: OUTRO_SLIDE_TABLE.len() as i64 })?;
+                    .ok_or(Fault::index_out_of_range(step as i64, OUTRO_SLIDE_TABLE.len() as i64))?;
 
                 glow_set(draw_context(&mut ctx.draw)?, 2);
                 set_tint(draw_context(&mut ctx.draw)?, 0x28, 0x28, 0x4d, 0xff);
@@ -176,7 +174,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                 glow_set(draw_context(&mut ctx.draw)?, 0);
 
                 let digits = ctx.img001_sheet.clone();
-                let digits = digits.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+                let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
                 let origin = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(slide) as f32;
                 let value = ctx.i32_at(AppContext::STAGE_SCORE)?;
                 let offset = imgcut_get_sprite_cut(banner, 5)?[2].wrapping_add(0x14);
@@ -208,12 +206,12 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
         if chapter != 3 && chapter != 0x63 {
             let popup = ctx.scene_img005_sheet.clone();
-            let popup = popup.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
             let centre = operation::div_2(get_drawable_width(ctx)?);
             let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             let grow = *POPUP_GROW_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: POPUP_GROW_TABLE.len() as i64 })?;
+                .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
             let span = grow.wrapping_mul(0x2b2);
             let rise = grow.wrapping_mul(0xb3);
             let x = operation::div_neg_200(span).wrapping_add(centre);
@@ -229,12 +227,12 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
                     .get(chapter as i64 as usize)
                     .and_then(|rows| rows.get(unlocked as i64 as usize))
                     .map(|row| row[0].clone())
-                    .ok_or(Fault::IndexOutOfRange { site: SITE, index: unlocked as i64, limit: 0 })?;
+                    .ok_or(Fault::index_out_of_range(unlocked as i64, 0))?;
                 let span = get_text_width(ctx, &name, 0x1e)?;
 
                 set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
-                let text = ctx.label_texts.first().copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+                let text = ctx.label_texts.first().copied().flatten().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(operation::div_2(span));
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1bc, 0);
@@ -250,7 +248,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
                 let caption = ctx.next_stage_caption.clone();
                 let span = get_text_width(ctx, &caption, 0x1e)?;
-                let text = ctx.label_texts.get(1).copied().flatten().ok_or(Fault::NullPointer { site: SITE })?;
+                let text = ctx.label_texts.get(1).copied().flatten().ok_or(Fault::null_pointer())?;
                 let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(operation::div_2(span));
 
                 draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1ec, 0);
@@ -272,18 +270,18 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     if get_map_type(ctx, 0)? == -0x15 && ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x26 {
         let centre = operation::div_2(get_drawable_width(ctx)?);
         let plate = ctx.outro_event_sheets[1].clone();
-        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, centre.wrapping_add(-0x151), 0x37, 0x2a2, 0x123, 0);
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0xff, 0xff);
 
         let title = ctx.outro_event_sheets[2].clone();
-        let title = title.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let title = title.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_surface(draw_context(&mut ctx.draw)?, Surface::Sheet(title), centre.wrapping_add(-0x121), 0x5b);
 
         let panel = ctx.outro_event_sheets[0].clone();
-        let panel = panel.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let panel = panel.as_deref().ok_or(Fault::null_pointer())?;
         let inset = centre.wrapping_add(-0x94);
 
         draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0xb5, 0x9b, 0x25, 1.0, 0x11, 0x12);
@@ -309,7 +307,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         draw_cut(draw_context(&mut ctx.draw)?, panel, anchor, 0xbf, 0xb);
 
         let small = ctx.img001_second_sheet.clone();
-        let small = small.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let small = small.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_number_plain(draw_context(&mut ctx.draw)?, small, 0xe, floor, 0, anchor.wrapping_add(-4) as f32, 185.0, -4.0, 0, 2, 0)?;
 
@@ -332,26 +330,26 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
         let floor = get_labyrinth_floor_reached(ctx)?;
         let gauge = ctx.outro_event_sheets[0].clone();
-        let gauge = gauge.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let gauge = gauge.as_deref().ok_or(Fault::null_pointer())?;
         let small = ctx.img001_second_sheet.clone();
-        let small = small.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let small = small.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_labyrinth_gauge(ctx, gauge, small, centre.wrapping_add(0x13), 0x64, floor)?;
     }
 
     if dialog_top(ctx).is_some() {
-        let dialog = dialog_top(ctx).ok_or(Fault::NullPointer { site: SITE })?;
+        let dialog = dialog_top(ctx).ok_or(Fault::null_pointer())?;
 
         dialog_draw(ctx, dialog, 1)?;
     }
 
     if ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x44 && hidden == 0 {
         let plate = ctx.img101_sheet.clone();
-        let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
         let step = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let press = *DECK_PRESS_SIZE_TABLE
             .get(step as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange { site: SITE, index: step as i64, limit: DECK_PRESS_SIZE_TABLE.len() as i64 })?;
+            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
         let half = operation::div_2(press);
         let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
         let y = ctx
@@ -363,7 +361,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, x, y, press.wrapping_add(0x17d), press.wrapping_add(0x48), 3);
 
         let label = ctx.img006_sheet.clone();
-        let label = label.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let label = label.as_deref().ok_or(Fault::null_pointer())?;
         let x = operation::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0x7f);
         let y = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
@@ -382,7 +380,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
             let plate = ctx.img101_sheet.clone();
-            let plate = plate.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
             let x = operation::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
             let y = ctx
                 .i32_at(AppContext::LETTERBOX_SHIFT)?
@@ -396,7 +394,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         }
 
         for id in [0xc8, 0xc9, 0xca] {
-            let button = button_bank_find(&ctx.buttons, id).ok_or(Fault::NullPointer { site: SITE })?;
+            let button = button_bank_find(&ctx.buttons, id).ok_or(Fault::null_pointer())?;
 
             new_button_draw(ctx, button, 0, 0)?;
         }
@@ -411,7 +409,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     }
 
     for id in [0xc8, 0xc9] {
-        let button = button_bank_find(&ctx.buttons, id).ok_or(Fault::NullPointer { site: SITE })?;
+        let button = button_bank_find(&ctx.buttons, id).ok_or(Fault::null_pointer())?;
 
         new_button_draw(ctx, button, 0, 0)?;
     }
@@ -420,7 +418,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         return Ok(());
     }
 
-    let video = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::NullPointer { site: SITE })?;
+    let video = button_bank_find(&ctx.buttons, 0xcb).ok_or(Fault::null_pointer())?;
 
     new_button_draw(ctx, video, 0, 0)
 }

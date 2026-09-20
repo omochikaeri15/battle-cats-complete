@@ -5,8 +5,6 @@ use super::{
     get_background_width, get_drawable_width, sin_deg,
 };
 
-const SITE: &str = "background_particles";
-
 pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 2
         || get_background_id(ctx)? == 0xe
@@ -35,7 +33,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(spread, width).ok_or(Fault::divide(SITE, width as i64))?,
+                operation::irem(spread, width).ok_or(Fault::divide(width as i64))?,
             )?;
 
             if get_background_id(ctx)? == 2
@@ -127,7 +125,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(wrapped, span).ok_or(Fault::divide(SITE, span as i64))?,
+                operation::irem(wrapped, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             let lift = sin_deg(ctx.i32_at(record.wrapping_add(8))? as f32);
@@ -211,7 +209,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(spread, width).ok_or(Fault::divide(SITE, width as i64))?,
+                operation::irem(spread, width).ok_or(Fault::divide(width as i64))?,
             )?;
 
             let height = 0x280i32.wrapping_sub(ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?);
@@ -398,7 +396,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
                 } else {
                     let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
                     let lift = operation::idiv(0x4e20, min_zoom)
-                        .ok_or(Fault::divide(SITE, min_zoom as i64))?;
+                        .ok_or(Fault::divide(min_zoom as i64))?;
                     let y = call_rng(ctx, 0x32)
                         .wrapping_add(lift)
                         .wrapping_mul(0x64)
@@ -564,11 +562,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             .bg_effects
             .instances
             .get_mut(instance)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: instance as i64,
-                limit: 0,
-            })?;
+            .ok_or(Fault::index_out_of_range(instance as i64, 0))?;
 
         effect.x += step_x;
         effect.y += step_y;
@@ -583,11 +577,7 @@ pub fn background_particles(ctx: &mut AppContext) -> Result<(), Fault> {
             .bg_effects
             .defs
             .get(effect.def_index as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: effect.def_index as i64,
-                limit: ctx.bg_effects.defs.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(effect.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
 
         let expired = (effect.life_time > 0 && old >= effect.life_time)
             || (bg_param_enabled(&def.destroy_left) != 0 && effect.destroy_left > effect.x)

@@ -20,11 +20,7 @@ pub fn slot_deploy_permitted(
 
         row = rows
             .get(slot as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "slot_deploy_permitted",
-                index: slot as i64,
-                limit: 10,
-            })?
+            .ok_or(Fault::index_out_of_range(slot as i64, 10))?
             .0 as i32;
     }
 

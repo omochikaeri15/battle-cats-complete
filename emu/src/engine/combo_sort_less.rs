@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, NyancomboRecord};
 
-const SITE: &str = "combo_sort_less";
-
 pub fn combo_sort_less(
     ctx: &AppContext,
     left: &NyancomboRecord,
@@ -21,11 +19,7 @@ pub fn combo_sort_less(
             ctx.combo_store
                 .tab_kinds
                 .get(tab as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: tab as i64,
-                    limit: ctx.combo_store.tab_kinds.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(tab as i64, ctx.combo_store.tab_kinds.len() as i64))?;
 
         if entry as i64 >= kinds.len() as i32 as i64 {
             return Ok(false);

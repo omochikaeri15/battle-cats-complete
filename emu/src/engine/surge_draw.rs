@@ -4,8 +4,6 @@ use super::{
     AppContext, Entity, SURGE_TIMING, draw_context, draw_model, get_drawable_width, maanim_execute,
 };
 
-const SITE: &str = "surge_draw";
-
 pub fn surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), Fault> {
     if ctx.surge_events.is_empty() {
         return Ok(());
@@ -26,7 +24,7 @@ pub fn surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), F
         let event = ctx
             .surge_events
             .get(index)
-            .ok_or(Fault::OutOfRange { site: SITE })?;
+            .ok_or(Fault::out_of_range())?;
         let mini = event.mini;
         let elapsed = event.frame.wrapping_sub(SURGE_TIMING[1]);
         let (phase, frame) = if event.frame >= SURGE_TIMING[1] {
@@ -49,11 +47,7 @@ pub fn surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), F
             (1, false) => (&mut ctx.volcano_e_model, &ctx.volcano_anims),
             (1, true) => (&mut ctx.smallvolcano_e_model, &ctx.smallvolcano_anims),
             _ => {
-                return Err(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: faction as i64,
-                    limit: 2,
-                });
+                return Err(Fault::index_out_of_range(faction as i64, 2));
             }
         };
 

@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::AppContext;
 
-const SITE: &str = "set_map_open";
-
 pub fn set_map_open(
     ctx: &mut AppContext,
     map_type: i32,
@@ -34,11 +32,7 @@ pub fn set_map_open(
             let cell = maps
                 .get_mut(map_idx as i64 as usize)
                 .and_then(|stars| stars.get_mut(star as i64 as usize))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map_idx as i64,
-                    limit,
-                })?;
+                .ok_or(Fault::index_out_of_range(map_idx as i64, limit))?;
 
             *cell = value as i8;
 
@@ -53,11 +47,7 @@ pub fn set_map_open(
                 _ => (&mut ctx.map_open_neg11, (map_idx as i64) * 4 + star as i64),
             };
             let limit = maps.len() as i64;
-            let slot = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let slot = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *slot = value as i8;
 
@@ -71,11 +61,7 @@ pub fn set_map_open(
             };
             let cell = (map_idx as i64) * 4 + star as i64;
             let limit = maps.len() as i64;
-            let slot = maps.get_mut(cell as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: cell,
-                limit,
-            })?;
+            let slot = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
             *slot = value;
 

@@ -5,8 +5,6 @@ use super::{
     text_texture_cache,
 };
 
-const SITE: &str = "game_lose_update_lambda_0";
-
 pub fn game_lose_update_lambda_0(
     ctx: &mut AppContext,
     dialog: u64,
@@ -36,11 +34,7 @@ pub fn game_lose_update_lambda_0(
 
             loop {
                 let tip = ctx.i32_at(AppContext::LOSE_TIP)? as i64 as usize;
-                let row = ctx.lose_rows.get(tip).ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: tip as i64,
-                    limit: ctx.lose_rows.len() as i64,
-                })?;
+                let row = ctx.lose_rows.get(tip).ok_or(Fault::index_out_of_range(tip as i64, ctx.lose_rows.len() as i64))?;
 
                 if line >= row.len() as i32 as i64 {
                     break;
@@ -53,11 +47,7 @@ pub fn game_lose_update_lambda_0(
 
                 *ctx.label_texts
                     .get_mut(slot)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: slot as i64,
-                        limit: 0x434,
-                    })? = Some(texture);
+                    .ok_or(Fault::index_out_of_range(slot as i64, 0x434))? = Some(texture);
 
                 line += 1;
             }

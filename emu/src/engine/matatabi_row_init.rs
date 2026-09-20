@@ -9,7 +9,6 @@ pub struct MatatabiRow {
     pub guide_text: Vec<u8>,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn matatabi_row_init(
     row: &mut MatatabiRow,
     gatya_id: i32,

@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{JsonNode, JsonParser};
 
-const SITE: &str = "json_parse_string";
-
 pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fault> {
     let mut text: Vec<u8> = Vec::new();
     let mut closed = false;
@@ -17,11 +15,7 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
             let escape = *parser
                 .source
                 .get(parser.cursor)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: parser.cursor as i64,
-                    limit: parser.end as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(parser.cursor as i64, parser.end as i64))?;
 
             match escape {
                 b'b' => text.push(0x8),
@@ -47,11 +41,7 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
         && *parser
             .source
             .get(parser.cursor)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: parser.cursor as i64,
-                limit: parser.end as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(parser.cursor as i64, parser.end as i64))?
             != b'"'
     {
         return Ok(None);
@@ -63,11 +53,11 @@ pub fn json_parse_string(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
             let parsed = operation::strtol(&text[digits..(digits + 4).min(text.len())], 0x10);
 
             if parsed.end == 0 {
-                return Err(Fault::InvalidArgument { site: SITE });
+                return Err(Fault::invalid_argument());
             }
 
             if parsed.overflow || parsed.value < i32::MIN as i64 || parsed.value > i32::MAX as i64 {
-                return Err(Fault::OutOfRange { site: SITE });
+                return Err(Fault::out_of_range());
             }
 
             let code = parsed.value as i32;

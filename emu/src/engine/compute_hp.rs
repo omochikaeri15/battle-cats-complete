@@ -87,11 +87,7 @@ pub fn compute_hp(
         let entry = ctx
             .stage_enemies
             .get(mag_slot as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_hp",
-                index: mag_slot as i64,
-                limit: ctx.stage_enemies.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(mag_slot as i64, ctx.stage_enemies.len() as i64))?;
         let mut scaled = operation::div_100(
             (stage_entry_magnification(entry) as i64)
                 .wrapping_mul(base)
@@ -115,11 +111,7 @@ pub fn compute_hp(
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let bonus = *EOC_CHAPTER_HP_MUL
             .get(chapter as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "compute_hp",
-                index: chapter as i64,
-                limit: 3,
-            })? as i64;
+            .ok_or(Fault::index_out_of_range(chapter as i64, 3))? as i64;
 
         operation::div_10(bonus.wrapping_add(0xa).wrapping_mul(base).wrapping_add(5))
     };

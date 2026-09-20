@@ -8,8 +8,6 @@ use super::{
     parse_bg_param_int, string_format_int, texture_cache_load,
 };
 
-const SITE: &str = "load_bg_effect_json";
-
 pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), Fault> {
     let name = string_format_int(ctx, b"bg%03d.json", background)?;
     let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? else {
@@ -18,7 +16,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
     let source = json_source_from_string(&bytes);
     let document = json_parse_object_document(Some(source))?;
     let Some(JsonNode::Object(root)) = document.as_ref() else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     if root.contains_key(b"id".as_slice()) {
@@ -34,7 +32,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
     }
 
     let Some(JsonNode::Array(data)) = root.get(b"data".as_slice()) else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     let mut index = 0usize;
@@ -43,13 +41,13 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
         ctx.bg_effects.defs.push(bg_effect_def_new());
 
         let JsonNode::Object(entry) = &data[index] else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let def = ctx
             .bg_effects
             .defs
             .last_mut()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         parse_bg_param_int(
             &mut def.count,
@@ -314,10 +312,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
                     .image_names
                     .get(&key)
                     .cloned()
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?;
+                    .ok_or(Fault::key_not_found(key as i64))?;
 
             if !ctx.bg_effect_sheets.contains_key(&image) {
                 let cut = match file.get(b"imgcut".as_slice()) {
@@ -338,10 +333,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
                     .model_names
                     .get(&key)
                     .cloned()
-                    .ok_or(Fault::KeyNotFound {
-                        site: SITE,
-                        key: key as i64,
-                    })?;
+                    .ok_or(Fault::key_not_found(key as i64))?;
 
             if !ctx.bg_models.contains_key(&model) {
                 let mut loaded = ctx.bg_models.remove(&model).unwrap_or_default();
@@ -355,10 +347,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
                 .model_anims
                 .get(&key)
                 .cloned()
-                .ok_or(Fault::KeyNotFound {
-                    site: SITE,
-                    key: key as i64,
-                })?;
+                .ok_or(Fault::key_not_found(key as i64))?;
 
             if !ctx.bg_anim_cache.contains_key(&anim) {
                 let mut loaded = ctx.bg_anim_cache.remove(&anim).unwrap_or_default();
@@ -372,7 +361,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
             .bg_effects
             .defs
             .last_mut()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         parse_bg_equally_spaced(
             &mut def.equally_spaced,

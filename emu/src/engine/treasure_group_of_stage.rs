@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, STAGE_DISPLAY_ORDER, treasure_group_at};
 
-const SITE: &str = "treasure_group_of_stage";
-
 pub fn treasure_group_of_stage(ctx: &AppContext, chapter: i32, stage: i32) -> Result<i32, Fault> {
     if chapter == 3 {
         return Ok(0);
@@ -12,11 +10,7 @@ pub fn treasure_group_of_stage(ctx: &AppContext, chapter: i32, stage: i32) -> Re
     let groups = ctx
         .treasure_store
         .get(chapter as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: chapter as i64,
-            limit: 10,
-        })?
+        .ok_or(Fault::index_out_of_range(chapter as i64, 10))?
         .len() as i32;
 
     if groups <= 0 {
@@ -36,19 +30,11 @@ pub fn treasure_group_of_stage(ctx: &AppContext, chapter: i32, stage: i32) -> Re
             }
 
             let castles = treasure_group_at(&ctx.treasure_store, chapter, group)?.castles;
-            let castle = *castles.get(index as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index,
-                limit: castles.len() as i64,
-            })?;
+            let castle = *castles.get(index as usize).ok_or(Fault::index_out_of_range(index, castles.len() as i64))?;
             let wanted =
                 *STAGE_DISPLAY_ORDER
                     .get(stage as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: stage as i64,
-                        limit: 0x33,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(stage as i64, 0x33))?;
 
             index += 1;
 
@@ -62,11 +48,7 @@ pub fn treasure_group_of_stage(ctx: &AppContext, chapter: i32, stage: i32) -> Re
         let groups = ctx
             .treasure_store
             .get(chapter as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: chapter as i64,
-                limit: 10,
-            })?
+            .ok_or(Fault::index_out_of_range(chapter as i64, 10))?
             .len() as i32;
 
         if group >= groups {

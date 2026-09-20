@@ -24,8 +24,6 @@ pub fn open_asset_stream(
 ) -> Result<Option<Vec<u8>>, Fault> {
     Ok(ctx
         .assets()
-        .ok_or(Fault::HostMissing {
-            site: "open_asset_stream",
-        })?
+        .ok_or(Fault::host_missing())?
         .open(name, packed, encrypted))
 }

@@ -9,9 +9,7 @@ pub fn resource_log(
     amount: i32,
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "resource_log",
-        })?
+        .ok_or(Fault::host_missing())?
         .resource_log(action, item, amount);
 
     Ok(())

@@ -10,8 +10,6 @@ use super::{
     get_wave_mini, has_attack_abilities, is_attack_long_range, roll_procs,
 };
 
-const SITE: &str = "cat_hit_executor";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct ExplosionEvent {
     pub faction: i32,
@@ -48,11 +46,7 @@ pub fn cat_hit_executor(
     let mut index = 0usize;
 
     while index < targets.len() {
-        let target = *targets.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: targets.len() as i64,
-        })?;
+        let target = *targets.get(index).ok_or(Fault::index_out_of_range(index as i64, targets.len() as i64))?;
 
         if cat_attack_dispatch(
             ctx,
@@ -209,11 +203,7 @@ pub fn cat_hit_executor(
             };
             let level = get_surge_level(ctx, 0, slot)?;
             let mini = get_mini_surge(ctx, 0, slot)? != 0;
-            let event = ctx.surge_events.last_mut().ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 0,
-                limit: 0,
-            })?;
+            let event = ctx.surge_events.last_mut().ok_or(Fault::index_out_of_range(0, 0))?;
 
             event.faction = 0;
             event.slot = slot;
@@ -247,11 +237,7 @@ pub fn cat_hit_executor(
             let event = ctx
                 .explosion_events
                 .last_mut()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 0,
-                    limit: 0,
-                })?;
+                .ok_or(Fault::index_out_of_range(0, 0))?;
 
             event.faction = 0;
             event.slot = slot;

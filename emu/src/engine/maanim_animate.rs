@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{Maanim, Mamodel, deploy_part, std_vector_int_assign};
 
-const SITE: &str = "maanim_animate";
-
 pub fn maanim_animate(
     model: &mut Mamodel,
     anim: Option<&Maanim>,
@@ -42,11 +40,7 @@ pub fn maanim_animate(
             let track = anim
                 .tracks
                 .get(track_index as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: track_index,
-                    limit: anim.tracks.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(track_index, anim.tracks.len() as i64))?;
 
             track_index += 1;
 
@@ -60,11 +54,7 @@ pub fn maanim_animate(
                 track
                     .keyframes
                     .get(index as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index,
-                        limit: track.keyframes.len() as i64,
-                    })
+                    .ok_or(Fault::index_out_of_range(index, track.keyframes.len() as i64))
             };
 
             let first = keyframe(0)?[0];
@@ -83,7 +73,7 @@ pub fn maanim_animate(
 
                 if repeats == -1 {
                     time = operation::irem(frame.wrapping_sub(first), span)
-                        .ok_or(Fault::divide(SITE, span as i64))?
+                        .ok_or(Fault::divide(span as i64))?
                         .wrapping_add(first);
                 } else {
                     time = last;
@@ -91,11 +81,11 @@ pub fn maanim_animate(
                     if repeats > 0 {
                         let elapsed = frame.wrapping_sub(first);
                         let lap = operation::idiv(elapsed, span)
-                            .ok_or(Fault::divide(SITE, span as i64))?;
+                            .ok_or(Fault::divide(span as i64))?;
 
                         if lap < repeats {
                             time = operation::irem(elapsed, span)
-                                .ok_or(Fault::divide(SITE, span as i64))?
+                                .ok_or(Fault::divide(span as i64))?
                                 .wrapping_add(first);
                         }
                     }
@@ -145,7 +135,7 @@ pub fn maanim_animate(
                             let bottom = to_frame.wrapping_sub(from_frame).wrapping_mul(steps);
 
                             found = operation::idiv(top, bottom)
-                                .ok_or(Fault::divide(SITE, bottom as i64))?
+                                .ok_or(Fault::divide(bottom as i64))?
                                 .wrapping_add(from[1]);
                         }
                         1 => {
@@ -236,7 +226,7 @@ pub fn maanim_animate(
                                             let gap = node_frame.wrapping_sub(other_frame);
 
                                             weight = operation::div_wide(weight, gap)
-                                                .ok_or(Fault::divide(SITE, gap))?;
+                                                .ok_or(Fault::divide(gap))?;
                                         }
 
                                         other += 1;
@@ -282,11 +272,7 @@ pub fn maanim_animate(
             let part = model
                 .parts
                 .get_mut(target as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: target,
-                    limit: part_count as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(target, part_count as i64))?;
 
             match track.header[1] as u32 {
                 0x0 => part.set_i32_at(0x20, value.wrapping_sub(part.i32_at(0x1c))),
@@ -347,11 +333,7 @@ pub fn maanim_animate(
         let mut turn = 0u64;
 
         loop {
-            let part_index = *deployed.get(turn as usize).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: turn as i64,
-                limit: deployed.len() as i64,
-            })?;
+            let part_index = *deployed.get(turn as usize).ok_or(Fault::index_out_of_range(turn as i64, deployed.len() as i64))?;
 
             deploy_part(part_index, model)?;
             turn += 1;
@@ -371,16 +353,8 @@ pub fn maanim_animate(
         *model
             .draw_order
             .get_mut(index)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: index as i64,
-                limit: 0,
-            })? = index as i32;
-        *model.draw_z.get_mut(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: 0,
-        })? = depth;
+            .ok_or(Fault::index_out_of_range(index as i64, 0))? = index as i32;
+        *model.draw_z.get_mut(index).ok_or(Fault::index_out_of_range(index as i64, 0))? = depth;
     }
 
     if part_count > 1 {

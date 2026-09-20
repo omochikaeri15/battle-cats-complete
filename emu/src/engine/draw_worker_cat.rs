@@ -6,8 +6,6 @@ use super::{
     get_worker_upgrade_cost,
 };
 
-const SITE: &str = "draw_worker_cat";
-
 pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_stage_record(ctx, -2, 0, 0, 0, 0)? <= 0 {
         return Ok(());
@@ -25,7 +23,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             6,
@@ -41,7 +39,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img001_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             0x51,
@@ -59,7 +57,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img001_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             0xd,
@@ -76,7 +74,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img001_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x.wrapping_add(0x49),
             top.wrapping_add(row).wrapping_add(0x1fe),
             level.wrapping_add(0xf),
@@ -98,7 +96,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             5,
@@ -120,7 +118,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.img002_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             y,
             cut,
@@ -139,7 +137,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img001_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         base,
         cost,
         0,
@@ -156,7 +154,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img001_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         operation::cvttss2si(area.left),
         y,
         0x16,
@@ -176,7 +174,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img001_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         x,
         y,
         label,
@@ -195,7 +193,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_context(&mut ctx.draw)?,
         ctx.img001_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?,
+            .ok_or(Fault::null_pointer())?,
         x,
         y,
         level.wrapping_add(level_cut),

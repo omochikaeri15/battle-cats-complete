@@ -9,9 +9,7 @@ pub fn analytics_named(
     detail: &[u8],
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "analytics_named",
-        })?
+        .ok_or(Fault::host_missing())?
         .analytics_named(code, name, detail);
 
     Ok(())

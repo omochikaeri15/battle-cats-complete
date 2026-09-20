@@ -13,20 +13,12 @@ pub fn is_attack_long_range(
             let flag_field =
                 *ATTACK_LD_FLAG_FIELDS
                     .get(attack as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: "is_attack_long_range",
-                        index: attack as i64,
-                        limit: 3,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(attack as i64, 3))?;
             let entity = AppContext::entity_field(faction, slot, 0);
 
             if ctx.i32_at(entity.wrapping_add((flag_field as usize).wrapping_mul(4)))? != 0 {
                 let anchor_field = *ATTACK_LD_ANCHOR_FIELDS.get(attack as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: "is_attack_long_range",
-                        index: attack as i64,
-                        limit: 3,
-                    },
+                    Fault::index_out_of_range(attack as i64, 3),
                 )?;
                 let anchor_missing =
                     ctx.i32_at(entity.wrapping_add((anchor_field as usize).wrapping_mul(4)))? == 0;

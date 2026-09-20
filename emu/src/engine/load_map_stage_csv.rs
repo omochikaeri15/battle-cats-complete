@@ -10,8 +10,6 @@ use super::{
     validate_map_type,
 };
 
-const SITE: &str = "load_map_stage_csv";
-
 const MAP_FILES: [(i32, &[u8]); 16] = [
     (-4, b"MapStageDataV_%03d.csv"),
     (-6, b"MapStageDataM_%03d.csv"),
@@ -361,11 +359,7 @@ pub fn load_map_stage_csv(
             .entry(kind)
             .or_insert_with(|| vec![0; 0x1f4])
             .get_mut(slot)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: map as i64,
-                limit: 0x1f4,
-            })? = data_id;
+            .ok_or(Fault::index_out_of_range(map as i64, 0x1f4))? = data_id;
 
         let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
         let kind = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
@@ -374,11 +368,7 @@ pub fn load_map_stage_csv(
             .entry(kind)
             .or_insert_with(|| vec![0; 0x1f4])
             .get_mut(slot)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: map as i64,
-                limit: 0x1f4,
-            })? = set;
+            .ok_or(Fault::index_out_of_range(map as i64, 0x1f4))? = set;
 
         for (column, value) in options.into_iter().enumerate() {
             let kind = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
@@ -387,11 +377,7 @@ pub fn load_map_stage_csv(
                 .entry(kind)
                 .or_insert_with(|| vec![[0; 4]; 0x1f4])
                 .get_mut(slot)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: map as i64,
-                    limit: 0x1f4,
-                })?;
+                .ok_or(Fault::index_out_of_range(map as i64, 0x1f4))?;
 
             row[column] = value;
         }

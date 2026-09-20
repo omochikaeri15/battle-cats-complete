@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, lose_exit_map_check};
 
-const SITE: &str = "lose_tip_allowed";
-
 pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
     let mut cells: Vec<i32> = Vec::new();
     let mut row = -1i64;
@@ -17,7 +15,7 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
 
         let first = *ctx.lose_text_settings[row as usize]
             .first()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         if first == id {
             cells = ctx.lose_text_settings[row as usize].clone();
@@ -31,13 +29,9 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
 
     loop {
         let cell = *cells.get(column).ok_or(if cells.is_empty() {
-            Fault::NullPointer { site: SITE }
+            Fault::null_pointer()
         } else {
-            Fault::IndexOutOfRange {
-                site: SITE,
-                index: column as i64,
-                limit: cells.len() as i64,
-            }
+            Fault::index_out_of_range(column as i64, cells.len() as i64)
         })?;
 
         if cell == 0 && (column as u32).wrapping_sub(1) <= 0x19 {

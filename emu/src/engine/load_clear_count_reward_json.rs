@@ -6,8 +6,6 @@ use super::{
     string_to_int,
 };
 
-const SITE: &str = "load_clear_count_reward_json";
-
 pub fn load_clear_count_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.clear_count_rewards.clear();
 
@@ -18,7 +16,7 @@ pub fn load_clear_count_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
     let source = json_source_from_string(&bytes);
     let document = json_parse_object_document(Some(source))?;
     let Some(JsonNode::Object(root)) = document.as_ref() else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
     let Some(JsonNode::Object(maps)) = root.get(b"MapID".as_slice()) else {
         return Ok(());

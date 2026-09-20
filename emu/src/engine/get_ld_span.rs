@@ -10,20 +10,12 @@ pub fn get_ld_span(ctx: &AppContext, faction: i32, slot: i32, attack: i32) -> Re
             let flag_field =
                 *ATTACK_LD_FLAG_FIELDS
                     .get(attack as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: "get_ld_span",
-                        index: attack as i64,
-                        limit: 3,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(attack as i64, 3))?;
             let entity = AppContext::entity_field(faction, slot, 0);
 
             if ctx.i32_at(entity.wrapping_add((flag_field as usize).wrapping_mul(4)))? != 0 {
                 let anchor_field = *ATTACK_LD_ANCHOR_FIELDS.get(attack as usize).ok_or(
-                    Fault::IndexOutOfRange {
-                        site: "get_ld_span",
-                        index: attack as i64,
-                        limit: 3,
-                    },
+                    Fault::index_out_of_range(attack as i64, 3),
                 )?;
                 let anchor_missing =
                     ctx.i32_at(entity.wrapping_add((anchor_field as usize).wrapping_mul(4)))? == 0;
@@ -43,11 +35,7 @@ pub fn get_ld_span(ctx: &AppContext, faction: i32, slot: i32, attack: i32) -> Re
     let source = if marker != -1 { marker } else { 0 };
     let field = *ATTACK_LD_SPAN_FIELDS
         .get(source as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: "get_ld_span",
-            index: source as i64,
-            limit: 3,
-        })?;
+        .ok_or(Fault::index_out_of_range(source as i64, 3))?;
 
     ctx.i32_at(
         AppContext::entity_field(faction, slot, 0).wrapping_add((field as usize).wrapping_mul(4)),

@@ -11,9 +11,7 @@ pub fn string_format_int2_text_copy(
 ) -> Result<Vec<u8>, Fault> {
     Ok(ctx
         .text_renderer()
-        .ok_or(Fault::HostMissing {
-            site: "string_format_int2_text_copy",
-        })?
+        .ok_or(Fault::host_missing())?
         .format_args(
             pattern,
             &[

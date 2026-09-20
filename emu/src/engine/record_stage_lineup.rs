@@ -40,11 +40,7 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
 
     for slot in 0..10usize {
         let cell = ctx.block_at::<2>(AppContext::BATTLE_DECK + slot * 4)?;
-        let unit = lineup.units.get_mut(slot).ok_or(Fault::IndexOutOfRange {
-            site: "record_stage_lineup",
-            index: slot as i64,
-            limit: 10,
-        })?;
+        let unit = lineup.units.get_mut(slot).ok_or(Fault::index_out_of_range(slot as i64, 10))?;
 
         *unit = u16::from_le_bytes([cell[0] ^ key[0], cell[1] ^ key[1]]);
 

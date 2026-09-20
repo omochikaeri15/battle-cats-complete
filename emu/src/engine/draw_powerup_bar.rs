@@ -7,8 +7,6 @@ use super::{
     set_draw_origin, set_tint, text_block_draw, touch_is_down,
 };
 
-const SITE: &str = "draw_powerup_bar";
-
 const BLANK_LINE: &[u8] = "\u{ff20}".as_bytes();
 
 pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -54,11 +52,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
         let bounce =
             *BUTTON_PRESS_BOUNCE
                 .get(press as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: press as i64,
-                    limit: 6,
-                })?;
+                .ok_or(Fault::index_out_of_range(press as i64, 6))?;
         let half = bounce / 2;
         let x = width
             .wrapping_add(column.wrapping_mul(0x58))
@@ -74,7 +68,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_context(&mut ctx.draw)?,
             ctx.mapicon_sheet
                 .as_deref()
-                .ok_or(Fault::NullPointer { site: SITE })?,
+                .ok_or(Fault::null_pointer())?,
             x,
             top.wrapping_sub(lift),
             size,
@@ -190,7 +184,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
                             .label_texts
                             .get(label)
                             .and_then(|slot| slot.as_ref())
-                            .ok_or(Fault::NullPointer { site: SITE })?;
+                            .ok_or(Fault::null_pointer())?;
 
                         draw_surface_aligned(
                             draw_context(&mut ctx.draw)?,
@@ -206,7 +200,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
                             .label_texts
                             .get(label)
                             .and_then(|slot| slot.as_ref())
-                            .ok_or(Fault::NullPointer { site: SITE })?;
+                            .ok_or(Fault::null_pointer())?;
 
                         draw_surface_aligned(
                             draw_context(&mut ctx.draw)?,
@@ -224,11 +218,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
                 let lines = get_item_description(ctx, index);
                 let blank = lines
                     .get(line as usize - 1)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: line as i64 - 1,
-                        limit: lines.len() as i64,
-                    })?
+                    .ok_or(Fault::index_out_of_range(line as i64 - 1, lines.len() as i64))?
                     .as_slice()
                     == BLANK_LINE;
 
@@ -243,7 +233,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
                     .label_texts
                     .get(label)
                     .and_then(|slot| slot.as_ref())
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 draw_surface_aligned(
                     draw_context(&mut ctx.draw)?,

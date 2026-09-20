@@ -28,9 +28,6 @@ pub fn get_built_deck_rows(ctx: &mut AppContext, stage_key: i32) -> Result<[(i16
     Ok(ctx
         .built_deck_records
         .get(&(deck_id as i16))
-        .ok_or(Fault::KeyNotFound {
-            site: "get_built_deck_rows",
-            key: deck_id as i64,
-        })?
+        .ok_or(Fault::key_not_found(deck_id as i64))?
         .rows)
 }

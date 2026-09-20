@@ -4,11 +4,9 @@ use super::{
     JsonNode, OrbDef, json_container_as_int, json_string_as_int, json_value_as_int,
 };
 
-const SITE: &str = "orb_parse_record";
-
 pub fn orb_parse_record(record: &mut OrbDef, node: Option<&JsonNode>) -> Result<(), Fault> {
     let Some(JsonNode::Object(fields)) = node else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     record.grade = fields
@@ -39,7 +37,7 @@ pub fn orb_parse_record(record: &mut OrbDef, node: Option<&JsonNode>) -> Result<
 
     loop {
         let Some(JsonNode::Array(values)) = fields.get(b"value".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         if index >= values.len() {
@@ -47,14 +45,10 @@ pub fn orb_parse_record(record: &mut OrbDef, node: Option<&JsonNode>) -> Result<
         }
 
         let Some(JsonNode::Array(values)) = fields.get(b"value".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
-        let element = values.get(index).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: index as i64,
-            limit: values.len() as i64,
-        })?;
+        let element = values.get(index).ok_or(Fault::index_out_of_range(index as i64, values.len() as i64))?;
 
         let value = match element {
             JsonNode::String(text) => json_string_as_int(text),

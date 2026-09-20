@@ -15,11 +15,7 @@ pub fn base_resists_one_shot(ctx: &AppContext) -> Result<bool, Fault> {
     let mut row = 0usize;
 
     while row < ctx.stage_enemies.len() {
-        let enemy_row = ctx.stage_enemies.get(row).ok_or(Fault::IndexOutOfRange {
-            site: "base_resists_one_shot",
-            index: row as i64,
-            limit: ctx.stage_enemies.len() as i64,
-        })?;
+        let enemy_row = ctx.stage_enemies.get(row).ok_or(Fault::index_out_of_range(row as i64, ctx.stage_enemies.len() as i64))?;
 
         if stage_entry_is_boss(enemy_row)
             && hp
@@ -27,11 +23,7 @@ pub fn base_resists_one_shot(ctx: &AppContext) -> Result<bool, Fault> {
                     stage_entry_base_trigger(enemy_row).wrapping_mul(max_hp) as i64
                 ) as i32
         {
-            let spawned = ctx.spawn_states.get(row).ok_or(Fault::IndexOutOfRange {
-                site: "base_resists_one_shot",
-                index: row as i64,
-                limit: ctx.spawn_states.len() as i64,
-            })?[1];
+            let spawned = ctx.spawn_states.get(row).ok_or(Fault::index_out_of_range(row as i64, ctx.spawn_states.len() as i64))?[1];
 
             if spawned < stage_entry_count(enemy_row) {
                 return Ok(true);

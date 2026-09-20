@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::AppContext;
 
-const SITE: &str = "eoc_progress_total";
-
 pub fn eoc_progress_total(ctx: &AppContext) -> Result<i32, Fault> {
     let mut total = 0i32;
 
@@ -13,11 +11,7 @@ pub fn eoc_progress_total(ctx: &AppContext) -> Result<i32, Fault> {
         pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS + chapter * 4)?);
         pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
 
-        let cleared = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 1,
-        })? as i32;
+        let cleared = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32;
 
         if cleared == 0 {
             return Ok(total);

@@ -7,8 +7,6 @@ use super::{
     get_drawable_width, load_bg_effect_json,
 };
 
-const SITE: &str = "bg_effect_spawn_all";
-
 pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
     let length = ctx.i32_at(AppContext::STAGE_LENGTH)?;
     let visible = operation::div_1000(
@@ -18,7 +16,7 @@ pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
     let span = get_drawable_width(ctx)?
         .wrapping_sub(visible)
         .wrapping_mul(length);
-    let span = operation::idiv(span, visible).ok_or(Fault::divide(SITE, visible as i64))?;
+    let span = operation::idiv(span, visible).ok_or(Fault::divide(visible as i64))?;
     let half = operation::div_2(span);
     let left = operation::div_neg_20(span) as f64;
     let left = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5 + left) as f32;
@@ -27,7 +25,7 @@ pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
         .wrapping_mul(100)
         .wrapping_add(0xc350);
     let zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
-    let lift = operation::idiv(lift, zoom).ok_or(Fault::divide(SITE, zoom as i64))?;
+    let lift = operation::idiv(lift, zoom).ok_or(Fault::divide(zoom as i64))?;
     let top = 0x1e0i32.wrapping_sub(lift) as f32;
     let centre = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5) as f32;
     let scale = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?.wrapping_mul(100) as f32 / 10000.0;

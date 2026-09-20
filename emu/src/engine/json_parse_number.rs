@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{JsonNode, JsonParser};
 
-const SITE: &str = "json_parse_number";
-
 pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fault> {
     let start = parser.cursor;
     let mut stop = start;
@@ -44,10 +42,10 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
 
     if fraction {
         let (value, range) =
-            operation::strtof(&text).ok_or(Fault::InvalidArgument { site: SITE })?;
+            operation::strtof(&text).ok_or(Fault::invalid_argument())?;
 
         if range {
-            return Err(Fault::OutOfRange { site: SITE });
+            return Err(Fault::out_of_range());
         }
 
         return Ok(Some(JsonNode::Double(value as f64)));
@@ -57,21 +55,21 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
         let parsed = operation::strtol(&text, 10);
 
         if parsed.end == 0 {
-            return Err(Fault::InvalidArgument { site: SITE });
+            return Err(Fault::invalid_argument());
         }
 
         if parsed.overflow {
-            return Err(Fault::OutOfRange { site: SITE });
+            return Err(Fault::out_of_range());
         }
 
         return Ok(Some(JsonNode::Int(parsed.value)));
     }
 
     let (value, overflow) =
-        operation::strtoull(&text, 10).ok_or(Fault::InvalidArgument { site: SITE })?;
+        operation::strtoull(&text, 10).ok_or(Fault::invalid_argument())?;
 
     if overflow {
-        return Err(Fault::OutOfRange { site: SITE });
+        return Err(Fault::out_of_range());
     }
 
     Ok(Some(JsonNode::Uint(value)))

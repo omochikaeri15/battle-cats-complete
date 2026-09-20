@@ -5,8 +5,6 @@ use super::{
     get_treasure_value, min_i32, validate_map_type, xor_row46_get,
 };
 
-const SITE: &str = "compute_stage_xp";
-
 pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
     let row = (AppContext::MAP_STAGE_ROWS as i64
         + (ctx.i32_at(AppContext::STAGE_ROW)? as i64) * AppContext::MAP_STAGE_ROW_STRIDE as i64)
@@ -14,11 +12,7 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
     let mut xp;
 
     if ctx.i32_at(AppContext::CHAPTER_MODE)? == 0x63 {
-        xp = xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 1,
-            limit: 0x2e,
-        })? as i32;
+        xp = xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::index_out_of_range(1, 0x2e))? as i32;
     } else {
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let legend_bonus = (map_type.wrapping_add(0x16) as u32) <= 0x16
@@ -30,18 +24,10 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
                 .wrapping_add(0x4e20)
                 / 10
         } else if legend_bonus {
-            (xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: 0x2e,
-            })? as i32)
+            (xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::index_out_of_range(1, 0x2e))? as i32)
                 .wrapping_mul(9)
         } else {
-            xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: 0x2e,
-            })? as i32
+            xor_row46_get(ctx.bytes_from(row)?, 1).ok_or(Fault::index_out_of_range(1, 0x2e))? as i32
         };
 
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -53,11 +39,7 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
                 (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
             )?;
             let cleared = operation::xor_row_decode(records, 0x33, stage as i64 as usize).ok_or(
-                Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: stage as i64,
-                    limit: 0x33,
-                },
+                Fault::index_out_of_range(stage as i64, 0x33),
             )? as i32;
             let scaled = min_i32(cleared, 0xd).wrapping_mul(xp);
 

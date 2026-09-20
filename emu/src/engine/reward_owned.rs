@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{AppContext, reward_unit_id};
 
-const SITE: &str = "reward_owned";
-
 pub fn reward_owned(ctx: &AppContext, id: i32) -> Result<bool, Fault> {
     if id == 0x3ea {
         return Ok(ctx.i32_at(AppContext::REWARD_1002_OWNED)? != 0);
@@ -40,17 +38,9 @@ pub fn reward_owned(ctx: &AppContext, id: i32) -> Result<bool, Fault> {
     }
 
     for row in ctx.event_unit_rows.iter().take(count as u32 as usize) {
-        if *row.first().ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: 0,
-            limit: 0,
-        })? == id
+        if *row.first().ok_or(Fault::index_out_of_range(0, 0))? == id
         {
-            let slot = *row.get(1).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: row.len() as i64,
-            })?;
+            let slot = *row.get(1).ok_or(Fault::index_out_of_range(1, row.len() as i64))?;
 
             if slot == -1 {
                 return Ok(false);

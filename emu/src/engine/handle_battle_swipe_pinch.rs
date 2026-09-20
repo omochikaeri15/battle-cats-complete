@@ -6,8 +6,6 @@ use super::{
     touch_released,
 };
 
-const SITE: &str = "handle_battle_swipe_pinch";
-
 pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
     if ctx.u8_at(AppContext::CAMERA_DRAGGING)? == 0 {
         if pinch_is_active(ctx, AppContext::PINCH)? != 0 {
@@ -47,11 +45,11 @@ pub fn handle_battle_swipe_pinch(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DRAW_TEMP_2, new_percent)?;
 
             let old_span =
-                operation::idiv(0x5b8d800, old_zoom).ok_or(Fault::divide(SITE, old_zoom as i64))?;
+                operation::idiv(0x5b8d800, old_zoom).ok_or(Fault::divide(old_zoom as i64))?;
             let camera_x =
                 operation::div_2(old_span).wrapping_add(ctx.i32_at(AppContext::CAMERA_X)?);
             let new_span =
-                operation::idiv(0x5b8d800, new_zoom).ok_or(Fault::divide(SITE, new_zoom as i64))?;
+                operation::idiv(0x5b8d800, new_zoom).ok_or(Fault::divide(new_zoom as i64))?;
 
             ctx.set_i32_at(
                 AppContext::CAMERA_X,

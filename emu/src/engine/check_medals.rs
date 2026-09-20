@@ -4,9 +4,7 @@ use super::AppContext;
 
 pub fn check_medals(ctx: &mut AppContext, kind: i32) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "check_medals",
-        })?
+        .ok_or(Fault::host_missing())?
         .check_medals(kind);
 
     Ok(())

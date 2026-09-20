@@ -7,8 +7,6 @@ use super::{
     read_csv_row,
 };
 
-const SITE: &str = "load_talent_type_csv";
-
 pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     let Some(bytes) = open_asset_stream(ctx, b"SkillAcquisition.csv", 0, 0)? else {
         return Ok(());
@@ -27,7 +25,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let type_id = read_csv_cell(stm, 1) as i32;
         let row = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
         let Some(slot) = row.first_mut() else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         *slot = type_id;
@@ -42,7 +40,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                 || !cell_is_int(stm, base.wrapping_add(2))
             {
                 let Some(slot) = row.get_mut(1i32.wrapping_add(base) as usize) else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
 
                 *slot = 0;
@@ -53,16 +51,16 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             let abil = read_csv_cell(stm, base.wrapping_add(2)) as i32;
             let max_level = read_csv_cell(stm, base.wrapping_add(3)) as i32;
             let Some(window) = row.get_mut(base as usize..base.wrapping_add(15) as usize) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
             let Some(slot) = window.get_mut(1) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
 
             *slot = abil;
 
             let Some(slot) = window.get_mut(2) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
 
             *slot = max_level;
@@ -76,14 +74,14 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             while pair != 4 {
                 let low = read_csv_cell(stm, base.wrapping_add(4).wrapping_add(pair * 2)) as i32;
                 let Some(slot) = window.get_mut(3i32.wrapping_add(pair) as usize) else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
 
                 *slot = low;
 
                 let high = read_csv_cell(stm, base.wrapping_add(5).wrapping_add(pair * 2)) as i32;
                 let Some(slot) = window.get_mut(7i32.wrapping_add(pair) as usize) else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
 
                 *slot = high;
@@ -93,7 +91,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             for (offset, column) in [(11usize, 0xci32), (12, 0xd), (13, 0xe), (14, 0xf)] {
                 let value = read_csv_cell(stm, base.wrapping_add(column)) as i32;
                 let Some(slot) = window.get_mut(offset) else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
 
                 *slot = value;

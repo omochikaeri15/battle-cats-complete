@@ -4,8 +4,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, BgParamSpec, bg_param_resolve_float, call_rng, max_f32, min_f32};
 
-const SITE: &str = "bg_param_roll_float";
-
 pub fn bg_param_roll_float(
     ctx: &mut AppContext,
     spec: &BgParamSpec<f32>,
@@ -26,11 +24,7 @@ pub fn bg_param_roll_float(
             *spec
                 .values
                 .get(pick as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: pick as i64,
-                    limit: spec.values.len() as i64,
-                })?
+                .ok_or(Fault::index_out_of_range(pick as i64, spec.values.len() as i64))?
         };
 
         return bg_param_resolve_float(ctx, reference, value, spec.base);
@@ -57,10 +51,7 @@ pub fn bg_param_roll_float(
     let low = bg_param_resolve_float(ctx, reference, spec.min, spec.min_base)?;
     let high = bg_param_resolve_float(ctx, reference, spec.max, spec.max_base)?;
     let span = high - bg_param_resolve_float(ctx, reference, spec.min, spec.min_base)?;
-    let draw = *groups.get(&spec.rand_group).ok_or(Fault::KeyNotFound {
-        site: SITE,
-        key: spec.rand_group as i64,
-    })?;
+    let draw = *groups.get(&spec.rand_group).ok_or(Fault::key_not_found(spec.rand_group as i64))?;
 
     Ok(low + span * draw as f32 / 10000.0)
 }

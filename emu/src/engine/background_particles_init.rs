@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, call_rng, get_background_id, get_drawable_width};
 
-const SITE: &str = "background_particles_init";
-
 pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 2
         || get_background_id(ctx)? == 0xe
@@ -23,7 +21,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(roll, span).ok_or(Fault::divide(SITE, span as i64))?,
+                operation::irem(roll, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             if get_background_id(ctx)? == 2
@@ -85,7 +83,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             let record = AppContext::BG_DRIFTERS.wrapping_add(drifter * 0x10);
             let roll = call_rng(ctx, 0x38).wrapping_add((drifter * 0x38) as i32);
             let length = operation::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
-            let x = operation::irem(roll, length).ok_or(Fault::divide(SITE, length as i64))?;
+            let x = operation::irem(roll, length).ok_or(Fault::divide(length as i64))?;
             let x = x
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
                 .wrapping_mul(100)
@@ -135,7 +133,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
 
             ctx.set_i32_at(
                 record,
-                operation::irem(roll, span).ok_or(Fault::divide(SITE, span as i64))?,
+                operation::irem(roll, span).ok_or(Fault::divide(span as i64))?,
             )?;
 
             let y = if rising != 0 {
@@ -265,7 +263,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     (0x32, 0x32)
                 } else {
                     let lift =
-                        operation::idiv(0x4e20, zoom).ok_or(Fault::divide(SITE, zoom as i64))?;
+                        operation::idiv(0x4e20, zoom).ok_or(Fault::divide(zoom as i64))?;
                     let reach = lift
                         .wrapping_add(100i32.wrapping_sub(zoom).wrapping_mul(20))
                         .wrapping_add(0x1e0)

@@ -4,12 +4,10 @@ use super::{
     AppContext, get_scene_id, get_screen_height, get_screen_width, get_usable_height, has_insets,
 };
 
-const SITE: &str = "compute_layout_metrics";
-
 pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
     let ratio = ctx
         .platform()
-        .ok_or(Fault::HostMissing { site: SITE })?
+        .ok_or(Fault::host_missing())?
         .screen_window_ratio();
 
     ctx.screen_metrics.window_ratio = ratio;
@@ -44,22 +42,22 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let left = ctx
             .platform()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .safe_inset_left();
         let right = ctx
             .platform()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .safe_inset_right();
 
         ctx.screen_metrics.inset_left = if left > right { left } else { right };
         ctx.screen_metrics.inset_top = ctx
             .platform()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .safe_inset_top();
         ctx.screen_metrics.inset_right = ctx.screen_metrics.inset_left;
         ctx.screen_metrics.inset_bottom = ctx
             .platform()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .safe_inset_bottom();
 
         if has_insets(ctx) {
@@ -96,7 +94,7 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
     let width = ctx.screen_metrics.screen_w;
     let height = ctx.screen_metrics.screen_h;
     let fitted = operation::idiv(width.wrapping_mul(design_h), design_w)
-        .ok_or(Fault::divide(SITE, design_w as i64))?;
+        .ok_or(Fault::divide(design_w as i64))?;
     let span = if fitted > height {
         operation::lroundf(height as f32 * design_w as f32 / design_h as f32) as f32
     } else {
@@ -129,20 +127,20 @@ pub fn compute_layout_metrics(ctx: &mut AppContext) -> Result<(), Fault> {
     let ratio = ctx.screen_metrics.window_ratio;
 
     ctx.ui()
-        .ok_or(Fault::HostMissing { site: SITE })?
+        .ok_or(Fault::host_missing())?
         .set_window_ratio(ratio);
 
     if get_scene_id(ctx)? == 0x64 && ctx.i32_at(AppContext::SCENE_0X64_PAGE)? == 0 {
         ctx.ui()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .clear_layout_latch();
         ctx.ui()
-            .ok_or(Fault::HostMissing { site: SITE })?
+            .ok_or(Fault::host_missing())?
             .set_layout_latch();
     }
 
     ctx.ui()
-        .ok_or(Fault::HostMissing { site: SITE })?
+        .ok_or(Fault::host_missing())?
         .viewport_resized();
 
     Ok(())

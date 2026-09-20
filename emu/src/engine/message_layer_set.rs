@@ -10,9 +10,7 @@ pub fn message_layer_set(
     width: i32,
 ) -> Result<(), Fault> {
     ctx.ui()
-        .ok_or(Fault::HostMissing {
-            site: "message_layer_set",
-        })?
+        .ok_or(Fault::host_missing())?
         .message_set(layer, text, size, width);
 
     Ok(())

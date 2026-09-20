@@ -9,14 +9,12 @@ use super::{
     json_value_as_int, string_to_int,
 };
 
-const SITE: &str = "parse_lineup_preset";
-
 pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Result<bool, Fault> {
     let Some(root) = root else {
         return Ok(false);
     };
     let JsonNode::Object(root) = root else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
     let slot = match root.get(b"slot".as_slice()) {
         Some(JsonNode::Object(slot)) => Some(slot),
@@ -28,18 +26,18 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
         && let Some(JsonNode::Object(_)) = slot.get(b"data".as_slice())
     {
         let Some(JsonNode::Object(data)) = slot.get(b"data".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         if let Some((_, entry)) = data.iter().next() {
             let JsonNode::Object(entry) = entry else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
             let mut index = 0usize;
 
             loop {
                 let Some(JsonNode::Array(chara)) = entry.get(b"chara".as_slice()) else {
-                    return Err(Fault::NullPointer { site: SITE });
+                    return Err(Fault::null_pointer());
                 };
 
                 if index >= chara.len() {
@@ -60,7 +58,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
                     .fixed_lineup_store
                     .units
                     .last_mut()
-                    .ok_or(Fault::NullPointer { site: SITE })?;
+                    .ok_or(Fault::null_pointer())?;
 
                 unit.unit_id = unit_id;
                 unit_index.insert(unit_id, index as i32);
@@ -89,7 +87,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
 
         for unit_id in units {
             let Some(JsonNode::Object(data)) = chara.get(b"data".as_slice()) else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
             let Some(JsonNode::Object(entry)) = data.get(unit_id.to_string().as_bytes()) else {
                 return Ok(false);
@@ -118,11 +116,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
                 ctx.fixed_lineup_store
                     .units
                     .get_mut(index as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(index as i64, 0))?
                     .form = evolution.wrapping_sub(1);
             }
 
@@ -142,11 +136,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
                 ctx.fixed_lineup_store
                     .units
                     .get_mut(index as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(index as i64, 0))?
                     .level = level.wrapping_sub(1);
             }
 
@@ -166,11 +156,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
                 ctx.fixed_lineup_store
                     .units
                     .get_mut(index as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: index as i64,
-                        limit: 0,
-                    })?
+                    .ok_or(Fault::index_out_of_range(index as i64, 0))?
                     .plus_level = plus;
             }
         }
@@ -178,7 +164,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
 
     if let Some(JsonNode::Object(ability)) = root.get(b"ability".as_slice()) {
         let Some(JsonNode::Object(data)) = ability.get(b"data".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         for (key, value) in data {
@@ -189,7 +175,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
             }
 
             let JsonNode::Object(value) = value else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
             let level = value
                 .get(b"level".as_slice())
@@ -226,13 +212,13 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
 
     if let Some(JsonNode::Object(cannon)) = root.get(b"cannon".as_slice()) {
         let Some(JsonNode::Object(data)) = cannon.get(b"data".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         for (key, value) in data {
             let part = string_to_int(key)?;
             let JsonNode::Object(value) = value else {
-                return Err(Fault::NullPointer { site: SITE });
+                return Err(Fault::null_pointer());
             };
             let level = (value
                 .get(b"level".as_slice())
@@ -262,7 +248,7 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
 
     if let Some(JsonNode::Object(_)) = treasure.get(b"defaultData".as_slice()) {
         let Some(JsonNode::Object(default)) = treasure.get(b"defaultData".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let none = default
             .get(b"none".as_slice())
@@ -291,10 +277,10 @@ pub fn parse_lineup_preset(ctx: &mut AppContext, root: Option<&JsonNode>) -> Res
         }
 
         let JsonNode::Object(value) = value else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Array(count)) = value.get(b"count".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let full = count.len() >= 3
             && match &count[2] {

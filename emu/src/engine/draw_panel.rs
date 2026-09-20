@@ -1,6 +1,5 @@
 use super::{DrawSink, Imgcut};
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_panel(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,

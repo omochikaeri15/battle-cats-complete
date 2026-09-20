@@ -10,8 +10,6 @@ use super::{
     transform_point,
 };
 
-const SITE: &str = "draw_cannon_anim";
-
 const EMBER_CUTS: [i32; 6] = [0, 0, 1, 1, 6, 6];
 
 const SPARK_CUTS: [i32; 5] = [2, 2, 2, 3, 3];
@@ -58,16 +56,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let sheet = ctx
             .base_sheets
             .get(1)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: ctx.base_sheets.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
             .take();
 
         ctx.base_sheets[1].set(sheet.clone());
 
-        let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let height = imgcut_get_sprite_cut(beam, 9)?[3];
         let across = start_x.wrapping_sub(end_x);
         let down = start_y.wrapping_add(-0x1ea);
@@ -121,7 +115,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
 
         ctx.base_sheets[1].set(sheet.clone());
 
-        let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let flare = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x1e) as f64;
         let x = operation::cvttsd2si(
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + flare,
@@ -224,16 +218,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             let sheet = ctx
                 .base_sheets
                 .get(1)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: ctx.base_sheets.len() as i64,
-                })?
+                .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
                 .take();
 
             ctx.base_sheets[1].set(sheet.clone());
 
-            let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let width = imgcut_get_sprite_cut(beam, 5)?[2];
             let half_width = operation::div_2(width);
             let height = imgcut_get_sprite_cut(beam, 5)?[3];
@@ -322,11 +312,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             let index = get_castle_anim_frame(ctx, faction)?.wrapping_rem(6);
             let ember = *EMBER_CUTS
                 .get(index as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: index as i64,
-                    limit: 6,
-                })?;
+                .ok_or(Fault::index_out_of_range(index as i64, 6))?;
             let width = imgcut_get_sprite_cut(beam, ember)?[2].wrapping_mul(3);
             let height = imgcut_get_sprite_cut(beam, ember)?[3].wrapping_mul(3);
 
@@ -346,16 +332,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let sheet = ctx
             .base_sheets
             .get(1)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: ctx.base_sheets.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
             .take();
 
         ctx.base_sheets[1].set(sheet.clone());
 
-        let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
         if get_castle_anim_frame(ctx, faction)? >= 2 {
             let width = imgcut_get_sprite_cut(beam, 2)?[2];
@@ -471,16 +453,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             let sheet = ctx
                 .base_sheets
                 .get(1)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: 1,
-                    limit: ctx.base_sheets.len() as i64,
-                })?
+                .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
                 .take();
 
             ctx.base_sheets[1].set(sheet.clone());
 
-            let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let width = imgcut_get_sprite_cut(beam, 5)?[2];
             let height = imgcut_get_sprite_cut(beam, 5)?[3];
             let across = start_x.wrapping_sub(end_x);
@@ -649,16 +627,12 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let sheet = ctx
             .base_sheets
             .get(1)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: 1,
-                limit: ctx.base_sheets.len() as i64,
-            })?
+            .ok_or(Fault::index_out_of_range(1, ctx.base_sheets.len() as i64))?
             .take();
 
         ctx.base_sheets[1].set(sheet.clone());
 
-        let beam = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let beam = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let height = imgcut_get_sprite_cut(beam, 4)?[3];
         let across = start_x.wrapping_sub(end_x);
         let down = start_y.wrapping_add(-0x1ea);
@@ -712,11 +686,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let index = get_castle_anim_frame(ctx, faction)?.wrapping_rem(5);
         let spark = *SPARK_CUTS
             .get(index as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: index as i64,
-                limit: 5,
-            })?;
+            .ok_or(Fault::index_out_of_range(index as i64, 5))?;
         let width = imgcut_get_sprite_cut(beam, spark)?[2];
         let height = imgcut_get_sprite_cut(beam, spark)?[3];
 
@@ -817,7 +787,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[2], x, 0x1f4);
 
             let part = mamodel_get_part(&ctx.base_models[2], 0)
-                .ok_or(Fault::NullPointer { site: SITE })?;
+                .ok_or(Fault::null_pointer())?;
             let unit = mamodel_get_scale_unit(&ctx.base_models[2]);
             let stretch = operation::div_1600(get_cannon_strike_width(ctx, 0)?.wrapping_mul(unit));
             let unit = mamodel_get_scale_unit(&ctx.base_models[2]);
@@ -900,10 +870,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         };
 
         if model < 0 {
-            return Err(Fault::Unrepresentable {
-                site: SITE,
-                reason: "a live cannon shot on a cannon type that never fires shots",
-            });
+            return Err(Fault::unrepresentable("a live cannon shot on a cannon type that never fires shots"));
         }
 
         let frame = length.wrapping_sub(ctx.i32_at(record.wrapping_add(CannonShot::TIMER))?);
@@ -917,7 +884,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         )?;
 
         let part = mamodel_get_part(&ctx.base_models[model], 0)
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let width =
             operation::cvttss2si(mamodel_get_scale_unit(&ctx.base_models[model]) as f32 * scale);
         let height =

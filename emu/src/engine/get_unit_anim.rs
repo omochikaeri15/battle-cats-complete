@@ -13,11 +13,7 @@ pub fn get_unit_anim(
         let anims =
             ctx.unit_anims[1]
                 .get_mut(button as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_unit_anim",
-                    index: button as i64,
-                    limit,
-                })?;
+                .ok_or(Fault::index_out_of_range(button as i64, limit))?;
 
         return Ok(Some(std_map_int_maanim_subscript(anims, &key)));
     }
@@ -30,11 +26,7 @@ pub fn get_unit_anim(
     let anims =
         ctx.unit_anims[0]
             .get_mut(button as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "get_unit_anim",
-                index: button as i64,
-                limit,
-            })?;
+            .ok_or(Fault::index_out_of_range(button as i64, limit))?;
 
     Ok(Some(std_map_int_maanim_subscript(anims, &key)))
 }

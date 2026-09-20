@@ -23,7 +23,6 @@ use super::{
     set_orb_dodge_timer, set_savage_blow_vfx, set_shield_state, set_toxic_vfx, start_immune_vfx,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn enemy_attack_dispatch(
     ctx: &mut AppContext,
     source: i32,
@@ -345,7 +344,7 @@ pub fn enemy_attack_dispatch(
 
         if kaijin_combo > 0 && get_trait_kaijin(ctx, 1, attacker)? {
             damage = operation::div_wide(damage.wrapping_mul(1000), kaijin_combo as u32 as i64)
-                .ok_or(Fault::divide("enemy_attack_dispatch", kaijin_combo as i64))?;
+                .ok_or(Fault::divide(kaijin_combo as i64))?;
         }
 
         if get_barrier_hp(ctx, 0, target)? > 0 && barrier_broke != 0 {

@@ -20,11 +20,7 @@ pub fn get_unit_file_base(ctx: &mut AppContext, unit_id: i32, form: i32) -> Resu
             &ctx.block_at::<4>((row + (UNIT_BUY + UnitBuy::KEY) as i64) as usize)?,
         );
 
-        let art = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::IndexOutOfRange {
-            site: "get_unit_file_base",
-            index: 0,
-            limit: 1,
-        })? as i32;
+        let art = operation::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32;
 
         if art != -1 {
             return string_format_int(ctx, b"%03d_m", art);

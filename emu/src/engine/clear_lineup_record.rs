@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, get_global_map_id, get_stage_index, get_star_level};
 
-const SITE: &str = "clear_lineup_record";
-
 pub fn clear_lineup_record(
     ctx: &mut AppContext,
     map: i32,
@@ -31,11 +29,7 @@ pub fn clear_lineup_record(
 
     for slot in 0..10usize {
         let row = ctx.bytes_from(AppContext::CLEAR_LINEUP)?;
-        let value = operation::xor_row_decode(row, 10, slot).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: 10,
-        })?;
+        let value = operation::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))?;
 
         if value == 0xffffffff {
             break;

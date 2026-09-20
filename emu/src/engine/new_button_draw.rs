@@ -5,15 +5,13 @@ use super::{
     ui_node_set_offset,
 };
 
-const SITE: &str = "new_button_draw";
-
 pub fn new_button_draw(ctx: &mut AppContext, button: i32, x: i32, y: i32) -> Result<(), Fault> {
     let mut held = ctx
         .buttons
         .buttons
         .get_mut(&button)
         .and_then(|slot| slot.take())
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
     let mut drawn = Ok(());
 
     if held.enabled != 0 {

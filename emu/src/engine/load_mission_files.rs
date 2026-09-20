@@ -11,8 +11,6 @@ use super::{
     read_cell_stream, read_csv_cell, read_csv_row, read_stream_row,
 };
 
-const SITE: &str = "load_mission_files";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct MissionConditionSetting {
     pub shortcut_type: i32,
@@ -27,10 +25,10 @@ pub fn load_mission_files(ctx: &mut AppContext) -> Result<(), Fault> {
         let source = json_source_from_string(&bytes);
         let document = json_parse_object_document(Some(source))?;
         let Some(JsonNode::Object(root)) = document.as_ref() else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Object(entries)) = root.get(b"ID".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         for (key, entry) in entries {
@@ -54,10 +52,10 @@ pub fn load_mission_files(ctx: &mut AppContext) -> Result<(), Fault> {
         let source = json_source_from_string(&bytes);
         let document = json_parse_object_document(Some(source))?;
         let Some(JsonNode::Object(root)) = document.as_ref() else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Object(entries)) = root.get(b"limitID".as_slice()) else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
 
         for (key, entry) in entries {

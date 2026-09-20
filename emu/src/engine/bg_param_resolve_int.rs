@@ -2,8 +2,6 @@ use crate::{Fault, operation};
 
 use super::{AppContext, get_design_height2, get_drawable_width, maanim_get_max_keyframe};
 
-const SITE: &str = "bg_param_resolve_int";
-
 pub fn bg_param_resolve_int(
     ctx: &mut AppContext,
     reference: i32,
@@ -27,7 +25,7 @@ pub fn bg_param_resolve_int(
                 .wrapping_add(0xc350);
             let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
             let lift =
-                operation::idiv(lift, min_zoom).ok_or(Fault::divide(SITE, min_zoom as i64))?;
+                operation::idiv(lift, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
 
             value
                 .wrapping_sub(lift)
@@ -41,7 +39,7 @@ pub fn bg_param_resolve_int(
                 .wrapping_sub(0xcb20);
             let min_zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
             let span =
-                operation::idiv(span, min_zoom).ok_or(Fault::divide(SITE, min_zoom as i64))?;
+                operation::idiv(span, min_zoom).ok_or(Fault::divide(min_zoom as i64))?;
 
             shifted.wrapping_add(span).wrapping_add(0x208)
         }

@@ -8,12 +8,12 @@ use crate::Fault;
 
 use super::{
     AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
-    BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CharaGroup, ComboStore,
-    CounterSurgeEvent, DialogManager, DrawSink, DropRecord, EffectSprite, Enigma, EventItemStore,
+    BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, CharaGroup, ComboStore,
+    CounterSurgeEvent, DialogManager, DojoChestRow, DrawSink, DropRecord, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
     ExGroup, ExplosionEvent, FixedLineupStore, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
-    Mamodel, MapData, MapOption, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
+    Mamodel, MapData, MapOption, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
-    RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SpecialRuleStore,
+    PointEventReward, RealmsRngTable, RewardDef, SceneHost, ScoredMap, ScreenMetrics, SheetTable, SoundManager, SpecialRuleStore,
     StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureStore,
     UiHost, UnlockGroup, UnlockPopupRow, WebPopupEntry, ZombieLotteryRow,
 };
@@ -40,7 +40,6 @@ const FACTION_FLAGS: usize = 0x2648;
 const FACTION_FLAGS_STRIDE: usize = 0x1f0;
 
 const RNG_STATE: usize = 0x46f790;
-const SITE: &str = "app_context";
 
 const _: () = assert!(RNG_STATE + 4 <= SIZE);
 
@@ -672,7 +671,6 @@ pub struct AppContext {
     pub attackers_by_serial: [BTreeMap<i32, Vec<i32>>; 2],
     pub scored_maps: BTreeMap<i32, ScoredMap>,
     pub cleared_session_keys: Vec<i32>,
-    pub conditioned_maps: Vec<i32>,
     pub stage_conditions: BTreeMap<i32, BTreeMap<i32, BTreeMap<i32, i32>>>,
     pub legend_stage_conditions: Vec<[i32; 9]>,
     pub aku_stage_lists: BTreeMap<i32, Vec<i32>>,
@@ -721,6 +719,8 @@ pub struct AppContext {
     pub label_texts: Vec<Option<Texture>>,
     pub map_names: BTreeMap<i32, Vec<u8>>,
     pub drop_item_rows: BTreeMap<i32, DropItemRow>,
+    pub filter_stage_maps: Vec<i32>,
+    pub slot_unlock_rows: [[i32; 2]; 19],
     pub matatabi_rows: Vec<MatatabiRow>,
     pub item_shop_rows: BTreeMap<i32, ItemShopRow>,
     pub rank_gift_messages: Vec<Vec<u8>>,
@@ -801,6 +801,17 @@ pub struct AppContext {
     pub star_multipliers: BTreeMap<i32, Vec<i32>>,
     pub map_options: MapOption,
     pub settings: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub pack_digests: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub dojo_chest_rows: Vec<DojoChestRow>,
+    pub gold_cpu_rows: Vec<[i32; 4]>,
+    pub lock_skip_rows: Vec<[i32; 2]>,
+    pub realms_rng_tables: BTreeMap<i32, RealmsRngTable>,
+    pub point_event_rewards: BTreeMap<i32, PointEventReward>,
+    pub event_gatya_items: BTreeMap<i32, EventGatyaGroup>,
+    pub leadership_return_maps: BTreeMap<i32, Vec<i32>>,
+    pub event_gatya_settings: BTreeMap<i32, BTreeMap<i32, BTreeMap<i32, i32>>>,
+    pub orb_effects: [OrbEffectStore; 2],
+    pub catseye_behavior: BTreeMap<i32, BTreeMap<i32, Vec<CatseyeStep>>>,
     pub treasure_store: TreasureStore,
     pub orb_store: OrbStore,
     pub special_rules: SpecialRuleStore,
@@ -1089,7 +1100,6 @@ pub struct AppContext {
     pub xp_ad_maps: Vec<i32>,
     pub map_intervals: BTreeMap<i32, i32>,
     pub map_one_time: BTreeMap<i32, i32>,
-    pub map_guerrilla_sets: BTreeMap<i32, i32>,
     pub aku_timers: BTreeMap<i32, f64>,
     pub altar_stage_values: BTreeMap<i32, i32>,
     pub stage_pair_progress: BTreeMap<i32, [i32; 2]>,
@@ -1726,7 +1736,6 @@ impl AppContext {
             attackers_by_serial: Default::default(),
             scored_maps: Default::default(),
             cleared_session_keys: Vec::new(),
-            conditioned_maps: Vec::new(),
             stage_conditions: BTreeMap::new(),
             legend_stage_conditions: Vec::new(),
             aku_stage_lists: BTreeMap::new(),
@@ -1775,6 +1784,8 @@ impl AppContext {
             label_texts: vec![None; 0x434],
             map_names: Default::default(),
             drop_item_rows: Default::default(),
+            filter_stage_maps: Default::default(),
+            slot_unlock_rows: [[0; 2]; 19],
             matatabi_rows: Default::default(),
             item_shop_rows: Default::default(),
             rank_gift_messages: Default::default(),
@@ -1856,6 +1867,17 @@ impl AppContext {
             star_multipliers: Default::default(),
             map_options: Default::default(),
             settings: Default::default(),
+            pack_digests: BTreeMap::new(),
+            dojo_chest_rows: Vec::new(),
+            gold_cpu_rows: Vec::new(),
+            lock_skip_rows: Vec::new(),
+            realms_rng_tables: BTreeMap::new(),
+            point_event_rewards: BTreeMap::new(),
+            event_gatya_items: BTreeMap::new(),
+            leadership_return_maps: BTreeMap::new(),
+            event_gatya_settings: BTreeMap::new(),
+            orb_effects: Default::default(),
+            catseye_behavior: BTreeMap::new(),
             treasure_store: Default::default(),
             orb_store: Default::default(),
             special_rules: Default::default(),
@@ -2145,7 +2167,6 @@ impl AppContext {
             xp_ad_maps: Default::default(),
             map_intervals: Default::default(),
             map_one_time: Default::default(),
-            map_guerrilla_sets: Default::default(),
             aku_timers: Default::default(),
             altar_stage_values: Default::default(),
             stage_pair_progress: Default::default(),
@@ -2304,11 +2325,7 @@ impl AppContext {
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..len))
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: off as i64,
-                limit: SIZE as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         bytes.fill(0);
 
@@ -2320,11 +2337,7 @@ impl AppContext {
             self.raw
                 .get(off..)
                 .and_then(|rest| rest.get(..N))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: off as i64,
-                    limit: SIZE as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         let mut block = [0u8; N];
         block.copy_from_slice(bytes);
@@ -2341,11 +2354,7 @@ impl AppContext {
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..N))
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: off as i64,
-                limit: SIZE as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         bytes.copy_from_slice(&value);
 
@@ -2353,11 +2362,7 @@ impl AppContext {
     }
 
     pub fn bytes_from(&self, off: usize) -> Result<&[u8], Fault> {
-        self.raw.get(off..).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: off as i64,
-            limit: SIZE as i64,
-        })
+        self.raw.get(off..).ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))
     }
 
     pub fn f32_at(&self, off: usize) -> Result<f32, Fault> {
@@ -2369,22 +2374,14 @@ impl AppContext {
     }
 
     pub fn u8_at(&self, off: usize) -> Result<u8, Fault> {
-        self.raw.get(off).copied().ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: off as i64,
-            limit: SIZE as i64,
-        })
+        self.raw.get(off).copied().ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))
     }
 
     pub fn i8_at(&self, off: usize) -> Result<i8, Fault> {
         self.raw
             .get(off)
             .map(|byte| *byte as i8)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: off as i64,
-                limit: SIZE as i64,
-            })
+            .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))
     }
 
     pub fn i16_at(&self, off: usize) -> Result<i16, Fault> {
@@ -2392,11 +2389,7 @@ impl AppContext {
             self.raw
                 .get(off..)
                 .and_then(|rest| rest.get(..2))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: off as i64,
-                    limit: SIZE as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         let mut word = [0u8; 2];
         word.copy_from_slice(bytes);
@@ -2409,11 +2402,7 @@ impl AppContext {
             self.raw
                 .get(off..)
                 .and_then(|rest| rest.get(..4))
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: off as i64,
-                    limit: SIZE as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         let mut word = [0u8; 4];
         word.copy_from_slice(bytes);
@@ -2426,11 +2415,7 @@ impl AppContext {
             .raw
             .get_mut(off..)
             .and_then(|rest| rest.get_mut(..4))
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: off as i64,
-                limit: SIZE as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(off as i64, SIZE as i64))?;
 
         bytes.copy_from_slice(&value.to_le_bytes());
 

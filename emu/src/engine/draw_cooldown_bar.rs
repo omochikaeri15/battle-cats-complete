@@ -5,8 +5,6 @@ use super::{
     get_deck_cooldown_max, get_drawable_width, get_setting, get_unit_recharge, set_tint,
 };
 
-const SITE: &str = "draw_cooldown_bar";
-
 pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     let mut shift = 0i32;
     let recharge = get_unit_recharge(ctx, 0, slot)?;
@@ -18,7 +16,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
         .wrapping_sub(get_deck_cooldown(ctx, wallet, slot)?)
         .wrapping_mul(0x5d);
     let span = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
-    let filled = operation::idiv(elapsed, span).ok_or(Fault::divide(SITE, span as i64))?;
+    let filled = operation::idiv(elapsed, span).ok_or(Fault::divide(span as i64))?;
     let filled = if filled < 0x5d { filled } else { 0x5d };
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_3, filled)?;
@@ -27,7 +25,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
         .wrapping_sub(get_deck_cooldown_max(ctx, wallet, slot)?)
         .wrapping_mul(0x5d);
     let span = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
-    let excess = operation::idiv(remaining, span).ok_or(Fault::divide(SITE, span as i64))?;
+    let excess = operation::idiv(remaining, span).ok_or(Fault::divide(span as i64))?;
 
     ctx.set_i32_at(AppContext::DRAW_TEMP_4, 0x61)?;
     ctx.set_i32_at(AppContext::DRAW_TEMP_5, 0xe)?;
@@ -60,11 +58,7 @@ pub fn draw_cooldown_bar(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
 
     let seat = *DECK_SLOT_X_TABLE
         .get(column as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: column as i64,
-            limit: DECK_SLOT_X_TABLE.len() as i64,
-        })?;
+        .ok_or(Fault::index_out_of_range(column as i64, DECK_SLOT_X_TABLE.len() as i64))?;
     let x = operation::cvttsd2si(
         get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + seat.wrapping_add(6) as f64,
     );

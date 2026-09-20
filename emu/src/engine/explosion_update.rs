@@ -5,18 +5,12 @@ use super::{
     get_pos_x, get_setting, is_touchable, min_i32, play_sound_in_battle, slot_occupied,
 };
 
-const SITE: &str = "explosion_update";
-
 pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut event_index = 0i32;
 
     while (event_index as i64 as usize) < ctx.explosion_events.len() {
         let at = event_index as i64 as usize;
-        let missing = Fault::IndexOutOfRange {
-            site: SITE,
-            index: event_index as i64,
-            limit: ctx.explosion_events.len() as i64,
-        };
+        let missing = Fault::index_out_of_range(event_index as i64, ctx.explosion_events.len() as i64);
         let event = ctx.explosion_events.get_mut(at).ok_or(missing.clone())?;
         let faction = event.faction;
         let frame = event.frame.wrapping_add(1);
@@ -26,7 +20,7 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
         let interval = get_setting(&ctx.settings, b"battle_explosion_frame4", 0xf)?;
         let rings = min_i32(
             operation::idiv(frame, interval)
-                .ok_or(Fault::divide(SITE, interval as i64))?
+                .ok_or(Fault::divide(interval as i64))?
                 .wrapping_add(1),
             3,
         );
@@ -40,11 +34,7 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let default_width =
                     *EXPLOSION_WIDTH_DEFAULTS
                         .get(ring)
-                        .ok_or(Fault::IndexOutOfRange {
-                            site: SITE,
-                            index: ring as i64,
-                            limit: 3,
-                        })?;
+                        .ok_or(Fault::index_out_of_range(ring as i64, 3))?;
                 let width = get_setting(
                     &ctx.settings,
                     &[b"battle_explosion_width".as_slice(), number.as_bytes()].concat(),
@@ -134,12 +124,9 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
                             let hit = ring.wrapping_add(if first { 0 } else { 2 });
 
                             if event.hits.contains_key(&slot) {
-                                let flags = event.hits.get(&slot).ok_or(Fault::KeyNotFound {
-                                    site: SITE,
-                                    key: slot as i64,
-                                })?;
+                                let flags = event.hits.get(&slot).ok_or(Fault::key_not_found(slot as i64))?;
 
-                                if *flags.get(hit).ok_or(Fault::OutOfRange { site: SITE })? != 0 {
+                                if *flags.get(hit).ok_or(Fault::out_of_range())? != 0 {
                                     break 'pass;
                                 }
                             }
@@ -155,11 +142,7 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
                             let attack = event.attack;
                             let default_damage = *EXPLOSION_DAMAGE_DEFAULTS.get(ring).ok_or(
-                                Fault::IndexOutOfRange {
-                                    site: SITE,
-                                    index: ring as i64,
-                                    limit: 3,
-                                },
+                                Fault::index_out_of_range(ring as i64, 3),
                             )?;
                             let dmg_scale = get_setting(
                                 &ctx.settings,
@@ -178,11 +161,7 @@ pub fn explosion_update(ctx: &mut AppContext) -> Result<(), Fault> {
                                 .entry(slot)
                                 .or_insert([0; 5]);
 
-                            *flags.get_mut(hit).ok_or(Fault::IndexOutOfRange {
-                                site: SITE,
-                                index: hit as i64,
-                                limit: 5,
-                            })? = 1;
+                            *flags.get_mut(hit).ok_or(Fault::index_out_of_range(hit as i64, 5))? = 1;
                         }
 
                         let again = ring != 0 && first;

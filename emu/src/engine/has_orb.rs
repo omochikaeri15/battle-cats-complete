@@ -7,10 +7,7 @@ pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, abil: i32) -> R
 
     loop {
         let slot_count = if store.slot_counts.contains_key(&unit_id) {
-            store.slot_counts.get(&unit_id).map(|row| row.count).ok_or(Fault::KeyNotFound {
-                site: "has_orb",
-                key: unit_id as i64,
-            })?
+            store.slot_counts.get(&unit_id).map(|row| row.count).ok_or(Fault::key_not_found(unit_id as i64))?
         } else {
             0
         };
@@ -25,11 +22,7 @@ pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, abil: i32) -> R
             let orb = store
                 .orbs
                 .get(orb_index as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "has_orb",
-                    index: orb_index as i64,
-                    limit: store.orbs.len() as i64,
-                })?;
+                .ok_or(Fault::index_out_of_range(orb_index as i64, store.orbs.len() as i64))?;
 
             if orb.abil == abil {
                 return Ok(slot < slot_count);

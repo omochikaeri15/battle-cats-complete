@@ -22,11 +22,7 @@ pub fn get_stages_cleared(
             .or_default()
             .get(star as usize)
             .map(|cleared| *cleared as i32)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "get_stages_cleared",
-                index: star as i64,
-                limit: 4,
-            });
+            .ok_or(Fault::index_out_of_range(star as i64, 4));
     }
 
     let map_id = map_type_base_id(map_type, map_idx);
@@ -57,11 +53,7 @@ pub fn get_stages_cleared(
             maps.get(map_idx as usize)
                 .and_then(|stars| stars.get(star as usize))
                 .map(|cleared| *cleared as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stages_cleared",
-                    index: map_idx as i64,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
         0x03 => get_cleared_count(ctx, 0xad0),
         0x05 => Ok(0x31),
@@ -88,11 +80,7 @@ pub fn get_stages_cleared(
 
             maps.get(cell as usize)
                 .map(|cleared| *cleared as i32)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stages_cleared",
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x0e | 0x0f | 0x14 => {
             let maps = match case {
@@ -104,11 +92,7 @@ pub fn get_stages_cleared(
 
             maps.get(cell as usize)
                 .copied()
-                .ok_or(Fault::IndexOutOfRange {
-                    site: "get_stages_cleared",
-                    index: cell,
-                    limit: maps.len() as i64,
-                })
+                .ok_or(Fault::index_out_of_range(cell, maps.len() as i64))
         }
         0x12 => {
             let cell = (map_idx as i64) * 0x10
@@ -129,11 +113,7 @@ pub fn get_stages_cleared(
                 chapter as i64 as usize,
             )
             .map(|cleared| cleared as i32)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "get_stages_cleared",
-                index: chapter as i64,
-                limit: 10,
-            })
+            .ok_or(Fault::index_out_of_range(chapter as i64, 10))
         }
         _ => Ok(0),
     }

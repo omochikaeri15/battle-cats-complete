@@ -19,7 +19,6 @@ use super::{
     set_shield_state, set_zkill_hit,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn cat_attack_dispatch(
     ctx: &mut AppContext,
     source: i32,

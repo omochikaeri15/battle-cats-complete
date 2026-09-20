@@ -14,7 +14,6 @@ use super::{
     vibration_clear,
 };
 
-const SITE: &str = "fade_update";
 const WALLET: usize = 0x2648;
 
 enum Step {
@@ -48,7 +47,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 && get_scene_id(ctx)? == 0x62
                 && ctx
                     .scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .fade_menu_prompt()
             {
                 app_on_draw(ctx)?;
@@ -76,7 +75,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
             if scene == 0x64 || scene == 0x62 {
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .fade_menu_dispatch(0, scene);
             }
         }
@@ -121,7 +120,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
 
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .collab_reward_ready(map, stage)
             };
 
@@ -134,7 +133,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
 
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .collab_reward_dialog(map, stage);
             }
 
@@ -147,7 +146,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
             if !blocked
                 && ctx
                     .scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .unlock_popup_pending()
             {
                 step = Step::Stop;
@@ -163,7 +162,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 if frame == 0xd
                     && ctx
                         .scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .loader_busy()
                 {
                     step = Step::Stop;
@@ -335,7 +334,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     if scene == 0x63 || scene == 0x64 {
                         if ctx
                             .scene_host()
-                            .ok_or(Fault::HostMissing { site: SITE })?
+                            .ok_or(Fault::host_missing())?
                             .fade_menu_dispatch(1, scene)
                         {
                             step = Step::Tail;
@@ -370,7 +369,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.set_i32_at(AppContext::SCENE_0X64_PAGE, 0)?;
                     ctx.set_i32_at(AppContext::SCENE_0X64_PAGE_NEXT, -1)?;
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .battle_exit_cleanup((chapter == 0x63) as u8);
                     ctx.set_i32_at(AppContext::BATTLE_RESUMED, 0)?;
                     ctx.set_i32_at(AppContext::BATTLE_CONTINUED, 0)?;
@@ -390,7 +389,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0 {
                         clear_items_selected(ctx)?;
                         ctx.scene_host()
-                            .ok_or(Fault::HostMissing { site: SITE })?
+                            .ok_or(Fault::host_missing())?
                             .map_ui_reset();
                         set_scene(ctx, 0x63)?;
                         scene_transition_tick(ctx)?;
@@ -555,7 +554,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                     if get_battle_status(ctx)? == 0 {
                         ctx.scene_host()
-                            .ok_or(Fault::HostMissing { site: SITE })?
+                            .ok_or(Fault::host_missing())?
                             .battle_exit_cleanup((chapter == 0x63) as u8);
                         ctx.set_i32_at(AppContext::BATTLE_CONTINUED, 0)?;
                         ctx.set_i32_at(AppContext::BATTLE_RESUMED, 0)?;
@@ -563,7 +562,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         && ctx.u8_at(AppContext::LEADERSHIP_REFUND)? != 0
                     {
                         ctx.scene_host()
-                            .ok_or(Fault::HostMissing { site: SITE })?
+                            .ok_or(Fault::host_missing())?
                             .leadership_refund();
 
                         let map_id = get_global_map_id(ctx, 0)?;
@@ -629,10 +628,10 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     }
 
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_return_reset();
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_return_flags();
                     ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING + 6, [0; 8])?;
                     ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING, [0; 8])?;
@@ -648,27 +647,27 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         0x1ca00000000u64.to_le_bytes(),
                     )?;
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_screen_init(0);
                     ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
                     ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
                     ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_menu_build(1);
                     ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 0)?;
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_background_pick();
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .scene_background_setup();
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_ui_reset();
                     sound_manager(ctx)?.stop_audio(-1);
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_bgm_start(0);
                     step = Step::Stop;
 
@@ -680,7 +679,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     if ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? != 0 {
                         clear_items_selected(ctx)?;
                         ctx.scene_host()
-                            .ok_or(Fault::HostMissing { site: SITE })?
+                            .ok_or(Fault::host_missing())?
                             .map_ui_reset();
                         set_scene(ctx, 0x63)?;
                         scene_transition_tick(ctx)?;
@@ -706,7 +705,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 } else {
                     clear_items_selected(ctx)?;
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_ui_reset();
                     set_scene(ctx, 0x63)?;
                     scene_transition_tick(ctx)?;
@@ -741,7 +740,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                         if status == 1 {
                             ctx.scene_host()
-                                .ok_or(Fault::HostMissing { site: SITE })?
+                                .ok_or(Fault::host_missing())?
                                 .leadership_return_begin();
                         }
 
@@ -764,7 +763,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                 if status == 1 {
                     ctx.scene_host()
-                        .ok_or(Fault::HostMissing { site: SITE })?
+                        .ok_or(Fault::host_missing())?
                         .map_return_reset();
                 }
 
@@ -792,7 +791,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 }
 
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_return_flags();
                 ctx.set_block_at::<0x2c>(AppContext::SPEED_UP_PRESS, [0; 0x2c])?;
                 ctx.set_block_at::<0x28>(AppContext::CAT_GOD_BUTTON_PRESS, [0; 0x28])?;
@@ -806,27 +805,27 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 )?;
                 ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_screen_init(0);
                 ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
                 ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
                 ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_menu_build(1);
                 ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 0)?;
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_background_pick();
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .scene_background_setup();
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_ui_reset();
                 sound_manager(ctx)?.stop_audio(-1);
                 ctx.scene_host()
-                    .ok_or(Fault::HostMissing { site: SITE })?
+                    .ok_or(Fault::host_missing())?
                     .map_bgm_start(0);
                 ctx.set_i32_at(AppContext::TUTORIAL_CLEARED, 1)?;
                 ctx.set_i32_at(AppContext::CAT_FOOD_SHOP_ENABLED, 1)?;

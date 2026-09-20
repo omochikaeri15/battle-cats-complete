@@ -11,10 +11,7 @@ pub fn find_point_rule_entry(
     }
 
     if table.entries.contains_key(&-1) {
-        return table.entries.get(&-1).map(Some).ok_or(Fault::KeyNotFound {
-            site: "find_point_rule_entry",
-            key: -1,
-        });
+        return table.entries.get(&-1).map(Some).ok_or(Fault::key_not_found(-1));
     }
 
     if !table.entries.contains_key(&rule_id) {
@@ -25,8 +22,5 @@ pub fn find_point_rule_entry(
         .entries
         .get(&rule_id)
         .map(Some)
-        .ok_or(Fault::KeyNotFound {
-            site: "find_point_rule_entry",
-            key: rule_id as i64,
-        })
+        .ok_or(Fault::key_not_found(rule_id as i64))
 }

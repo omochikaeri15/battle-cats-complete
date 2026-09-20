@@ -35,11 +35,7 @@ pub fn event_reward_received(
 
         return Ok(*cell
             .get(slot as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: "event_reward_received",
-                index: slot as i64,
-                limit: 4,
-            })?
+            .ok_or(Fault::index_out_of_range(slot as i64, 4))?
             != 0);
     }
 

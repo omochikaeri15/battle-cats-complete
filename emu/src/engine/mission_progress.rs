@@ -11,9 +11,7 @@ pub fn mission_progress(
     second: i32,
 ) -> Result<(), Fault> {
     ctx.meta()
-        .ok_or(Fault::HostMissing {
-            site: "mission_progress",
-        })?
+        .ok_or(Fault::host_missing())?
         .mission_progress(kind, target, amount, first, second);
 
     Ok(())

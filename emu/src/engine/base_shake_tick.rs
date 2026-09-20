@@ -49,7 +49,7 @@ pub fn base_shake_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         .wrapping_mul(ctx.base_shake.frame);
     let duration = std_map_int_shake_record_subscript(&mut ctx.base_shake.records, &id).duration;
     let amplitude = operation::idiv(swing, duration)
-        .ok_or(Fault::divide("base_shake_tick", duration as i64))?
+        .ok_or(Fault::divide(duration as i64))?
         .wrapping_add(from);
     let roll = call_rng(ctx, 0x168);
 

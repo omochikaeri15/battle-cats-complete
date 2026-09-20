@@ -4,8 +4,6 @@ use super::{
     AppContext, Debris, draw_context, draw_cut_scaled, get_drawable_width, glow_set, set_color,
 };
 
-const SITE: &str = "draw_smoke";
-
 pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut group = 0usize;
     let mut first = true;
@@ -47,7 +45,7 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
                         draw_context(&mut ctx.draw)?,
                         ctx.effect_a_sheet
                             .as_deref()
-                            .ok_or(Fault::NullPointer { site: SITE })?,
+                            .ok_or(Fault::null_pointer())?,
                         x,
                         y,
                         0x89,
@@ -84,7 +82,7 @@ pub fn draw_smoke(ctx: &mut AppContext) -> Result<(), Fault> {
                     draw_context(&mut ctx.draw)?,
                     ctx.effect_a_sheet
                         .as_deref()
-                        .ok_or(Fault::NullPointer { site: SITE })?,
+                        .ok_or(Fault::null_pointer())?,
                     x,
                     y,
                     0x89,

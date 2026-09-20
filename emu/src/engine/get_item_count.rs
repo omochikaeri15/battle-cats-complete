@@ -5,8 +5,6 @@ use super::{
     obf_value_read, obf_value_read_2,
 };
 
-const SITE: &str = "get_item_count";
-
 pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
     let mut item = item;
     let mut definition;
@@ -139,11 +137,7 @@ pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
         let index = ctx.i32_at(index_at)? as u32 as u64;
 
         if index >= 2 {
-            return Err(Fault::IndexOutOfRange {
-                site: SITE,
-                index: index as i64,
-                limit: 2,
-            });
+            return Err(Fault::index_out_of_range(index as i64, 2));
         }
 
         return Ok(obf_value_read(
@@ -155,11 +149,7 @@ pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
         let index = ctx.i32_at(index_at)? as u32 as u64;
 
         if index >= 4 {
-            return Err(Fault::IndexOutOfRange {
-                site: SITE,
-                index: index as i64,
-                limit: 4,
-            });
+            return Err(Fault::index_out_of_range(index as i64, 4));
         }
 
         return ctx.i32_at(AppContext::ITEM_COUNTS_KIND_B.wrapping_add((index * 4) as usize));
@@ -169,11 +159,7 @@ pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
         let index = ctx.i32_at(index_at)? as u32 as u64;
 
         if index >= 0x2a {
-            return Err(Fault::IndexOutOfRange {
-                site: SITE,
-                index: index as i64,
-                limit: 0x2a,
-            });
+            return Err(Fault::index_out_of_range(index as i64, 0x2a));
         }
 
         return Ok(obf_value_read(
@@ -202,7 +188,7 @@ pub fn get_item_count(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
     let store = ctx
         .event_items
         .as_ref()
-        .ok_or(Fault::NullPointer { site: SITE })?;
+        .ok_or(Fault::null_pointer())?;
 
     if !event_items_has(store, item) {
         return Ok(0);

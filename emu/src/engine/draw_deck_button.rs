@@ -14,8 +14,6 @@ use super::{
     slot_has_flagged_orb, stage_has_restriction, unit_meets_restriction,
 };
 
-const SITE: &str = "draw_deck_button";
-
 pub fn draw_deck_button(
     ctx: &mut AppContext,
     slot: i32,
@@ -35,11 +33,7 @@ pub fn draw_deck_button(
     if layer == 3 {
         let base = *DECK_SLOT_X_TABLE
             .get(column as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: column as i64,
-                limit: DECK_SLOT_X_TABLE.len() as i64,
-            })? as f64;
+            .ok_or(Fault::index_out_of_range(column as i64, DECK_SLOT_X_TABLE.len() as i64))? as f64;
         let mut span = get_drawable_width(ctx)?;
 
         if slot <= 4 {
@@ -58,11 +52,7 @@ pub fn draw_deck_button(
                 ctx.i32_at(AppContext::DECK_PRESS.wrapping_add(((slot as i64) * 4) as usize))?;
             *DECK_PRESS_SIZE_TABLE
                 .get(step as i64 as usize)
-                .ok_or(Fault::IndexOutOfRange {
-                    site: SITE,
-                    index: step as i64,
-                    limit: DECK_PRESS_SIZE_TABLE.len() as i64,
-                })?
+                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
         };
         let half = operation::div_2(size);
 
@@ -74,11 +64,7 @@ pub fn draw_deck_button(
     } else {
         let base = *DECK_SLOT_X_TABLE
             .get(slot as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: DECK_SLOT_X_TABLE.len() as i64,
-            })? as f64;
+            .ok_or(Fault::index_out_of_range(slot as i64, DECK_SLOT_X_TABLE.len() as i64))? as f64;
         let span = get_drawable_width(ctx)?.wrapping_add(-0x3c0);
         let base = span as f64 * 0.5 + base;
 
@@ -120,11 +106,7 @@ pub fn draw_deck_button(
                     .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
                 *DECK_PRESS_SIZE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: step as i64,
-                        limit: DECK_PRESS_SIZE_TABLE.len() as i64,
-                    })?
+                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
             };
             let half = operation::div_2(size);
 
@@ -191,13 +173,9 @@ pub fn draw_deck_button(
     let icon = ctx
         .unit_icon_textures
         .get(slot as i64 as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: ctx.unit_icon_textures.len() as i64,
-        })?
+        .ok_or(Fault::index_out_of_range(slot as i64, ctx.unit_icon_textures.len() as i64))?
         .clone();
-    let sheet = icon.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+    let sheet = icon.as_deref().ok_or(Fault::null_pointer())?;
 
     draw_cut_scaled(
         draw_context(&mut ctx.draw)?,
@@ -268,17 +246,13 @@ pub fn draw_deck_button(
             }
 
             let sheet = ctx.img002_sheet.clone();
-            let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+            let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let size = {
                 let step = ctx
                     .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
                 *DECK_PRESS_SIZE_TABLE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: SITE,
-                        index: step as i64,
-                        limit: DECK_PRESS_SIZE_TABLE.len() as i64,
-                    })?
+                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
             };
 
             draw_cut_scaled(
@@ -304,7 +278,7 @@ pub fn draw_deck_button(
         set_color(draw_context(&mut ctx.draw)?, glow, glow, 0xff, 0xff);
 
         let sheet = ctx.img002_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let cut = imgcut_get_sprite_cut(sheet, 0x35)?;
         let x = origin.wrapping_add(operation::div_2(0x6ei32.wrapping_sub(cut[2])));
         let y = bottom.wrapping_add(operation::div_2(0x55i32.wrapping_sub(cut[3])));
@@ -315,7 +289,7 @@ pub fn draw_deck_button(
 
     if overlay != 0 && ctx.i32_at(AppContext::UNIT_INFO_SLOT)? == slot {
         let sheet = ctx.img015_sheet.clone();
-        let sheet = sheet.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let half = operation::div_2(ctx.i32_at(AppContext::BATTLE_TICKS)?);
         let phase = half.wrapping_sub(operation::div_2(half) * 2);
 
@@ -341,7 +315,7 @@ pub fn draw_deck_button(
         let cost = get_effective_deploy_cost(ctx, 0, slot)?;
         let sheet = money_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
 
         draw_deploy_cost(
             draw_context(&mut ctx.draw)?,
@@ -362,7 +336,7 @@ pub fn draw_deck_button(
         let money_sheet = ctx.img001_sheet.clone();
         let sheet = money_sheet
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let cut = imgcut_get_sprite_cut(sheet, 0x87)?;
         let x = origin.wrapping_sub(cut[2]).wrapping_add(0x73);
         let y = bottom.wrapping_add(-5);
@@ -455,7 +429,7 @@ pub fn draw_deck_button(
         let attribute = ctx.equipment_attribute_s_sheet.clone();
         let attribute = attribute
             .as_deref()
-            .ok_or(Fault::NullPointer { site: SITE })?;
+            .ok_or(Fault::null_pointer())?;
         let step = index.wrapping_mul(27);
 
         draw_cut(
@@ -467,7 +441,7 @@ pub fn draw_deck_button(
         );
 
         let effect = ctx.equipment_effect_s_sheet.clone();
-        let effect = effect.as_deref().ok_or(Fault::NullPointer { site: SITE })?;
+        let effect = effect.as_deref().ok_or(Fault::null_pointer())?;
 
         draw_cut(
             draw_context(&mut ctx.draw)?,

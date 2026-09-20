@@ -5,8 +5,6 @@ use super::{
     get_setting, play_sound, sound_manager,
 };
 
-const SITE: &str = "wave_update";
-
 pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
     let mut wave_index = 0usize;
 
@@ -37,7 +35,7 @@ pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(record.wrapping_add(WaveRecord::FRAME), frame)?;
 
-        if operation::irem(frame, interval).ok_or(Fault::divide(SITE, interval as i64))? != 0 {
+        if operation::irem(frame, interval).ok_or(Fault::divide(interval as i64))? != 0 {
             continue;
         }
 
@@ -84,7 +82,7 @@ pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let origin = ctx.i32_at(record.wrapping_add(WaveRecord::POS_X))?;
 
                 step =
-                    operation::idiv(frame, interval).ok_or(Fault::divide(SITE, interval as i64))?;
+                    operation::idiv(frame, interval).ok_or(Fault::divide(interval as i64))?;
 
                 let x = origin
                     .wrapping_add(
@@ -108,7 +106,7 @@ pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let origin = ctx.i32_at(record.wrapping_add(WaveRecord::POS_X))?;
 
                 step =
-                    operation::idiv(frame, interval).ok_or(Fault::divide(SITE, interval as i64))?;
+                    operation::idiv(frame, interval).ok_or(Fault::divide(interval as i64))?;
 
                 let unit = CANNON_SHOT_SPACING.wrapping_mul(5);
                 let x = origin
@@ -127,7 +125,7 @@ pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let frame = ctx.i32_at(record.wrapping_add(WaveRecord::FRAME))?;
 
                 step =
-                    operation::idiv(frame, interval).ok_or(Fault::divide(SITE, interval as i64))?;
+                    operation::idiv(frame, interval).ok_or(Fault::divide(interval as i64))?;
             }
         }
 

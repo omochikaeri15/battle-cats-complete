@@ -2,8 +2,6 @@ use crate::Fault;
 
 use super::{JsonNode, json_container_as_int, json_string_as_int, json_value_as_int};
 
-const SITE: &str = "parse_mission_gatya_setting";
-
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct MissionGatyaItem {
     pub kind: i32,
@@ -26,18 +24,14 @@ pub fn parse_mission_gatya_setting(
     out.items.clear();
 
     let Some(JsonNode::Object(fields)) = node else {
-        return Err(Fault::NullPointer { site: SITE });
+        return Err(Fault::null_pointer());
     };
 
     if let Some(JsonNode::Array(values)) = fields.get(b"Rarity".as_slice()) {
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.rarity.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -52,11 +46,7 @@ pub fn parse_mission_gatya_setting(
         let mut slot = 0usize;
 
         while slot < values.len() {
-            let element = values.get(slot).ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: slot as i64,
-                limit: values.len() as i64,
-            })?;
+            let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
             out.series.push(match element {
                 JsonNode::String(text) => json_string_as_int(text),
@@ -74,13 +64,9 @@ pub fn parse_mission_gatya_setting(
     let mut slot = 0usize;
 
     while slot < entries.len() {
-        let element = entries.get(slot).ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: slot as i64,
-            limit: entries.len() as i64,
-        })?;
+        let element = entries.get(slot).ok_or(Fault::index_out_of_range(slot as i64, entries.len() as i64))?;
         let JsonNode::Object(item) = element else {
-            return Err(Fault::NullPointer { site: SITE });
+            return Err(Fault::null_pointer());
         };
         let kind = item
             .get(b"Type".as_slice())

@@ -27,11 +27,7 @@ pub fn get_cat_combo_values(
         let mut effect = 0i64;
 
         loop {
-            let effect_kind = *effects.get(effect as usize).ok_or(Fault::IndexOutOfRange {
-                site: "get_cat_combo_values",
-                index: effect,
-                limit: effects.len() as i64,
-            })?;
+            let effect_kind = *effects.get(effect as usize).ok_or(Fault::index_out_of_range(effect, effects.len() as i64))?;
 
             if effect_kind == kind
                 && (record.charagroup_id == -1
@@ -39,20 +35,12 @@ pub fn get_cat_combo_values(
             {
                 let power = *effects
                     .get((effect + 3) as usize)
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: "get_cat_combo_values",
-                        index: effect,
-                        limit: 4,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(effect, 4))?;
                 let value = table
                     .params
                     .get(kind as usize)
                     .and_then(|powers| powers.get(power as usize))
-                    .ok_or(Fault::IndexOutOfRange {
-                        site: "get_cat_combo_values",
-                        index: power as i64,
-                        limit: 0,
-                    })?;
+                    .ok_or(Fault::index_out_of_range(power as i64, 0))?;
 
                 out.push(*value);
             }

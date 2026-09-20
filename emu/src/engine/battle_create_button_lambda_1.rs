@@ -5,8 +5,6 @@ use super::{
     new_button_get_x, new_button_get_y, play_sound, sound_manager,
 };
 
-const SITE: &str = "battle_create_button_lambda_1";
-
 pub fn battle_create_button_lambda_1(
     ctx: &mut AppContext,
     _button: i32,
@@ -16,19 +14,19 @@ pub fn battle_create_button_lambda_1(
         4 => {
             let x = new_button_get_x(
                 &ctx.buttons,
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?,
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?,
             )?;
             let y = new_button_get_y(
                 &ctx.buttons,
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?,
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?,
             )?;
             let width = new_button_get_width(
                 &ctx.buttons,
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?,
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?,
             )?;
             let height = new_button_get_height(
                 &ctx.buttons,
-                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::NullPointer { site: SITE })?,
+                button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?,
             )?;
 
             jni_share_image(ctx, x, y, width, height)?;

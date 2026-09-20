@@ -8,8 +8,6 @@ use super::{
     stage_entry_row, stage_entry_z_max, stage_entry_z_min,
 };
 
-const SITE: &str = "enemy_schedule_tick";
-
 pub fn enemy_schedule_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let kills = ctx.i32_at(AppContext::KILLS_SINCE_SPAWN_TICK)?;
 
@@ -61,11 +59,7 @@ pub fn enemy_schedule_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         let state = ctx
             .spawn_states
             .get_mut(row)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: row as i64,
-                limit: 0,
-            })?;
+            .ok_or(Fault::index_out_of_range(row as i64, 0))?;
 
         if met {
             state[2] = state[2].wrapping_add(kills);
@@ -113,11 +107,7 @@ pub fn enemy_schedule_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         let waiting = ctx
             .spawn_states
             .get(row as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: row as i64,
-                limit: 0,
-            })?[0];
+            .ok_or(Fault::index_out_of_range(row as i64, 0))?[0];
 
         if waiting <= 0 {
             break;
@@ -157,11 +147,7 @@ pub fn enemy_schedule_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let state = ctx
         .spawn_states
         .get_mut(row as usize)
-        .ok_or(Fault::IndexOutOfRange {
-            site: SITE,
-            index: row as i64,
-            limit: 0,
-        })?;
+        .ok_or(Fault::index_out_of_range(row as i64, 0))?;
 
     state[0] = respawn;
     state[1] = state[1].wrapping_add(1);

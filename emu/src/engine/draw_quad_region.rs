@@ -1,6 +1,5 @@
 use super::{DrawSink, Imgcut};
 
-#[allow(clippy::too_many_arguments)]
 pub fn draw_quad_region(
     dc: &mut dyn DrawSink,
     sheet: &Imgcut,

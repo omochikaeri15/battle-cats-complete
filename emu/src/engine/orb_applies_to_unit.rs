@@ -7,8 +7,6 @@ use super::{
     trait_zombie,
 };
 
-const SITE: &str = "orb_applies_to_unit";
-
 pub fn orb_applies_to_unit(
     ctx: &mut AppContext,
     abil: i32,
@@ -65,11 +63,7 @@ pub fn orb_applies_to_unit(
             .orb_store
             .trait_masks
             .get(trait_index as i64 as usize)
-            .ok_or(Fault::IndexOutOfRange {
-                site: SITE,
-                index: trait_index as i64,
-                limit: ctx.orb_store.trait_masks.len() as i64,
-            })?;
+            .ok_or(Fault::index_out_of_range(trait_index as i64, ctx.orb_store.trait_masks.len() as i64))?;
         let mut hit = false;
 
         for (bit, present) in traits.iter() {

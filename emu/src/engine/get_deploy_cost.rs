@@ -17,11 +17,7 @@ pub fn get_deploy_cost(
         let map_id = get_global_map_id(ctx, 0)?;
 
         if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 4)? {
-            let flat = *params.first().ok_or(Fault::IndexOutOfRange {
-                site: "get_deploy_cost",
-                index: 0,
-                limit: 0,
-            })?;
+            let flat = *params.first().ok_or(Fault::index_out_of_range(0, 0))?;
 
             return Ok(flat.wrapping_mul(0x64));
         }
@@ -92,11 +88,7 @@ pub fn get_deploy_cost(
 
         if let Some(params) = get_special_rule_params(ctx, &ctx.special_rules, map_id, 5)? {
             let rarity = get_unit_rarity(ctx, unit_id)? as i64;
-            let percent = *params.get(rarity as usize).ok_or(Fault::IndexOutOfRange {
-                site: "get_deploy_cost",
-                index: rarity,
-                limit: params.len() as i64,
-            })?;
+            let percent = *params.get(rarity as usize).ok_or(Fault::index_out_of_range(rarity, params.len() as i64))?;
 
             cost = operation::div_100(cost.wrapping_mul(percent) as i64) as i32;
         }
