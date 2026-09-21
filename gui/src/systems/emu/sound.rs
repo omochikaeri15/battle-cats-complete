@@ -138,13 +138,9 @@ impl Speaker {
     }
 
     fn start_music(&mut self, sound_id: i32) {
-        if let Some((held, sink)) = &self.music
-            && *held == sound_id
-        {
-            sink.play();
+        let level = self.music_level();
 
-            return;
-        }
+        self.music = None;
 
         let Some(stream) = self.stream.0.output.as_ref() else {
             return;
@@ -162,7 +158,7 @@ impl Speaker {
         };
         let sink = Player::connect_new(stream.mixer());
 
-        sink.set_volume(self.music_level());
+        sink.set_volume(level);
         sink.append(decoded);
         self.music = Some((sound_id, sink));
     }
@@ -227,6 +223,7 @@ fn parse_caf(bytes: &[u8]) -> Option<Effect> {
 impl SoundManager for Speaker {
     fn play_audio(&mut self, sound_id: i32, volume: Option<i32>, is_bgm: bool) {
         if is_bgm || self.track(sound_id).is_some() {
+            self.duck = volume.unwrap_or(FULL);
             self.start_music(sound_id);
 
             return;
