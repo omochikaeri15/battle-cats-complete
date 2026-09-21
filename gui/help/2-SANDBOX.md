@@ -18,7 +18,7 @@ You can add a cat combo to the lineup by double-clicking it. You can also search
 Mirror of the `Stages` page and determines what stage you lead into when you click `Play`.
 
 ## Config
-Manage settings using dedicated sections on a left sidebar.
+Manage ope settings using dedicated sections on a left sidebar.
 
 - **Settings:** In-game battle settings alongside a meta `Device` setting that dictates HUD layout.
 - **Treasure:** Treasure completion percentages for all 9 chapters, defaults to 100%.

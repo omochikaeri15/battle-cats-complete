@@ -14,6 +14,7 @@ use std::rc::Rc;
 use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
+use kore::domains::sandbox::config::CatGod;
 use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::TECHS;
 use kore::domains::settings::Settings;
@@ -257,6 +258,11 @@ impl State {
         }
 
         setup.altar = options.config.altar();
+        setup.cat_god = match options.config.cat_god {
+            CatGod::Absent => ::emu::runtime::CatGod::Absent,
+            CatGod::Present => ::emu::runtime::CatGod::Present,
+            CatGod::Discounted => ::emu::runtime::CatGod::Discounted,
+        };
 
         for (item, off) in options.config.items_off.iter().enumerate() {
             if let Some(stocked) = setup.items.get_mut(item) {

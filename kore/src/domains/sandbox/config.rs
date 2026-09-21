@@ -55,6 +55,28 @@ impl Tech {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CatGod {
+    Absent,
+    #[default]
+    Present,
+    Discounted,
+}
+
+impl CatGod {
+    pub const ALL: [Self; 3] = [Self::Absent, Self::Present, Self::Discounted];
+}
+
+impl std::fmt::Display for CatGod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Absent => "Absent",
+            Self::Present => "Present",
+            Self::Discounted => "Discounted",
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -68,6 +90,7 @@ pub struct Config {
     pub foundation_level: String,
     pub items_off: [bool; 6],
     pub altar_level: String,
+    pub cat_god: CatGod,
 }
 
 impl Config {
@@ -105,6 +128,7 @@ mod tests {
         assert_eq!(config.tech(1), (10, 0), "cannon range stops at ten and has no plus levels");
         assert_eq!(level("", 30), 30);
         assert_eq!(config.altar(), None, "no entry means the altar is already destroyed");
+        assert_eq!(config.cat_god, CatGod::Present);
     }
 
     #[test]

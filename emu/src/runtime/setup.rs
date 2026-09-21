@@ -57,6 +57,14 @@ pub struct PartLevels {
     pub style: i32,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CatGod {
+    Absent,
+    #[default]
+    Present,
+    Discounted,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Setup {
     pub stage: StageEntry,
@@ -69,6 +77,7 @@ pub struct Setup {
     pub parts: BTreeMap<i32, PartLevels>,
     pub items: [bool; BATTLE_ITEMS],
     pub altar: Option<i32>,
+    pub cat_god: CatGod,
 }
 
 impl Default for Setup {
@@ -84,6 +93,7 @@ impl Default for Setup {
             parts: BTreeMap::new(),
             items: [true; BATTLE_ITEMS],
             altar: None,
+            cat_god: CatGod::default(),
         }
     }
 }

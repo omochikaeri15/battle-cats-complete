@@ -5,7 +5,7 @@ use emu::engine::AppContext;
 use emu::runtime::{
     BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Setup, apply_battle_options,
     fill_dummy_save, fill_dummy_talents, load_scene_sheets,
-    pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, stock_battle_items, unlock_dummy_combos,
+    pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use tracing::{info, warn};
@@ -342,6 +342,10 @@ impl Driver {
     pub fn enter_battle(&mut self) -> bool {
         if let Err(fault) = stock_battle_items(&mut self.ctx, &self.setup) {
             warn!("emu: battle items could not be stocked: {fault}");
+        }
+
+        if let Err(fault) = seed_cat_god(&mut self.ctx, &self.setup) {
+            warn!("emu: Cat God could not be seeded: {fault}");
         }
 
         if let Err(fault) = seed_altar_records(&mut self.ctx, &self.setup) {

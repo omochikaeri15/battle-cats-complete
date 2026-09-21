@@ -2,6 +2,7 @@ use iced::widget::{column, container, scrollable, text, Column};
 use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
+use kore::domains::sandbox::config::CatGod;
 use kore::domains::sandbox::{config, CHAPTERS, ITEMS, TECHS};
 use kore::Vfs;
 
@@ -70,6 +71,7 @@ pub enum Message {
     Level(Slot, String),
     Item(usize, bool),
     Altar(String),
+    CatGod(CatGod),
 }
 
 #[derive(Default)]
@@ -136,6 +138,7 @@ impl State {
                 Slot::Style => options.config.style = Some(part.id),
                 Slot::Foundation => options.config.foundation = Some(part.id),
             },
+            Message::CatGod(picked) => options.config.cat_god = picked,
             Message::Altar(entry) => {
                 if typable(&entry) {
                     options.config.altar_level = entry;
@@ -278,6 +281,17 @@ impl State {
 
         column![
             section("Tech Levels", Length::Fill, rows),
+            section(
+                "Cat God",
+                Length::Fill,
+                combo_row(
+                    "Availability",
+                    "Absent: not unlocked, so his button never appears\nPresent: unlocked, miracles at full price\nDiscounted: the 70% off reward for clearing Cats of the Cosmos chapter 1",
+                    CatGod::ALL,
+                    Some(options.config.cat_god),
+                    Some(Message::CatGod),
+                ),
+            ),
             section(
                 "Aku Altar",
                 Length::Fill,

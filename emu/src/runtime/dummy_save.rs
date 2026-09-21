@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-use super::{Setup, fill_dummy_lineup};
+use super::{CatGod, Setup, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
 const STORY_CHAPTERS: usize = 5;
@@ -18,6 +18,10 @@ const LEGEND_MAP_STRIDE: i64 = 0x30;
 const ALTAR_KEY_STAGES: i32 = 100;
 
 const TUTORIAL_DONE: i32 = 1;
+const MIRACLE_PRICES: [u32; 4] = [20, 10, 5, 90];
+const CAT_GOD_INTRO_DONE: i32 = 4;
+const DISCOUNT_CHAPTER: usize = 7;
+const CHAPTER_CLEARED: u32 = 0x30;
 const COMBO_UNLOCKED: i32 = 0;
 const PLUS_SHIFT: u32 = 0x10;
 const CAT_FOOD: u32 = 45_000;
@@ -212,6 +216,27 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
         &mut ctx.stage_unlock_neg4,
     ] {
         wide.resize(MAPS_PER_TYPE * CROWNS, 0);
+    }
+
+    Ok(())
+}
+
+pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
+    ctx.set_i32_at(AppContext::CAT_GOD_AVAILABLE, i32::from(setup.cat_god != CatGod::Absent))?;
+    ctx.set_i32_at(AppContext::CAT_GOD_INTRO_STEP, CAT_GOD_INTRO_DONE)?;
+
+    for (miracle, price) in MIRACLE_PRICES.into_iter().enumerate() {
+        let mut cell = [0u8; 8];
+
+        cell[..4].copy_from_slice(&price.to_le_bytes());
+        obfuscate_value(&mut cell);
+        ctx.set_block_at(AppContext::MIRACLE_PRICES + miracle * 8, cell)?;
+    }
+
+    if setup.cat_god == CatGod::Discounted {
+        let key = u32::from_le_bytes(ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
+
+        ctx.set_block_at(AppContext::CHAPTER_PROGRESS + DISCOUNT_CHAPTER * 4, (CHAPTER_CLEARED ^ key).to_le_bytes())?;
     }
 
     Ok(())

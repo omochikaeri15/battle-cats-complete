@@ -65,7 +65,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
             if ctx.u8_at(AppContext::CAT_GOD_CONFIRM_OPEN)? == 0 && ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 2 {
-                let sheet = ctx.img039_sheet.clone();
+                let sheet = ctx.img042_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312);
                 let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
@@ -150,7 +150,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
         if ctx.i32_at(AppContext::CAT_GOD_STATE)? >= 3 {
             set_alpha(draw_context(&mut ctx.draw)?, 0xa5);
 
-            let sheet = ctx.img042_sheet.clone();
+            let sheet = ctx.img041_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xd4);
             let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x21);
@@ -173,7 +173,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x12b, 1);
 
             if ctx.i32_at(AppContext::CAT_GOD_STATE)? <= 4 {
-                let sheet = ctx.img042_sheet.clone();
+                let sheet = ctx.img006_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?;
                 let size = *DECK_PRESS_SIZE_TABLE
@@ -192,7 +192,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 ];
 
                 if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-                    let sheet = ctx.img042_sheet.clone();
+                    let sheet = ctx.img006_sheet.clone();
                     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let ticks = ctx.i32_at(AppContext::CAT_GOD_TICKS)?;
                     let beat = ticks.wrapping_sub(ops::div_4(ticks) * 4);
@@ -223,7 +223,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                     draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0xc5, 0x300, 0x180, 0);
 
-                    let sheet = ctx.img042_sheet.clone();
+                    let sheet = ctx.img006_sheet.clone();
                     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)?;
                     let size = *DECK_PRESS_SIZE_TABLE
@@ -246,7 +246,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     ];
 
                     if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-                        let sheet = ctx.img042_sheet.clone();
+                        let sheet = ctx.img006_sheet.clone();
                         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x322);
                         let ticks = ctx.i32_at(AppContext::CAT_GOD_TICKS)?;
@@ -270,11 +270,16 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     let half = ops::div_2(size);
                     let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6).wrapping_sub(half);
 
-                    draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x141i32.wrapping_sub(half), size.wrapping_add(0x17d), size.wrapping_add(0x48), 3);
+                    let button = ctx.img101_sheet.clone();
+                    let button = button.as_deref().ok_or(Fault::null_pointer())?;
+
+                    draw_cut_scaled(draw_context(&mut ctx.draw)?, button, x, 0x141i32.wrapping_sub(half), size.wrapping_add(0x17d), size.wrapping_add(0x48), 3);
 
                     let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1e5).wrapping_sub(half);
+                    let caption = ctx.img041_sheet.clone();
+                    let caption = caption.as_deref().ok_or(Fault::null_pointer())?;
 
-                    draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x149i32.wrapping_sub(half), size.wrapping_add(0xfe), size.wrapping_add(0x37), 0);
+                    draw_cut_scaled(draw_context(&mut ctx.draw)?, caption, x, 0x149i32.wrapping_sub(half), size.wrapping_add(0xfe), size.wrapping_add(0x37), 0);
 
                     let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
                     let price = get_miracle_price(ctx, selected)?;
@@ -284,7 +289,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                         set_color(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
                         set_alpha(draw_context(&mut ctx.draw)?, 0x7f);
 
-                        let sheet = ctx.img042_sheet.clone();
+                        let sheet = ctx.img101_sheet.clone();
                         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6).wrapping_sub(half);
 
@@ -303,7 +308,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     ];
 
                     if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
-                        let sheet = ctx.img042_sheet.clone();
+                        let sheet = ctx.img101_sheet.clone();
                         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6);
                         let ticks = ctx.i32_at(AppContext::BATTLE_TICKS)?;
@@ -338,7 +343,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
 
                     if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 5 {
-                        let sheet = ctx.img039_sheet.clone();
+                        let sheet = ctx.img006_sheet.clone();
                         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x234);
                         let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
