@@ -1,5 +1,6 @@
 pub mod base;
 pub mod config;
+pub mod keybind;
 pub mod lineup;
 pub mod orb;
 pub mod rules;

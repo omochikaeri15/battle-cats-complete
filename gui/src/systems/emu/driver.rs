@@ -12,6 +12,7 @@ use tracing::{info, warn};
 
 use super::assets::{DiskAssets, FileIndex, SheetCache};
 use super::input::{Touch, TouchQueue};
+use super::keys::{Action, Keys};
 use super::sink::{Frame, Recorder};
 use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
 use super::text::{Formatter, LABEL_PREFIX};
@@ -44,6 +45,7 @@ pub struct Driver {
     phone: bool,
     spread: i32,
     gap: Option<i32>,
+    keys: Keys,
     reach: i32,
     idle: u32,
     booted: bool,
@@ -85,6 +87,7 @@ impl Driver {
             phone: false,
             spread: 0,
             gap: None,
+            keys: Keys::default(),
             reach: FINGER_GAP,
             idle: 0,
             booted: false,
@@ -130,6 +133,7 @@ impl Driver {
         self.returning.set(false);
         self.spread = 0;
         self.gap = None;
+        self.keys.reset();
         self.booted = false;
         self.host();
         self.resize(width, height);
@@ -169,7 +173,18 @@ impl Driver {
         &self.touches
     }
 
+    pub fn key(&mut self, action: Action, pressed: bool) {
+        if pressed {
+            self.keys.press(action);
+        } else {
+            self.keys.release(action);
+        }
+    }
+
     fn pump_input(&mut self) {
+        self.keys.pump(&mut self.ctx, &mut self.spread);
+
+        let keyed = self.keys.busy();
         let mut pending: std::collections::VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
 
         while let Some(touch) = pending.pop_front() {
@@ -179,6 +194,7 @@ impl Driver {
 
                     Ok(())
                 }
+                Touch::Moved { .. } | Touch::Pressed { .. } | Touch::Released if keyed => Ok(()),
                 Touch::Moved { x, y } => {
                     emu::runtime::queue_touch_position(&mut self.ctx, x, y)
                 }

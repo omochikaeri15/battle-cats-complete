@@ -14,13 +14,14 @@ use std::rc::Rc;
 use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
+use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::TECHS;
 use kore::domains::settings::Settings;
 
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
 use crate::domains::{cat, stage};
-use crate::systems::emu::{Frame as EmuFrame, Session};
+use crate::systems::emu::{Action, Frame as EmuFrame, Session};
 use crate::systems::emu::SheetCache;
 use crate::widget::{popup, smooth_scroll};
 
@@ -38,6 +39,10 @@ You can accept the agreement by clicking the "Agree" button below. Selecting "Di
 const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
 const FAULT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Fault, Size::new(460.0, 260.0));
 const BODY_SIZE: f32 = 14.0;
+const SPEED_UP_ITEM: i32 = 0;
+const CAT_CPU_ITEM: i32 = 3;
+const SNIPER_ITEM: i32 = 5;
+const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
 const CHOICE_SPACING: f32 = 12.0;
@@ -69,6 +74,7 @@ pub enum Message {
     FaultPopup(popup::Message),
     Terminate,
     Continue,
+    Key(String, bool),
 }
 
 pub struct State {
@@ -78,6 +84,7 @@ pub struct State {
     terms: Vec<markdown::Item>,
     status: String,
     session: Option<Session>,
+    tapped: Option<std::time::Instant>,
     lineup: lineup::State,
     config: config::State,
 }
@@ -91,9 +98,26 @@ impl Default for State {
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
             status: String::new(),
             session: None,
+            tapped: None,
             lineup: lineup::State::new(0),
             config: config::State::default(),
         }
+    }
+}
+
+pub(crate) fn key_name(key: &iced::keyboard::Key) -> Option<String> {
+    match key {
+        iced::keyboard::Key::Character(typed) => Some(typed.to_lowercase()),
+        iced::keyboard::Key::Named(named) => Some(format!("{named:?}")),
+        iced::keyboard::Key::Unidentified => None,
+    }
+}
+
+fn game_key(event: iced::Event, _status: iced::event::Status, _window: iced::window::Id) -> Option<Message> {
+    match event {
+        iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, repeat: false, .. }) => key_name(&key).map(|name| Message::Key(name, true)),
+        iced::Event::Keyboard(iced::keyboard::Event::KeyReleased { key, .. }) => key_name(&key).map(|name| Message::Key(name, false)),
+        _ => None,
     }
 }
 
@@ -122,6 +146,10 @@ impl State {
     }
 
     pub(crate) fn subscription(&self) -> iced::Subscription<Message> {
+        if self.session.as_ref().is_some_and(Session::running) {
+            return iced::event::listen_with(game_key);
+        }
+
         self.lineup.subscription().map(Message::Lineup)
     }
 
@@ -335,6 +363,46 @@ impl State {
                 if let Some(session) = self.session.as_mut() {
                     session.resume();
                 }
+
+                Task::none()
+            }
+            Message::Key(name, pressed) => {
+                let Some(session) = self.session.as_mut() else {
+                    return Task::none();
+                };
+                let Some(bind) = settings.sandbox.keys.bound(&name) else {
+                    return Task::none();
+                };
+
+                let action = match bind {
+                    Bind::Slot(slot) => Action::Slot(i32::from(slot)),
+                    Bind::SpeedUp => Action::Item(SPEED_UP_ITEM),
+                    Bind::CatCpu => Action::Item(CAT_CPU_ITEM),
+                    Bind::Sniper => Action::Item(SNIPER_ITEM),
+                    Bind::Worker => Action::Worker,
+                    Bind::Cannon => Action::Cannon,
+                    Bind::ZoomOut => Action::ZoomOut,
+                    Bind::ZoomIn => Action::ZoomIn,
+                    Bind::Left => Action::PanLeft,
+                    Bind::Right => Action::PanRight,
+                    Bind::Pause => Action::Pause,
+                    Bind::Restart => {
+                        if pressed {
+                            let now = std::time::Instant::now();
+                            let doubled = self.tapped.take().is_some_and(|at| now.duration_since(at) <= RESTART_WINDOW);
+
+                            if doubled {
+                                session.restart();
+                            } else {
+                                self.tapped = Some(now);
+                            }
+                        }
+
+                        return Task::none();
+                    }
+                };
+
+                session.key(action, pressed);
 
                 Task::none()
             }

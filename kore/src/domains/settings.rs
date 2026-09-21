@@ -104,6 +104,7 @@ pub struct UtilitiesSettings {
 #[serde(default)]
 pub struct SandboxSettings {
     pub banner_form: usize,
+    pub keys: crate::domains::sandbox::keybind::Keybinds,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]

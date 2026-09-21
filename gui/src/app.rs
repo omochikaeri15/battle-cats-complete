@@ -508,6 +508,10 @@ impl BattleCatsApp {
             subs.push(iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::DownloadTick));
         }
 
+        if self.current_page == Page::Settings {
+            subs.push(self.settings_state.subscription().map(Message::Settings));
+        }
+
         if self.current_page == Page::Sandbox {
             subs.push(self.sandbox_state.subscription().map(Message::Sandbox));
         }

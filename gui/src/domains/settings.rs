@@ -13,6 +13,7 @@ use iced::widget::{
 use iced::{Alignment, Element, Length, Size, Task};
 
 use kore::domains::cat::files as cat_files;
+use kore::domains::sandbox::keybind::Bind;
 use kore::domains::settings::{lang, nightly, ContextScope, EditorMode, Utf8Mode};
 use kore::domains::settings::{
     ExportBehavior, FrameCount, ImportStructure, ScrubBehavior, Settings as CoreSettings,
@@ -58,6 +59,9 @@ pub enum Message {
     General(general::Message),
     PreferredBannerSelected(usize),
     SandboxBannerSelected(usize),
+    KeyCapture(Bind),
+    KeyCaptured(String),
+    KeysReset,
     ToggleInvalidCats(bool),
     ToggleExpandSpirit(bool),
     DefaultLevelChanged(String),
@@ -98,6 +102,7 @@ pub struct State {
     pub showcase_idle_buffer: String,
     pub showcase_kb_buffer: String,
 
+    capturing: Option<Bind>,
     general: general::State,
     keys: keys::State,
     exceptions: exceptions::State,
@@ -105,6 +110,27 @@ pub struct State {
     addons: addons::State,
     disk: disk::State,
     snapshot: snapshot::State,
+}
+
+const KEY_PROMPT: &str = "Press a key...";
+const KEY_UNBOUND: &str = "Unbound";
+const KEY_LABEL_WIDTH: f32 = 230.0;
+const KEY_BUTTON_WIDTH: f32 = 140.0;
+
+fn key_label(name: &str) -> String {
+    match name {
+        " " => "Space".to_owned(),
+        single if single.chars().count() == 1 => single.to_uppercase(),
+        named => named.to_owned(),
+    }
+}
+
+fn captured_key(event: iced::Event, _status: iced::event::Status, _window: iced::window::Id) -> Option<Message> {
+    let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, repeat: false, .. }) = event else {
+        return None;
+    };
+
+    crate::domains::sandbox::key_name(&key).map(Message::KeyCaptured)
 }
 
 impl Default for State {
@@ -115,6 +141,7 @@ impl Default for State {
             showcase_walk_buffer: "0".to_string(),
             showcase_idle_buffer: "0".to_string(),
             showcase_kb_buffer: "0".to_string(),
+            capturing: None,
             general: general::State::default(),
             keys: keys::State::default(),
             exceptions: exceptions::State::default(),
@@ -129,7 +156,26 @@ impl Default for State {
 impl State {
     pub fn update(&mut self, message: Message, core_settings: &mut CoreSettings) -> Task<Message> {
         match message {
+            Message::KeyCapture(bind) => {
+                self.capturing = (self.capturing != Some(bind)).then_some(bind);
+
+                Task::none()
+            }
+            Message::KeyCaptured(name) => {
+                if let Some(bind) = self.capturing.take() {
+                    core_settings.sandbox.keys.set(bind, &name);
+                }
+
+                Task::none()
+            }
+            Message::KeysReset => {
+                self.capturing = None;
+                core_settings.sandbox.keys.reset();
+
+                Task::none()
+            }
             Message::TabSelected(tab) => {
+                self.capturing = None;
                 self.active_tab = tab;
                 match tab {
                     Tab::General => {
@@ -383,7 +429,7 @@ impl State {
                 header_section(text("Keys & IV").size(24), self.view_keys(core_settings)),
                 self.general.view(core_settings, updater_status).map(Message::General),
             ].spacing(SECTION_SPACING).into(),
-            Tab::Sandbox => Self::view_sandbox(core_settings),
+            Tab::Sandbox => self.view_sandbox(core_settings),
             Tab::Cats => self.view_cats(core_settings),
             Tab::Enemies => self.view_enemies(core_settings),
             Tab::Stages => self.view_stages(core_settings),
@@ -399,7 +445,15 @@ impl State {
         }
     }
 
-    fn view_sandbox(core_settings: &CoreSettings) -> Element<'_, Message> {
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        if self.capturing.is_none() {
+            return iced::Subscription::none();
+        }
+
+        iced::event::listen_with(captured_key)
+    }
+
+    fn view_sandbox<'a>(&'a self, core_settings: &'a CoreSettings) -> Element<'a, Message> {
         let banner_options: Vec<BannerForm> = (0..cat_files::FORM_COUNT).map(BannerForm).collect();
 
         let list_content = row![
@@ -411,7 +465,32 @@ impl State {
             ).style(theme::combo_box).menu_style(theme::combo_box_menu),
         ].spacing(10).align_y(Alignment::Center);
 
-        header_section(text("Lineup List").size(24), list_content)
+        let mut binds = column![
+            theme::sized_button("Set to Default", theme::STATUS_BUTTON_WIDTH, theme::danger_button).on_press(Message::KeysReset),
+        ].spacing(10);
+
+        for bind in Bind::ALL {
+            let held = core_settings.sandbox.keys.key(bind);
+            let shown = match (self.capturing == Some(bind), held.is_empty()) {
+                (true, _) => KEY_PROMPT.to_owned(),
+                (false, true) => KEY_UNBOUND.to_owned(),
+                (false, false) => key_label(held),
+            };
+            let listening = self.capturing == Some(bind);
+            let style = move |theme: &iced::Theme, status| if listening { theme::success_button(theme, status) } else { theme::neutral_button(theme, status) };
+
+            binds = binds.push(
+                row![
+                    text(bind.label()).width(Length::Fixed(KEY_LABEL_WIDTH)),
+                    theme::sized_button(shown, KEY_BUTTON_WIDTH, style).on_press(Message::KeyCapture(bind)),
+                ].spacing(10).align_y(Alignment::Center),
+            );
+        }
+
+        column![
+            header_section(text("Lineup List").size(24), list_content),
+            header_section(text("Keybinds").size(24), binds),
+        ].spacing(20).into()
     }
 
     fn view_cats<'a>(&'a self, core_settings: &'a CoreSettings) -> Element<'a, Message> {

@@ -1,6 +1,7 @@
 mod assets;
 mod driver;
 mod input;
+mod keys;
 mod pipeline;
 #[cfg(target_os = "linux")]
 mod server_audio;
@@ -14,4 +15,5 @@ pub(crate) use session::Session;
 pub(crate) use assets::SheetCache;
 pub(crate) use sink::Frame;
 pub(crate) use input::TouchQueue;
+pub(crate) use keys::Action;
 pub(crate) use viewport::{Feed, overlay};

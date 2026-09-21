@@ -9,6 +9,7 @@ use tracing::warn;
 use super::driver::Driver;
 use super::assets::SheetCache;
 use super::input::TouchQueue;
+use super::keys::Action;
 use super::sink::Frame;
 
 const BLACK_FROM: i32 = 0xb;
@@ -40,6 +41,7 @@ pub struct Session {
     stepped: Instant,
     failure: Option<String>,
     stale: bool,
+    again: bool,
 }
 
 impl Session {
@@ -53,6 +55,7 @@ impl Session {
             phase: Phase::Idle,
             sweep: 0,
             stale: false,
+            again: false,
             started: Instant::now(),
             entered: false,
             frozen: 0,
@@ -184,7 +187,7 @@ impl Session {
                 self.driver.draw_curtain_over(self.sweep);
 
                 if self.sweep >= CLOSED_FRAME {
-                    self.phase = Phase::Leaving;
+                    self.phase = if self.again { Phase::Loading } else { Phase::Leaving };
                     self.started = Instant::now();
                 }
             }
@@ -203,6 +206,10 @@ impl Session {
                 self.driver.draw_curtain(self.sweep);
             }
             Phase::Loading => {
+                if std::mem::take(&mut self.again) {
+                    self.driver.renew();
+                }
+
                 self.driver.reindex(vfs);
                 self.load();
 
@@ -240,6 +247,26 @@ impl Session {
                 self.driver.draw_curtain(self.sweep);
             }
         }
+    }
+
+    pub fn key(&mut self, action: Action, pressed: bool) {
+        if self.phase == Phase::Running {
+            self.driver.key(action, pressed);
+        }
+    }
+
+    pub fn restart(&mut self) {
+        if self.phase != Phase::Running {
+            return;
+        }
+
+        self.again = true;
+        self.entered = false;
+        self.driver.silence();
+        self.frozen = self.frame.borrow().quads.len();
+        self.phase = Phase::Closing;
+        self.sweep = 0;
+        self.started = Instant::now();
     }
 
     fn step(&mut self) {
