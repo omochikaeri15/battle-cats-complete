@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use nyanko::cat::unitid;
-use nyanko::cat::unit::{Nyancombo, NyancomboData, NyancomboFilter, NyancomboParam, UnitExplanation};
+use nyanko::cat::unit::{
+    Equipment, EquipmentSlot, Nyancombo, NyancomboData, NyancomboFilter, NyancomboParam, UnitExplanation,
+};
 use nyanko::combat::{Entity, Separator};
 use tracing::trace;
 
@@ -135,6 +138,38 @@ pub(crate) fn nyancomboparam(vfs: &Vfs) -> Vec<NyancomboParam> {
     };
 
     NyancomboParam::parse(&bytes, None).unwrap_or_default()
+}
+
+pub(crate) fn equipmentlist(vfs: &Vfs) -> Vec<Equipment> {
+    trace!("loading the talent orb definitions");
+
+    let Some(file_path) = vfs.find(files::EQUIPMENT_LIST) else {
+        return Vec::new();
+    };
+
+    let Ok(bytes) = fs::read(&file_path) else {
+        return Vec::new();
+    };
+
+    Equipment::parse(&bytes).unwrap_or_default()
+}
+
+pub(crate) fn equipmentslot(vfs: &Vfs) -> HashMap<u32, usize> {
+    trace!("loading the talent orb slot counts");
+
+    let Some(file_path) = vfs.find(files::EQUIPMENT_SLOT) else {
+        return HashMap::new();
+    };
+
+    let Ok(bytes) = fs::read(&file_path) else {
+        return HashMap::new();
+    };
+
+    EquipmentSlot::parse(&bytes, None)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|row| Some((u32::try_from(row.unit_id?).ok()?, usize::try_from(row.slot_count?).ok()?)))
+        .collect()
 }
 
 pub fn nyancombo_source(vfs: &Vfs, line: usize) -> Option<PathBuf> {

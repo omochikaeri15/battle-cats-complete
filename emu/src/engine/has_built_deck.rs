@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, find_built_deck_4star, get_map_type};
+use super::{AppContext, find_built_deck_4crown, get_map_type};
 
 pub fn has_built_deck(ctx: &mut AppContext, stage_key: i32) -> Result<bool, Fault> {
     let case = get_map_type(ctx, 0)?.wrapping_add(0x19) as u32;
@@ -19,5 +19,5 @@ pub fn has_built_deck(ctx: &mut AppContext, stage_key: i32) -> Result<bool, Faul
         return Ok(false);
     }
 
-    Ok(find_built_deck_4star(ctx, stage_key) >= 0)
+    Ok(find_built_deck_4crown(ctx, stage_key) >= 0)
 }

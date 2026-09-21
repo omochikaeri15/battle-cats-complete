@@ -14,6 +14,7 @@ use super::{classify, figures, ground, prose, Action, AnimTarget, CatTarget, Con
 
 const BINARY_NOTICE: &str = "Cannot open binary format";
 const NO_CHANNEL_NOTICE: &str = "This part has no channels in this animation";
+const REMOVE_MEMBER_LABEL: &str = "Remove from Lineup";
 const UNALIGNED_NOTICE: &str = "This model declares no unit divisors, and the revision that reads offsets reads those too";
 const NO_OFFSET_NOTICE: &str = "This model declares no offset rows to remove";
 const NOT_DRAWN_NOTICE: &str = "This part is not drawn on the current frame";
@@ -178,6 +179,10 @@ pub(super) fn items(context: &Context) -> Vec<Item> {
 
     if let Some(target) = context.making.as_ref() {
         items.extend(making(target));
+    }
+
+    if let Some(cell) = context.lineup {
+        items.push(Item::new(REMOVE_MEMBER_LABEL.to_owned(), Action::DropMember { cell }));
     }
 
     let payloads = payloads(context);

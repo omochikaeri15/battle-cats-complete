@@ -1693,7 +1693,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     }
 
     let notice = ctx.i32_at(AppContext::DEPLOY_NOTICE_KIND)?;
-    let notice = if notice == 1 && get_battle_status(ctx)? == 0 {
+    let notice = if notice == 1 && get_battle_status(ctx)? != 0 {
         -1
     } else {
         ctx.i32_at(AppContext::DEPLOY_NOTICE_KIND)?

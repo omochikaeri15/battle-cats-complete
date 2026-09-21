@@ -2,7 +2,7 @@ use crate::{
     Fault,
     engine::{
         AppContext, get_bottom_inset_logical, get_drawable_width, get_left_inset_logical,
-        get_right_inset_logical, get_top_inset_offset, powerup_available,
+        get_right_inset_logical, get_top_inset_offset, option_window_build_alt, powerup_available,
     },
     ops,
 };
@@ -13,6 +13,7 @@ const ITEM_COLUMNS: i32 = 6;
 const ITEM_PITCH: i32 = 0x58;
 const ITEM_LEFT: i32 = -0x210;
 const ITEM_TOP: i32 = 0x2b;
+const BATTLE_OPTION_WINDOW: i32 = 1;
 
 #[derive(Clone, Copy)]
 enum Across {
@@ -106,6 +107,14 @@ pub fn relatch_battle_rects(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(rect, x)?;
         ctx.set_i32_at(rect + 4, ITEM_TOP.wrapping_sub(shift))?;
         column -= 1;
+    }
+
+    let shown = ctx.u8_at(AppContext::OPTION_WINDOW)? != 0
+        && ctx.i32_at(AppContext::OPTION_WINDOW_KIND)? == BATTLE_OPTION_WINDOW
+        && ctx.u8_at(AppContext::UNIT_INFO_OVERLAY_OPEN)? == 0;
+
+    if shown {
+        option_window_build_alt(ctx)?;
     }
 
     Ok(())

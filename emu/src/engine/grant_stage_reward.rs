@@ -3,7 +3,7 @@ use crate::Fault;
 use super::{
     AppContext, FormatArg, UNIT_BUY, UNIT_BUY_STRIDE, add_resource, analytics_params,
     event_unit_slot_by_item, find_item_index, get_global_map_id, get_powerup, get_stage_index,
-    get_star_level, level_cell_add, level_cell_base, mission_progress, orb_inventory_add,
+    get_crown_level, level_cell_add, level_cell_base, mission_progress, orb_inventory_add,
     reward_unit_id, unit_buy_field, xor_row46_get,
 };
 
@@ -28,7 +28,7 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
         if find_item_index(ctx, item)? == 0x16 {
             let map_id = get_global_map_id(ctx, 0)?;
             let stage = get_stage_index(ctx)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
             let amount =
                 xor_row46_get(ctx.bytes_from(row)?, index + 1).ok_or(Fault::index_out_of_range(index as i64 + 1, 0x2e))? as i32;
 
@@ -42,7 +42,7 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
                     (b"sec2_type", FormatArg::Text(b"StageIdx")),
                     (b"sec2_id", FormatArg::Int(stage)),
                     (b"ex_type", FormatArg::Text(b"StageLv")),
-                    (b"ex_id", FormatArg::Int(star)),
+                    (b"ex_id", FormatArg::Int(crown)),
                 ],
             )?;
         }

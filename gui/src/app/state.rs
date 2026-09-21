@@ -66,7 +66,7 @@ impl SandboxVolume {
     pub fn percent(self) -> i32 {
         match self {
             Self::Off => 0,
-            Self::Low => 25,
+            Self::Low => 20,
             Self::Medium => 50,
             Self::High => 100,
         }
@@ -111,59 +111,56 @@ impl std::fmt::Display for SandboxDevice {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-pub struct SandboxScale(pub i32);
-
-impl SandboxScale {
-    pub const ALL: [Self; 7] = [
-        Self(50),
-        Self(75),
-        Self(100),
-        Self(125),
-        Self(150),
-        Self(200),
-        Self(300),
-    ];
-
-    pub fn factor(self) -> f32 {
-        self.0 as f32 / 100.0
-    }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum SandboxTab {
+    #[default]
+    Lineup,
+    Stage,
+    Config,
 }
 
-impl Default for SandboxScale {
-    fn default() -> Self {
-        Self(100)
-    }
-}
-
-impl std::fmt::Display for SandboxScale {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}%", self.0)
-    }
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum SandboxPanel {
+    #[default]
+    Settings,
+    Treasure,
+    Tech,
+    Base,
+    Items,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub(crate) struct SandboxState {
     pub acknowledged: bool,
+    pub tab: SandboxTab,
+    pub panel: SandboxPanel,
+    pub roster: kore::domains::sandbox::Roster,
+    pub config: kore::domains::sandbox::Config,
+    pub list_scroll_offset: f32,
+    pub search_query: String,
     pub music_volume: i32,
     pub effects_volume: i32,
     pub two_rows: bool,
     pub vibrate: bool,
     pub device: SandboxDevice,
-    pub screen_size: SandboxScale,
 }
 
 impl Default for SandboxState {
     fn default() -> Self {
         Self {
             acknowledged: false,
+            tab: SandboxTab::default(),
+            panel: SandboxPanel::default(),
+            roster: kore::domains::sandbox::Roster::default(),
+            config: kore::domains::sandbox::Config::default(),
+            list_scroll_offset: 0.0,
+            search_query: String::new(),
             music_volume: 100,
             effects_volume: 100,
             two_rows: false,
             vibrate: false,
             device: SandboxDevice::default(),
-            screen_size: SandboxScale::default(),
         }
     }
 }

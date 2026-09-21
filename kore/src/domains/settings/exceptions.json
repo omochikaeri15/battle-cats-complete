@@ -146,7 +146,7 @@
       }
     },
     {
-      "pattern": "(001|092)_s",
+      "pattern": "(001|092|210)_s",
       "extension": "png",
       "handling": "Include",
       "languages": {

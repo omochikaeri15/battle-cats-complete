@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, find_built_deck_4star, has_built_deck};
+use super::{AppContext, find_built_deck_4crown, has_built_deck};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct BuiltDeckRecord {
@@ -29,7 +29,7 @@ pub fn get_built_deck_cannon(ctx: &mut AppContext, stage_key: i32) -> Result<i32
             return Ok(0);
         }
     } else if deck_id == -1 {
-        deck_id = find_built_deck_4star(ctx, stage_key);
+        deck_id = find_built_deck_4crown(ctx, stage_key);
 
         if deck_id == -1 {
             return Ok(0);

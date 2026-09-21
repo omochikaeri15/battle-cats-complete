@@ -9,13 +9,13 @@ pub struct Medal {
     pub medals: Vec<i32>,
     pub limit: i32,
     pub condition_stage: i32,
-    pub condition_star: i32,
+    pub condition_crown: i32,
     pub line: i32,
     pub grade: i32,
     pub maps: Vec<i32>,
     pub stage: i32,
     pub treasure: i32,
-    pub star: i32,
+    pub crown: i32,
     pub action: i32,
     pub count: i32,
     pub chara: i32,
@@ -48,7 +48,7 @@ pub fn parse_medal_entry(medal: &mut Medal, node: Option<&JsonNode>) -> Result<(
                 }?,
                 None => -1,
             } as i32;
-            medal.condition_star = match inner.get(b"star".as_slice()) {
+            medal.condition_crown = match inner.get(b"star".as_slice()) {
                 Some(found) => match found {
                     JsonNode::String(text) => json_string_as_int(text),
                     JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
@@ -77,7 +77,7 @@ pub fn parse_medal_entry(medal: &mut Medal, node: Option<&JsonNode>) -> Result<(
         }
         _ => {
             medal.limit = -1;
-            medal.condition_star = 0;
+            medal.condition_crown = 0;
         }
     }
 
@@ -134,7 +134,7 @@ pub fn parse_medal_entry(medal: &mut Medal, node: Option<&JsonNode>) -> Result<(
             }?,
             None => -1,
         } as i32;
-        medal.star = match fields.get(b"star".as_slice()) {
+        medal.crown = match fields.get(b"star".as_slice()) {
             Some(found) => match found {
                 JsonNode::String(text) => json_string_as_int(text),
                 JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),

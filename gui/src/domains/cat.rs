@@ -99,6 +99,7 @@ pub enum Message {
     ToggleOrigin(bool),
     ToggleParts(bool),
     ToggleWorld(bool),
+    HeaderAction(usize),
     List(list::Message),
     Filter(filter::Message),
     Abilities(abilities::Message),
@@ -130,6 +131,7 @@ impl std::fmt::Debug for Message {
             Self::ToggleOrigin(b) => write!(f, "ToggleOrigin({})", b),
             Self::ToggleParts(b) => write!(f, "ToggleParts({})", b),
             Self::ToggleWorld(b) => write!(f, "ToggleWorld({})", b),
+            Self::HeaderAction(index) => write!(f, "HeaderAction({})", index),
             Self::List(msg) => write!(f, "List({:?})", msg),
             Self::Filter(msg) => write!(f, "Filter({:?})", msg),
             Self::Abilities(msg) => write!(f, "Abilities({:?})", msg),
@@ -217,7 +219,124 @@ impl Default for State {
     }
 }
 
+pub(crate) struct Inspected<'a> {
+    pub(crate) form: usize,
+    pub(crate) level: &'a str,
+    pub(crate) talents: Option<&'a HashMap<u8, u8>>,
+}
+
+pub(crate) enum Picked {
+    Pressed(u32),
+    Chosen(u32),
+}
+
+impl Message {
+    pub(crate) fn picked(&self) -> Option<Picked> {
+        match self {
+            Self::List(list::Message::Pressed(id)) => Some(Picked::Pressed(*id)),
+            Self::List(list::Message::Select(id)) => Some(Picked::Chosen(*id)),
+            _ => None,
+        }
+    }
+}
+
 impl State {
+    pub(crate) fn inspector(scope: &'static str, banner_form: usize) -> Self {
+        Self { list: list::State::scoped(scope, banner_form), ..Self::default() }
+    }
+
+    pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
+        self.list.set_variant(banner_form);
+    }
+
+    pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], vault: &Vault) -> Task<Message> {
+        self.list.invalidate();
+        self.details.clear_icons();
+        self.details.clear_combos();
+        self.dynamic_stats.replace(None);
+        self.header_icon_cache.borrow_mut().clear();
+        self.data.cats = cats.to_vec();
+        self.filter.refresh_combos(vault);
+        self.list.refresh(&self.data.cats, &self.search_query, &self.filter.filter_state);
+
+        Task::batch([
+            self.filter.refresh_available(&self.data.cats).map(Message::Filter),
+            self.check_sheets(&vault.vfs),
+            self.list.take_scroll(),
+        ])
+    }
+
+    pub(crate) fn inspect(&mut self, id: u32, form: usize, level: &str, talents: &HashMap<u8, u8>) {
+        self.selected_cat = Some(id);
+        self.selected_form = form;
+        self.selected_tab = DetailTab::Abilities;
+        self.talent_level_inputs.clear();
+        self.talent_levels.clear();
+        self.talent_levels.insert(id, talents.clone());
+        self.level_input = level.to_owned();
+        self.current_level = level.split('+').filter_map(|term| term.trim().parse::<i32>().ok()).sum::<i32>().max(1);
+        self.animation.clear();
+        self.animation.reset_playhead();
+    }
+
+    pub(crate) fn inspected(&self) -> Option<Inspected<'_>> {
+        let id = self.selected_cat?;
+
+        Some(Inspected { form: self.selected_form, level: &self.level_input, talents: self.talent_levels.get(&id) })
+    }
+
+    pub(crate) fn restore_list(&mut self, offset: f32, query: &str) -> Task<Message> {
+        if self.search_query != query {
+            self.search_query = query.to_owned();
+        }
+
+        self.list.set_scroll_offset(offset);
+        self.list.refresh(&self.data.cats, &self.search_query, &self.filter.filter_state);
+        self.list.restore_scroll()
+    }
+
+    pub(crate) fn sidebar_view(&self) -> Element<'_, Message> {
+        self.view_sidebar()
+    }
+
+    pub(crate) fn detail_view<'a>(
+        &'a self,
+        settings: &'a Settings,
+        app_state: &'a AppState,
+        global_ctx: GlobalContext<'a>,
+        extra: Option<Element<'a, Message>>,
+    ) -> Element<'a, Message> {
+        self.view_main_content(settings, app_state, global_ctx, extra)
+    }
+
+    pub(crate) fn header_action(message: &Message) -> Option<usize> {
+        match message {
+            Message::HeaderAction(index) => Some(*index),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn seeded(&self, id: u32, banner_form: usize, settings: &Settings) -> Option<(usize, String)> {
+        let cat = self.data.cats.iter().find(|cat| cat.id == id)?;
+
+        Some((Self::shown_form(cat, banner_form), seeded_level(cat, settings).1))
+    }
+
+    pub(crate) fn shown_form(cat: &CatEntry, banner_form: usize) -> usize {
+        let highest = banner_form.min(cat.forms.len() - 1);
+
+        (0..=highest)
+            .rev()
+            .find(|form| cat.forms[*form] && cat.banner_paths[*form].is_some())
+            .or_else(|| (0..=highest).rev().find(|form| cat.forms[*form]))
+            .or_else(|| cat.forms.iter().position(|exists| *exists))
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn cat(&self, id: u32) -> Option<&CatEntry> {
+        self.data.cats.iter().find(|cat| cat.id == id)
+    }
+
     pub(crate) fn list_scrollable_id() -> Id {
         list::State::scrollable_id()
     }
@@ -653,6 +772,7 @@ impl State {
                 settings.animation.show_world = val;
                 Task::none()
             }
+            Message::HeaderAction(_) => Task::none(),
             Message::ToggleTalents(is_ultra) => {
                 let talent_data = self.selected_cat
                     .and_then(|id| self.data.cats.iter().find(|c| c.id == id))
@@ -768,7 +888,7 @@ impl State {
 
     pub fn view<'a>(&'a self, settings: &'a Settings, app_state: &'a AppState, global_ctx: GlobalContext<'a>) -> Element<'a, Message> {
         let sidebar = self.view_sidebar();
-        let main_content = self.view_main_content(settings, app_state, global_ctx);
+        let main_content = self.view_main_content(settings, app_state, global_ctx, None);
 
         let base_layout = row![sidebar, main_content]
             .width(Length::Fill)
@@ -835,7 +955,13 @@ impl State {
         Some(status("Scanning Cats...", Some(format!("{} / {}", done, total))))
     }
 
-    fn view_main_content<'a>(&'a self, settings: &'a Settings, app_state: &'a AppState, global_ctx: GlobalContext<'a>) -> Element<'a, Message> {
+    fn view_main_content<'a>(
+        &'a self,
+        settings: &'a Settings,
+        app_state: &'a AppState,
+        global_ctx: GlobalContext<'a>,
+        extra: Option<Element<'a, Message>>,
+    ) -> Element<'a, Message> {
         if let Some(progress) = self.scan_status() {
             return progress;
         }
@@ -858,7 +984,7 @@ impl State {
                 .into();
         };
 
-        let header = self.view_header(cat, &global_ctx.vault.vfs, settings);
+        let header = self.view_header(cat, &global_ctx.vault.vfs, settings, extra);
 
         let content = match self.selected_tab {
             DetailTab::Abilities => self.view_abilities(cat, settings, global_ctx),
@@ -883,7 +1009,13 @@ impl State {
             .into()
     }
 
-    fn view_header<'a>(&'a self, cat: &'a CatEntry, vfs: &Vfs, settings: &'a Settings) -> Element<'a, Message> {
+    fn view_header<'a>(
+        &'a self,
+        cat: &'a CatEntry,
+        vfs: &Vfs,
+        settings: &'a Settings,
+        extra: Option<Element<'a, Message>>,
+    ) -> Element<'a, Message> {
         let mut form_row = row![].spacing(4);
         let form_labels = ["Normal", "Evolved", "True", "Ultra"];
 
@@ -954,6 +1086,13 @@ impl State {
                     .header_view(talent_data, self.talent_levels.get(&cat.id), &cat.talent_costs, &self.img022_sheets)
                     .map(Message::Talents),
             );
+
+            if let Some(extra) = extra {
+                detail_row = detail_row.push(Space::new().width(Length::Fixed(15.0)));
+                detail_row = detail_row.push(container(rule::vertical(1)).height(Length::Fixed(96.0)));
+                detail_row = detail_row.push(Space::new().width(Length::Fixed(15.0)));
+                detail_row = detail_row.push(extra);
+            }
         } else if self.selected_tab == DetailTab::Animation {
             detail_row = detail_row.push(Space::new().width(Length::Fixed(15.0)));
             detail_row = detail_row.push(container(rule::vertical(1)).height(Length::Fixed(96.0)));

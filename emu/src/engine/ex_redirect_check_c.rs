@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, get_map_count, get_map_index, get_map_type, get_stage_index, get_stage_record,
-    get_star_level, is_map_cleared,
+    get_crown_level, is_map_cleared,
 };
 
 pub fn ex_redirect_check_c(ctx: &mut AppContext, in_stage: u8) -> Result<bool, Fault> {
@@ -14,7 +14,7 @@ pub fn ex_redirect_check_c(ctx: &mut AppContext, in_stage: u8) -> Result<bool, F
         return Ok(false);
     }
 
-    if get_star_level(ctx)? != 0 {
+    if get_crown_level(ctx)? != 0 {
         return Ok(false);
     }
 

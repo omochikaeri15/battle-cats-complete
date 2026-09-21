@@ -124,6 +124,7 @@ fn format_special_rule(rule: &SpecialRulesMapEntry, global_ctx: &GlobalContext) 
             let formatted_rule = match target_rule {
                 RuleType::TrustFund(params) => format!("Trust Fund {:?}", params),
                 RuleType::CooldownEquality(params) => format!("Cooldown Equality {:?}", params),
+                RuleType::LineupLimit(params) => format!("Lineup Limit {:?}", params),
                 RuleType::RarityLimit(params) => format!("Rarity Limit {:?}", params),
                 RuleType::CheapLabor(params) => format!("Cheap Labor {:?}", params),
                 RuleType::CatCost(params) => format!("Cat Cost {:?}", params),
@@ -144,6 +145,7 @@ fn format_special_rule(rule: &SpecialRulesMapEntry, global_ctx: &GlobalContext) 
             let parameters = match target_rule {
                 RuleType::TrustFund(params) => params,
                 RuleType::CooldownEquality(params) => params,
+                RuleType::LineupLimit(params) => params,
                 RuleType::RarityLimit(params) => params,
                 RuleType::CheapLabor(params) => params,
                 RuleType::CatCost(params) => params,

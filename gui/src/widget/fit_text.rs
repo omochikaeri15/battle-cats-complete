@@ -30,7 +30,7 @@ pub(crate) fn fit_column<'a, Message: 'a>(
         .into()
 }
 
-fn shrink_by(lines: &[(String, f32)], available: f32, floor: f32) -> f32 {
+pub(crate) fn shrink_by(lines: &[(String, f32)], available: f32, floor: f32) -> f32 {
     let deepest = lines.iter().map(|(_, size)| size - floor).fold(0.0, f32::max);
 
     if available <= 0.0 || deepest <= 0.0 {

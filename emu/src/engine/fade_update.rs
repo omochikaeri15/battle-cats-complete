@@ -6,7 +6,7 @@ use super::{
     clear_cannon_shot, clear_crit_vfx_slot, clear_debris, clear_effect_slot, clear_items_selected,
     clear_wave_sprite, fever_clear_state, get_battle_status, get_entity_base_idx, get_entity_state,
     get_global_map_id, get_item_selected, get_max_hp, get_max_money, get_powerup_available,
-    get_scene_id, get_stage_index, get_star_level, load_map_stage_csv, lose_exit_map_check,
+    get_scene_id, get_stage_index, get_crown_level, load_map_stage_csv, lose_exit_map_check,
     map_type_base_id, notification_schedule, record_stage_played, request_save_data,
     reset_hud_corner_rects, scene_transition_tick, set_battle_status, set_cannon_countdown,
     set_deck_cooldown, set_entity_state, set_hp, set_item_selected, set_money,
@@ -111,7 +111,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
         let status = get_battle_status(ctx)?;
         let collab = status == 1
             && ctx.i32_at(AppContext::CHAPTER_MODE)? == 3
-            && ctx.i32_at(AppContext::STAR_LEVEL)? == 0
+            && ctx.i32_at(AppContext::CROWN_LEVEL)? == 0
             && {
                 let map = map_type_base_id(
                     validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?),
@@ -567,7 +567,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                         let map_id = get_global_map_id(ctx, 0)?;
                         let stage = get_stage_index(ctx)?;
-                        let star = get_star_level(ctx)?;
+                        let crown = get_crown_level(ctx)?;
                         let total = ctx.i32_at(AppContext::LEADERSHIP_TOTAL)?;
 
                         analytics_params(
@@ -580,7 +580,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                                 (b"sec2_type", FormatArg::Text(b"StageIdx")),
                                 (b"sec2_id", FormatArg::Int(stage)),
                                 (b"ex_type", FormatArg::Text(b"StageLv")),
-                                (b"ex_id", FormatArg::Int(star)),
+                                (b"ex_id", FormatArg::Int(crown)),
                             ],
                         )?;
 

@@ -19,7 +19,6 @@ pub trait MetaHost {
     fn analytics_named(&mut self, code: i32, name: &[u8], detail: &[u8]);
     fn bc_log(&mut self, name: &[u8]);
     fn save_battle_snapshot(&mut self);
-    fn bonus_popup_text(&mut self) -> Vec<u8>;
     fn labyrinth_unit_count(&mut self, rarity: i32) -> i32;
     fn breadcrumb(&mut self, id: i32);
     fn analytics_params(&mut self, event: i32, value: i32, params: &[(&[u8], FormatArg<'_>)]);

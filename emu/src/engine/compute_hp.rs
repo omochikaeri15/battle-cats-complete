@@ -2,8 +2,8 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, CatStats, EOC_CHAPTER_HP_MUL, EnemyStats, ex_redirect_check_a, ex_redirect_check_b,
-    get_cat_combo_bonus, get_global_map_id, get_map_type, get_orb_value_max, get_star_level,
-    get_star_multiplier, get_talent_value, get_treasure_uncapped, get_treasure_value, is_ex_map_68,
+    get_cat_combo_bonus, get_global_map_id, get_map_type, get_orb_value_max, get_crown_level,
+    get_crown_multiplier, get_talent_value, get_treasure_uncapped, get_treasure_value, is_ex_map_68,
     read_flag, stage_entry_magnification,
 };
 
@@ -96,12 +96,12 @@ pub fn compute_hp(
 
         if chapter == 3 {
             let map_id = get_global_map_id(ctx, 0)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
 
-            scaled = ops::div_100(scaled.wrapping_mul(get_star_multiplier(
-                &ctx.star_multipliers,
+            scaled = ops::div_100(scaled.wrapping_mul(get_crown_multiplier(
+                &ctx.crown_multipliers,
                 map_id,
-                star,
+                crown,
             )? as i64));
         }
 

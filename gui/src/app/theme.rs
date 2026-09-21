@@ -19,6 +19,10 @@ const DISABLED_BUTTON_SHADE: f32 = 0.6;
 pub const WEAK_TEXT_ALPHA: f32 = 0.4;
 
 
+const OUTLINED_SHADE: f32 = 0.78;
+const OUTLINED_WIDTH: f32 = 2.0;
+const OUTLINED_ALPHA: f32 = 0.35;
+
 pub fn weak_text_color(theme: &Theme) -> Color {
     Color { a: WEAK_TEXT_ALPHA, ..theme.palette().text }
 }
@@ -287,6 +291,32 @@ pub fn left_sidebar_container(theme: &Theme) -> container::Style {
     let radius = Radius { top_left: 0.0, bottom_left: 0.0, top_right: SIDEBAR_RADIUS, bottom_right: SIDEBAR_RADIUS };
 
     sidebar_style(theme, radius, OPAQUE)
+}
+
+pub fn list_panel_container_right(theme: &Theme) -> container::Style {
+    let style = container::bordered_box(theme);
+
+    container::Style {
+        border: Border {
+            radius: Radius { top_left: RADIUS_MD, bottom_left: RADIUS_MD, top_right: 0.0, bottom_right: 0.0 },
+            ..style.border
+        },
+        ..style
+    }
+}
+
+pub fn outlined_card_container(theme: &Theme) -> container::Style {
+    let palette = theme.palette();
+
+    container::Style {
+        background: Some(shade_color(palette.background, OUTLINED_SHADE).into()),
+        border: Border {
+            radius: Radius::from(RADIUS_MD),
+            width: OUTLINED_WIDTH,
+            color: Color { a: OUTLINED_ALPHA, ..palette.text },
+        },
+        ..container::Style::default()
+    }
 }
 
 pub fn list_panel_container(theme: &Theme) -> container::Style {

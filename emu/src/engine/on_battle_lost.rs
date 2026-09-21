@@ -187,30 +187,30 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
-        let played = get_stage_record(ctx, map_type, map_index, stage_row, star, 0)?;
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
+        let played = get_stage_record(ctx, map_type, map_index, stage_row, crown, 0)?;
 
         log_analytics_event(ctx, 0x1d, (played <= 0) as i32, 0, 0, 0)?;
 
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-        add_stage_record(ctx, map_type, map_index, stage_row, star, 1, 0)?;
+        add_stage_record(ctx, map_type, map_index, stage_row, crown, 1, 0)?;
 
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-        if get_stage_record(ctx, map_type, map_index, stage_row, star, 0)? >= 0x2710 {
+        if get_stage_record(ctx, map_type, map_index, stage_row, crown, 0)? >= 0x2710 {
             let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
             let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
             let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-            let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+            let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-            set_stage_record(ctx, map_type, map_index, stage_row, star, 0x270f, 0)?;
+            set_stage_record(ctx, map_type, map_index, stage_row, crown, 0x270f, 0)?;
         }
 
         record_stage_played(ctx)?;

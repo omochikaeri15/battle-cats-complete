@@ -39,6 +39,7 @@ pub struct Session {
     discard: bool,
     stepped: Instant,
     failure: Option<String>,
+    stale: bool,
 }
 
 impl Session {
@@ -51,6 +52,7 @@ impl Session {
             frame,
             phase: Phase::Idle,
             sweep: 0,
+            stale: false,
             started: Instant::now(),
             entered: false,
             frozen: 0,
@@ -72,8 +74,8 @@ impl Session {
         self.driver.touches()
     }
 
-    pub fn design_height(&self) -> f32 {
-        self.driver.design_height()
+    pub fn design_width(&self) -> f32 {
+        self.driver.design_width()
     }
 
     pub fn covered(&self) -> bool {
@@ -108,6 +110,18 @@ impl Session {
         self.started = Instant::now();
         self.entered = false;
         self.failure = None;
+    }
+
+    pub fn forget_assets(&mut self) {
+        if self.phase == Phase::Idle {
+            self.driver.forget_assets();
+        } else {
+            self.stale = true;
+        }
+    }
+
+    pub fn equip(&mut self, setup: emu::runtime::Setup) {
+        self.driver.set_setup(setup);
     }
 
     pub fn configure(&mut self, options: BattleOptions) {
@@ -189,7 +203,7 @@ impl Session {
                 self.driver.draw_curtain(self.sweep);
             }
             Phase::Loading => {
-                self.driver.index_assets(vfs);
+                self.driver.reindex(vfs);
                 self.load();
 
                 if self.entered {
@@ -212,8 +226,12 @@ impl Session {
                     if self.discard {
                         self.discard = false;
                         self.failure = None;
-                        self.driver = Driver::new();
-                        self.frame = Rc::clone(self.driver.frame());
+                    }
+
+                    self.driver.renew();
+
+                    if std::mem::take(&mut self.stale) {
+                        self.driver.forget_assets();
                     }
 
                     return;

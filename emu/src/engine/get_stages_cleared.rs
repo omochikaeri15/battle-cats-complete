@@ -6,7 +6,7 @@ pub fn get_stages_cleared(
     ctx: &mut AppContext,
     map_type: i32,
     map_idx: i32,
-    star: i32,
+    crown: i32,
     use_cache: i32,
 ) -> Result<i32, Fault> {
     if use_cache != 0 {
@@ -20,9 +20,9 @@ pub fn get_stages_cleared(
             .stages_cleared_cache
             .entry(map_id)
             .or_default()
-            .get(star as usize)
+            .get(crown as usize)
             .map(|cleared| *cleared as i32)
-            .ok_or(Fault::index_out_of_range(star as i64, 4));
+            .ok_or(Fault::index_out_of_range(crown as i64, 4));
     }
 
     let map_id = map_type_base_id(map_type, map_idx);
@@ -34,7 +34,7 @@ pub fn get_stages_cleared(
     if map_type as u32 <= 4 {
         let cell = (map_type as u32 as i64) * 0x7d0
             + (map_idx as i64) * 4
-            + star as i64
+            + crown as i64
             + AppContext::STAGES_CLEARED_STORY as i64;
 
         return Ok(ctx.i8_at(cell as usize)? as i32);
@@ -51,7 +51,7 @@ pub fn get_stages_cleared(
             };
 
             maps.get(map_idx as usize)
-                .and_then(|stars| stars.get(star as usize))
+                .and_then(|crowns| crowns.get(crown as usize))
                 .map(|cleared| *cleared as i32)
                 .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
@@ -61,20 +61,20 @@ pub fn get_stages_cleared(
             let (maps, cell) = match case {
                 0x04 => (
                     &ctx.stages_cleared_neg20,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
                 0x06 => (
                     &ctx.stages_cleared_neg18,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
-                0x07 => (&ctx.stages_cleared_neg17, map_idx as i64 + star as i64),
+                0x07 => (&ctx.stages_cleared_neg17, map_idx as i64 + crown as i64),
                 0x08 => (
                     &ctx.stages_cleared_neg16,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
                 _ => (
                     &ctx.stages_cleared_neg11,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
             };
 
@@ -88,7 +88,7 @@ pub fn get_stages_cleared(
                 0x0f => &ctx.stages_cleared_neg9,
                 _ => &ctx.stages_cleared_neg4,
             };
-            let cell = (map_idx as i64) * 4 + star as i64;
+            let cell = (map_idx as i64) * 4 + crown as i64;
 
             maps.get(cell as usize)
                 .copied()
@@ -96,7 +96,7 @@ pub fn get_stages_cleared(
         }
         0x12 => {
             let cell = (map_idx as i64) * 0x10
-                + (star as i64) * 4
+                + (crown as i64) * 4
                 + AppContext::STAGES_CLEARED_NEG6 as i64;
 
             ctx.i32_at(cell as usize)

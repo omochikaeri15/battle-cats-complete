@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, get_global_map_id, get_map_type, get_stage_index, get_star_level};
+use super::{AppContext, get_global_map_id, get_map_type, get_stage_index, get_crown_level};
 
 pub fn get_current_stage_id(ctx: &mut AppContext) -> Result<i32, Fault> {
     let leading = if get_map_type(ctx, 0)? == 0
@@ -10,7 +10,7 @@ pub fn get_current_stage_id(ctx: &mut AppContext) -> Result<i32, Fault> {
     {
         let map_part = get_global_map_id(ctx, 0)?.wrapping_mul(0x3e8);
 
-        get_star_level(ctx)?
+        get_crown_level(ctx)?
             .wrapping_mul(0x64)
             .wrapping_add(map_part)
     } else {

@@ -60,27 +60,27 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                 20 => mode == 9 && ctx.u8_at(AppContext::BATTLE_IS_INVASION)? != 0,
                 21 => {
                     mode == 3
-                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 0
+                        && ctx.i32_at(AppContext::CROWN_LEVEL)? == 0
                         && !lose_exit_map_check(ctx)?
                 }
                 22 => {
                     mode == 3
-                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 1
+                        && ctx.i32_at(AppContext::CROWN_LEVEL)? == 1
                         && !lose_exit_map_check(ctx)?
                 }
                 23 => {
                     mode == 3
-                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 2
+                        && ctx.i32_at(AppContext::CROWN_LEVEL)? == 2
                         && !lose_exit_map_check(ctx)?
                 }
                 24 => {
                     mode == 3
-                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 3
+                        && ctx.i32_at(AppContext::CROWN_LEVEL)? == 3
                         && !lose_exit_map_check(ctx)?
                 }
                 25 => {
                     mode == 3
-                        && ctx.i32_at(AppContext::STAR_LEVEL)? == 4
+                        && ctx.i32_at(AppContext::CROWN_LEVEL)? == 4
                         && !lose_exit_map_check(ctx)?
                 }
                 _ => mode == 0x63 && !lose_exit_map_check(ctx)?,

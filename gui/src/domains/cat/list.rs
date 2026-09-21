@@ -33,8 +33,15 @@ impl Roster for CatRoster {
         entry.id
     }
 
-    fn image_path(entry: &CatEntry) -> Option<PathBuf> {
-        entry.image_path.clone()
+    fn image_path(entry: &CatEntry, variant: Option<usize>) -> Option<PathBuf> {
+        let Some(preferred) = variant else {
+            return entry.image_path.clone();
+        };
+
+        (0..=preferred.min(entry.banner_paths.len() - 1))
+            .rev()
+            .find_map(|form| entry.banner_paths[form].clone())
+            .or_else(|| entry.banner_paths.iter().flatten().next().cloned())
     }
 
     fn passes_filter(entry: &CatEntry, filter: &CatFilterState) -> bool {

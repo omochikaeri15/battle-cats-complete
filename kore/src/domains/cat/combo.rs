@@ -29,6 +29,10 @@ pub struct CatCombo {
     pub line: usize,
     pub name: String,
     pub effect: String,
+    pub kind: String,
+    pub band: String,
+    pub effect_type: i32,
+    pub effect_level: i32,
     pub restriction: Option<String>,
     pub members: [ComboMember; 5],
 }
@@ -56,6 +60,16 @@ pub fn combo_lines(vault: &Vault, cat_id: u32, form: usize) -> Vec<usize> {
 pub fn combos(ctx: GlobalContext<'_>, cat_id: u32, form: usize) -> Vec<CatCombo> {
     trace!(cat_id = cat_id, form = form, "resolving the combos a cat takes part in");
 
+    resolve(ctx, |row| joins(row, cat_id, form))
+}
+
+pub fn every(ctx: GlobalContext<'_>) -> Vec<CatCombo> {
+    trace!("resolving every combo the game declares");
+
+    resolve(ctx, NyancomboData::is_active)
+}
+
+fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> Vec<CatCombo> {
     let vfs = &ctx.vault.vfs;
     let vds = &ctx.vault.vds;
 
@@ -66,8 +80,7 @@ pub fn combos(ctx: GlobalContext<'_>, cat_id: u32, form: usize) -> Vec<CatCombo>
     let unitbuy = vds.cats.unitbuy(vfs);
     let groups = vds.stages.charagroups(vfs);
 
-    let joined: Vec<(usize, &NyancomboData)> =
-        rows.iter().enumerate().filter(|(_, row)| joins(row, cat_id, form)).collect();
+    let joined: Vec<(usize, &NyancomboData)> = rows.iter().enumerate().filter(|(_, row)| wanted(row)).collect();
 
     if joined.is_empty() {
         return Vec::new();
@@ -98,7 +111,17 @@ pub fn combos(ctx: GlobalContext<'_>, cat_id: u32, form: usize) -> Vec<CatCombo>
                 member(vfs, &unitbuy, &mut explanations, slot, empty_icon.as_deref())
             });
 
-            CatCombo { line, name, effect: format!("{effect}{band}"), restriction, members }
+            CatCombo {
+                line,
+                name,
+                effect: format!("{effect}{band}"),
+                kind: effect.trim().to_owned(),
+                band: band.trim().to_owned(),
+                effect_type: row.effect_type,
+                effect_level: row.effect_level,
+                restriction,
+                members,
+            }
         })
         .collect()
 }

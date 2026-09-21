@@ -7,7 +7,7 @@ use super::{
 #[derive(Clone, Default, PartialEq, Debug)]
 pub struct DropItemRow {
     pub map_id: i32,
-    pub star_rates: Vec<f32>,
+    pub crown_rates: Vec<f32>,
     pub stage_rates: Vec<f32>,
     pub miss_weight: i32,
     pub item_weights: Vec<i32>,
@@ -28,7 +28,7 @@ pub fn load_drop_item_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let row = ctx.drop_item_rows.entry(key).or_default();
 
         row.map_id = 0;
-        row.star_rates.clear();
+        row.crown_rates.clear();
         row.stage_rates.clear();
         row.miss_weight = 0;
         row.item_weights.clear();
@@ -44,7 +44,7 @@ pub fn load_drop_item_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.drop_item_rows
                 .entry(key)
                 .or_default()
-                .star_rates
+                .crown_rates
                 .push(value);
         }
 

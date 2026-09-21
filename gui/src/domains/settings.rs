@@ -37,6 +37,7 @@ impl std::fmt::Display for BannerForm {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     General,
+    Sandbox,
     Cats,
     Enemies,
     Stages,
@@ -56,6 +57,7 @@ pub enum Message {
     TabSelected(Tab),
     General(general::Message),
     PreferredBannerSelected(usize),
+    SandboxBannerSelected(usize),
     ToggleInvalidCats(bool),
     ToggleExpandSpirit(bool),
     DefaultLevelChanged(String),
@@ -153,6 +155,10 @@ impl State {
 
             Message::PreferredBannerSelected(val) => {
                 core_settings.cat_data.preferred_banner_form = val;
+                Task::none()
+            }
+            Message::SandboxBannerSelected(val) => {
+                core_settings.sandbox.banner_form = val;
                 Task::none()
             }
             Message::ToggleInvalidCats(val) => {
@@ -339,6 +345,7 @@ impl State {
 
         let tabs = [
             (Tab::General, "General"),
+            (Tab::Sandbox, "Sandbox"),
             (Tab::Cats, "Cats"),
             (Tab::Enemies, "Enemies"),
             (Tab::Stages, "Stages"),
@@ -376,6 +383,7 @@ impl State {
                 header_section(text("Keys & IV").size(24), self.view_keys(core_settings)),
                 self.general.view(core_settings, updater_status).map(Message::General),
             ].spacing(SECTION_SPACING).into(),
+            Tab::Sandbox => Self::view_sandbox(core_settings),
             Tab::Cats => self.view_cats(core_settings),
             Tab::Enemies => self.view_enemies(core_settings),
             Tab::Stages => self.view_stages(core_settings),
@@ -389,6 +397,21 @@ impl State {
             Tab::AddOns => self.addons.view().map(Message::Addons),
             Tab::About => self.view_about(),
         }
+    }
+
+    fn view_sandbox(core_settings: &CoreSettings) -> Element<'_, Message> {
+        let banner_options: Vec<BannerForm> = (0..cat_files::FORM_COUNT).map(BannerForm).collect();
+
+        let list_content = row![
+            text("Lineup Banner Form"),
+            pick_list(
+                banner_options,
+                Some(BannerForm(core_settings.sandbox.banner_form)),
+                |form| Message::SandboxBannerSelected(form.0),
+            ).style(theme::combo_box).menu_style(theme::combo_box_menu),
+        ].spacing(10).align_y(Alignment::Center);
+
+        header_section(text("Lineup List").size(24), list_content)
     }
 
     fn view_cats<'a>(&'a self, core_settings: &'a CoreSettings) -> Element<'a, Message> {

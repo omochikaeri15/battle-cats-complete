@@ -534,6 +534,7 @@ fn load_map(
             let rule_id = match target_rule {
                 RuleType::TrustFund(_) => 0,
                 RuleType::CooldownEquality(_) => 1,
+                RuleType::LineupLimit(_) => 2,
                 RuleType::RarityLimit(_) => 3,
                 RuleType::CheapLabor(_) => 4,
                 RuleType::CatCost(_) => 5,
@@ -574,6 +575,7 @@ fn load_map(
         score_bonuses: global_map_id.and_then(|id| ctx.score_bonuses.get(&id)).cloned(),
         special_rules,
         invalid_combos,
+        cost_multiplier: map_opt.cost_multiplier,
         drop_items: global_map_id.and_then(|id| ctx.drop_items.get(&id)).cloned(),
     };
 

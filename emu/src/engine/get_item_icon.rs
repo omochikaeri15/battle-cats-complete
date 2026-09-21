@@ -13,5 +13,5 @@ pub fn get_item_icon(ctx: &AppContext, item: i32) -> Result<i32, Fault> {
             + ItemDefinition::ICON,
     )?;
 
-    Ok(if icon == -1 { 0x78 } else { icon })
+    Ok(if icon == -1 { item } else { icon })
 }

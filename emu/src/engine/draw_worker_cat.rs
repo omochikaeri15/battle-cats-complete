@@ -155,7 +155,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.img001_sheet
             .as_deref()
             .ok_or(Fault::null_pointer())?,
-        ops::cvttss2si(area.left),
+        ops::cvttss2si(area.right),
         y,
         0x16,
         0x1a,

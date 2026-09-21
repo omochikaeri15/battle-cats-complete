@@ -3,9 +3,9 @@ use std::rc::Rc;
 
 use emu::engine::AppContext;
 use emu::runtime::{
-    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, apply_battle_options,
+    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Setup, apply_battle_options,
     fill_dummy_save, fill_dummy_talents, load_scene_sheets,
-    pump_stage_return, read_battle_options, relatch_battle_rects, stock_battle_items, unlock_dummy_combos,
+    pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use tracing::{info, warn};
@@ -13,8 +13,8 @@ use tracing::{info, warn};
 use super::assets::{DiskAssets, FileIndex, SheetCache};
 use super::input::{Touch, TouchQueue};
 use super::sink::{Frame, Recorder};
-use super::sound::{SharedVolumes, Speaker, Volumes};
-use super::text::Formatter;
+use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
+use super::text::{Formatter, LABEL_PREFIX};
 
 const CURTAIN_CLOSING: i32 = 1;
 const IDENTITY: [f32; 6] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
@@ -22,14 +22,10 @@ const BATTLE_SCENE: i32 = 0x12c;
 const TRANSITION_SCENE: i32 = 0x3e7;
 const FADE_STEPS: usize = 0x10;
 const FINGER_GAP: i32 = 400;
+const PINCH_EASE: i32 = 4;
+const PINCH_LIFT_FRAMES: u32 = 2;
 const FULL_VOLUME: i32 = 100;
 const DIM_ALPHA: i32 = 0x80;
-const MAP_BATTLE_MODE: i32 = 3;
-const STAGE_CATEGORY: i32 = -16;
-const STAGE_MAP: i32 = 52;
-const STAGE_INDEX: i32 = 9;
-const CAT_SIDE: i32 = 1;
-const ENEMY_SIDE: i32 = 2;
 const NOTCH_SHARE: f32 = 0.04;
 
 pub struct Driver {
@@ -39,13 +35,17 @@ pub struct Driver {
     files: Rc<RefCell<FileIndex>>,
     touches: TouchQueue,
     volumes: SharedVolumes,
+    output: SharedOutput,
     options: BattleOptions,
+    setup: Setup,
     changed: bool,
     returning: Rc<Cell<bool>>,
     profile: Rc<DeviceProfile>,
     phone: bool,
     spread: i32,
     gap: Option<i32>,
+    reach: i32,
+    idle: u32,
     booted: bool,
 }
 
@@ -53,67 +53,108 @@ impl Driver {
     pub fn new() -> Self {
         let frame = Rc::new(RefCell::new(Frame::default()));
         let sheets: Rc<RefCell<SheetCache>> = Rc::new(RefCell::new(SheetCache::new()));
-        let mut ctx = Box::new(AppContext::default());
-
         let files: Rc<RefCell<FileIndex>> = Rc::new(RefCell::new(FileIndex::new()));
         let volumes: SharedVolumes = Rc::new(RefCell::new(Volumes {
             music: FULL_VOLUME,
             effects: FULL_VOLUME,
         }));
-
-        ctx.set_assets(Box::new(DiskAssets::new(Rc::clone(&files), Rc::clone(&sheets))));
+        let output = SharedOutput::open();
         let profile = Rc::new(DeviceProfile::default());
-
-        profile.tablet.set(true);
-        ctx.set_platform(Box::new(InertPlatform {
-            profile: Rc::clone(&profile),
-        }));
-        ctx.set_sound(Box::new(Speaker::new(Rc::clone(&files), Rc::clone(&volumes))));
-        ctx.set_meta(Box::new(InertMeta));
         let returning = Rc::new(Cell::new(false));
 
-        ctx.set_scene_host(Box::new(InertScene {
-            returning: Rc::clone(&returning),
-        }));
-        ctx.set_text_renderer(Box::new(Formatter::new(Rc::clone(&sheets))));
-        ctx.set_ui(Box::new(InertUi));
-        ctx.draw = Some(Box::new(Recorder::new(Rc::clone(&frame))));
+        profile.tablet.set(true);
 
-        if let Err(fault) = fill_dummy_save(&mut ctx) {
-            warn!("emu: dummy save could not be filled: {fault}");
-        }
-
-        Self {
-            ctx,
+        let mut driver = Self {
+            ctx: Box::new(AppContext::default()),
             frame,
             sheets,
             files,
             touches: super::input::queue(),
             volumes,
+            output,
             options: BattleOptions {
                 music: FULL_VOLUME,
                 effects: FULL_VOLUME,
                 two_rows: false,
                 vibrate: false,
             },
+            setup: Setup::default(),
             changed: false,
             returning,
             profile,
             phone: false,
             spread: 0,
             gap: None,
+            reach: FINGER_GAP,
+            idle: 0,
             booted: false,
+        };
+
+        driver.host();
+        driver
+    }
+
+    fn host(&mut self) {
+        let ctx = &mut self.ctx;
+
+        ctx.set_assets(Box::new(DiskAssets::new(Rc::clone(&self.files), Rc::clone(&self.sheets))));
+        ctx.set_platform(Box::new(InertPlatform {
+            profile: Rc::clone(&self.profile),
+        }));
+        ctx.set_sound(Box::new(Speaker::new(
+            Rc::clone(&self.files),
+            Rc::clone(&self.volumes),
+            self.output.share(),
+        )));
+        ctx.set_meta(Box::new(InertMeta));
+        ctx.set_scene_host(Box::new(InertScene {
+            returning: Rc::clone(&self.returning),
+        }));
+        ctx.set_text_renderer(Box::new(Formatter::new(Rc::clone(&self.sheets))));
+        ctx.set_ui(Box::new(InertUi));
+        ctx.draw = Some(Box::new(Recorder::new(Rc::clone(&self.frame))));
+
+        if let Err(fault) = fill_dummy_save(ctx, &self.setup) {
+            warn!("emu: dummy save could not be filled: {fault}");
         }
+    }
+
+    pub fn renew(&mut self) {
+        let width = self.ctx.device_screen_w as f32;
+        let height = self.ctx.device_screen_h as f32;
+        let options = self.options;
+
+        *self.ctx = AppContext::default();
+        self.sheets.borrow_mut().retain(|name, _| !name.starts_with(LABEL_PREFIX));
+        self.touches.borrow_mut().clear();
+        self.returning.set(false);
+        self.spread = 0;
+        self.gap = None;
+        self.booted = false;
+        self.host();
+        self.resize(width, height);
+        self.set_options(options);
     }
 
     pub fn resolved(&self) -> usize {
         self.files.borrow().len()
     }
 
-    pub fn index_assets(&mut self, vfs: &Vfs) {
-        if self.files.borrow().is_empty() {
-            *self.files.borrow_mut() = DiskAssets::index(vfs);
+    pub fn forget_assets(&mut self) {
+        self.files.borrow_mut().clear();
+        self.sheets.borrow_mut().clear();
+    }
+
+    pub fn reindex(&mut self, vfs: &Vfs) {
+        let fresh = DiskAssets::index(vfs);
+
+        {
+            let held = self.files.borrow();
+
+            self.sheets.borrow_mut().retain(|name, _| held.get(name) == fresh.get(name));
         }
+
+        *self.files.borrow_mut() = fresh;
     }
 
     pub fn sheets(&self) -> &Rc<RefCell<SheetCache>> {
@@ -129,9 +170,9 @@ impl Driver {
     }
 
     fn pump_input(&mut self) {
-        let pending: Vec<Touch> = self.touches.borrow_mut().drain(..).collect();
+        let mut pending: std::collections::VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
 
-        for touch in pending {
+        while let Some(touch) = pending.pop_front() {
             let fed = match touch {
                 Touch::Pinched { spread: step } => {
                     self.spread = self.spread.wrapping_add(step);
@@ -140,6 +181,14 @@ impl Driver {
                 }
                 Touch::Moved { x, y } => {
                     emu::runtime::queue_touch_position(&mut self.ctx, x, y)
+                }
+                Touch::Pressed { .. } if self.gap.is_some() => {
+                    self.spread = 0;
+                    self.gap = None;
+                    pending.push_front(touch);
+                    self.touches.borrow_mut().extend(pending.drain(..));
+
+                    Ok(())
                 }
                 Touch::Pressed { x, y } => emu::runtime::queue_touch_press(&mut self.ctx, x, y),
                 Touch::Released => emu::runtime::queue_touch_release(&mut self.ctx),
@@ -150,15 +199,7 @@ impl Driver {
             }
         }
 
-        self.gap = match (self.spread, self.gap) {
-            (0, _) => None,
-            (_, None) => Some(FINGER_GAP),
-            (spread, Some(gap)) => {
-                self.spread = 0;
-
-                Some(gap.wrapping_add(spread).max(1))
-            }
-        };
+        self.ease_pinch();
 
         if let Err(fault) = emu::runtime::pump_pinch(&mut self.ctx, self.gap) {
             warn!("emu: pinch could not be pumped: {fault}");
@@ -167,6 +208,40 @@ impl Driver {
         if let Err(fault) = emu::runtime::pump_touch(&mut self.ctx) {
             warn!("emu: touch could not be pumped: {fault}");
         }
+    }
+
+    fn ease_pinch(&mut self) {
+        let spread = std::mem::take(&mut self.spread);
+
+        let Some(gap) = self.gap else {
+            if spread != 0 {
+                self.gap = Some(FINGER_GAP);
+                self.reach = FINGER_GAP.wrapping_add(spread).max(1);
+                self.idle = 0;
+            }
+
+            return;
+        };
+
+        self.reach = self.reach.wrapping_add(spread).max(1);
+
+        let left = self.reach.wrapping_sub(gap);
+
+        if left == 0 {
+            self.idle = self.idle.saturating_add(1);
+
+            if self.idle > PINCH_LIFT_FRAMES {
+                self.gap = None;
+            }
+
+            return;
+        }
+
+        let eased = left / PINCH_EASE;
+        let moved = if eased == 0 { left.signum() } else { eased };
+
+        self.idle = 0;
+        self.gap = Some(gap.wrapping_add(moved));
     }
 
     pub fn resize(&mut self, width: f32, height: f32) {
@@ -203,8 +278,8 @@ impl Driver {
         self.resize(width, height);
     }
 
-    pub fn design_height(&self) -> f32 {
-        self.ctx.screen_metrics.design_h2 as f32
+    pub fn design_width(&self) -> f32 {
+        self.ctx.screen_metrics.design_w as f32
     }
 
     pub fn in_battle(&self) -> bool {
@@ -232,7 +307,7 @@ impl Driver {
             Ok(true) => {
                 unlock_dummy_combos(&mut self.ctx);
 
-                fill_dummy_talents(&mut self.ctx);
+                fill_dummy_talents(&mut self.ctx, &self.setup);
 
                 if let Err(fault) = load_scene_sheets(&mut self.ctx) {
                     warn!("emu: scene sheets failed to load: {fault}");
@@ -249,8 +324,12 @@ impl Driver {
     }
 
     pub fn enter_battle(&mut self) -> bool {
-        if let Err(fault) = stock_battle_items(&mut self.ctx) {
+        if let Err(fault) = stock_battle_items(&mut self.ctx, &self.setup) {
             warn!("emu: battle items could not be stocked: {fault}");
+        }
+
+        if let Err(fault) = seed_altar_records(&mut self.ctx, &self.setup) {
+            warn!("emu: altar records could not be seeded: {fault}");
         }
 
         if let Err(fault) = self.select_stage() {
@@ -297,18 +376,16 @@ impl Driver {
     }
 
     fn select_stage(&mut self) -> Result<(), emu::Fault> {
-        self.ctx
-            .set_i32_at(AppContext::CHAPTER_MODE, MAP_BATTLE_MODE)?;
-        self.ctx.set_i32_at(
-            AppContext::SAVED_MAP_TYPE,
-            emu::engine::map_type_as_index(STAGE_CATEGORY),
-        )?;
-        self.ctx.set_i32_at(AppContext::MAP_INDEX, STAGE_MAP)?;
-        self.ctx.set_i32_at(AppContext::ENTRY_STAGE, STAGE_INDEX)?;
-        self.ctx
-            .set_i32_at(AppContext::faction_flags(0), CAT_SIDE)?;
-        self.ctx
-            .set_i32_at(AppContext::faction_flags(1), ENEMY_SIDE)
+        emu::runtime::select_stage(&mut self.ctx, self.setup.stage)
+    }
+
+    pub fn set_setup(&mut self, setup: Setup) {
+        if self.setup == setup {
+            return;
+        }
+
+        self.setup = setup;
+        self.renew();
     }
 
     pub fn advance(&mut self) -> Result<(), String> {

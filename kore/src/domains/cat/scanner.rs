@@ -24,6 +24,7 @@ use crate::{Vfs, Vault};
 pub struct CatEntry {
     pub id: u32,
     pub image_path: Option<PathBuf>,
+    pub banner_paths: [Option<PathBuf>; 4],
     pub deploy_icon_paths: [Option<PathBuf>; 4],
     pub names: [Option<String>; 4],
     pub description: [Option<Vec<String>>; 4],
@@ -72,6 +73,7 @@ struct Images {
     forms: [bool; 4],
     deploy_icons: [Option<PathBuf>; 4],
     banner: Option<PathBuf>,
+    banners: [Option<PathBuf>; 4],
     art: bool,
 }
 
@@ -138,10 +140,17 @@ fn resolve_images(vfs: &Vfs, id: u32, egg_ids: (i32, i32), ub_row: &UnitBuy, con
         .rev()
         .find(|form| forms[*form] && banners[*form].is_some());
 
-    let banner = picked.and_then(|form| banners[form].take());
+    let banner = picked.and_then(|form| banners[form].clone());
+
+    for form in 0..forms.len() {
+        if !forms[form] {
+            banners[form] = None;
+        }
+    }
+
     let art = config.show_invalid_cats || real.iter().any(|found| *found);
 
-    Images { forms, deploy_icons, banner, art }
+    Images { forms, deploy_icons, banner, banners, art }
 }
 
 fn base_form_present(form: usize, banner: bool, icon: bool, real: bool, show_invalid: bool) -> bool {
@@ -183,6 +192,7 @@ pub fn revalidate(vfs: &Vfs, entry: &mut CatEntry, config: &ScannerConfig) -> bo
     entry.forms = images.forms;
     entry.deploy_icon_paths = images.deploy_icons;
     entry.image_path = images.banner;
+    entry.banner_paths = images.banners;
 
     listable
 }
@@ -347,6 +357,7 @@ fn process_cat_entry(
     Some(CatEntry {
         id: cat_id,
         image_path: images.banner,
+        banner_paths: images.banners,
         deploy_icon_paths: images.deploy_icons,
         names: explanation.names,
         description: explanation.descriptions,

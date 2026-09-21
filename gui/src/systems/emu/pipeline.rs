@@ -4,6 +4,8 @@ use std::ops::Range;
 use iced::wgpu;
 use iced::widget::shader;
 
+use super::assets::Sheet;
+
 const SHADER_SOURCE: &str = r"
 struct VertexInput {
     @location(0) position: vec2<f32>,
@@ -59,6 +61,7 @@ pub struct Run {
 
 struct Binding {
     bind_group: wgpu::BindGroup,
+    stamp: u64,
 }
 
 pub struct Pipeline {
@@ -76,7 +79,7 @@ impl shader::Pipeline for Pipeline {
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Self {
         let mut pipeline = Self::create(device, format);
 
-        pipeline.blank = Some(pipeline.upload(device, queue, 1, 1, &[0xff, 0xff, 0xff, 0xff]));
+        pipeline.blank = Some(pipeline.upload(device, queue, 1, 1, &[0xff, 0xff, 0xff, 0xff], 0));
         pipeline
     }
 }
@@ -186,6 +189,7 @@ impl Pipeline {
         width: u32,
         height: u32,
         pixels: &[u8],
+        stamp: u64,
     ) -> Binding {
         let size = wgpu::Extent3d {
             width: width.max(1),
@@ -235,23 +239,15 @@ impl Pipeline {
             ],
         });
 
-        Binding { bind_group }
+        Binding { bind_group, stamp }
     }
 
-    pub fn ensure_sheet(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        name: &str,
-        width: u32,
-        height: u32,
-        pixels: &[u8],
-    ) {
-        if self.sheets.contains_key(name) {
+    pub fn ensure_sheet(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &str, sheet: &Sheet) {
+        if self.sheets.get(name).is_some_and(|held| held.stamp == sheet.stamp) {
             return;
         }
 
-        let binding = self.upload(device, queue, width, height, pixels);
+        let binding = self.upload(device, queue, sheet.width, sheet.height, &sheet.pixels, sheet.stamp);
 
         self.sheets.insert(Box::from(name), binding);
     }

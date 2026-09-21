@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use nyanko::cat::unit::{
-    LevelCurve, NyancomboData, NyancomboFilter, NyancomboParam, SkillDescriptions, Talent, TalentCost,
+    Equipment, LevelCurve, NyancomboData, NyancomboFilter, NyancomboParam, SkillDescriptions, Talent, TalentCost,
     UnitBuy, UnitEvolve,
 };
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,8 @@ pub struct CatStore {
     combo_bands: Slot<Vec<Option<String>>>,
     combo_filters: Slot<Vec<NyancomboFilter>>,
     combo_params: Slot<Vec<NyancomboParam>>,
+    orbs: Slot<Vec<Equipment>>,
+    orb_slots: Slot<HashMap<u32, usize>>,
 }
 
 impl Clone for CatStore {
@@ -45,6 +47,8 @@ impl Clone for CatStore {
             combo_bands: super::snapshot(&self.combo_bands),
             combo_filters: super::snapshot(&self.combo_filters),
             combo_params: super::snapshot(&self.combo_params),
+            orbs: super::snapshot(&self.orbs),
+            orb_slots: super::snapshot(&self.orb_slots),
         }
     }
 }
@@ -150,6 +154,14 @@ impl CatStore {
         super::cached(&self.combo_params, || waiter::nyancomboparam(vfs))
     }
 
+    pub fn orbs(&self, vfs: &Vfs) -> Arc<Vec<Equipment>> {
+        super::cached(&self.orbs, || waiter::equipmentlist(vfs))
+    }
+
+    pub fn orb_slots(&self, vfs: &Vfs) -> Arc<HashMap<u32, usize>> {
+        super::cached(&self.orb_slots, || waiter::equipmentslot(vfs))
+    }
+
     pub(super) fn evict(&self, filename: &str) {
         match filename {
             files::SKILL_ACQUISITION => super::reset(&self.talents),
@@ -164,6 +176,8 @@ impl CatStore {
             files::NYANCOMBO_BAND => super::reset(&self.combo_bands),
             files::NYANCOMBO_FILTER => super::reset(&self.combo_filters),
             files::NYANCOMBO_PARAM => super::reset(&self.combo_params),
+            files::EQUIPMENT_LIST => super::reset(&self.orbs),
+            files::EQUIPMENT_SLOT => super::reset(&self.orb_slots),
             _ => (),
         }
     }

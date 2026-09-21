@@ -1,23 +1,23 @@
 use crate::{Fault, ops};
 
-use super::{AppContext, get_global_map_id, get_stage_index, get_star_level};
+use super::{AppContext, get_global_map_id, get_stage_index, get_crown_level};
 
 pub fn clear_lineup_record(
     ctx: &mut AppContext,
     map: i32,
     stage: i32,
-    star: i32,
+    crown: i32,
 ) -> Result<(), Fault> {
-    let (map, stage, star) = if map == -1 {
+    let (map, stage, crown) = if map == -1 {
         (
             get_global_map_id(ctx, 0)?,
             get_stage_index(ctx)?,
-            get_star_level(ctx)?,
+            get_crown_level(ctx)?,
         )
     } else {
-        (map, stage, star)
+        (map, stage, crown)
     };
-    let key = star
+    let key = crown
         .wrapping_add(stage.wrapping_mul(10))
         .wrapping_add(map.wrapping_mul(0x3e8));
 

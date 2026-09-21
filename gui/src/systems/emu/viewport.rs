@@ -12,12 +12,12 @@ use super::pipeline::{Pipeline, Run, Vertex};
 use super::sink::Frame as EmuFrame;
 
 const PIXELS_PER_LINE: f32 = 40.0;
-const SPREAD_PER_LINE: f32 = 25.0;
+const SPREAD_PER_LINE: f32 = 28.0;
 
 pub struct Viewport {
     frame: Rc<RefCell<EmuFrame>>,
     sheets: Rc<RefCell<SheetCache>>,
-    design_height: f32,
+    design_width: f32,
     touches: TouchQueue,
     active: bool,
     covered: bool,
@@ -51,7 +51,7 @@ impl<Message> shader::Program<Message> for Viewport {
     fn draw(&self, _state: &Held, _cursor: mouse::Cursor, bounds: Rectangle) -> Scene {
         let frame = self.frame.borrow();
 
-        if !self.active || frame.quads.is_empty() || bounds.height <= 0.0 {
+        if !self.active || frame.quads.is_empty() || bounds.width <= 0.0 {
             return Scene {
                 vertices: Vec::new(),
                 runs: Vec::new(),
@@ -59,11 +59,7 @@ impl<Message> shader::Program<Message> for Viewport {
             };
         }
 
-        let scale = if self.design_height > 0.0 {
-            bounds.height / self.design_height
-        } else {
-            1.0
-        };
+        let scale = if self.design_width > 0.0 { bounds.width / self.design_width } else { 1.0 };
         let sheets = self.sheets.borrow();
         let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
         let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
@@ -161,11 +157,7 @@ impl<Message> shader::Program<Message> for Viewport {
             return None;
         }
 
-        let scale = if self.design_height > 0.0 && bounds.height > 0.0 {
-            bounds.height / self.design_height
-        } else {
-            1.0
-        };
+        let scale = if self.design_width > 0.0 && bounds.width > 0.0 { bounds.width / self.design_width } else { 1.0 };
         let at = cursor.position_in(bounds).map(|point| {
             (
                 (point.x / scale).round() as i32,
@@ -173,18 +165,30 @@ impl<Message> shader::Program<Message> for Viewport {
             )
         });
 
-        let lifted = matches!(
-            event,
-            iced::Event::Mouse(
-                mouse::Event::ButtonReleased(mouse::Button::Left) | mouse::Event::CursorLeft
-            )
-        );
+        if state.pressed {
+            let lifted = matches!(
+                event,
+                iced::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                    | iced::Event::Window(iced::window::Event::Unfocused)
+            );
 
-        if state.pressed && (lifted || at.is_none()) {
-            state.pressed = false;
-            self.touches.borrow_mut().push(Touch::Released);
+            if lifted {
+                state.pressed = false;
+                self.touches.borrow_mut().push(Touch::Released);
 
-            return None;
+                return None;
+            }
+
+            let dragged = cursor.position().filter(|_| matches!(event, iced::Event::Mouse(mouse::Event::CursorMoved { .. })));
+
+            if let Some(point) = dragged.filter(|_| at.is_none()) {
+                let x = ((point.x - bounds.x).clamp(0.0, bounds.width) / scale).round() as i32;
+                let y = ((point.y - bounds.y).clamp(0.0, bounds.height) / scale).round() as i32;
+
+                self.touches.borrow_mut().push(Touch::Moved { x, y });
+
+                return Some(shader::Action::capture());
+            }
         }
 
         if !self.covered && !self.frozen && let Some((x, y)) = at {
@@ -229,10 +233,10 @@ impl<Message> shader::Program<Message> for Viewport {
         _bounds: Rectangle,
         _cursor: mouse::Cursor,
     ) -> mouse::Interaction {
-        if self.active && self.covered {
-            mouse::Interaction::Progress
-        } else {
-            mouse::Interaction::None
+        match (self.active, self.covered) {
+            (true, true) => mouse::Interaction::Progress,
+            (true, false) => mouse::Interaction::Idle,
+            (false, _) => mouse::Interaction::None,
         }
     }
 }
@@ -249,14 +253,7 @@ impl shader::Primitive for Scene {
         _viewport: &shader::Viewport,
     ) {
         for (name, sheet) in &self.uploads {
-            pipeline.ensure_sheet(
-                device,
-                queue,
-                name,
-                sheet.width,
-                sheet.height,
-                &sheet.pixels,
-            );
+            pipeline.ensure_sheet(device, queue, name, sheet);
         }
 
         let runs = self
@@ -289,7 +286,7 @@ pub struct Feed<'a> {
     pub touches: Option<&'a TouchQueue>,
     pub covered: bool,
     pub frozen: bool,
-    pub design_height: f32,
+    pub design_width: f32,
 }
 
 pub fn overlay<'a, Message: 'a>(
@@ -303,7 +300,7 @@ pub fn overlay<'a, Message: 'a>(
         touches,
         covered,
         frozen,
-        design_height,
+        design_width,
     } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
@@ -312,7 +309,7 @@ pub fn overlay<'a, Message: 'a>(
     let painted = shader::Shader::new(Viewport {
         frame,
         sheets,
-        design_height,
+        design_width,
         touches,
         active,
         covered,

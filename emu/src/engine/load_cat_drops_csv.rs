@@ -7,8 +7,8 @@ use super::{
 
 pub fn load_cat_drops_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.drop_chara_rows.clear();
-    ctx.drop_chara_max_1100s = -1;
-    ctx.drop_chara_max_1000s = -1;
+    ctx.drop_chara_max_1100 = -1;
+    ctx.drop_chara_max_1000 = -1;
 
     let Some(bytes) = open_asset_stream(ctx, b"drop_chara.csv", 0, 0)? else {
         return Ok(());
@@ -32,11 +32,11 @@ pub fn load_cat_drops_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let id = row.first().copied().unwrap_or(0);
 
         if (id.wrapping_sub(0x3e8) as u32) < 0x64 {
-            if id > ctx.drop_chara_max_1000s {
-                ctx.drop_chara_max_1000s = id;
+            if id > ctx.drop_chara_max_1000 {
+                ctx.drop_chara_max_1000 = id;
             }
-        } else if (id.wrapping_sub(0x44c) as u32) <= 0x63 && id > ctx.drop_chara_max_1100s {
-            ctx.drop_chara_max_1100s = id;
+        } else if (id.wrapping_sub(0x44c) as u32) <= 0x63 && id > ctx.drop_chara_max_1100 {
+            ctx.drop_chara_max_1100 = id;
         }
 
         ctx.drop_chara_rows.push(row);

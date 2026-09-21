@@ -65,6 +65,7 @@ pub struct Settings {
     pub stages: StageDataSettings,
     pub files: FilesSettings,
     pub utilities: UtilitiesSettings,
+    pub sandbox: SandboxSettings,
     pub window: WindowSettings,
 }
 
@@ -97,6 +98,12 @@ impl FrameCount {
 #[serde(default)]
 pub struct UtilitiesSettings {
     pub frame_count: FrameCount,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
+pub struct SandboxSettings {
+    pub banner_form: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]

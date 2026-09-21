@@ -10,7 +10,7 @@ pub fn get_stage_record(
     map_type: i32,
     map_idx: i32,
     stage: i32,
-    star: i32,
+    crown: i32,
     use_cache: i32,
 ) -> Result<i32, Fault> {
     if use_cache != 0 {
@@ -22,16 +22,16 @@ pub fn get_stage_record(
             .or_default()
             .entry(stage)
             .or_default()
-            .get(star as usize)
+            .get(crown as usize)
             .map(|record| *record as i32)
-            .ok_or(Fault::index_out_of_range(star as i64, 4));
+            .ok_or(Fault::index_out_of_range(crown as i64, 4));
     }
 
     if map_type as u32 <= 4 {
         let cell = (map_type_as_index(map_type) as i64) * 0xbb80
             + (map_idx as i64) * 0x60
             + (stage as i64) * 8
-            + (star as i64) * 2
+            + (crown as i64) * 2
             + AppContext::STAGE_RECORD_STORY as i64;
 
         return Ok(ctx.i16_at(cell as usize)? as i32);
@@ -49,7 +49,7 @@ pub fn get_stage_record(
             };
 
             maps.get(map_idx as usize)
-                .and_then(|stars| stars.get(star as usize))
+                .and_then(|crowns| crowns.get(crown as usize))
                 .and_then(|stages| stages.get(stage as usize))
                 .map(|record| *record as i32)
                 .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
@@ -63,7 +63,7 @@ pub fn get_stage_record(
                 return Err(Fault::index_out_of_range(map_idx as i64, (maps.len() / 0x31) as i64));
             }
 
-            if stage as u32 >= 0x31 || star != 0 {
+            if stage as u32 >= 0x31 || crown != 0 {
                 return Err(Fault::index_out_of_range(stage as i64, 0x31));
             }
 
@@ -77,23 +77,23 @@ pub fn get_stage_record(
             let (maps, cell) = match case {
                 0x06 => (
                     &ctx.stage_record_neg20,
-                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + crown as i64,
                 ),
                 0x08 => (
                     &ctx.stage_record_neg18,
-                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + crown as i64,
                 ),
                 0x09 => (
                     &ctx.stage_record_neg17,
-                    (map_idx as i64) * 8 + stage as i64 + star as i64,
+                    (map_idx as i64) * 8 + stage as i64 + crown as i64,
                 ),
                 0x0a => (
                     &ctx.stage_record_neg16,
-                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0x78 + (stage as i64) * 4 + crown as i64,
                 ),
                 _ => (
                     &ctx.stage_record_neg11,
-                    (map_idx as i64) * 0xc0 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0xc0 + (stage as i64) * 4 + crown as i64,
                 ),
             };
 
@@ -119,15 +119,15 @@ pub fn get_stage_record(
             let (maps, cell) = match case {
                 0x10 => (
                     &ctx.stage_record_neg10,
-                    (map_idx as i64) * 0x3c + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0x3c + (stage as i64) * 4 + crown as i64,
                 ),
                 0x11 => (
                     &ctx.stage_record_neg9,
-                    (map_idx as i64) * 0x30 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0x30 + (stage as i64) * 4 + crown as i64,
                 ),
                 _ => (
                     &ctx.stage_record_neg4,
-                    (map_idx as i64) * 0xc8 + (stage as i64) * 4 + star as i64,
+                    (map_idx as i64) * 0xc8 + (stage as i64) * 4 + crown as i64,
                 ),
             };
 
@@ -156,7 +156,7 @@ pub fn get_stage_record(
         0x14 => {
             let cell = (map_idx as i64) * 0x320
                 + (stage as i64) * 0x10
-                + (star as i64) * 4
+                + (crown as i64) * 4
                 + AppContext::STAGE_RECORD_NEG6 as i64;
 
             ctx.i32_at(cell as usize)

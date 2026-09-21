@@ -9,7 +9,7 @@ use crate::Fault;
 use super::{
     AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
     BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, ChangeCondition, CharaGroup, ComboStore,
-    CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DojoScoreBonus, DrawSink, DropRecord, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
+    CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DojoScoreBonus, DrawSink, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
     ExGroup, ExplosionEvent, FixedLineupStore, GatyaDataSet, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
     Mamodel, MapLayout, Medal, MapOption, OfficersClubRow, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
@@ -830,7 +830,7 @@ pub struct AppContext {
     pub fixed_lineup_store: FixedLineupStore,
     pub combo_store: ComboStore,
     pub chara_groups: BTreeMap<i32, CharaGroup>,
-    pub star_multipliers: BTreeMap<i32, Vec<i32>>,
+    pub crown_multipliers: BTreeMap<i32, Vec<i32>>,
     pub map_options: MapOption,
     pub settings: BTreeMap<Vec<u8>, Vec<u8>>,
     pub failed_packs: BTreeSet<Vec<u8>>,
@@ -922,8 +922,6 @@ pub struct AppContext {
     pub opening_messages: [Vec<Vec<u8>>; 4],
     pub map_stage_shortcuts: [BTreeMap<i32, Vec<MapStageShortcut>>; 2],
     pub drop_chara_rows: Vec<Vec<i32>>,
-    pub drop_chara_max_1000s: i32,
-    pub drop_chara_max_1100s: i32,
     pub rank_gift_rows: Vec<[i32; 21]>,
     pub unit_limit_rows: Vec<[i32; 10]>,
     pub unit_limit_extra: [i32; 110],
@@ -1105,7 +1103,6 @@ pub struct AppContext {
     pub miracle_anims: [[Maanim; 2]; 4],
     pub miracle_levels: [[u8; 8]; 4],
     pub battle_option_texts: Vec<Vec<u8>>,
-    pub battle_texts: Vec<Vec<u8>>,
     pub god_item_texts: Vec<[Vec<u8>; 2]>,
     pub god_item_names: Vec<Vec<u8>>,
     pub god_name_text: Vec<u8>,
@@ -1127,7 +1124,6 @@ pub struct AppContext {
     pub lineup_records: BTreeMap<i16, LineupRecord>,
     pub labyrinth_units: Vec<i32>,
     pub labyrinth_floors: BTreeMap<i32, LabyrinthFloor>,
-    pub drop_items: BTreeMap<i32, DropRecord>,
     pub stage_rewards_taken: BTreeMap<i32, BTreeMap<i32, bool>>,
     pub event_reward_cache: BTreeMap<i32, BTreeMap<i32, [u8; 4]>>,
     pub clear_count_rewards: BTreeMap<i32, BTreeMap<i32, Vec<[i32; 2]>>>,
@@ -1497,7 +1493,7 @@ impl AppContext {
     pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
     pub const PRESET_STYLE_PARTS: usize = 0x427259;
     pub const PRESET_FOUNDATION_PARTS: usize = 0x42725a;
-    pub const STAR_LEVEL: usize = 0x38fecc;
+    pub const CROWN_LEVEL: usize = 0x38fecc;
     pub const EX_MAP_INDEX: usize = 0x402168;
     pub const EX_STAGE_INDEX: usize = 0x402170;
     pub const UNIT_LEVEL_CURVE: usize = 0x4475a4;
@@ -1867,7 +1863,7 @@ impl AppContext {
             matatabi_rows: Default::default(),
             item_shop_rows: Default::default(),
             rank_gift_messages: Default::default(),
-            warning1_texts: Default::default(),
+            warning1_texts: vec![Vec::new(); 0x35],
             warning2_rows: Default::default(),
             main_menu_rows: Default::default(),
             main_menu_row_settings: Default::default(),
@@ -1941,7 +1937,7 @@ impl AppContext {
             fixed_lineup_store: Default::default(),
             combo_store: Default::default(),
             chara_groups: Default::default(),
-            star_multipliers: Default::default(),
+            crown_multipliers: Default::default(),
             map_options: Default::default(),
             settings: Default::default(),
             failed_packs: BTreeSet::new(),
@@ -2034,8 +2030,6 @@ impl AppContext {
             opening_messages: Default::default(),
             map_stage_shortcuts: Default::default(),
             drop_chara_rows: Vec::new(),
-            drop_chara_max_1000s: -1,
-            drop_chara_max_1100s: -1,
             rank_gift_rows: Vec::new(),
             unit_limit_rows: Vec::new(),
             unit_limit_extra: [-1; 110],
@@ -2217,7 +2211,6 @@ impl AppContext {
             miracle_anims: Default::default(),
             miracle_levels: Default::default(),
             battle_option_texts: vec![Vec::new(); 9],
-            battle_texts: vec![Vec::new(); 0x35],
             god_item_texts: vec![Default::default(); 4],
             god_item_names: vec![Vec::new(); 4],
             god_name_text: Default::default(),
@@ -2239,7 +2232,6 @@ impl AppContext {
             lineup_records: Default::default(),
             labyrinth_units: Default::default(),
             labyrinth_floors: Default::default(),
-            drop_items: Default::default(),
             stage_rewards_taken: Default::default(),
             event_reward_cache: Default::default(),
             clear_count_rewards: Default::default(),

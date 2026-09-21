@@ -6,16 +6,16 @@ pub fn set_stages_cleared(
     ctx: &mut AppContext,
     map_type: i32,
     map_idx: i32,
-    star: i32,
+    crown: i32,
     value: i32,
     use_cache: i32,
 ) -> Result<(), Fault> {
     if use_cache != 0 {
         let map_id = map_type_base_id(map_type, map_idx);
-        let stars = ctx.stages_cleared_cache.entry(map_id).or_default();
-        let cell = stars
-            .get_mut(star as i64 as usize)
-            .ok_or(Fault::index_out_of_range(star as i64, 4))?;
+        let crowns = ctx.stages_cleared_cache.entry(map_id).or_default();
+        let cell = crowns
+            .get_mut(crown as i64 as usize)
+            .ok_or(Fault::index_out_of_range(crown as i64, 4))?;
 
         *cell = value as i16;
 
@@ -25,7 +25,7 @@ pub fn set_stages_cleared(
     if map_type as u32 <= 4 {
         let cell = (map_type as u32 as i64) * 0x7d0
             + (map_idx as i64) * 4
-            + star as i64
+            + crown as i64
             + AppContext::STAGES_CLEARED_STORY as i64;
 
         return ctx.set_block_at::<1>(cell as usize, [value as u8]);
@@ -44,7 +44,7 @@ pub fn set_stages_cleared(
             let limit = maps.len() as i64;
             let cell = maps
                 .get_mut(map_idx as i64 as usize)
-                .and_then(|stars| stars.get_mut(star as i64 as usize))
+                .and_then(|crowns| crowns.get_mut(crown as i64 as usize))
                 .ok_or(Fault::index_out_of_range(map_idx as i64, limit))?;
 
             *cell = value as i8;
@@ -56,20 +56,20 @@ pub fn set_stages_cleared(
             let (maps, cell) = match case {
                 0x06 => (
                     &mut ctx.stages_cleared_neg20,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
                 0x08 => (
                     &mut ctx.stages_cleared_neg18,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
-                0x09 => (&mut ctx.stages_cleared_neg17, map_idx as i64 + star as i64),
+                0x09 => (&mut ctx.stages_cleared_neg17, map_idx as i64 + crown as i64),
                 0x0a => (
                     &mut ctx.stages_cleared_neg16,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
                 _ => (
                     &mut ctx.stages_cleared_neg11,
-                    (map_idx as i64) * 4 + star as i64,
+                    (map_idx as i64) * 4 + crown as i64,
                 ),
             };
             let limit = maps.len() as i64;
@@ -85,7 +85,7 @@ pub fn set_stages_cleared(
                 0x11 => &mut ctx.stages_cleared_neg9,
                 _ => &mut ctx.stages_cleared_neg4,
             };
-            let cell = (map_idx as i64) * 4 + star as i64;
+            let cell = (map_idx as i64) * 4 + crown as i64;
             let limit = maps.len() as i64;
             let slot = maps.get_mut(cell as usize).ok_or(Fault::index_out_of_range(cell, limit))?;
 
@@ -95,7 +95,7 @@ pub fn set_stages_cleared(
         }
         0x14 => {
             let cell = (map_idx as i64) * 0x10
-                + (star as i64) * 4
+                + (crown as i64) * 4
                 + AppContext::STAGES_CLEARED_NEG6 as i64;
 
             ctx.set_i32_at(cell as usize, value)

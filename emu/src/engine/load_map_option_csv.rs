@@ -6,9 +6,9 @@ use super::{
 };
 
 pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
-    ctx.map_options.stars_unlocked.clear();
-    ctx.map_options.back_stars_unlocked.clear();
-    ctx.map_options.star_multipliers.clear();
+    ctx.map_options.crowns_unlocked.clear();
+    ctx.map_options.back_crowns_unlocked.clear();
+    ctx.map_options.crown_multipliers.clear();
     ctx.map_options.guerrilla_maps.clear();
     ctx.map_options.guerrilla_set.clear();
     ctx.map_options.reward_reset_kind.clear();
@@ -35,10 +35,10 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let map_id = read_csv_cell(stm, 0) as i32;
 
         ctx.map_options
-            .stars_unlocked
+            .crowns_unlocked
             .insert(map_id, read_csv_cell(stm, 1) as i32);
         ctx.map_options
-            .back_stars_unlocked
+            .back_crowns_unlocked
             .insert(map_id, read_csv_cell(stm, 2) as i32);
 
         let mut multipliers: Vec<i32> = Vec::new();
@@ -49,7 +49,7 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             column += 1;
         }
 
-        ctx.map_options.star_multipliers.insert(map_id, multipliers);
+        ctx.map_options.crown_multipliers.insert(map_id, multipliers);
 
         let schedule = read_csv_cell(stm, 7) as i32;
 

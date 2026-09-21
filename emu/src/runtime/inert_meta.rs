@@ -14,9 +14,6 @@ impl MetaHost for InertMeta {
     fn analytics_named(&mut self, _code: i32, _name: &[u8], _detail: &[u8]) {}
     fn bc_log(&mut self, _name: &[u8]) {}
     fn save_battle_snapshot(&mut self) {}
-    fn bonus_popup_text(&mut self) -> Vec<u8> {
-        Vec::new()
-    }
     fn labyrinth_unit_count(&mut self, _rarity: i32) -> i32 {
         0
     }

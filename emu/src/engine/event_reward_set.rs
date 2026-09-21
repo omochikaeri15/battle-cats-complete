@@ -6,12 +6,12 @@ pub fn event_reward_set(
     ctx: &mut AppContext,
     event: i32,
     stage: i32,
-    star: i32,
+    crown: i32,
     kind: i32,
     value: u8,
     use_cache: i32,
 ) -> Result<(), Fault> {
-    let slot = if kind == 2 { star } else { 0 };
+    let slot = if kind == 2 { crown } else { 0 };
 
     if use_cache != 0 {
         let cell = ctx

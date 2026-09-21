@@ -17,7 +17,7 @@ use super::{
     get_map_index, get_map_type, get_point_cap, get_point_id, get_point_rewards, get_point_total,
     get_powerup, get_release_point_cap, get_slot_unit_id, get_stage_best_score, get_stage_count,
     get_stage_index, get_stage_record, get_stage_score, get_stage_set_size, get_stages_cleared,
-    get_star_level, get_trait_dojo, grant_stage_reward, has_point_decay, invasion_available,
+    get_crown_level, get_trait_dojo, grant_stage_reward, has_point_decay, invasion_available,
     invasion_z_available, is_aku_final_map, is_ex_option_target, is_reward_claimed, is_score_stage,
     labyrinth_active, labyrinth_result_ready, labyrinth_roll_floor, labyrinth_submit,
     labyrinth_unit_count, log_analytics_event, map_guerrilla_set, map_index_of_map_id,
@@ -40,8 +40,8 @@ use super::{
 pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     let map_id = get_global_map_id(ctx, 0)?;
     let map_text = string_format_int(ctx, b"%d", map_id)?;
-    let star = get_star_level(ctx)?;
-    let star_text = string_format_int(ctx, b"%d", star)?;
+    let crown = get_crown_level(ctx)?;
+    let crown_text = string_format_int(ctx, b"%d", crown)?;
     let stage = get_stage_index(ctx)?;
     let stage_text = string_format_int(ctx, b"%d", stage)?;
 
@@ -50,7 +50,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         0x47,
         &[
             (b"MapID", &map_text),
-            (b"Level", &star_text),
+            (b"Level", &crown_text),
             (b"StageIndex", &stage_text),
         ],
     )?;
@@ -213,14 +213,14 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
     for (unit, count) in kills {
         let stage = get_stage_index(ctx)?;
-        let star = if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3 {
-            get_star_level(ctx)?
+        let crown = if ctx.i32_at(AppContext::CHAPTER_MODE)? == 3 {
+            get_crown_level(ctx)?
         } else {
             0
         };
         let map_id = get_global_map_id(ctx, 0)?;
 
-        mission_progress_list(ctx, 0x16, &[stage, star, unit, map_id], count)?;
+        mission_progress_list(ctx, 0x16, &[stage, crown, unit, map_id], count)?;
     }
 
     let replay = replay_mode(ctx)?;
@@ -370,12 +370,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         mission_progress(ctx, 9, ops::div_1000(pair_map), 1, cleared as i32, 0)?;
 
         if get_map_type(ctx, 0)? == -0x17 {
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
 
             mission_progress(
                 ctx,
                 0x1e,
-                star.wrapping_add(pair_stage.wrapping_mul(10)),
+                crown.wrapping_add(pair_stage.wrapping_mul(10)),
                 1,
                 cleared as i32,
                 0,
@@ -415,22 +415,22 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
-        let target = if get_stages_cleared(ctx, map_type, map_index, star, use_cache)?
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
+        let target = if get_stages_cleared(ctx, map_type, map_index, crown, use_cache)?
             != ctx.i32_at(AppContext::STAGE_ROW)?
         {
             AppContext::OUTRO_STAGE_CLEARED
         } else {
-            add_stages_cleared(ctx, map_type, map_index, star, 1, use_cache)?;
+            add_stages_cleared(ctx, map_type, map_index, crown, 1, use_cache)?;
 
-            let cleared_now = get_stages_cleared(ctx, map_type, map_index, star, use_cache)?;
+            let cleared_now = get_stages_cleared(ctx, map_type, map_index, crown, use_cache)?;
 
             ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, cleared_now)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, -1)?;
-            add_stage_unlock(ctx, map_type, map_index, star, 1, use_cache)?;
+            add_stage_unlock(ctx, map_type, map_index, crown, 1, use_cache)?;
 
-            let cleared_now = get_stages_cleared(ctx, map_type, map_index, star, use_cache)?;
+            let cleared_now = get_stages_cleared(ctx, map_type, map_index, crown, use_cache)?;
             let data_id = ctx.i32_at(AppContext::MAP_DATA_ID)?;
             let set = ctx.i32_at(AppContext::MAP_STAGE_SET)?;
             let size = get_stage_set_size(ctx.map_layouts.entry(data_id).or_default(), set)?;
@@ -444,12 +444,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     ctx,
                     map_type,
                     map_index,
-                    star,
+                    crown,
                     (size as i32).wrapping_sub(1),
                     use_cache,
                 )?;
 
-                if ctx.i32_at(AppContext::STAR_LEVEL)? == 0
+                if ctx.i32_at(AppContext::CROWN_LEVEL)? == 0
                     && validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?) == 0
                 {
                     let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
@@ -461,14 +461,14 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 ctx.set_i32_at(AppContext::NEXT_STAGE_UNLOCKED, 0)?;
                 add_resource(ctx, 0x16, 0x1e, 0)?;
 
-                let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-                mission_progress(ctx, 3, star, 1, cleared as i32, use_cache)?;
+                mission_progress(ctx, 3, crown, 1, cleared as i32, use_cache)?;
                 add_resource(ctx, 0x69, 1, 0)?;
 
                 let map_id = get_global_map_id(ctx, 0)?;
                 let stage = get_stage_index(ctx)?;
-                let star = get_star_level(ctx)?;
+                let crown = get_crown_level(ctx)?;
 
                 analytics_params(
                     ctx,
@@ -480,7 +480,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         (b"sec2_type", FormatArg::Text(b"StageIdx")),
                         (b"sec2_id", FormatArg::Int(stage)),
                         (b"ex_type", FormatArg::Text(b"StageLv")),
-                        (b"ex_id", FormatArg::Int(star)),
+                        (b"ex_id", FormatArg::Int(crown)),
                     ],
                 )?;
             }
@@ -493,7 +493,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
         if !replay {
             let score = is_score_stage(ctx.event_items.as_ref());
@@ -501,15 +501,15 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let mut record = 0;
 
             if !score || !decay {
-                add_stage_record(ctx, map_type, map_index, stage_row, star, 1, 0)?;
-                record = get_stage_record(ctx, map_type, map_index, stage_row, star, 0)?;
+                add_stage_record(ctx, map_type, map_index, stage_row, crown, 1, 0)?;
+                record = get_stage_record(ctx, map_type, map_index, stage_row, crown, 0)?;
             }
 
             if !(score && decay) && record >= 0x2710 {
-                set_stage_record(ctx, map_type, map_index, stage_row, star, 0x270f, 0)?;
+                set_stage_record(ctx, map_type, map_index, stage_row, crown, 0x270f, 0)?;
             }
         } else {
-            let before = get_stage_record(ctx, map_type, map_index, stage_row, star, 1)?;
+            let before = get_stage_record(ctx, map_type, map_index, stage_row, crown, 1)?;
 
             if before <= 0x270e {
                 let lineups = clear_lineup_count(ctx, -1, 0, 0)?.wrapping_add(1);
@@ -519,22 +519,22 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     map_type,
                     map_index,
                     stage_row,
-                    star,
+                    crown,
                     max_i32(lineups, before),
                     1,
                 )?;
             }
 
-            first_record = get_stage_record(ctx, map_type, map_index, stage_row, star, 1)? > before;
+            first_record = get_stage_record(ctx, map_type, map_index, stage_row, crown, 1)? > before;
         }
 
         let aku = get_aku_stage_list(ctx, 0);
-        let record = get_stage_record(ctx, map_type, map_index, stage_row, star, use_cache)?;
+        let record = get_stage_record(ctx, map_type, map_index, stage_row, crown, use_cache)?;
 
         if record == 1
             && validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?) == -0x13
             && ctx.i32_at(AppContext::MAP_INDEX)? == 0
-            && ctx.i32_at(AppContext::STAR_LEVEL)? == 0
+            && ctx.i32_at(AppContext::CROWN_LEVEL)? == 0
             && aku.len() == 1
         {
             let only = *aku.first().ok_or(Fault::index_out_of_range(0, 0))?;
@@ -547,7 +547,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         if validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?) == 0
             && ctx.i32_at(AppContext::MAP_INDEX)? == 0x30
             && ctx.i32_at(AppContext::STAGE_ROW)? == get_stage_count(ctx, 0, 0x30)?.wrapping_sub(1)
-            && get_stage_record(ctx, map_type, map_index, stage_row, star, use_cache)? == 1
+            && get_stage_record(ctx, map_type, map_index, stage_row, crown, use_cache)? == 1
         {
             ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 1)?;
@@ -560,7 +560,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             if ctx.i32_at(AppContext::STAGE_ROW)?
                 == get_stage_count(ctx, -9, last_map)?.wrapping_sub(1)
-                && get_stage_record(ctx, map_type, map_index, stage_row, star, use_cache)? == 1
+                && get_stage_record(ctx, map_type, map_index, stage_row, crown, use_cache)? == 1
             {
                 ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 1)?;
             }
@@ -883,14 +883,14 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         stage_pair_progress_set(ctx, map_key, pair_stage, other);
     }
 
-    let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
     if get_stage_record(
         ctx,
         map_type_of_map_id(pair_map),
         map_index_of_map_id(pair_map),
         pair_stage,
-        star,
+        crown,
         use_cache,
     )? == 1
         && altar_stage_value(ctx, pair_map, pair_stage) > 0
@@ -1019,25 +1019,25 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                 let reward_kind = stage_reward_kind(ctx, pair_stage, 0)?;
                                 let unseen = reward_kind == 0 && {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
-                                    let star = get_star_level(ctx)?;
+                                    let crown = get_crown_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
                                         Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     !event_reward_received(
-                                        ctx, event, pair_stage, star, kind, use_cache,
+                                        ctx, event, pair_stage, crown, kind, use_cache,
                                     )?
                                 };
 
                                 if unseen {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
-                                    let star = get_star_level(ctx)?;
+                                    let crown = get_crown_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
                                         Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     event_reward_set(
-                                        ctx, event, pair_stage, star, kind, 1, use_cache,
+                                        ctx, event, pair_stage, crown, kind, 1, use_cache,
                                     )?;
 
                                     break 'decide (true, true);
@@ -1057,13 +1057,13 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                                     }
                                 {
                                     let event = ctx.i32_at(AppContext::EVENT_REWARD_ID)?;
-                                    let star = get_star_level(ctx)?;
+                                    let crown = get_crown_level(ctx)?;
                                     let kind = xor_row46_get(ctx.bytes_from(row)?, 8).ok_or(
                                         Fault::index_out_of_range(8, 0x2e),
                                     )? as i32;
 
                                     event_reward_set(
-                                        ctx, event, pair_stage, star, kind, 1, use_cache,
+                                        ctx, event, pair_stage, crown, kind, 1, use_cache,
                                     )?;
 
                                     break 'decide (true, true);
@@ -1311,12 +1311,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 } else if ranking == -1 {
                     0
                 } else {
-                    let star = ctx.i32_at(AppContext::STAR_LEVEL)? as i64;
+                    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)? as i64;
 
                     ctx.i32_at(
                         (stage_row * 0x10
                             + ranking as i64 * 0xf0
-                            + star * 4
+                            + crown * 4
                             + AppContext::RANKING_BEST_SCORES as i64)
                             as usize,
                     )?
@@ -1391,12 +1391,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                         if ranking != -1 {
                             let stage_row = ctx.i32_at(AppContext::STAGE_ROW)? as i64;
-                            let star = ctx.i32_at(AppContext::STAR_LEVEL)? as i64;
+                            let crown = ctx.i32_at(AppContext::CROWN_LEVEL)? as i64;
 
                             ctx.set_i32_at(
                                 (stage_row * 0x10
                                     + ranking as i64 * 0xf0
-                                    + star * 4
+                                    + crown * 4
                                     + AppContext::RANKING_BEST_SCORES as i64)
                                     as usize,
                                 ctx.i32_at(AppContext::STAGE_SCORE)?,
@@ -1419,7 +1419,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                 let ranking = ctx.i32_at(AppContext::RANKING_ID)?;
                 let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-                let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
                 let score = ctx.i32_at(AppContext::STAGE_SCORE)?;
 
                 mission_progress(
@@ -1428,7 +1428,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     ranking
                         .wrapping_mul(0x3e8)
                         .wrapping_add(stage_row.wrapping_mul(10))
-                        .wrapping_add(star),
+                        .wrapping_add(crown),
                     score,
                     0,
                     0,
@@ -1692,7 +1692,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         }
     }
 
-    let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
     let mut drop_map = pair_map;
     let mut drop_stage = pair_stage;
 
@@ -1706,7 +1706,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         drop_stage = again.wrapping_sub((again / 100).wrapping_mul(100));
     }
 
-    let mut counts = roll_drop_item_counts(ctx, drop_map, drop_stage, star)?;
+    let mut counts = roll_drop_item_counts(ctx, drop_map, drop_stage, crown)?;
 
     'items: for index in 0..counts.len() {
         if *counts.get(index).ok_or(Fault::index_out_of_range(index as i64, 0x10))? == 0
@@ -1789,8 +1789,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
-        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
-        let record = get_stage_record(ctx, map_type, map_index, stage_row, star, 1)?;
+        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
+        let record = get_stage_record(ctx, map_type, map_index, stage_row, crown, 1)?;
         let map_id = get_global_map_id(ctx, 0)?;
         let stage = get_stage_index(ctx)?;
         let rewards = clear_count_rewards_get(ctx, map_id, stage);

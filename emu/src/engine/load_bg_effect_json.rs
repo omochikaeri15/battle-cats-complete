@@ -297,7 +297,7 @@ pub fn load_bg_effect_json(ctx: &mut AppContext, background: i32) -> Result<(), 
             );
             ctx.bg_effects.model_anims.insert(
                 key,
-                match file.get(b"anim".as_slice()) {
+                match file.get(b"anime".as_slice()) {
                     Some(JsonNode::String(text)) => json_string_as_string(text),
                     Some(JsonNode::Array(_)) | Some(JsonNode::Object(_)) => {
                         json_container_as_string()

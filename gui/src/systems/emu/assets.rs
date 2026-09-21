@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use emu::engine::{AssetSource, SheetImage};
@@ -14,6 +15,15 @@ pub struct Sheet {
     pub width: u32,
     pub height: u32,
     pub pixels: Arc<[u8]>,
+    pub stamp: u64,
+}
+
+static NEXT_STAMP: AtomicU64 = AtomicU64::new(1);
+
+impl Sheet {
+    pub fn new(width: u32, height: u32, pixels: &[u8]) -> Self {
+        Self { width, height, pixels: Arc::from(pixels), stamp: NEXT_STAMP.fetch_add(1, Ordering::Relaxed) }
+    }
 }
 
 const NATIVE_REGION: &str = "ja";
@@ -146,11 +156,8 @@ impl DiskAssets {
             }
         }
 
-        let sheet = Sheet {
-            width: decoded.width(),
-            height: decoded.height(),
-            pixels: Arc::from(decoded.into_raw().as_slice()),
-        };
+        let (width, height) = (decoded.width(), decoded.height());
+        let sheet = Sheet::new(width, height, decoded.into_raw().as_slice());
 
         self.sheets
             .borrow_mut()

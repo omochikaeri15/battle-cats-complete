@@ -1,22 +1,23 @@
 use crate::{
     Fault,
-    engine::{AppContext, obfuscate_value},
+    engine::{
+        AltarReward, AppContext, map_index_of_map_id, map_type_of_map_id, obfuscate_value,
+        set_stage_record,
+    },
 };
 
-use super::fill_dummy_lineup;
+use super::{Setup, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
 const STORY_CHAPTERS: usize = 5;
 const MAPS_PER_TYPE: usize = 0x1f4;
 const STAGES_PER_MAP: usize = 0x30;
-const STARS: usize = 4;
+const CROWNS: usize = 4;
+const LEGEND_TYPE: i32 = -8;
+const LEGEND_MAP_STRIDE: i64 = 0x30;
+const ALTAR_KEY_STAGES: i32 = 100;
 
 const TUTORIAL_DONE: i32 = 1;
-const TECH_COUNT: usize = 0xb;
-const TECH_LEVEL: u32 = 0x13;
-const CANNON_RANGE: usize = 2;
-const CANNON_RANGE_LEVEL: u32 = 9;
-const PLUS_LEVEL: u32 = 0xa;
 const COMBO_UNLOCKED: i32 = 0;
 const PLUS_SHIFT: u32 = 0x10;
 const CAT_FOOD: u32 = 45_000;
@@ -25,9 +26,6 @@ const CHAPTER_ROWS: usize = 0xa;
 const CHAPTER_ROW_STRIDE: usize = 0xd0;
 const CHAPTER_STAGES: usize = 0x30;
 const STAGE_CLEARED: i32 = 1;
-const TREASURE_CHAPTERS: usize = 0xa;
-const TREASURE_STAGES: usize = 0x31;
-const SUPERIOR_TREASURE: i32 = 3;
 const SPEED_MODES: usize = 3;
 const TWO_ROWS_UNLOCKED: i32 = 2;
 const TUTORIALS_SEEN: [usize; 4] = [
@@ -37,7 +35,7 @@ const TUTORIALS_SEEN: [usize; 4] = [
     AppContext::SHOP_TUTORIAL_SEEN,
 ];
 
-pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
+pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::TUTORIAL_CLEARED, TUTORIAL_DONE)?;
 
     for seen in TUTORIALS_SEEN {
@@ -61,27 +59,36 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    for tech in 0..TECH_COUNT {
+    for (tech, held) in setup.tech.iter().enumerate() {
         let mut cell = [0u8; 8];
-
-        let packed = if tech == CANNON_RANGE {
-            CANNON_RANGE_LEVEL
-        } else {
-            PLUS_LEVEL << PLUS_SHIFT | TECH_LEVEL
-        };
+        let packed = held.plus << PLUS_SHIFT | held.level.saturating_sub(1);
 
         cell[..4].copy_from_slice(&packed.to_le_bytes());
         obfuscate_value(&mut cell);
         ctx.set_block_at(AppContext::TECH_LEVELS + tech * 8, cell)?;
     }
 
-    for chapter in 0..TREASURE_CHAPTERS {
-        for stage in 0..TREASURE_STAGES {
+    for (chapter, stages) in setup.treasures.iter().enumerate() {
+        for (stage, level) in stages.iter().enumerate() {
             ctx.set_i32_at(
                 AppContext::TREASURE_LEVELS + chapter * AppContext::TREASURE_LEVELS_STRIDE + stage * 4,
-                SUPERIOR_TREASURE,
+                *level,
             )?;
         }
+    }
+
+    let preset = AppContext::PRESET_CANNON_PARTS;
+
+    ctx.set_block_at::<3>(
+        preset,
+        [setup.cannon as u8, setup.style as u8, setup.foundation as u8],
+    )?;
+
+    for (part, levels) in &setup.parts {
+        ctx.cannon_part_rows.insert(
+            *part,
+            vec![0, levels.cannon.wrapping_sub(1), levels.foundation, levels.style],
+        );
     }
 
     for mode in 0..SPEED_MODES {
@@ -96,7 +103,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(AppContext::SELECTED_DECK_PRESET, 0)?;
 
-    fill_dummy_lineup(ctx)?;
+    fill_dummy_lineup(ctx, setup)?;
 
     for chapter in 0..STORY_CHAPTERS {
         ctx.set_i32_at(
@@ -130,7 +137,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stage_record_neg23,
         &mut ctx.stage_record_neg22,
     ] {
-        nested.resize(MAPS_PER_TYPE, vec![vec![0i16; STAGES_PER_MAP]; STARS]);
+        nested.resize(MAPS_PER_TYPE, vec![vec![0i16; STAGES_PER_MAP]; CROWNS]);
     }
 
     for flat in [
@@ -158,7 +165,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stage_unlock_neg23,
         &mut ctx.stage_unlock_neg22,
     ] {
-        nested.resize(MAPS_PER_TYPE, vec![0i8; STARS]);
+        nested.resize(MAPS_PER_TYPE, vec![0i8; CROWNS]);
     }
 
     for flat in [
@@ -169,7 +176,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stage_unlock_neg16,
         &mut ctx.stage_unlock_neg11,
     ] {
-        flat.resize(MAPS_PER_TYPE * STARS, 0);
+        flat.resize(MAPS_PER_TYPE * CROWNS, 0);
     }
 
     for nested in [
@@ -178,7 +185,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stages_cleared_neg23,
         &mut ctx.stages_cleared_neg22,
     ] {
-        nested.resize(MAPS_PER_TYPE, vec![0i8; STARS]);
+        nested.resize(MAPS_PER_TYPE, vec![0i8; CROWNS]);
     }
 
     for flat in [
@@ -188,7 +195,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stages_cleared_neg16,
         &mut ctx.stages_cleared_neg11,
     ] {
-        flat.resize(MAPS_PER_TYPE * STARS, 0);
+        flat.resize(MAPS_PER_TYPE * CROWNS, 0);
     }
 
     for wide in [
@@ -196,7 +203,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stages_cleared_neg9,
         &mut ctx.stages_cleared_neg4,
     ] {
-        wide.resize(MAPS_PER_TYPE * STARS, 0);
+        wide.resize(MAPS_PER_TYPE * CROWNS, 0);
     }
 
     for wide in [
@@ -204,7 +211,37 @@ pub fn fill_dummy_save(ctx: &mut AppContext) -> Result<(), Fault> {
         &mut ctx.stage_unlock_neg9,
         &mut ctx.stage_unlock_neg4,
     ] {
-        wide.resize(MAPS_PER_TYPE * STARS, 0);
+        wide.resize(MAPS_PER_TYPE * CROWNS, 0);
+    }
+
+    Ok(())
+}
+
+pub fn seed_altar_records(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
+    let rewards: Vec<(i32, AltarReward)> = ctx.altar_rewards.iter().map(|(key, reward)| (*key, *reward)).collect();
+    let mut budget = setup.altar.map_or(0, |level| level.saturating_sub(1));
+
+    for (key, reward) in rewards {
+        let cleared = setup.altar.is_none() || (reward.unseal == 0 && reward.amount <= budget);
+
+        if cleared && setup.altar.is_some() {
+            budget -= reward.amount;
+        }
+
+        let map = key / ALTAR_KEY_STAGES;
+        let stage = key % ALTAR_KEY_STAGES;
+        let map_type = map_type_of_map_id(map);
+        let map_index = map_index_of_map_id(map);
+
+        if map_type == LEGEND_TYPE {
+            let cell = i64::from(map_index) * LEGEND_MAP_STRIDE + i64::from(stage) * 4 + AppContext::STAGE_RECORD_NEG8 as i64;
+
+            ctx.set_i32_at(cell as usize, i32::from(cleared))?;
+
+            continue;
+        }
+
+        set_stage_record(ctx, map_type, map_index, stage, 0, i32::from(cleared), 0)?;
     }
 
     Ok(())

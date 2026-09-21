@@ -7,12 +7,12 @@ pub fn add_stage_record(
     map_type: i32,
     map_idx: i32,
     stage: i32,
-    star: i32,
+    crown: i32,
     delta: i32,
     use_cache: i32,
 ) -> Result<(), Fault> {
     let total =
-        get_stage_record(ctx, map_type, map_idx, stage, star, use_cache)?.wrapping_add(delta);
+        get_stage_record(ctx, map_type, map_idx, stage, crown, use_cache)?.wrapping_add(delta);
 
-    set_stage_record(ctx, map_type, map_idx, stage, star, total, use_cache)
+    set_stage_record(ctx, map_type, map_idx, stage, crown, total, use_cache)
 }

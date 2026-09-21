@@ -166,9 +166,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     query_localizable(ctx, b"leadershipreturn_pop2")
                 } else {
                     ctx.warning2_rows
-                        .get(0x62)
+                        .get(0x7a)
                         .map(|row| row[0].clone())
-                        .ok_or(Fault::index_out_of_range(0x62, 0))?
+                        .ok_or(Fault::index_out_of_range(0x7a, 0))?
                 };
 
                 if percent != 0 {

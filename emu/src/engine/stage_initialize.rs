@@ -24,7 +24,7 @@ use super::{
     get_foundation_part_id, get_global_map_id, get_item_selected, get_left_inset_logical,
     get_map_index, get_map_rules, get_map_type, get_max_money, get_max_zoom, get_powerup,
     get_powerup_available, get_right_inset_logical, get_setting, get_special_rule,
-    get_special_rule_params, get_stage_index, get_stage_record, get_star_level, get_style_part_id,
+    get_special_rule_params, get_stage_index, get_stage_record, get_crown_level, get_style_part_id,
     get_text_texture, get_top_inset_offset, get_unit_guide_order, get_unit_recharge,
     has_built_deck, has_castle_enemy, has_fixed_lineup, invasion_available, invasion_z_available,
     is_aku_final_map, is_ex_map_68, is_ex_option_target, is_score_stage, item_pass_active,
@@ -342,8 +342,8 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let map_id = get_global_map_id(ctx, 0)?;
     let map_text = string_format_int(ctx, b"%d", map_id)?;
-    let star = get_star_level(ctx)?;
-    let star_text = string_format_int(ctx, b"%d", star)?;
+    let crown = get_crown_level(ctx)?;
+    let crown_text = string_format_int(ctx, b"%d", crown)?;
     let stage = get_stage_index(ctx)?;
     let stage_text = string_format_int(ctx, b"%d", stage)?;
     let adoption: &[u8] = if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 {
@@ -353,7 +353,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     };
     let mut params: Vec<(Vec<u8>, Vec<u8>)> = vec![
         (b"MapID".to_vec(), map_text),
-        (b"Level".to_vec(), star_text),
+        (b"Level".to_vec(), crown_text),
         (b"StageIndex".to_vec(), stage_text),
         (b"useClearedAdoption".to_vec(), adoption.to_vec()),
     ];
@@ -454,12 +454,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let last = (ctx.random_dungeon_rows.len() as u32).wrapping_sub(1) as i32;
             let map_index = get_map_index(ctx, 0)?;
             let stage = get_stage_index(ctx)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
             let clears = *ctx
                 .dungeon_clear_counts
                 .get(map_index as i64 as usize)
                 .and_then(|map| map.get(stage as i64 as usize))
-                .and_then(|stage| stage.get(star as i64 as usize))
+                .and_then(|stage| stage.get(crown as i64 as usize))
                 .ok_or(Fault::index_out_of_range(map_index as i64, ctx.dungeon_clear_counts.len() as i64))?;
             let pick = min_i32(last, clears as i32);
             let weights = *ctx.random_dungeon_rows.get(pick as i64 as usize).ok_or(
@@ -587,12 +587,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let map_index = get_map_index(ctx, 0)?;
             let stage = get_stage_index(ctx)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
             let cell = ctx
                 .dungeon_clear_counts
                 .get_mut(map_index as i64 as usize)
                 .and_then(|map| map.get_mut(stage as i64 as usize))
-                .and_then(|stage| stage.get_mut(star as i64 as usize))
+                .and_then(|stage| stage.get_mut(crown as i64 as usize))
                 .ok_or(Fault::index_out_of_range(map_index as i64, 0))?;
 
             if *cell <= 0x270e {
@@ -858,11 +858,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         if mode == 3 {
             let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
             let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
-            let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+            let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
             let stage = ctx.i32_at(AppContext::ENTRY_STAGE)?;
             let replay = replay_mode(ctx)? as i32;
 
-            set_stage_unlock(ctx, map_type, map_index, star, stage, replay)?;
+            set_stage_unlock(ctx, map_type, map_index, crown, stage, replay)?;
         } else if mode == 0x63 {
             if is_aku_final_map(ctx)? {
                 set_stage_unlock(ctx, -0x13, 0, 0, 0x1d, 0)?;
@@ -1481,7 +1481,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.restriction_warning_texts[0] = {
         let font = ctx.default_font.clone();
         let text = ctx
-            .battle_texts
+            .warning1_texts
             .get(5)
             .cloned()
             .ok_or(Fault::index_out_of_range(5, 0x35))?;
@@ -2010,7 +2010,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         if ctx.i32_at(AppContext::BATTLE_RESUMED)? == 0 && get_map_type(ctx, 0)? != -10 {
             let map = get_global_map_id(ctx, 0)?;
             let stage = get_stage_index(ctx)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
             let leadership = ctx.i32_at(AppContext::LEADERSHIP_TOTAL)?;
 
             analytics_params_send(
@@ -2023,7 +2023,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                     (b"sec2_type", FormatArg::Text(b"StageIdx")),
                     (b"sec2_id", FormatArg::Int(stage)),
                     (b"ex_type", FormatArg::Text(b"StageLv")),
-                    (b"ex_id", FormatArg::Int(star)),
+                    (b"ex_id", FormatArg::Int(crown)),
                 ],
             )?;
         }

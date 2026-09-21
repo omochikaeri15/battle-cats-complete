@@ -70,7 +70,7 @@ pub(crate) trait Roster {
 
     fn id(entry: &Self::Entry) -> u32;
 
-    fn image_path(entry: &Self::Entry) -> Option<PathBuf>;
+    fn image_path(entry: &Self::Entry, variant: Option<usize>) -> Option<PathBuf>;
 
     fn passes_filter(entry: &Self::Entry, filter: &Self::Filter) -> bool;
 
@@ -87,6 +87,7 @@ pub(crate) trait Roster {
 pub enum Message {
     IconLoaded(LoadResult),
     Select(u32),
+    Pressed(u32),
     Scrolled(f32),
 }
 
@@ -95,6 +96,7 @@ impl std::fmt::Debug for Message {
         match self {
             Self::IconLoaded(result) => write!(f, "IconLoaded({})", result.id),
             Self::Select(id) => write!(f, "Select({})", id),
+            Self::Pressed(id) => write!(f, "Pressed({})", id),
             Self::Scrolled(offset) => write!(f, "Scrolled({})", offset),
         }
     }
@@ -119,6 +121,8 @@ pub(crate) struct State<R: Roster> {
     generation: u64,
     loader: Dispatcher,
     rx_result: Option<UnboundedReceiver<LoadResult>>,
+    scope: &'static str,
+    variant: Option<usize>,
     roster: PhantomData<R>,
 }
 
@@ -155,6 +159,8 @@ impl<R: Roster> Default for State<R> {
             generation: 0,
             loader,
             rx_result: Some(rx_result),
+            scope: R::SCROLLABLE_ID,
+            variant: None,
             roster: PhantomData,
         }
     }
@@ -163,6 +169,24 @@ impl<R: Roster> Default for State<R> {
 impl<R: Roster> State<R> {
     pub(crate) fn scrollable_id() -> Id {
         Id::new(R::SCROLLABLE_ID)
+    }
+
+    pub(crate) fn scoped(scope: &'static str, variant: usize) -> Self {
+        Self { scope, variant: Some(variant), ..Self::default() }
+    }
+
+    pub(crate) fn set_variant(&mut self, variant: usize) {
+        if self.variant == Some(variant) {
+            return;
+        }
+
+        self.variant = Some(variant);
+        self.invalidate();
+        self.dirty = true;
+    }
+
+    fn scroll_id(&self) -> Id {
+        Id::new(self.scope)
     }
 
     pub(crate) fn scroll_offset(&self) -> f32 {
@@ -174,7 +198,11 @@ impl<R: Roster> State<R> {
             return Task::none();
         }
 
-        operation::scroll_to(Self::scrollable_id(), scrollable::AbsoluteOffset { x: 0.0, y: self.scroll_offset })
+        operation::scroll_to(self.scroll_id(), scrollable::AbsoluteOffset { x: 0.0, y: self.scroll_offset })
+    }
+
+    pub(crate) fn restore_scroll<T: Send + 'static>(&self) -> Task<T> {
+        operation::scroll_to(self.scroll_id(), scrollable::AbsoluteOffset { x: 0.0, y: self.scroll_offset })
     }
 
     pub(crate) fn set_scroll_offset(&mut self, offset: f32) {
@@ -299,7 +327,7 @@ impl<R: Roster> State<R> {
                 continue;
             }
 
-            let Some(path) = R::image_path(entry) else {
+            let Some(path) = R::image_path(entry, self.variant) else {
                 self.stale.remove(&id);
                 self.missing_ids.insert(id);
                 continue;
@@ -344,7 +372,7 @@ impl<R: Roster> State<R> {
 
             smooth_scroll(
                 scrollable(list_col)
-                    .id(Self::scrollable_id())
+                    .id(self.scroll_id())
                     .on_scroll(|viewport| Message::Scrolled(viewport.absolute_offset().y))
                     .height(Length::Fill)
                     .width(Length::Fill),
@@ -362,7 +390,7 @@ impl<R: Roster> State<R> {
             .cloned()
             .unwrap_or_else(|| self.placeholder.clone());
 
-        let row = roster_row(handle, is_selected, Message::Select(id), R::tooltip(entry));
+        let row = roster_row(handle, is_selected, Message::Select(id), self.variant.map(|_| Message::Pressed(id)), R::tooltip(entry));
 
         match R::target(entry) {
             Some(marker) => editor::target(row, marker),

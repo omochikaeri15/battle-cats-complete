@@ -35,6 +35,7 @@ use nyanko::chapter::stage::RewardStructure;
 use nyanko::common;
 use nyanko::graphics::tools::crash::Side;
 
+use crate::app::state::SandboxTab;
 use crate::app::{theme, BattleCatsApp, Page};
 use crate::domains::cat::DetailTab;
 use crate::domains::studio;
@@ -51,6 +52,7 @@ pub(crate) use watch::watch;
 pub enum Target {
     FileRow(usize),
     CatRow(u32),
+    LineupCell(kore::domains::sandbox::Cell),
     EnemyRow(u32),
     CatLevels,
     CatForms,
@@ -99,6 +101,7 @@ pub(crate) struct Context {
     offsets: Option<studio::Offsets>,
     ground: Option<GroundTarget>,
     making: Option<MakeTarget>,
+    lineup: Option<kore::domains::sandbox::Cell>,
 }
 
 pub(crate) struct MakeTarget {
@@ -170,6 +173,39 @@ struct AssetFile {
     name: String,
     game: Option<PathBuf>,
     mod_copy: Option<PathBuf>,
+}
+
+fn scene(app: &BattleCatsApp) -> Page {
+    if app.current_page != Page::Sandbox {
+        return app.current_page;
+    }
+
+    if app.sandbox_state.inspector().is_some() {
+        return Page::Cats;
+    }
+
+    match app.app_state.sandbox.tab {
+        SandboxTab::Stage => Page::Stages,
+        _ => Page::Sandbox,
+    }
+}
+
+fn held_view(app: &BattleCatsApp) -> &crate::domains::cat::State {
+    app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox).unwrap_or(&app.cat_state)
+}
+
+fn held_cat(app: &BattleCatsApp) -> Option<u32> {
+    match app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox) {
+        Some(inspector) => inspector.selected_cat,
+        None => app.app_state.cat.selected_cat,
+    }
+}
+
+fn held_form(app: &BattleCatsApp) -> usize {
+    match app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox) {
+        Some(inspector) => inspector.selected_form,
+        None => app.app_state.cat.selected_form,
+    }
 }
 
 fn asset_files(app: &BattleCatsApp, base: &str) -> Vec<AssetFile> {
@@ -518,6 +554,7 @@ enum Action {
     AddOffset,
     DropOffset { row: usize },
     Locate { part: usize },
+    DropMember { cell: kore::domains::sandbox::Cell },
     DropPart { part: usize },
     EditAnimation(AnimPlan),
     EditFigures(figures::Plan),
@@ -639,6 +676,7 @@ pub(crate) struct State {
     open: Option<Open>,
     opened: Option<Page>,
     rescan: bool,
+    dropped: Option<kore::domains::sandbox::Cell>,
     pending: Option<Trail>,
     confirm: Slot<Trail>,
     failed: Slot<Trail>,
@@ -751,6 +789,10 @@ impl State {
         self.opened.take()
     }
 
+    pub(crate) fn take_dropped(&mut self) -> Option<kore::domains::sandbox::Cell> {
+        self.dropped.take()
+    }
+
     pub(crate) fn take_rescan(&mut self) -> bool {
         std::mem::take(&mut self.rescan)
     }
@@ -765,7 +807,7 @@ impl State {
         let used = talent_costs(app);
 
         for subject in prose::SUBJECTS {
-            if subject.page() != app.current_page || !prose_tab(app, subject) {
+            if subject.page() != scene(app) || !prose_tab(app, subject) {
                 continue;
             }
 
@@ -777,7 +819,7 @@ impl State {
         }
 
         for subject in figures::SUBJECTS {
-            if subject.page() != app.current_page || !figures_tab(app, subject) {
+            if subject.page() != scene(app) || !figures_tab(app, subject) {
                 continue;
             }
 
@@ -788,7 +830,7 @@ impl State {
             }
         }
 
-        if app.current_page == Page::Stages {
+        if scene(app) == Page::Stages {
             let enemies = &app.stage_state.data.enemy_registry;
 
             if let Some(view) = self.ground.view(window, enemies) {
@@ -999,6 +1041,11 @@ impl State {
                 true => Outcome::Done,
                 false => Outcome::Failed,
             },
+            Action::DropMember { cell } => {
+                self.dropped = Some(*cell);
+
+                Outcome::Done
+            }
             Action::Locate { part } => match studio.locate(*part) {
                 true => Outcome::Done,
                 false => Outcome::Failed,
@@ -1133,7 +1180,7 @@ fn channel_target(app: &BattleCatsApp, target: Option<Target>) -> Option<Channel
 }
 
 fn expanded(app: &BattleCatsApp) -> bool {
-    match app.current_page {
+    match scene(app) {
         Page::Cats => app.cat_state.animation_expanded(),
         Page::Enemies => app.enemy_state.animation_expanded(),
         Page::Utilities => app.utilities_state.animation_expanded(),
@@ -1146,10 +1193,10 @@ pub(crate) fn context(app: &BattleCatsApp, target: Option<Target>) -> Context {
     let broad = app.settings.files.context_scope == ContextScope::Broad;
     let reached = |wanted: Target| target == Some(wanted) || broad;
 
-    if app.current_page == Page::Studio || expanded(app) {
+    if scene(app) == Page::Studio || expanded(app) {
         return Context {
             values: app.settings.files.editor_mode,
-            page: app.current_page,
+            page: scene(app),
             file: None,
             cats: Vec::new(),
             enemies: Vec::new(),
@@ -1166,12 +1213,13 @@ pub(crate) fn context(app: &BattleCatsApp, target: Option<Target>) -> Context {
                 .flatten(),
             ground: None,
             making: None,
+            lineup: None,
         };
     }
 
     Context {
         values: app.settings.files.editor_mode,
-        page: app.current_page,
+        page: scene(app),
         file: file_target(app, target),
         cats: cat_payloads(app, reached(Target::CatAttributes)),
         enemies: enemy_payloads(app, reached(Target::EnemyAttributes)),
@@ -1194,11 +1242,15 @@ pub(crate) fn context(app: &BattleCatsApp, target: Option<Target>) -> Context {
         offsets: None,
         ground: ground_target(app, reached(Target::StageGround)),
         making: make_target(app, reached(Target::StageMake)),
+        lineup: match target {
+            Some(Target::LineupCell(cell)) if scene(app) == Page::Sandbox => Some(cell),
+            _ => None,
+        },
     }
 }
 
 fn stage_images(app: &BattleCatsApp, map: bool, stage: bool) -> Vec<ImageTarget> {
-    if (!map && !stage) || app.current_page != Page::Stages {
+    if (!map && !stage) || scene(app) != Page::Stages {
         return Vec::new();
     }
 
@@ -1262,7 +1314,7 @@ fn stage_data_payloads(app: &BattleCatsApp, reached: bool) -> Vec<LevelTarget> {
 }
 
 fn stage_data_targets(app: &BattleCatsApp) -> Vec<LevelTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return Vec::new();
     }
 
@@ -1331,7 +1383,7 @@ fn map_drop_payloads(app: &BattleCatsApp, reached: bool) -> Vec<LevelTarget> {
 // The eight material slots are named by the items `MAT_IDS` points them at, read from the
 // game's own item table rather than translated here.
 fn map_drop_targets(app: &BattleCatsApp) -> Vec<LevelTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return Vec::new();
     }
 
@@ -1398,7 +1450,7 @@ fn item_buy_payloads(app: &BattleCatsApp, target: Option<Target>, broad: bool) -
 // Gatyaitembuy.csv names the item in its fourth column, so the row is found by that rather
 // than by counting past a header the file need not carry.
 fn item_buy_targets(app: &BattleCatsApp, item: Option<u32>) -> Vec<LevelTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return Vec::new();
     }
 
@@ -1431,7 +1483,7 @@ fn item_buy_targets(app: &BattleCatsApp, item: Option<u32>) -> Vec<LevelTarget> 
 // The name file has no header, so an item's catalogue line is its line here outright --
 // nyanko's own `icon_index` doc states that pairing.
 fn item_name_target(app: &BattleCatsApp, item: Option<u32>) -> Option<ProseTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return None;
     }
 
@@ -1464,7 +1516,7 @@ fn item_label(app: &BattleCatsApp, item: u32) -> String {
 // the shipped corpus, 327 stages reference exactly one and none reference two, so the row is
 // addressed outright; a stage that drops no unit offers nothing.
 fn drop_chara_targets(app: &BattleCatsApp) -> Vec<LevelTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return Vec::new();
     }
 
@@ -1541,7 +1593,7 @@ fn material_names(app: &BattleCatsApp) -> Vec<String> {
 // Creating a stage or a map only makes sense into a mod: the files are new, so there is no
 // vanilla original to place and nothing to fall back on under `game`.
 fn make_target(app: &BattleCatsApp, reached: bool) -> Option<MakeTarget> {
-    if !reached || app.current_page != Page::Stages {
+    if !reached || scene(app) != Page::Stages {
         return None;
     }
 
@@ -1655,7 +1707,7 @@ fn making(
 }
 
 fn ground_target(app: &BattleCatsApp, reached: bool) -> Option<GroundTarget> {
-    if !reached || app.current_page != Page::Stages {
+    if !reached || scene(app) != Page::Stages {
         return None;
     }
 
@@ -1715,13 +1767,13 @@ fn named_files(app: &BattleCatsApp, names: Vec<String>) -> Vec<AssetFile> {
 fn anim_target(app: &BattleCatsApp, cats: bool, enemies: bool) -> Option<AnimTarget> {
     let vfs = &app.vault.vfs;
 
-    let (files, motion) = match app.current_page {
+    let (files, motion) = match scene(app) {
         Page::Cats if cats => {
-            let id = app.app_state.cat.selected_cat?;
-            let form = app.app_state.cat.selected_form;
+            let id = held_cat(app)?;
+            let form = held_form(app);
             let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
-            (cat_animation::rig_files(cat, form, vfs)?, app.cat_state.selected_motion())
+            (cat_animation::rig_files(cat, form, vfs)?, held_view(app).selected_motion())
         }
         Page::Enemies if enemies => {
             let id = app.app_state.enemy.selected_enemy?;
@@ -1830,9 +1882,9 @@ fn stage_into(vfs: &Vfs, name: &str, file: &str) -> Option<PathBuf> {
 
 fn figures_tab(app: &BattleCatsApp, subject: figures::Subject) -> bool {
     match subject {
-        figures::Subject::Cat => app.cat_state.selected_tab == DetailTab::Abilities,
+        figures::Subject::Cat => held_view(app).selected_tab == DetailTab::Abilities,
         figures::Subject::Enemy => app.enemy_state.selected_tab == EnemyTab::Abilities,
-        figures::Subject::Combo => app.cat_state.selected_tab == DetailTab::Details,
+        figures::Subject::Combo => held_view(app).selected_tab == DetailTab::Details,
         figures::Subject::Costs => talents_tab(app),
         figures::Subject::Buy
         | figures::Subject::Curve
@@ -1852,11 +1904,11 @@ enum IconSubject {
 fn icon_subject(app: &BattleCatsApp, target: Option<Target>, broad: bool) -> Option<IconSubject> {
     match target {
         Some(Target::EnemyRow(id)) => Some(IconSubject::Enemy(id)),
-        Some(Target::CatIcon) => app.app_state.cat.selected_cat.map(IconSubject::Cat),
+        Some(Target::CatIcon) => held_cat(app).map(IconSubject::Cat),
         Some(Target::EnemyIcon) => app.app_state.enemy.selected_enemy.map(IconSubject::Enemy),
         _ if !broad => None,
-        _ => match app.current_page {
-            Page::Cats => app.app_state.cat.selected_cat.map(IconSubject::Cat),
+        _ => match scene(app) {
+            Page::Cats => held_cat(app).map(IconSubject::Cat),
             Page::Enemies => app.app_state.enemy.selected_enemy.map(IconSubject::Enemy),
             _ => None,
         },
@@ -1892,7 +1944,7 @@ fn prose_payloads(app: &BattleCatsApp, target: Option<Target>, broad: bool) -> V
 
     prose::SUBJECTS
         .into_iter()
-        .filter(|subject| subject.page() == app.current_page && prose_tab(app, *subject))
+        .filter(|subject| subject.page() == scene(app) && prose_tab(app, *subject))
         .filter(|subject| prose_offered(app, *subject))
         .flat_map(|subject| prose_targets(app, subject))
         .collect()
@@ -1923,15 +1975,15 @@ fn combo_payloads(app: &BattleCatsApp, target: Option<Target>, broad: bool) -> V
 }
 
 fn combo_joined(app: &BattleCatsApp) -> bool {
-    app.app_state.cat.selected_cat.is_some_and(|id| combo_line(app, id).is_some())
+    held_cat(app).is_some_and(|id| combo_line(app, id).is_some())
 }
 
 fn combo_target(app: &BattleCatsApp, line: Option<usize>) -> Option<LevelTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return None;
     }
 
-    let id = app.app_state.cat.selected_cat?;
+    let id = held_cat(app)?;
     let files = asset_files(app, cat_files::NYANCOMBO_DATA);
 
     if files.is_empty() {
@@ -1953,13 +2005,13 @@ fn combo_target(app: &BattleCatsApp, line: Option<usize>) -> Option<LevelTarget>
 }
 
 fn combo_anchor(app: &BattleCatsApp, id: u32) -> Option<(i32, i32)> {
-    let form = i32::try_from(app.app_state.cat.selected_form).ok()?;
+    let form = i32::try_from(held_form(app)).ok()?;
 
     Some((i32::try_from(id).ok()?, form))
 }
 
 fn combo_line(app: &BattleCatsApp, id: u32) -> Option<usize> {
-    cat_combo::combo_lines(&app.vault, id, app.app_state.cat.selected_form).first().copied()
+    cat_combo::combo_lines(&app.vault, id, held_form(app)).first().copied()
 }
 
 fn talent_payloads(app: &BattleCatsApp, reached: bool) -> Vec<LevelTarget> {
@@ -1974,11 +2026,11 @@ fn talent_payloads(app: &BattleCatsApp, reached: bool) -> Vec<LevelTarget> {
 }
 
 fn talents_tab(app: &BattleCatsApp) -> bool {
-    app.cat_state.selected_tab == DetailTab::Talents
+    held_view(app).selected_tab == DetailTab::Talents
 }
 
 fn talented(app: &BattleCatsApp) -> bool {
-    app.app_state.cat.selected_cat.is_some()
+    held_cat(app).is_some()
 }
 
 fn address(app: &BattleCatsApp, subject: figures::Subject, id: u32) -> figures::Address {
@@ -1994,7 +2046,7 @@ fn address(app: &BattleCatsApp, subject: figures::Subject, id: u32) -> figures::
 fn talent_costs(app: &BattleCatsApp) -> figures::Marks {
     let mut used = figures::Marks::default();
 
-    let Some(id) = app.app_state.cat.selected_cat else {
+    let Some(id) = held_cat(app) else {
         return used;
     };
 
@@ -2022,11 +2074,11 @@ fn talent_costs(app: &BattleCatsApp) -> figures::Marks {
 }
 
 fn roster_payloads(app: &BattleCatsApp, files: &[(figures::Subject, &str)]) -> Vec<LevelTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return Vec::new();
     }
 
-    let Some(id) = app.app_state.cat.selected_cat else {
+    let Some(id) = held_cat(app) else {
         return Vec::new();
     };
 
@@ -2057,11 +2109,11 @@ fn roster_payloads(app: &BattleCatsApp, files: &[(figures::Subject, &str)]) -> V
 }
 
 fn talent_text_target(app: &BattleCatsApp) -> Option<ProseTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return None;
     }
 
-    let id = app.app_state.cat.selected_cat?;
+    let id = held_cat(app)?;
     let rows = talent_texts(app);
 
     Some(ProseTarget {
@@ -2102,14 +2154,14 @@ fn talent_texts(app: &BattleCatsApp) -> Vec<usize> {
 }
 
 fn level_cap(app: &BattleCatsApp) -> Option<i32> {
-    let id = app.app_state.cat.selected_cat?;
+    let id = held_cat(app)?;
     let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
     Some(cat.unitbuy.level_cap_catseye + cat.unitbuy.level_cap_plus)
 }
 
 fn cat_label(app: &BattleCatsApp, id: u32) -> String {
-    let form = app.app_state.cat.selected_form;
+    let form = held_form(app);
 
     app.cat_state
         .data
@@ -2144,7 +2196,7 @@ fn prose_targets(app: &BattleCatsApp, subject: prose::Subject) -> Vec<ProseTarge
 fn prose_tab(app: &BattleCatsApp, subject: prose::Subject) -> bool {
     match subject {
         prose::Subject::EnemyDescription => app.enemy_state.selected_tab == EnemyTab::Details,
-        prose::Subject::ComboName => app.cat_state.selected_tab == DetailTab::Details,
+        prose::Subject::ComboName => held_view(app).selected_tab == DetailTab::Details,
         prose::Subject::TalentText => talents_tab(app),
         prose::Subject::Explanation
         | prose::Subject::EnemyName
@@ -2206,7 +2258,7 @@ fn prose_subject(target: Option<Target>) -> Option<prose::Subject> {
 
 fn prose_target(app: &BattleCatsApp, subject: prose::Subject) -> Option<ProseTarget> {
     match subject {
-        prose::Subject::Explanation => explanation_target(app, app.app_state.cat.selected_cat?),
+        prose::Subject::Explanation => explanation_target(app, held_cat(app)?),
         prose::Subject::EnemyName => enemy_name_target(app),
         prose::Subject::EnemyDescription => enemy_description_target(app),
         prose::Subject::ComboName => combo_name_target(app, None),
@@ -2236,7 +2288,7 @@ fn stage_key(app: &BattleCatsApp, stage: Option<u32>) -> Option<GlobalStageId> {
 }
 
 fn map_name_target(app: &BattleCatsApp, map: Option<u32>) -> Option<ProseTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return None;
     }
 
@@ -2268,7 +2320,7 @@ fn map_name_target(app: &BattleCatsApp, map: Option<u32>) -> Option<ProseTarget>
 // The story chapters put one stage per line and read the first cell; every other chapter
 // puts a whole map on one line and reads the cell at the stage index.
 fn stage_name_target(app: &BattleCatsApp, stage: Option<u32>) -> Option<ProseTarget> {
-    if app.current_page != Page::Stages {
+    if scene(app) != Page::Stages {
         return None;
     }
 
@@ -2307,11 +2359,11 @@ fn stage_name_target(app: &BattleCatsApp, stage: Option<u32>) -> Option<ProseTar
 }
 
 fn combo_name_target(app: &BattleCatsApp, line: Option<usize>) -> Option<ProseTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return None;
     }
 
-    let id = app.app_state.cat.selected_cat?;
+    let id = held_cat(app)?;
     let row = line.or_else(|| combo_line(app, id))?;
     let files = asset_files(app, cat_files::NYANCOMBO_NAME);
 
@@ -2383,7 +2435,7 @@ fn enemy_label(app: &BattleCatsApp, id: u32) -> String {
 }
 
 fn explanation_target(app: &BattleCatsApp, id: u32) -> Option<ProseTarget> {
-    let form = app.app_state.cat.selected_form;
+    let form = held_form(app);
 
     cat_waiter::unitexplanation_source(&app.vault.vfs, id, form)?;
 
@@ -2427,7 +2479,7 @@ fn icon_target(app: &BattleCatsApp, subject: Option<IconSubject>) -> Option<Icon
         IconSubject::Cat(id) => {
             let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
-            cat.deploy_icon_paths[app.app_state.cat.selected_form].as_ref()?
+            cat.deploy_icon_paths[held_form(app)].as_ref()?
         }
         IconSubject::Enemy(id) => {
             let enemy = app.enemy_state.data.enemies.iter().find(|enemy| enemy.id == id)?;
@@ -2449,12 +2501,12 @@ fn banner_subject(app: &BattleCatsApp, target: Option<Target>, broad: bool) -> O
     match target {
         Some(Target::CatRow(id)) => Some(id),
         _ if !broad => None,
-        _ => app.app_state.cat.selected_cat,
+        _ => held_cat(app),
     }
 }
 
 fn banner_target(app: &BattleCatsApp, id: u32) -> Option<BannerTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return None;
     }
 
@@ -2694,17 +2746,17 @@ fn place_image(file: &str, target_mod: Option<&str>, game: Option<&Path>, source
 }
 
 fn cat_subject(app: &BattleCatsApp) -> Option<CatTarget> {
-    cat_target(app, app.app_state.cat.selected_cat?)
+    cat_target(app, held_cat(app)?)
 }
 
 fn cat_target(app: &BattleCatsApp, id: u32) -> Option<CatTarget> {
-    if app.current_page != Page::Cats {
+    if scene(app) != Page::Cats {
         return None;
     }
 
     let file = cat_files::stats_file(id);
     let source = app.vault.vfs.rooted(architecture::GAME, &file)?;
-    let form = app.app_state.cat.selected_form;
+    let form = held_form(app);
 
     let mod_copy = mod_copy(app, &file);
 
@@ -2728,7 +2780,7 @@ fn cat_target(app: &BattleCatsApp, id: u32) -> Option<CatTarget> {
 }
 
 fn enemy_subject(app: &BattleCatsApp) -> Option<EnemyTarget> {
-    if app.current_page != Page::Enemies {
+    if scene(app) != Page::Enemies {
         return None;
     }
 
@@ -2773,10 +2825,10 @@ pub(crate) fn refresh(app: &BattleCatsApp, editor: &State, force: bool) -> Optio
 
 fn key(app: &BattleCatsApp) -> Key {
     Key {
-        page: app.current_page,
+        page: scene(app),
         values: app.settings.files.editor_mode,
-        cat: app.app_state.cat.selected_cat,
-        form: app.app_state.cat.selected_form,
+        cat: held_cat(app),
+        form: held_form(app),
         enemy: app.app_state.enemy.selected_enemy,
         map: app.stage_state.data.selected_map.clone(),
         stage: app.stage_state.data.selected_stage.clone(),
@@ -2787,16 +2839,16 @@ fn key(app: &BattleCatsApp) -> Key {
 
 fn snapshot(app: &BattleCatsApp, editor: &State) -> Snapshot {
     Snapshot {
-        page: app.current_page,
+        page: scene(app),
         figures: figures::SUBJECTS.map(|subject| {
-            if subject.page() != app.current_page || !editor.figures_drafting(subject) {
+            if subject.page() != scene(app) || !editor.figures_drafting(subject) {
                 return None;
             }
 
             current_plan(app, subject)
         }),
         prose: prose::SUBJECTS.map(|subject| {
-            if subject.page() != app.current_page || !editor.prose_drafting(subject) {
+            if subject.page() != scene(app) || !editor.prose_drafting(subject) {
                 return Vec::new();
             }
 

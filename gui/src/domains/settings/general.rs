@@ -45,6 +45,7 @@ enum Drag {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    ToggleFullscreen(bool),
     ToggleLogging(bool),
     ToggleNightly(bool),
     ToggleIgnoreConflicts(bool),
@@ -75,6 +76,10 @@ pub struct State {
 impl State {
     pub fn update(&mut self, message: Message, core_settings: &mut CoreSettings) -> Task<Message> {
         match message {
+            Message::ToggleFullscreen(enabled) => {
+                core_settings.window.fullscreen = enabled;
+                Task::none()
+            }
             Message::ToggleLogging(enabled) => {
                 core_settings.general.enable_logging = enabled;
                 Task::none()
@@ -249,6 +254,10 @@ impl State {
                     }
                 ).style(theme::combo_box).menu_style(theme::combo_box_menu),
             ].spacing(10).align_y(Alignment::Center),
+            hover_hint(
+                toggle_row(core_settings.window.fullscreen, text("Fullscreen"), Some(Message::ToggleFullscreen)),
+                "Fills the whole screen with the app\nF11 switches this at any time",
+            ),
             hover_hint(
                 toggle_row(core_settings.general.enable_logging, text("Enable Logging"), Some(Message::ToggleLogging)),
                 "Enables logs for easy debugging\nDisable to improve performance\nDevs may refuse to debug without logs",

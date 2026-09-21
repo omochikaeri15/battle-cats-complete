@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
@@ -25,8 +24,10 @@ pub struct Formatter {
     labels: BTreeMap<LabelKey, Texture>,
 }
 
+pub const LABEL_PREFIX: &str = "label:";
+
 pub fn label_key(id: u64) -> Box<str> {
-    Box::from(format!("label:{id}").as_str())
+    Box::from(format!("{LABEL_PREFIX}{id}").as_str())
 }
 
 struct Line {
@@ -181,11 +182,7 @@ impl Formatter {
             }
         }
 
-        Some(Sheet {
-            width,
-            height,
-            pixels: Arc::from(pixels.as_slice()),
-        })
+        Some(Sheet::new(width, height, pixels.as_slice()))
     }
     fn expand(pattern: &[u8], args: &[FormatArg<'_>]) -> Vec<u8> {
         let mut out = Vec::with_capacity(pattern.len());

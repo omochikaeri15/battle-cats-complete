@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, CharaGroup, StageRestriction, get_map_max_star, get_stage_count,
+    AppContext, AssetStream, CharaGroup, StageRestriction, get_map_max_crown, get_stage_count,
     map_type_of_map_id, open_asset_stream, parse_charagroup_row, read_csv_cell, read_csv_row,
 };
 
@@ -32,17 +32,17 @@ pub fn load_cat_group_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
     while read_csv_row(stm) {
         let map_id = read_csv_cell(stm, 0) as i32;
-        let star = read_csv_cell(stm, 1) as i32;
+        let crown = read_csv_cell(stm, 1) as i32;
         let stage = read_csv_cell(stm, 2) as i32;
-        let mut stars: Vec<i32> = Vec::new();
+        let mut crowns: Vec<i32> = Vec::new();
 
-        if star != -1 {
-            stars.push(star);
+        if crown != -1 {
+            crowns.push(crown);
         } else {
             let mut level = 0i32;
 
-            while level <= get_map_max_star(&ctx.map_options, map_id) {
-                stars.push(level);
+            while level <= get_map_max_crown(&ctx.map_options, map_id) {
+                crowns.push(level);
                 level += 1;
             }
         }
@@ -62,7 +62,7 @@ pub fn load_cat_group_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
 
-        for level in &stars {
+        for level in &crowns {
             for index in &stages {
                 let rarity_mask = read_csv_cell(stm, 3) as i32;
                 let deploy_limit = read_csv_cell(stm, 4) as i32;

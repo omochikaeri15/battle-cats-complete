@@ -33,7 +33,7 @@ impl Roster for EnemyRoster {
         entry.id
     }
 
-    fn image_path(entry: &EnemyEntry) -> Option<PathBuf> {
+    fn image_path(entry: &EnemyEntry, _variant: Option<usize>) -> Option<PathBuf> {
         entry.icon_path.clone()
     }
 

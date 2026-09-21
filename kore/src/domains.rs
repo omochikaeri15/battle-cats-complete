@@ -3,6 +3,7 @@ pub mod enemy;
 pub mod import;
 pub mod mining;
 pub mod mods;
+pub mod sandbox;
 pub mod settings;
 pub mod stage;
 pub mod studio;

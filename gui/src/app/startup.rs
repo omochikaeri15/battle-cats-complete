@@ -36,9 +36,11 @@ struct SettingsWindowField {
     window: WindowSettings,
 }
 
-pub(crate) fn saved_window_size() -> Size {
+pub(crate) fn saved_window() -> (Size, bool) {
     let config: WindowConfig = json::load("settings.json").unwrap_or_default();
-    Size::new(config.settings.window.width.max(800.0), config.settings.window.height.max(600.0))
+    let window = config.settings.window;
+
+    (Size::new(window.width.max(800.0), window.height.max(600.0)), window.fullscreen)
 }
 
 fn split(phase: &mut Instant) -> u128 {
@@ -54,6 +56,7 @@ impl BattleCatsApp {
 
         let mut app: Self = json::load("settings.json").unwrap_or_default();
         app.app_state = json::load_state("state.json").unwrap_or_default();
+        app.sandbox_state.set_banner_form(app.settings.sandbox.banner_form);
         let settings_ms = split(&mut phase);
 
         logging::init_logging(app.settings.general.enable_logging);
@@ -127,6 +130,7 @@ impl BattleCatsApp {
 
         let icon_streams = Task::batch([
             app.cat_state.icon_stream().map(Message::Cat),
+            app.sandbox_state.icon_stream().map(Message::Sandbox),
             app.enemy_state.icon_stream().map(Message::Enemy),
             app.mods_state.icon_stream().map(Message::Mod),
         ]);

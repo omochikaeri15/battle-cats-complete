@@ -1,8 +1,8 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, EOC_CHAPTER_HP_MUL, EnemyStats, get_global_map_id, get_star_level,
-    get_star_multiplier, read_flag, stage_entry_magnification,
+    AppContext, EOC_CHAPTER_HP_MUL, EnemyStats, get_global_map_id, get_crown_level,
+    get_crown_multiplier, read_flag, stage_entry_magnification,
 };
 
 pub fn stat_shield_hitpoints(
@@ -38,10 +38,10 @@ pub fn stat_shield_hitpoints(
         }
 
         let map_id = get_global_map_id(ctx, 0)?;
-        let star = get_star_level(ctx)?;
+        let crown = get_crown_level(ctx)?;
 
         return Ok(ops::div_100(
-            get_star_multiplier(&ctx.star_multipliers, map_id, star)?.wrapping_mul(scaled),
+            get_crown_multiplier(&ctx.crown_multipliers, map_id, crown)?.wrapping_mul(scaled),
         ));
     }
 

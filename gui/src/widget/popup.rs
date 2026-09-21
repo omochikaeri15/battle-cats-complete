@@ -118,9 +118,12 @@ pub enum Kind {
     StudioShipout,
     Acknowledgement,
     Fault,
+    SandboxFilter,
+    SandboxUnit,
+    SandboxOrb,
 }
 
-pub(crate) const KIND_COUNT: usize = 43;
+pub(crate) const KIND_COUNT: usize = 46;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -166,6 +169,9 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::StudioShipout,
     Kind::Acknowledgement,
     Kind::Fault,
+    Kind::SandboxFilter,
+    Kind::SandboxUnit,
+    Kind::SandboxOrb,
 ];
 
 impl Kind {
@@ -214,6 +220,9 @@ impl Kind {
             Self::StudioShipout => "studio_shipout",
             Self::Acknowledgement => "acknowledgement",
             Self::Fault => "fault",
+            Self::SandboxFilter => "sandbox_filter",
+            Self::SandboxUnit => "sandbox_unit",
+            Self::SandboxOrb => "sandbox_orb",
         }
     }
 

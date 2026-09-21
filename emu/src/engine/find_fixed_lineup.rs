@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, get_global_map_id, get_stage_index, get_star_level};
+use super::{AppContext, get_global_map_id, get_stage_index, get_crown_level};
 
 pub fn find_fixed_lineup(
     ctx: &mut AppContext,
@@ -11,7 +11,7 @@ pub fn find_fixed_lineup(
     if map_id == -1 {
         map_id = get_global_map_id(ctx, 0)?;
         stage = get_stage_index(ctx)?;
-        level = get_star_level(ctx)?;
+        level = get_crown_level(ctx)?;
     }
 
     for row in &ctx.fixed_lineup_store.rows {

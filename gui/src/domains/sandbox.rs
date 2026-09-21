@@ -1,18 +1,28 @@
-use iced::widget::{column, markdown, row, scrollable, text, Space};
+mod combos;
+mod config;
+mod lineup;
+mod orbs;
+
+use iced::alignment::{Horizontal, Vertical};
+use iced::widget::{button, column, container, markdown, row, rule, scrollable, stack, text, Space};
 use iced::{Alignment, Element, Length, Size, Task, Theme};
 use tracing::warn;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use emu::runtime::BattleOptions;
-use kore::Vfs;
+use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES};
+use kore::common::context::GlobalContext;
+use kore::domains::cat::scanner::CatEntry;
+use kore::domains::sandbox::TECHS;
+use kore::domains::settings::Settings;
 
-use crate::app::state::{AppState, SandboxDevice, SandboxScale, SandboxState, SandboxVolume};
+use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
+use crate::domains::{cat, stage};
 use crate::systems::emu::{Frame as EmuFrame, Session};
 use crate::systems::emu::SheetCache;
-use crate::widget::{combo_row, popup, smooth_scroll, toggle_row};
+use crate::widget::{popup, smooth_scroll};
 
 const ACKNOWLEDGEMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
@@ -33,6 +43,16 @@ const SCROLLBAR_GAP: f32 = 8.0;
 const CHOICE_SPACING: f32 = 12.0;
 const CHOICE_GAP: f32 = 18.0;
 const OPTION_SPACING: f32 = 12.0;
+const PLAY_RESERVE: f32 = 70.0;
+const PLAY_MARGIN: f32 = 14.0;
+const PLAY_WIDTH: f32 = 160.0;
+const TAB_WIDTH: f32 = 90.0;
+const TAB_HEIGHT: f32 = 28.0;
+const TAB_SIZE: f32 = 13.0;
+const TAB_SPACING: f32 = 4.0;
+const TAB_PADDING: f32 = 6.0;
+const FULL_PERCENT: u32 = 100;
+const SUPERIOR_TREASURE: i32 = 3;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -42,12 +62,10 @@ pub enum Message {
     Disagree,
     Play,
     Tick,
-    MusicVolume(SandboxVolume),
-    EffectsVolume(SandboxVolume),
-    Device(SandboxDevice),
-    ScreenSize(SandboxScale),
-    TwoRows(bool),
-    Vibrate(bool),
+    Tab(SandboxTab),
+    Lineup(lineup::Message),
+    Config(config::Message),
+    Stage(stage::Message),
     FaultPopup(popup::Message),
     Terminate,
     Continue,
@@ -60,7 +78,8 @@ pub struct State {
     terms: Vec<markdown::Item>,
     status: String,
     session: Option<Session>,
-    window: (f32, f32),
+    lineup: lineup::State,
+    config: config::State,
 }
 
 impl Default for State {
@@ -72,14 +91,163 @@ impl Default for State {
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
             status: String::new(),
             session: None,
-            window: (0.0, 0.0),
+            lineup: lineup::State::new(0),
+            config: config::State::default(),
         }
     }
 }
 
+impl Message {
+    pub(crate) fn dropping(cell: kore::domains::sandbox::Cell) -> Self {
+        Self::Lineup(lineup::Message::Drop(cell))
+    }
+}
+
 impl State {
-    pub fn enter(&mut self, acknowledged: bool) {
-        self.prompt_open = !acknowledged;
+    pub(crate) fn enter(&mut self, app_state: &AppState, settings: &Settings, ctx: GlobalContext<'_>) -> Task<Message> {
+        self.prompt_open = !app_state.sandbox.acknowledged;
+        self.config.enter(&ctx.vault.vfs);
+        self.lineup.set_banner_form(settings.sandbox.banner_form);
+        self.lineup.enter(app_state, ctx).map(Message::Lineup)
+    }
+
+    pub(crate) fn set_rules(&mut self, rules: kore::domains::sandbox::rules::Rules, app_state: &AppState) {
+        self.lineup.set_rules(rules, app_state);
+    }
+
+    pub(crate) fn forget_assets(&mut self) {
+        if let Some(session) = self.session.as_mut() {
+            session.forget_assets();
+        }
+    }
+
+    pub(crate) fn subscription(&self) -> iced::Subscription<Message> {
+        self.lineup.subscription().map(Message::Lineup)
+    }
+
+    pub(crate) fn icon_stream(&mut self) -> Task<Message> {
+        self.lineup.icon_stream().map(Message::Lineup)
+    }
+
+    pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
+        self.config.reload(&ctx.vault.vfs);
+        self.lineup.adopt_cats(cats, app_state, ctx).map(Message::Lineup)
+    }
+
+    pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
+        self.lineup.set_banner_form(banner_form);
+    }
+
+    pub(crate) fn inspector(&self) -> Option<&cat::State> {
+        self.lineup.unit_open().then(|| self.lineup.inspector())
+    }
+
+    pub(crate) fn unit_popup_open(&self) -> bool {
+        self.lineup.unit_open()
+    }
+
+    pub(crate) fn orb_popup_open(&self) -> bool {
+        self.lineup.orb_open()
+    }
+
+    pub(crate) fn filter_popup_open(&self) -> bool {
+        self.lineup.filter_open()
+    }
+
+    pub(crate) fn unit_popup_view<'a>(
+        &'a self,
+        window: Size,
+        settings: &'a Settings,
+        app_state: &'a AppState,
+        ctx: GlobalContext<'a>,
+    ) -> Option<Element<'a, Message>> {
+        self.lineup.unit_popup_view(window, settings, app_state, ctx).map(|view| view.map(Message::Lineup))
+    }
+
+    pub(crate) fn orb_popup_view<'a>(&'a self, window: Size, app_state: &'a AppState) -> Option<Element<'a, Message>> {
+        self.lineup.orb_popup_view(window, app_state).map(|view| view.map(Message::Lineup))
+    }
+
+    pub(crate) fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        self.lineup.filter_popup_view(window).map(|view| view.map(Message::Lineup))
+    }
+
+    pub(crate) fn setup(&self, app_state: &AppState, stage: StageEntry) -> Setup {
+        let options = &app_state.sandbox;
+        let parts = self.config.parts();
+        let mut setup = Setup { stage, ..Setup::default() };
+
+        setup.lineup = options
+            .roster
+            .current()
+            .into_iter()
+            .flat_map(|lineup| lineup.slots.iter())
+            .map(|member| {
+                let (level, plus) = member.levels();
+                let groups = self.lineup.inspector().cat(member.id).and_then(|cat| cat.talent_data.as_ref());
+
+                SetupUnit {
+                    unit: member.id as i32,
+                    form: member.form as i32,
+                    level,
+                    plus,
+                    talents: member
+                        .talents
+                        .iter()
+                        .filter_map(|(index, level)| {
+                            let group = groups?.groups.get(*index as usize)?;
+
+                            Some((i32::from(group.ability_id), i32::from(*level)))
+                        })
+                        .collect(),
+                    orbs: member.equipped().map(|(slot, orb)| (slot as i32, orb as i32)).collect(),
+                }
+            })
+            .collect();
+
+        setup.tech[0] = TechLevel { level: 1, plus: 0 };
+
+        for (index, tech) in TECHS.iter().enumerate() {
+            let (level, plus) = options.config.tech(index);
+
+            if let Some(held) = setup.tech.get_mut(tech.slot) {
+                *held = TechLevel { level, plus };
+            }
+        }
+
+        for (chapter, stages) in setup.treasures.iter_mut().enumerate() {
+            let percent = if chapter < options.config.treasures.len() { options.config.treasure(chapter) } else { FULL_PERCENT };
+            let owned = (TREASURE_STAGES as u32 * percent).div_ceil(FULL_PERCENT) as usize;
+
+            for level in stages.iter_mut().take(owned) {
+                *level = SUPERIOR_TREASURE;
+            }
+        }
+
+        setup.altar = options.config.altar();
+
+        for (item, off) in options.config.items_off.iter().enumerate() {
+            if let Some(stocked) = setup.items.get_mut(item) {
+                *stocked = !off;
+            }
+        }
+
+        setup.cannon = options.config.cannon.unwrap_or(0);
+        setup.style = options.config.style.unwrap_or(0);
+        setup.foundation = options.config.foundation.unwrap_or(0);
+
+        setup.parts.entry(setup.cannon).or_default().cannon =
+            config::level(&options.config.cannon_level, &parts.cannons, options.config.cannon);
+        setup.parts.entry(setup.style).or_default().style =
+            config::level(&options.config.style_level, &parts.styles, options.config.style);
+        setup.parts.entry(setup.foundation).or_default().foundation =
+            config::level(&options.config.foundation_level, &parts.foundations, options.config.foundation);
+
+        for levels in setup.parts.values_mut() {
+            levels.cannon = levels.cannon.max(1);
+        }
+
+        setup
     }
 
     pub fn transitioning(&self) -> bool {
@@ -98,31 +266,26 @@ impl State {
         self.session.as_ref().map(Session::sheets)
     }
 
-    pub fn design_height(&self) -> f32 {
-        self.session.as_ref().map_or(0.0, Session::design_height)
+    pub fn design_width(&self) -> f32 {
+        self.session.as_ref().map_or(0.0, Session::design_width)
     }
 
     pub fn curtain_touches(&self) -> Option<&crate::systems::emu::TouchQueue> {
         self.session.as_ref().map(Session::touches)
     }
 
-    pub(crate) fn resize(&mut self, width: f32, height: f32, options: &SandboxState) {
-        self.window = (width, height);
-
-        let factor = options.screen_size.factor();
-
+    pub fn resize(&mut self, width: f32, height: f32) {
         if let Some(session) = self.session.as_mut() {
-            session.resize(width * factor, height * factor);
+            session.resize(width, height);
         }
     }
 
-    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState) {
+    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup) {
         let session = self.session.get_or_insert_with(Session::new);
-        let factor = options.screen_size.factor();
 
-        self.window = (width, height);
+        session.equip(setup);
         session.set_phone(options.device == SandboxDevice::Phone);
-        session.resize(width * factor, height * factor);
+        session.resize(width, height);
         session.configure(BattleOptions {
             music: SandboxVolume::nearest(options.music_volume).percent(),
             effects: SandboxVolume::nearest(options.effects_volume).percent(),
@@ -133,7 +296,7 @@ impl State {
         self.status = String::new();
     }
 
-    pub fn update(&mut self, message: Message, app_state: &mut AppState, vfs: &Vfs) -> Task<Message> {
+    pub(crate) fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         match message {
             Message::Popup(msg) => {
                 if self.prompt.update(msg, ACKNOWLEDGE_POPUP) {
@@ -182,49 +345,27 @@ impl State {
 
                 Task::none()
             }
-            Message::MusicVolume(volume) => {
-                app_state.sandbox.music_volume = volume.percent();
-                self.retune(&app_state.sandbox);
+            Message::Tab(tab) => {
+                app_state.sandbox.tab = tab;
 
                 Task::none()
             }
-            Message::EffectsVolume(volume) => {
-                app_state.sandbox.effects_volume = volume.percent();
-                self.retune(&app_state.sandbox);
-
-                Task::none()
-            }
-            Message::Device(device) => {
-                app_state.sandbox.device = device;
+            Message::Stage(_) => Task::none(),
+            Message::Lineup(msg) => self.lineup.update(msg, settings, app_state, ctx).map(Message::Lineup),
+            Message::Config(msg) => {
+                self.config.update(msg, &mut app_state.sandbox);
 
                 if let Some(session) = self.session.as_mut() {
-                    session.set_phone(device == SandboxDevice::Phone);
+                    session.set_phone(app_state.sandbox.device == SandboxDevice::Phone);
                 }
 
-                Task::none()
-            }
-            Message::ScreenSize(size) => {
-                app_state.sandbox.screen_size = size;
-
-                let (width, height) = self.window;
-
-                self.resize(width, height, &app_state.sandbox);
-
-                Task::none()
-            }
-            Message::TwoRows(enabled) => {
-                app_state.sandbox.two_rows = enabled;
-
-                Task::none()
-            }
-            Message::Vibrate(enabled) => {
-                app_state.sandbox.vibrate = enabled;
+                self.retune(&app_state.sandbox);
 
                 Task::none()
             }
             Message::Tick => {
                 if let Some(session) = self.session.as_mut() {
-                    session.tick(vfs);
+                    session.tick(&ctx.vault.vfs);
 
                     if let Some(options) = session.take_options() {
                         app_state.sandbox.music_volume = options.music;
@@ -318,49 +459,60 @@ impl State {
         }
     }
 
-    pub(crate) fn view<'a>(&'a self, options: &SandboxState) -> Element<'a, Message> {
-        column![
-            theme::sized_button("Play", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button)
-                .on_press(Message::Play),
-            Space::new().height(CHOICE_GAP),
-            combo_row(
-                "Device",
-                "Phone insets the battle controls from the screen edges like a notched phone",
-                SandboxDevice::ALL,
-                Some(options.device),
-                Some(Message::Device),
-            ),
-            combo_row(
-                "Screen Size",
-                "Size of the screen the game is told it has, as a share of the window",
-                SandboxScale::ALL,
-                Some(options.screen_size),
-                Some(Message::ScreenSize),
-            ),
-            combo_row(
-                "Music Volume",
-                "The four volume steps the battle settings cycle through",
-                SandboxVolume::ALL,
-                Some(SandboxVolume::nearest(options.music_volume)),
-                Some(Message::MusicVolume),
-            ),
-            combo_row(
-                "Sound Volume",
-                "The four volume steps the battle settings cycle through",
-                SandboxVolume::ALL,
-                Some(SandboxVolume::nearest(options.effects_volume)),
-                Some(Message::EffectsVolume),
-            ),
-            toggle_row(options.two_rows, text("Two-Row Deck").size(BODY_SIZE), Some(Message::TwoRows)),
-            toggle_row(options.vibrate, text("Vibrate").size(BODY_SIZE), Some(Message::Vibrate)),
-            Space::new().height(CHOICE_GAP),
-            iced::widget::text(self.status.as_str()).size(BODY_SIZE),
+    pub(crate) fn view<'a>(
+        &'a self,
+        app_state: &'a AppState,
+        staged: Option<Element<'a, stage::Message>>,
+        playable: bool,
+    ) -> Element<'a, Message> {
+        let options = &app_state.sandbox;
+        let tabs = [(SandboxTab::Lineup, "Lineup"), (SandboxTab::Stage, "Stage"), (SandboxTab::Config, "Config")];
+        let mut bar = row![].spacing(TAB_SPACING);
+
+        for (tab, label) in tabs {
+            let chosen = options.tab == tab;
+
+            bar = bar.push(
+                button(theme::centered_text(label).size(TAB_SIZE))
+                    .width(Length::Fixed(TAB_WIDTH))
+                    .height(Length::Fixed(TAB_HEIGHT))
+                    .on_press(Message::Tab(tab))
+                    .style(move |theme: &Theme, status| theme::header_toggle_button(theme, status, chosen, true)),
+            );
+        }
+
+        let body: Element<'a, Message> = match (options.tab, staged) {
+            (SandboxTab::Stage, Some(staged)) => staged.map(Message::Stage),
+            (SandboxTab::Config, _) => self.config.view(options, PLAY_RESERVE).map(Message::Config),
+            _ => self.lineup.view(app_state).map(Message::Lineup),
+        };
+
+        let page = column![
+            container(bar).width(Length::Fill).align_x(Horizontal::Center).padding([TAB_PADDING, 0.0]),
+            rule::horizontal(1),
+            body,
         ]
-            .spacing(OPTION_SPACING)
-            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .height(Length::Fill);
+
+        let play = container(
+            column![
+                text(self.status.as_str()).size(BODY_SIZE),
+                theme::sized_button("Play", PLAY_WIDTH, theme::primary_button).on_press_maybe(playable.then_some(Message::Play)),
+            ]
+                .spacing(4)
+                .align_x(Alignment::Center),
+        )
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(BODY_PADDING)
-            .into()
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Bottom)
+            .padding(PLAY_MARGIN);
+
+        stack![page, play].into()
+    }
+
+    pub(crate) fn playable(app_state: &AppState, staged: bool) -> bool {
+        staged && app_state.sandbox.roster.current().is_some_and(|lineup| !lineup.slots.is_empty())
     }
 }

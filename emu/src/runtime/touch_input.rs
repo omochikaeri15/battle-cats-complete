@@ -4,8 +4,12 @@ use crate::{
 };
 
 pub fn queue_touch_position(ctx: &mut AppContext, x: i32, y: i32) -> Result<(), Fault> {
+    let tablet = ctx.platform().ok_or(Fault::host_missing())?.is_tablet();
+    let shift = if tablet { ctx.i32_at(AppContext::LETTERBOX_SHIFT)? } else { 0 };
+    let lifted = shift.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_PAD)?);
+
     ctx.set_i32_at(AppContext::TOUCH_PENDING_X, x)?;
-    ctx.set_i32_at(AppContext::TOUCH_PENDING_Y, y)
+    ctx.set_i32_at(AppContext::TOUCH_PENDING_Y, y.wrapping_sub(lifted))
 }
 
 pub fn queue_touch_press(ctx: &mut AppContext, x: i32, y: i32) -> Result<(), Fault> {

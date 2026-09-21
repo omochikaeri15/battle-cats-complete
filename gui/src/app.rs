@@ -84,6 +84,14 @@ impl Page {
     }
 }
 
+fn fullscreen_key(event: iced::Event, _status: iced::event::Status, _window: window::Id) -> Option<Message> {
+    let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, repeat: false, .. }) = event else {
+        return None;
+    };
+
+    (key == iced::keyboard::Key::Named(iced::keyboard::key::Named::F11)).then_some(Message::ToggleFullscreen)
+}
+
 fn undo_key(event: iced::keyboard::Event) -> Option<Message> {
     let iced::keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
         return None;
@@ -204,11 +212,14 @@ enum ActivePopup {
     StudioExport,
     SandboxAcknowledge,
     SandboxFault,
+    SandboxFilter,
+    SandboxUnit,
+    SandboxOrb,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 22] = [
+    const ALL: [Self; 25] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -231,6 +242,9 @@ impl ActivePopup {
         Self::StudioExport,
         Self::SandboxAcknowledge,
         Self::SandboxFault,
+        Self::SandboxFilter,
+        Self::SandboxUnit,
+        Self::SandboxOrb,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -257,6 +271,9 @@ impl ActivePopup {
             Self::StudioExport => popup::Kind::Animator,
             Self::SandboxAcknowledge => popup::Kind::Acknowledgement,
             Self::SandboxFault => popup::Kind::Fault,
+            Self::SandboxFilter => popup::Kind::SandboxFilter,
+            Self::SandboxUnit => popup::Kind::SandboxUnit,
+            Self::SandboxOrb => popup::Kind::SandboxOrb,
         }
     }
 }
@@ -272,6 +289,7 @@ pub enum Message {
     CloseWithMode(window::Id, window::Mode),
     ToggleSidebar,
     WindowResized(Size),
+    ToggleFullscreen,
     Updater(UpdaterMsg),
     UpdaterAction(UpdaterAction),
     UpdaterPopup(popup::Message),
@@ -483,10 +501,15 @@ impl BattleCatsApp {
             self.utilities_state.subscription().map(Message::Utilities),
             Subscription::run(watcher::changes).map(Message::FilesChanged),
             window::close_requests().map(Message::CloseRequested),
+            iced::event::listen_with(fullscreen_key),
         ];
 
         if self.updater_popup_open && matches!(self.updater_status, UpdateStatus::Downloading(_)) {
             subs.push(iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::DownloadTick));
+        }
+
+        if self.current_page == Page::Sandbox {
+            subs.push(self.sandbox_state.subscription().map(Message::Sandbox));
         }
 
         if self.current_page == Page::Studio {
@@ -518,8 +541,19 @@ impl BattleCatsApp {
             info!(ms = boot.elapsed().as_millis(), "Window revealed");
         }
 
+        self.apply_window_mode()
+    }
+
+    fn apply_window_mode(&self) -> Task<Message> {
         let mode = if self.settings.window.fullscreen { window::Mode::Fullscreen } else { window::Mode::Windowed };
+
         window::latest().and_then(move |id| window::set_mode(id, mode))
+    }
+
+    fn set_fullscreen(&mut self, enabled: bool) -> Task<Message> {
+        self.settings.window.fullscreen = enabled;
+
+        self.apply_window_mode()
     }
 
     fn navigate(&mut self, page: Page) -> Task<Message> {
@@ -571,11 +605,15 @@ impl BattleCatsApp {
             Page::Utilities => self.utilities_state.export_scroll_task(),
             Page::Studio => self.studio_state.export_scroll_task(),
             Page::Sandbox => {
-                self.sandbox_state.enter(self.app_state.sandbox.acknowledged);
-                self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
-                self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
 
-                Task::none()
+                self.stage_state.enter();
+
+                let entered = self.sandbox_state.enter(&self.app_state, &self.settings, global_ctx).map(Message::Sandbox);
+
+                self.sync_sandbox_popups();
+
+                entered
             }
             Page::Mining => {
                 let scope = mining::Scope {
@@ -610,6 +648,8 @@ impl BattleCatsApp {
     }
 
     fn apply_changes(&mut self, paths: Vec<PathBuf>) -> Task<Message> {
+        self.sandbox_state.forget_assets();
+
         if !self.vault_ready {
             return Task::none();
         }
@@ -744,7 +784,11 @@ impl BattleCatsApp {
         self.index_dirty = true;
         self.last_change_at = Some(Instant::now());
 
-        files_task
+        if units.is_empty() && stats.is_empty() {
+            return files_task;
+        }
+
+        Task::batch([files_task, self.adopt_sandbox_cats()])
     }
 
     fn replay_changes(&mut self) -> Task<Message> {
@@ -868,6 +912,8 @@ impl BattleCatsApp {
     }
 
     pub(crate) fn rebuild_content(&mut self) -> Task<Message> {
+        self.sandbox_state.forget_assets();
+
         if self.rebuild_running || !self.vault_ready || self.mods_state.mounting() {
             self.rebuild_queued = true;
             return Task::none();
@@ -971,12 +1017,16 @@ impl BattleCatsApp {
                 self.window_size = size;
                 self.window_measured = true;
 
-                self.sandbox_state.resize(size.width, size.height, &self.app_state.sandbox);
+                self.sandbox_state.resize(size.width, size.height);
 
-                self.settings.window.width = size.width;
-                self.settings.window.height = size.height;
+                if !self.settings.window.fullscreen {
+                    self.settings.window.width = size.width;
+                    self.settings.window.height = size.height;
+                }
+
                 Task::none()
             }
+            Message::ToggleFullscreen => self.set_fullscreen(!self.settings.window.fullscreen),
             Message::AutoSave => {
                 self.check_auto_save();
                 self.check_auto_save_state();
@@ -1202,8 +1252,9 @@ impl BattleCatsApp {
 
                 if loaded {
                     let mined = self.restock_mining();
+                    let adopted = self.adopt_sandbox_cats();
 
-                    return Task::batch([task, mined, self.reconcile_caches()]);
+                    return Task::batch([task, mined, adopted, self.reconcile_caches()]);
                 }
 
                 if retabbed {
@@ -1260,6 +1311,7 @@ impl BattleCatsApp {
                 self.stage_state.sync_state(&mut self.app_state.stage);
                 self.sync_popup(ActivePopup::StageFilter, self.stage_state.filter_popup_open());
                 self.sync_editor(stages_loaded);
+                self.sync_sandbox_rules();
 
                 if stages_loaded {
                     let mined = self.restock_mining();
@@ -1451,14 +1503,23 @@ impl BattleCatsApp {
             Message::Sandbox(msg) => {
                 let disagreed = matches!(msg, sandbox::Message::Disagree);
 
-                if matches!(msg, sandbox::Message::Play) {
-                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox);
+                if let sandbox::Message::Stage(staged) = msg {
+                    return self.update(Message::Stage(staged));
                 }
 
-                let task = self.sandbox_state.update(msg, &mut self.app_state, &self.vault.vfs).map(Message::Sandbox);
+                if matches!(msg, sandbox::Message::Play)
+                    && let Some(entry) = self.staged_entry()
+                {
+                    let setup = self.sandbox_state.setup(&self.app_state, entry);
 
-                self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
-                self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup);
+                }
+
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let task = self.sandbox_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Sandbox);
+
+                self.sync_sandbox_rules();
+                self.sync_sandbox_popups();
 
                 if disagreed {
                     return Task::batch([task, self.navigate(Page::Home)]);
@@ -1472,6 +1533,10 @@ impl BattleCatsApp {
                     .update(msg, &self.vault.vfs, &mut self.studio_state)
                     .map(Message::Editor);
 
+                let dropped = self.editor.take_dropped().map(|cell| {
+                    self.update(Message::Sandbox(sandbox::Message::dropping(cell)))
+                });
+
                 let rescan = self.editor.take_rescan().then(|| {
                     let active = self.mods_state.active_mod();
 
@@ -1479,15 +1544,18 @@ impl BattleCatsApp {
                 });
 
                 let Some(page) = self.editor.take_opened() else {
-                    return Task::batch([task].into_iter().chain(rescan));
+                    return Task::batch([task].into_iter().chain(rescan).chain(dropped));
                 };
 
-                Task::batch([task, self.navigate(page)].into_iter().chain(rescan))
+                Task::batch([task, self.navigate(page)].into_iter().chain(rescan).chain(dropped))
             }
             Message::Settings(msg) => {
                 if matches!(msg, gui_settings::Message::General(gui_settings::general::Message::ManualUpdateCheck)) {
                     info!("Manual update check requested from Settings");
                     return self.check_for_updates(true);
+                }
+                if let gui_settings::Message::General(gui_settings::general::Message::ToggleFullscreen(enabled)) = msg {
+                    return self.set_fullscreen(enabled);
                 }
                 if matches!(msg, gui_settings::Message::General(gui_settings::general::Message::ShowUpdatePopup)) {
                     self.set_updater_popup(true);
@@ -1511,6 +1579,7 @@ impl BattleCatsApp {
                 }
 
                 self.sync_editor(false);
+                self.sandbox_state.set_banner_form(self.settings.sandbox.banner_form);
 
                 let relocalize = self.settings_state.take_language_change().then(|| self.relocalize());
 
@@ -1544,7 +1613,14 @@ impl BattleCatsApp {
                 .studio_state
                 .view(&self.settings, &self.app_state.animation)
                 .map(Message::Studio),
-            Page::Sandbox => self.sandbox_state.view(&self.app_state.sandbox).map(Message::Sandbox),
+            Page::Sandbox => {
+                let staged = (self.app_state.sandbox.tab == crate::app::state::SandboxTab::Stage).then(|| {
+                    self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault })
+                });
+                let playable = sandbox::State::playable(&self.app_state, self.staged_entry().is_some());
+
+                self.sandbox_state.view(&self.app_state, staged, playable).map(Message::Sandbox)
+            }
             Page::Utilities => self.utilities_state.view(&self.settings, &self.app_state).map(Message::Utilities),
             Page::Help => {
                 let ui_theme = self.theme();
@@ -1605,9 +1681,47 @@ impl BattleCatsApp {
                 touches: self.sandbox_state.curtain_touches(),
                 covered: self.sandbox_state.curtain_covered(),
                 frozen: self.sandbox_state.frozen(),
-                design_height: self.sandbox_state.design_height(),
+                design_width: self.sandbox_state.design_width(),
             },
         )
+    }
+
+    fn sync_sandbox_rules(&mut self) {
+        let data = &self.stage_state.data;
+        let rules = data.selected_stage.as_ref().and_then(|picked| {
+            let stage = data.registry.stages.get(picked)?;
+            let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+
+            Some(kore::domains::sandbox::rules::Rules::of(stage, data.registry.maps.get(&map), self.stage_state.selected_crown as i8))
+        });
+
+        self.sandbox_state.set_rules(rules.unwrap_or_default(), &self.app_state);
+    }
+
+    fn staged_entry(&self) -> Option<::emu::runtime::StageEntry> {
+        let picked = self.stage_state.data.selected_stage.as_ref()?;
+        let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+        let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
+
+        Some(::emu::runtime::StageEntry {
+            map_id: i32::try_from(global).ok()?,
+            stage: i32::try_from(picked.stage).ok()?,
+            crown: i32::from(self.stage_state.selected_crown),
+        })
+    }
+
+    fn sync_sandbox_popups(&mut self) {
+        self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
+        self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
+        self.sync_popup(ActivePopup::SandboxFilter, self.sandbox_state.filter_popup_open());
+        self.sync_popup(ActivePopup::SandboxUnit, self.sandbox_state.unit_popup_open());
+        self.sync_popup(ActivePopup::SandboxOrb, self.sandbox_state.orb_popup_open());
+    }
+
+    fn adopt_sandbox_cats(&mut self) -> Task<Message> {
+        let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+
+        self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &self.app_state, global_ctx).map(Message::Sandbox)
     }
 
     fn sync_popup(&mut self, popup: ActivePopup, open: bool) {
@@ -1680,7 +1794,7 @@ impl BattleCatsApp {
                         self.enemy_state.filter_popup_view(self.window_size).map(|view| view.map(Message::Enemy))
                     }
                     ActivePopup::StageFilter => {
-                        if !matches!(self.current_page, Page::Stages) {
+                        if !matches!(self.current_page, Page::Stages | Page::Sandbox) {
                             return None;
                         }
 
@@ -1761,6 +1875,34 @@ impl BattleCatsApp {
                         self.studio_state.export_popup_view(self.window_size).map(|view| view.map(Message::Studio))
                     }
                     ActivePopup::SandboxFault => None,
+                    ActivePopup::SandboxFilter => {
+                        if !matches!(self.current_page, Page::Sandbox) {
+                            return None;
+                        }
+
+                        self.sandbox_state.filter_popup_view(self.window_size).map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxUnit => {
+                        if !matches!(self.current_page, Page::Sandbox) {
+                            return None;
+                        }
+
+                        self.sandbox_state
+                            .unit_popup_view(
+                                self.window_size,
+                                &self.settings,
+                                &self.app_state,
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                            )
+                            .map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxOrb => {
+                        if !matches!(self.current_page, Page::Sandbox) {
+                            return None;
+                        }
+
+                        self.sandbox_state.orb_popup_view(self.window_size, &self.app_state).map(|view| view.map(Message::Sandbox))
+                    }
                     ActivePopup::SandboxAcknowledge => {
                         if !matches!(self.current_page, Page::Sandbox) {
                             return None;

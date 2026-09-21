@@ -6,11 +6,11 @@ pub fn event_reward_received(
     ctx: &mut AppContext,
     event: i32,
     stage: i32,
-    star: i32,
+    crown: i32,
     kind: i32,
     use_cache: i32,
 ) -> Result<bool, Fault> {
-    let slot = if kind == 2 { star } else { 0 };
+    let slot = if kind == 2 { crown } else { 0 };
 
     if use_cache != 0 {
         if !ctx.event_reward_cache.contains_key(&event) {

@@ -17,6 +17,8 @@ use super::server_audio::ServerLink;
 
 const FULL: i32 = 100;
 const EVERY_TRACK: i32 = -1;
+const EVERY_EFFECT: i32 = -2;
+const EVERYTHING: i32 = -3;
 const CAF_HEADER: usize = 8;
 const CHUNK_HEADER: usize = 12;
 const DESCRIPTION: &[u8; 4] = b"desc";
@@ -37,6 +39,23 @@ pub struct Volumes {
 }
 
 pub type SharedVolumes = Rc<RefCell<Volumes>>;
+
+struct Shared {
+    output: Option<Output>,
+    voices: RefCell<BTreeMap<i32, Player>>,
+}
+
+pub struct SharedOutput(Rc<Shared>);
+
+impl SharedOutput {
+    pub fn open() -> Self {
+        Self(Rc::new(Shared { output: Output::open(), voices: RefCell::new(BTreeMap::new()) }))
+    }
+
+    pub fn share(&self) -> Self {
+        Self(Rc::clone(&self.0))
+    }
+}
 
 enum Output {
     #[cfg(target_os = "linux")]
@@ -69,24 +88,20 @@ impl Output {
 pub struct Speaker {
     files: Rc<RefCell<FileIndex>>,
     volumes: SharedVolumes,
-    stream: Option<Output>,
+    stream: SharedOutput,
     music: Option<(i32, Player)>,
     effects: BTreeMap<i32, Effect>,
-    voices: BTreeMap<i32, Player>,
     duck: i32,
 }
 
 impl Speaker {
-    pub fn new(files: Rc<RefCell<FileIndex>>, volumes: SharedVolumes) -> Self {
-        let stream = Output::open();
-
+    pub fn new(files: Rc<RefCell<FileIndex>>, volumes: SharedVolumes, stream: SharedOutput) -> Self {
         Self {
             files,
             volumes,
             stream,
             music: None,
             effects: BTreeMap::new(),
-            voices: BTreeMap::new(),
             duck: FULL,
         }
     }
@@ -97,6 +112,12 @@ impl Speaker {
         std::fs::read(path)
             .inspect_err(|error| warn!("emu: {name} could not be read: {error}"))
             .ok()
+    }
+
+    fn track(&self, sound_id: i32) -> Option<String> {
+        let files = self.files.borrow();
+
+        [format!("snd{sound_id:03}.ogg"), format!("{sound_id:03}.ogg")].into_iter().find(|name| files.contains_key(name.as_str()))
     }
 
     fn music_level(&self) -> f32 {
@@ -125,10 +146,10 @@ impl Speaker {
             return;
         }
 
-        let Some(stream) = &self.stream else {
+        let Some(stream) = self.stream.0.output.as_ref() else {
             return;
         };
-        let Some(bytes) = self.read(&format!("{sound_id:03}.ogg")) else {
+        let Some(bytes) = self.track(sound_id).and_then(|name| self.read(&name)) else {
             return;
         };
         let decoded = match Decoder::new_looped(Cursor::new(bytes)) {
@@ -205,7 +226,7 @@ fn parse_caf(bytes: &[u8]) -> Option<Effect> {
 
 impl SoundManager for Speaker {
     fn play_audio(&mut self, sound_id: i32, volume: Option<i32>, is_bgm: bool) {
-        if is_bgm || self.files.borrow().contains_key(format!("{sound_id:03}.ogg").as_str()) {
+        if is_bgm || self.track(sound_id).is_some() {
             self.start_music(sound_id);
 
             return;
@@ -214,7 +235,7 @@ impl SoundManager for Speaker {
         let Some(effect) = self.effect(sound_id) else {
             return;
         };
-        let Some(stream) = &self.stream else {
+        let Some(stream) = self.stream.0.output.as_ref() else {
             return;
         };
         let level = (volume.unwrap_or(FULL) * self.volumes.borrow().effects) as f32 / (FULL * FULL) as f32;
@@ -226,18 +247,21 @@ impl SoundManager for Speaker {
 
         voice.set_volume(level);
         voice.append(source);
-        self.voices.insert(sound_id, voice);
+        self.stream.0.voices.borrow_mut().insert(sound_id, voice);
     }
 
     fn stop_audio(&mut self, sound_id: i32) {
-        if sound_id == EVERY_TRACK || self.music.as_ref().is_some_and(|(held, _)| *held == sound_id) {
+        let music = matches!(sound_id, EVERY_TRACK | EVERYTHING);
+        let effects = matches!(sound_id, EVERY_EFFECT | EVERYTHING);
+
+        if music || self.music.as_ref().is_some_and(|(held, _)| *held == sound_id) {
             self.music = None;
         }
 
-        if sound_id == EVERY_TRACK {
-            self.voices.clear();
+        if effects {
+            self.stream.0.voices.borrow_mut().clear();
         } else {
-            self.voices.remove(&sound_id);
+            self.stream.0.voices.borrow_mut().remove(&sound_id);
         }
     }
 

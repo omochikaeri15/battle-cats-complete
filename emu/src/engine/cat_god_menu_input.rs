@@ -4,7 +4,7 @@ use super::{
     AppContext, Entity, FormatArg, analytics_record, app_on_draw, back_pressed, bgm_player_switch,
     call_rng, can_push_back, get_anim_len, get_battle_status, get_design_height2,
     get_drawable_width, get_entity_state, get_global_map_id, get_max_money, get_max_zoom,
-    get_miracle_price, get_stage_index, get_star_level, get_text_texture, get_worker_level,
+    get_miracle_price, get_stage_index, get_crown_level, get_text_texture, get_worker_level,
     hit_test_rect, keep_in_bound, log_analytics_event, obf_value_read, play_sound,
     save_battle_snapshot, set_auto_camera_mode, set_bgm_duck, set_money, set_worker_level, sin_deg,
     sound_manager, spend_cat_food, text_texture_cache, touch_is_down, touch_released, xor_row_get,
@@ -304,7 +304,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         ctx.label_texts[0] =
                             {
                                 let font = ctx.default_font.clone();
-                                let text = ctx.battle_texts.get(5).cloned().ok_or(
+                                let text = ctx.warning1_texts.get(5).cloned().ok_or(
                                     Fault::index_out_of_range(5, 0x35),
                                 )?;
 
@@ -407,7 +407,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                             let map = get_global_map_id(ctx, 0)?;
                             let stage = get_stage_index(ctx)?;
-                            let star = get_star_level(ctx)?;
+                            let crown = get_crown_level(ctx)?;
                             let price =
                                 get_miracle_price(ctx, ctx.i32_at(AppContext::CAT_GOD_SELECTED)?)?;
 
@@ -422,7 +422,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     (b"sec2_type", FormatArg::Text(b"StageIdx")),
                                     (b"sec2_id", FormatArg::Int(stage)),
                                     (b"ex_type", FormatArg::Text(b"StageLv")),
-                                    (b"ex_id", FormatArg::Int(star)),
+                                    (b"ex_id", FormatArg::Int(crown)),
                                 ],
                             )?;
 

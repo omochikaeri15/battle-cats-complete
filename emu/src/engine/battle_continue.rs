@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, FormatArg, add_resource, analytics_record, app_on_draw, base_shake_reset,
-    get_global_map_id, get_stage_index, get_star_level, is_ex_option_target, log_analytics_event,
+    get_global_map_id, get_stage_index, get_crown_level, is_ex_option_target, log_analytics_event,
     save_battle_snapshot,
 };
 
@@ -23,7 +23,7 @@ pub fn battle_continue(ctx: &mut AppContext) -> Result<(), Fault> {
         if ctx.u8_at(AppContext::OUTRO_VIDEO_WATCHED)? == 0 {
             let map = get_global_map_id(ctx, 0)?;
             let stage = get_stage_index(ctx)?;
-            let star = get_star_level(ctx)?;
+            let crown = get_crown_level(ctx)?;
 
             analytics_record(
                 ctx,
@@ -36,7 +36,7 @@ pub fn battle_continue(ctx: &mut AppContext) -> Result<(), Fault> {
                     (b"sec2_type", FormatArg::Text(b"StageIdx")),
                     (b"sec2_id", FormatArg::Int(stage)),
                     (b"ex_type", FormatArg::Text(b"StageLv")),
-                    (b"ex_id", FormatArg::Int(star)),
+                    (b"ex_id", FormatArg::Int(crown)),
                 ],
             )?;
         }

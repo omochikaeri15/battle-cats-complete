@@ -10,6 +10,8 @@ pub(crate) const NYANCOMBO_EFFECT: &str = "Nyancombo1.csv";
 pub(crate) const NYANCOMBO_BAND: &str = "Nyancombo2.csv";
 pub(crate) const NYANCOMBO_FILTER: &str = "NyancomboFilter.tsv";
 pub(crate) const NYANCOMBO_PARAM: &str = "NyancomboParam.tsv";
+pub(crate) const EQUIPMENT_LIST: &str = "equipmentlist.json";
+pub(crate) const EQUIPMENT_SLOT: &str = "equipmentslot.csv";
 pub(crate) const EMPTY_ICON: &str = "uni.png";
 
 #[derive(Copy, Clone, PartialEq)]

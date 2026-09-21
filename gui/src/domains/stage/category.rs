@@ -32,6 +32,7 @@ impl CategoryExt for Category {
             Self::ZeroLegends          => "Zero Legends",
             Self::OtherworldColosseum  => "Otherworld Colosseum",
             Self::CatclawChampionships => "Catclaw Championships",
+            Self::FeverRush            => "Fever Rush",
             Self::Unknown(prefix)      => {
                 if prefix == "PT" {
                     "Legacy Princess Punt"
@@ -60,6 +61,7 @@ impl CategoryExt for Category {
             Self::GauntletStages       => 22,
             Self::CataminStages        => 24,
             Self::ChallengeBattle      => 25,
+            Self::FeverRush            => 26,
 
             Self::TowersAndCitadels    => 31,
             Self::OtherworldColosseum  => 32,

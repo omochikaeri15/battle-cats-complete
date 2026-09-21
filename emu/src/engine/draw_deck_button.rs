@@ -363,17 +363,21 @@ pub fn draw_deck_button(
         return Ok(());
     }
 
-    if overlay == 0
-        && ctx.i32_at(
+    let flash = if overlay == 0 {
+        ctx.i32_at(
             wallet
                 .wrapping_add(AppContext::WALLET_SLOT_FLASH)
                 .wrapping_add(((slot as i64) * 4) as usize),
-        )? >= 0
-    {
+        )?
+    } else {
+        -1
+    };
+
+    if flash >= 0 {
         maanim_execute(
             &mut ctx.invoke_equipment_model,
             Some(&ctx.invoke_equipment_anim),
-            0,
+            flash,
             0,
         )?;
 

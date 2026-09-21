@@ -1595,9 +1595,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     let map_type = validate_map_type(saved);
                                     let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                                     let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
-                                    let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                                    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
                                     let first_clear =
-                                        get_stage_record(ctx, map_type, map_index, stage, star, 0)?
+                                        get_stage_record(ctx, map_type, map_index, stage, crown, 0)?
                                             <= 0;
 
                                     log_analytics_event(ctx, 0x1e, first_clear as i32, 0, 0, 0)?;
@@ -1606,17 +1606,17 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
                                     let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                                     let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
-                                    let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                                    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-                                    add_stage_record(ctx, map_type, map_index, stage, star, 1, 0)?;
+                                    add_stage_record(ctx, map_type, map_index, stage, crown, 1, 0)?;
 
                                     let map_type =
                                         validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
                                     let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                                     let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
-                                    let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                                    let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
-                                    if get_stage_record(ctx, map_type, map_index, stage, star, 0)?
+                                    if get_stage_record(ctx, map_type, map_index, stage, crown, 0)?
                                         >= 0x2710
                                     {
                                         let map_type = validate_map_type(
@@ -1624,10 +1624,10 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         );
                                         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                                         let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
-                                        let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
+                                        let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
 
                                         set_stage_record(
-                                            ctx, map_type, map_index, stage, star, 0x270f, 0,
+                                            ctx, map_type, map_index, stage, crown, 0x270f, 0,
                                         )?;
                                     }
 

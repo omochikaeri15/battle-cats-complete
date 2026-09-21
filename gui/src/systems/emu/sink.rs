@@ -344,15 +344,31 @@ impl Recorder {
         let Some(sheet) = shared.as_deref() else {
             return;
         };
-        let cut = part.i32_at(PART_CUT[0]).wrapping_add(part.i32_at(PART_CUT[1]));
-        let Some(source) = Self::cut_of(sheet, cut) else {
-            return;
-        };
         let corners = PART_CORNERS.map(|offset| {
             let [x, y] = place(part.i32_at(offset), part.i32_at(offset + 4));
 
             self.place(x as f32, y as f32)
         });
+
+        if sheet.whole != 0 {
+            let quad = Quad {
+                sheet: None,
+                label: Some(sheet.label),
+                corners,
+                source: [0.0, 0.0, sheet.width as f32, sheet.height as f32],
+                colors: [premultiplied(self.state.color); 4],
+                blend: self.state.glow as u8,
+            };
+
+            self.push(quad);
+
+            return;
+        }
+
+        let cut = part.i32_at(PART_CUT[0]).wrapping_add(part.i32_at(PART_CUT[1]));
+        let Some(source) = Self::cut_of(sheet, cut) else {
+            return;
+        };
 
         self.push_region(sheet, source, corners);
     }

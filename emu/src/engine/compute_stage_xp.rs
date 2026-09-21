@@ -48,8 +48,8 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
             let map_type = validate_map_type(ctx.i32_at(AppContext::SAVED_MAP_TYPE)?);
             let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
             let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
-            let star = ctx.i32_at(AppContext::STAR_LEVEL)?;
-            let clears = get_stage_record(ctx, map_type, map_index, stage, star, 0)?;
+            let crown = ctx.i32_at(AppContext::CROWN_LEVEL)?;
+            let clears = get_stage_record(ctx, map_type, map_index, stage, crown, 0)?;
             let scaled = min_i32(clears, 4).wrapping_mul(xp);
 
             xp = (scaled / -5).wrapping_add(xp);
