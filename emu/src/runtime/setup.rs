@@ -117,6 +117,7 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
     }
 
     ctx.set_i32_at(AppContext::ENTRY_STAGE, entry.stage)?;
+    ctx.set_i32_at(if mode == EXTRA_MODE { AppContext::EX_STAGE_INDEX } else { AppContext::STAGE_INDEX }, entry.stage)?;
     ctx.set_i32_at(AppContext::faction_flags(0), CAT_SIDE)?;
     ctx.set_i32_at(AppContext::faction_flags(1), ENEMY_SIDE)
 }

@@ -924,7 +924,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let map = ctx.i32_at(AppContext::EX_MAP)? as i64 as usize;
             let stage = ctx.i32_at(AppContext::EX_STAGE)? as i64 as usize;
             let name = ctx
-                .ex_stage_names
+                .stage_name_variants[3]
                 .get(map)
                 .and_then(|names| names.get(stage))
                 .cloned()
