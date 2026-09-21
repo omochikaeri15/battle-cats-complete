@@ -32,12 +32,18 @@ pub fn load_god_texts(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
-        read_stream_row(stm, b',');
         ctx.god_chatter_texts.clear();
-        ctx.god_chatter_texts.push([
-            read_cell_stream(stm, 0).to_vec(),
-            read_cell_stream(stm, 1).to_vec(),
-        ]);
+
+        let mut row = 0i32;
+
+        while row != 0x21 {
+            read_stream_row(stm, b',');
+            ctx.god_chatter_texts.push([
+                read_cell_stream(stm, 0).to_vec(),
+                read_cell_stream(stm, 1).to_vec(),
+            ]);
+            row += 1;
+        }
     }
 
     let lang = query_localizable(ctx, b"lang");
@@ -99,12 +105,18 @@ pub fn load_god_texts(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
-        read_stream_row(stm, b',');
         ctx.god_item_texts.clear();
-        ctx.god_item_texts.push([
-            read_cell_stream(stm, 0).to_vec(),
-            read_cell_stream(stm, 1).to_vec(),
-        ]);
+
+        let mut row = 0i32;
+
+        while row != 4 {
+            read_stream_row(stm, b',');
+            ctx.god_item_texts.push([
+                read_cell_stream(stm, 0).to_vec(),
+                read_cell_stream(stm, 1).to_vec(),
+            ]);
+            row += 1;
+        }
     }
 
     Ok(())

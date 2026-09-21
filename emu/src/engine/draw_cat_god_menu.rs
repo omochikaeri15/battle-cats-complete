@@ -65,7 +65,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
             if ctx.u8_at(AppContext::CAT_GOD_CONFIRM_OPEN)? == 0 && ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 2 {
-                let sheet = ctx.img042_sheet.clone();
+                let sheet = ctx.img039_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312);
                 let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
@@ -135,7 +135,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 };
                 let digits = ctx.img001_sheet.clone();
                 let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
-                let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0, x as f32, y as f32, 0.0, 0x37, 2, 1)?;
+                let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0x37, x as f32, y as f32, 0.0, 1, 2, 0)?;
                 let icon = ctx.img006_sheet.clone();
                 let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
                 let across = ops::cvttss2si(bounds.left + -55.0);
@@ -216,7 +216,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, purse, 0, x, 592.0, -1.0, 0, 2, 0)?;
 
-                if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 4 {
+                if ctx.u8_at(AppContext::CAT_GOD_CONFIRM_OPEN)? != 0 {
                     let sheet = ctx.img040_sheet.clone();
                     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x71);
@@ -328,7 +328,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     let digits = ctx.img001_sheet.clone();
                     let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
                     let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x10c) as f32;
-                    let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0, x, 388.0, -1.0, 0x37, 1, 0)?;
+                    let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0x37, x, 388.0, -1.0, 0, 1, 0)?;
                     let icon = ctx.img006_sheet.clone();
                     let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
                     let across = ops::cvttss2si(bounds.left + -55.0);
@@ -342,8 +342,8 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                         draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, y, 1);
                     }
 
-                    if ctx.i32_at(AppContext::CAT_GOD_STATE)? == 5 {
-                        let sheet = ctx.img006_sheet.clone();
+                    if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 2 {
+                        let sheet = ctx.img039_sheet.clone();
                         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x234);
                         let ticks = ctx.i32_at(AppContext::CAT_GOD_OPEN_TICKS)?;
@@ -354,6 +354,10 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
             }
         }
+    }
+
+    if ctx.i32_at(AppContext::CAT_GOD_STATE)? != 5 {
+        return Ok(());
     }
 
     let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
