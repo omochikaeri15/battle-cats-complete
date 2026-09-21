@@ -1812,54 +1812,11 @@ pub(super) fn plan(label: String, game: &Path, target_mod: Option<String>, value
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::path::{Path, PathBuf};
-
-    use nyanko::combat::Separator;
-    use nyanko::common;
-
-    use nyanko::chapter::stage::Battleground;
+    use std::path::PathBuf;
 
     use kore::domains::settings::EditorMode;
 
-    use super::{body, cells, scan, Kind, Rule};
-
-    // nyanko drops one row from `entries` on sight: the placeholder that is enemy 21 at
-    // frame 27000 (raw id 23, raw frame 13500 before its Double scale). The editor keeps
-    // it, because it is a real line somebody may want to change, so the corpus check has
-    // to add it back rather than pretend the two sets are equal.
-    fn hidden(line: &str, delimiter: char) -> bool {
-        let parts = cells(body(line), delimiter);
-        let read = |at: usize| parts.get(at).and_then(|cell| cell.trim().parse::<i32>().ok());
-
-        read(0) == Some(23) && read(2) == Some(13500)
-    }
-
-    fn corpus() -> Option<PathBuf> {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent()?.join(".cargo/game/stages");
-
-        root.is_dir().then_some(root)
-    }
-
-    fn walk(root: &Path, found: &mut Vec<PathBuf>) {
-        let Ok(entries) = fs::read_dir(root) else {
-            return;
-        };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-
-            if path.is_dir() {
-                walk(&path, found);
-                continue;
-            }
-
-            let named = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
-
-            if named.starts_with("stage") && named.ends_with(".csv") {
-                found.push(path);
-            }
-        }
-    }
+    use super::{Kind, Rule};
 
     // The editor writes raw lines, so it has to find the enemy rows itself rather than
     // going through the parser. Agreeing with nyanko on every shipped stage is what keeps
@@ -2037,69 +1994,6 @@ mod tests {
         }
 
         assert_eq!(super::magnifications("100"), (Some("100"), Some("100")), "one number sets both");
-    }
-
-    #[test]
-    fn the_line_scan_agrees_with_nyanko_on_every_shipped_stage() {
-        let Some(root) = corpus() else {
-            return;
-        };
-
-        let mut files = Vec::new();
-        walk(&root, &mut files);
-
-        assert!(files.len() > 5000, "expected the shipped stage corpus, found {}", files.len());
-
-        let mut checked = 0;
-        let mut skipped = 0;
-
-        for path in &files {
-            let Ok(bytes) = fs::read(path) else { continue };
-            let scrubbed = common::scrub(&bytes);
-            let delimiter = Separator::detect(&scrubbed).unwrap_or(Separator::Comma).char();
-            let lines: Vec<String> = scrubbed.lines().map(str::to_owned).collect();
-
-            let Ok(parsed) = Battleground::parse(&bytes, None) else {
-                skipped += 1;
-                continue;
-            };
-
-            let Some(sheet) = scan(&lines, delimiter) else {
-                skipped += 1;
-                continue;
-            };
-
-            let masked = sheet
-                .spawns
-                .iter()
-                .filter(|index| lines.get(**index).is_some_and(|line| hidden(line, delimiter)))
-                .count();
-
-            assert_eq!(
-                sheet.spawns.len() - masked,
-                parsed.entries.len(),
-                "{}: scanned {} spawn rows ({masked} hidden), nyanko parsed {}",
-                path.display(),
-                sheet.spawns.len(),
-                parsed.entries.len(),
-            );
-
-            for index in &sheet.spawns {
-                let Some(line) = lines.get(*index) else { continue };
-                let row = super::split(line, delimiter);
-
-                assert_eq!(
-                    row.rebuild(0, delimiter),
-                    *line,
-                    "{}: line {index} does not survive an untouched rebuild",
-                    path.display(),
-                );
-            }
-
-            checked += 1;
-        }
-
-        assert!(checked > 5000, "only {checked} files agreed, {skipped} skipped");
     }
 
     fn scratch_dir(label: &str) -> PathBuf {

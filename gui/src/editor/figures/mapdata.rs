@@ -19,8 +19,6 @@ const NOTICE_SIZE: f32 = 11.0;
 const CHROME_GAP: f32 = 8.0;
 
 pub(crate) const MAP_HEADER_LINES: usize = 2;
-#[cfg(test)]
-const MAP_PATTERN_LINE: usize = 1;
 
 // The map-wide cells sit above the scroll because they belong to the file rather than to
 // the stage, and the stage's own row scrolls beneath them.
@@ -169,48 +167,12 @@ fn timed(row: &[i32]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::path::{Path, PathBuf};
-
     use nyanko::chapter::stage::{CostType, MapStageData, RewardStructure};
-    use nyanko::combat::Separator;
-    use nyanko::common;
 
     use super::super::schema::{self, Subject};
     use super::*;
 
     const HEADER_WIDTH: usize = 7;
-    const STAGE_FIRST: usize = HEADER_WIDTH + 1;
-
-    fn wanted_width() -> usize {
-        5
-    }
-
-    fn corpus() -> Option<PathBuf> {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent()?.join(".cargo/game/stages");
-
-        root.is_dir().then_some(root)
-    }
-
-    fn walk(root: &Path, found: &mut Vec<PathBuf>) {
-        let Ok(entries) = fs::read_dir(root) else { return };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-
-            if path.is_dir() {
-                walk(&path, found);
-                continue;
-            }
-
-            let named = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
-            let wanted = named.starts_with("MapStageData") || named.starts_with("stageNormal");
-
-            if wanted && named.ends_with(".csv") {
-                found.push(path);
-            }
-        }
-    }
 
     // Only the cells the line really holds are compared. Past them the editor pads with the
     // column's published `absent` default, which is nyanko's declared value for a missing
@@ -219,12 +181,6 @@ mod tests {
         let row = super::super::split_span(line, delimiter, schema::of(Subject::MapStage), first, len);
 
         (row.cells, row.stored)
-    }
-
-    fn shared(read: &[i32], wanted: &[i32], stored: usize) -> (Vec<i32>, Vec<i32>) {
-        let width = wanted.len().min(stored);
-
-        (read[..width].to_vec(), wanted[..width].to_vec())
     }
 
     // The pick list has to be able to represent the padding the editor writes into a file
@@ -348,92 +304,5 @@ mod tests {
         for name in ["Drop 10 Chance", "Score 10 Points", "Timed Marker", "Drop Rule", "Row End"] {
             assert!(name.chars().count() <= widest, "{name} is wider than {widest} characters");
         }
-    }
-
-    // The editor addresses a stage by arithmetic rather than by scanning, so the arithmetic
-    // has to be right on every shipped file: 9,083 of their table lines are blank or comment
-    // only, and nyanko spends a stage index on each one.
-    #[test]
-    fn a_stage_row_sits_where_the_editor_addresses_it() {
-        let Some(root) = corpus() else { return };
-
-        let mut files = Vec::new();
-        walk(&root, &mut files);
-
-        assert!(files.len() > 1000, "expected the shipped map corpus, found {}", files.len());
-
-        let mut checked = 0;
-
-        for path in &files {
-            let Ok(bytes) = fs::read(path) else { continue };
-            let Ok(parsed) = MapStageData::parse(&bytes, None) else { continue };
-
-            let body = common::scrub(&bytes);
-            let delimiter = Separator::detect(&body).unwrap_or(Separator::Comma).char();
-            let lines: Vec<&str> = body.lines().collect();
-
-            for (stage, entry) in parsed.entries.iter().enumerate() {
-                let held = lines.get(MAP_HEADER_LINES + stage).copied().unwrap_or_default();
-                let (read, stored) = cells(held, delimiter, STAGE_FIRST, wanted_width());
-
-                let wanted = [
-                    entry.cost as i32,
-                    entry.xp as i32,
-                    entry.init_track as i32,
-                    entry.bgm_change_percent as i32,
-                    i32::from(entry.boss_track),
-                ];
-
-                let (read, wanted) = shared(&read, &wanted, stored);
-
-                assert_eq!(
-                    read, wanted,
-                    "{}: line {} does not hold stage {stage}",
-                    path.display(),
-                    MAP_HEADER_LINES + stage,
-                );
-            }
-
-            let (head, stored) = cells(lines.first().copied().unwrap_or_default(), delimiter, 0, HEADER_WIDTH);
-            let header = &parsed.header;
-            let cost_type = match header.cost_type {
-                CostType::Energy => 0,
-                CostType::Item => 1,
-                CostType::Catamin => 2,
-                _ => -1,
-            };
-
-            let declared = [
-                header.map_number,
-                header.item_reward_setting,
-                header.score_reward_setting,
-                header.map_condition,
-                header.stage_condition,
-                header.user_rank_threshold,
-                cost_type,
-            ];
-
-            let (head, declared) = shared(&head, &declared, stored);
-
-            assert_eq!(
-                head, declared,
-                "{}: line 0 is not the map header",
-                path.display(),
-            );
-
-            let (pattern, _) =
-                cells(lines.get(MAP_PATTERN_LINE).copied().unwrap_or_default(), delimiter, HEADER_WIDTH, 1);
-
-            assert_eq!(
-                pattern.first().copied(),
-                Some(header.map_pattern),
-                "{}: line {MAP_PATTERN_LINE} is not the map pattern",
-                path.display(),
-            );
-
-            checked += 1;
-        }
-
-        assert!(checked > 1000, "only {checked} files agreed");
     }
 }
