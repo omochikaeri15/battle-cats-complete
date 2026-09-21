@@ -354,7 +354,12 @@ impl Driver {
             return false;
         }
 
-        match emu::engine::prepare_battle_entry(&mut self.ctx) {
+        let prepared = match emu::runtime::is_extra_entry(&self.ctx) {
+            Ok(true) => emu::runtime::prepare_extra_entry(&mut self.ctx),
+            _ => emu::engine::prepare_battle_entry(&mut self.ctx),
+        };
+
+        match prepared {
             Ok(true) => {}
             Ok(false) => return false,
             Err(fault) => {

@@ -42,6 +42,7 @@ const BODY_SIZE: f32 = 14.0;
 const SPEED_UP_ITEM: i32 = 0;
 const CAT_CPU_ITEM: i32 = 3;
 const SNIPER_ITEM: i32 = 5;
+const STATUS_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
 const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
@@ -75,6 +76,7 @@ pub enum Message {
     Terminate,
     Continue,
     Key(String, bool),
+    StatusExpired,
 }
 
 pub struct State {
@@ -83,6 +85,7 @@ pub struct State {
     fault: popup::State,
     terms: Vec<markdown::Item>,
     status: String,
+    reported: String,
     session: Option<Session>,
     tapped: Option<std::time::Instant>,
     lineup: lineup::State,
@@ -97,6 +100,7 @@ impl Default for State {
             fault: popup::State::default(),
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
             status: String::new(),
+            reported: String::new(),
             session: None,
             tapped: None,
             lineup: lineup::State::new(0),
@@ -322,6 +326,7 @@ impl State {
         });
         session.begin();
         self.status = String::new();
+        self.reported = String::new();
     }
 
     pub(crate) fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
@@ -363,6 +368,11 @@ impl State {
                 if let Some(session) = self.session.as_mut() {
                     session.resume();
                 }
+
+                Task::none()
+            }
+            Message::StatusExpired => {
+                self.status.clear();
 
                 Task::none()
             }
@@ -442,10 +452,16 @@ impl State {
                         app_state.sandbox.vibrate = options.vibrate;
                     }
 
-                    self.status = session
-                        .failure()
-                        .filter(|_| !session.faulted())
-                        .map_or_else(String::new, str::to_owned);
+                    let failure = session.failure().filter(|_| !session.faulted()).map_or_else(String::new, str::to_owned);
+
+                    if failure != self.reported {
+                        self.reported.clone_from(&failure);
+                        self.status = failure;
+
+                        if !self.status.is_empty() {
+                            return Task::future(smol::Timer::after(STATUS_LIFETIME)).map(|_| Message::StatusExpired);
+                        }
+                    }
                 }
 
                 Task::none()

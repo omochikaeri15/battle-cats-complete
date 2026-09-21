@@ -314,7 +314,10 @@ impl State {
             let cost = self.rules.cost(grown.eoc1_cost, rarity);
             let earlier = fielded.iter().filter(|held| **held == rarity).count();
 
-            self.priced.insert(cell, Priced { cost, barred: self.rules.bars(member.id, rarity, cost, earlier) });
+            self.priced.insert(cell, Priced { cost, barred: self.rules.bars(member.id, rarity, cost, earlier, match cell {
+                Cell::Slot(slot) => Some(slot),
+                Cell::Bench(_) => None,
+            }) });
 
             if matches!(cell, Cell::Slot(_)) {
                 fielded.push(rarity);

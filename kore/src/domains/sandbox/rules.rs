@@ -5,10 +5,12 @@ use nyanko::chapter::{Map, Stage};
 const FOUR_CROWN: i8 = 3;
 const FOUR_CROWN_MASK: u8 = 6;
 const LEGEND_TIER: i32 = 3;
+const TOP_ROW: usize = 5;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
     rarity_mask: u8,
+    single_row: bool,
     min_cost: i32,
     max_cost: i32,
     only: Option<Vec<u32>>,
@@ -46,6 +48,7 @@ impl Rules {
         }
 
         rules.rarity_mask = if crown == FOUR_CROWN { FOUR_CROWN_MASK } else { stage.rarity_mask };
+        rules.single_row = stage.allowed_rows == 1;
         rules.min_cost = i32::try_from(stage.min_cost).unwrap_or(i32::MAX);
         rules.max_cost = i32::try_from(stage.max_cost).unwrap_or(i32::MAX);
 
@@ -76,7 +79,11 @@ impl Rules {
             .map_or(cost, |percent| cost * percent / 100)
     }
 
-    pub fn bars(&self, unit: u32, rarity: usize, cost: i32, earlier: usize) -> bool {
+    pub fn bars(&self, unit: u32, rarity: usize, cost: i32, earlier: usize, slot: Option<usize>) -> bool {
+        if self.single_row && slot.is_some_and(|slot| slot >= TOP_ROW) {
+            return true;
+        }
+
         if self.rarity_mask != 0 && (u32::from(self.rarity_mask) >> (rarity & 0x1f)) & 1 == 0 {
             return true;
         }
@@ -124,10 +131,16 @@ mod tests {
     fn a_restriction_bars_the_units_it_names() {
         let rules = Rules { rarity_mask: 0b100, max_cost: 1200, never: vec![7], lineup_caps: vec![9, 9, 1, 9, 9, 9], ..Rules::default() };
 
-        assert!(rules.bars(1, 4, 100, 0), "an Uber is outside a Rare-only mask");
-        assert!(rules.bars(1, 2, 1500, 0), "priced over the cap");
-        assert!(rules.bars(7, 2, 100, 0), "named by a Cannot Use group");
-        assert!(rules.bars(1, 2, 100, 1), "the second Rare is over a cap of one");
-        assert!(!rules.bars(1, 2, 100, 0));
+        assert!(rules.bars(1, 4, 100, 0, Some(0)), "an Uber is outside a Rare-only mask");
+        assert!(rules.bars(1, 2, 1500, 0, Some(0)), "priced over the cap");
+        assert!(rules.bars(7, 2, 100, 0, Some(0)), "named by a Cannot Use group");
+        assert!(rules.bars(1, 2, 100, 1, Some(1)), "the second Rare is over a cap of one");
+        assert!(!rules.bars(1, 2, 100, 0, Some(0)));
+
+        let one_row = Rules { single_row: true, ..Rules::default() };
+
+        assert!(one_row.bars(1, 2, 100, 0, Some(5)), "the bottom row cannot deploy");
+        assert!(!one_row.bars(1, 2, 100, 0, Some(4)));
+        assert!(!one_row.bars(1, 2, 100, 0, None), "the bench is not a row");
     }
 }

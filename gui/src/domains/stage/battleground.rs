@@ -117,7 +117,9 @@ fn format_special_rule(rule: &SpecialRulesMapEntry, global_ctx: &GlobalContext) 
     let mut description = strip_html_tags(raw_description, BreakHandling::Space);
 
     if description.is_empty() {
-        warn!(key = %explanation_key, name_label = %rule.name_label, "missing localization for special rule explanation, falling back to raw enum parsing");
+        if !explanation_key.is_empty() {
+            warn!(key = %explanation_key, name_label = %rule.name_label, "missing localization for special rule explanation, falling back to raw enum parsing");
+        }
 
         let mut fallback = String::new();
         for target_rule in &rule.rules {

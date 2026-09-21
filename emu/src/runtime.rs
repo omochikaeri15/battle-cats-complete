@@ -29,7 +29,7 @@ pub use relayout::relatch_battle_rects;
 pub use scene_sheets::load_scene_sheets;
 pub use setup::{
     BATTLE_ITEMS, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
-    select_stage,
+    select_stage, is_extra_entry, prepare_extra_entry,
 };
 pub use silent_sound::SilentSound;
 pub use touch_input::{pump_pinch, pump_touch, queue_touch_position, queue_touch_press, queue_touch_release};

@@ -55,6 +55,7 @@ const PREVIEW_FILES: [(i32, &[u8]); 15] = [
 #[derive(PartialEq, Eq)]
 enum Tail {
     Plain,
+    Story,
     Header,
 }
 
@@ -246,7 +247,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
             if map_type == -2 {
                 (
                     Some(string_format_int(ctx, b"stage%02d.csv", stage)?),
-                    Tail::Plain,
+                    Tail::Story,
                 )
             } else if get_map_type(ctx, 0)? == -3 {
                 let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -258,7 +259,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
                         mode,
                         stage,
                     )?),
-                    Tail::Plain,
+                    Tail::Story,
                 )
             } else if get_map_type(ctx, 0)? == -7 {
                 let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -270,7 +271,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
                         mode,
                         stage,
                     )?),
-                    Tail::Plain,
+                    Tail::Story,
                 )
             } else {
                 (None, Tail::Plain)
@@ -284,36 +285,38 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
     };
     let mut stm = AssetStream::new(&bytes, b'\n');
 
-    read_csv_row(&mut stm);
-    ctx.set_i32_at(AppContext::STAGE_CASTLE_ID, read_csv_cell(&stm, 0) as i32)?;
-    ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, 0)?;
-    ctx.set_i32_at(
-        AppContext::STAGE_NO_CONTINUES,
-        read_csv_cell(&stm, 1) as i32,
-    )?;
-    ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, 0)?;
-    ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, read_csv_cell(&stm, 2) as i32)?;
-    ctx.set_i32_at(AppContext::STAGE_EX_MAP, 0)?;
-    ctx.set_i32_at(AppContext::STAGE_EX_MAP, read_csv_cell(&stm, 3) as i32)?;
-    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MIN, 0)?;
-    ctx.set_i32_at(
-        AppContext::STAGE_EX_STAGE_MIN,
-        read_csv_cell(&stm, 4) as i32,
-    )?;
-    ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MAX, 0)?;
-    ctx.set_i32_at(
-        AppContext::STAGE_EX_STAGE_MAX,
-        read_csv_cell(&stm, 5) as i32,
-    )?;
+    if tail != Tail::Story {
+        read_csv_row(&mut stm);
+        ctx.set_i32_at(AppContext::STAGE_CASTLE_ID, read_csv_cell(&stm, 0) as i32)?;
+        ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, 0)?;
+        ctx.set_i32_at(
+            AppContext::STAGE_NO_CONTINUES,
+            read_csv_cell(&stm, 1) as i32,
+        )?;
+        ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, 0)?;
+        ctx.set_i32_at(AppContext::STAGE_EX_CHANCE, read_csv_cell(&stm, 2) as i32)?;
+        ctx.set_i32_at(AppContext::STAGE_EX_MAP, 0)?;
+        ctx.set_i32_at(AppContext::STAGE_EX_MAP, read_csv_cell(&stm, 3) as i32)?;
+        ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MIN, 0)?;
+        ctx.set_i32_at(
+            AppContext::STAGE_EX_STAGE_MIN,
+            read_csv_cell(&stm, 4) as i32,
+        )?;
+        ctx.set_i32_at(AppContext::STAGE_EX_STAGE_MAX, 0)?;
+        ctx.set_i32_at(
+            AppContext::STAGE_EX_STAGE_MAX,
+            read_csv_cell(&stm, 5) as i32,
+        )?;
 
-    if tail == Tail::Header && ctx.i32_at(AppContext::SAVED_MAP_TYPE)? == map_type_as_index(-11) {
-        let stage = get_stage_index(ctx)?;
-        let row =
-            ctx.play_dungeon_rows
-                .get(stage as i64 as usize)
-                .ok_or(Fault::index_out_of_range(stage as i64, ctx.play_dungeon_rows.len() as i64))?;
+        if tail == Tail::Header && ctx.i32_at(AppContext::SAVED_MAP_TYPE)? == map_type_as_index(-11) {
+            let stage = get_stage_index(ctx)?;
+            let row =
+                ctx.play_dungeon_rows
+                    .get(stage as i64 as usize)
+                    .ok_or(Fault::index_out_of_range(stage as i64, ctx.play_dungeon_rows.len() as i64))?;
 
-        ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, row[8] as u8 as i32)?;
+            ctx.set_i32_at(AppContext::STAGE_NO_CONTINUES, row[8] as u8 as i32)?;
+        }
     }
 
     read_csv_row(&mut stm);
@@ -343,7 +346,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
 
     ctx.set_i32_at(AppContext::STAGE_LENGTH, length.wrapping_shl(2))?;
 
-    if tail == Tail::Plain {
+    if tail != Tail::Header {
         return Ok(true);
     }
 

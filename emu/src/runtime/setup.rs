@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 
 use crate::{
     Fault,
-    engine::{AppContext, map_index_of_map_id, map_type_as_index, map_type_of_map_id},
+    engine::{
+        AppContext, altar_recompute, load_map_stage_csv, map_index_of_map_id, map_type_as_index, map_type_of_map_id,
+        texture_cache_load,
+    },
 };
 
 pub const DECK_SLOTS: usize = 10;
@@ -17,6 +20,9 @@ const FUTURE_TYPE: i32 = -3;
 const COSMOS_TYPE: i32 = -7;
 const FUTURE_MODE: i32 = 4;
 const COSMOS_MODE: i32 = 7;
+const EXTRA_TYPE: i32 = -8;
+const EXTRA_MODE: i32 = 0x63;
+const BATTLE_INTRO_START: i32 = 0x726;
 const SCORED_TYPES: [i32; 3] = [3, 4, -24];
 const CAT_SIDE: i32 = 1;
 const ENEMY_SIDE: i32 = 2;
@@ -90,6 +96,7 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
         EMPIRE_TYPE => index,
         FUTURE_TYPE => index.wrapping_add(FUTURE_MODE),
         COSMOS_TYPE => index.wrapping_add(COSMOS_MODE),
+        EXTRA_TYPE => EXTRA_MODE,
         _ => FREE_MAP_MODE,
     };
 
@@ -102,7 +109,34 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
         ctx.set_i32_at(AppContext::CROWN_LEVEL, entry.crown)?;
     }
 
+    if mode == EXTRA_MODE {
+        ctx.set_i32_at(AppContext::OUTRO_CHAPTER_MODE, FREE_MAP_MODE)?;
+        ctx.set_i32_at(AppContext::OUTRO_ENTRY_STAGE, 0)?;
+        ctx.set_i32_at(AppContext::EX_MAP, index)?;
+        ctx.set_i32_at(AppContext::EX_STAGE, entry.stage)?;
+    }
+
     ctx.set_i32_at(AppContext::ENTRY_STAGE, entry.stage)?;
     ctx.set_i32_at(AppContext::faction_flags(0), CAT_SIDE)?;
     ctx.set_i32_at(AppContext::faction_flags(1), ENEMY_SIDE)
+}
+
+pub fn is_extra_entry(ctx: &AppContext) -> Result<bool, Fault> {
+    Ok(ctx.i32_at(AppContext::CHAPTER_MODE)? == EXTRA_MODE)
+}
+
+pub fn prepare_extra_entry(ctx: &mut AppContext) -> Result<bool, Fault> {
+    ctx.set_i32_at(AppContext::BATTLE_ENTRY_RESET, 0)?;
+    ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
+    ctx.set_block_at::<1>(AppContext::CURTAIN_STYLE, [1])?;
+    altar_recompute(ctx)?;
+    texture_cache_load(ctx, b"img015.png", b"img015.imgcut", 0x2601)?;
+    ctx.set_i32_at(AppContext::BATTLE_INTRO_FRAME, BATTLE_INTRO_START)?;
+    ctx.set_i32_at(AppContext::EVENT_POINT_BOOST, 1)?;
+    ctx.set_i32_at(AppContext::BATTLE_RESUMED, 0)?;
+    ctx.set_i32_at(AppContext::BATTLE_CONTINUED, 0)?;
+
+    let map = ctx.i32_at(AppContext::EX_MAP)?;
+
+    load_map_stage_csv(ctx, map, 0, 1, 0, 1, 1)
 }
