@@ -1023,10 +1023,10 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 .get(selected as i64 as usize)
                 .ok_or(Fault::index_out_of_range(selected as i64, 4))?;
         let anim = ctx
-            .miracle_anims
-            .get(slot as usize)
-            .ok_or(Fault::index_out_of_range(slot as i64, 4))?;
-        let length = get_anim_len(&anim[0])?.wrapping_add(lead);
+            .castle_anims
+            .get(slot as usize * 2)
+            .ok_or(Fault::index_out_of_range(slot as i64 * 2, 8))?;
+        let length = get_anim_len(anim)?.wrapping_add(lead);
         let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
         let slot =
             *MIRACLE_ANIM_SLOT
@@ -1046,15 +1046,15 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
         }
 
         let anim = ctx
-            .miracle_anims
-            .get(slot as usize)
-            .ok_or(Fault::index_out_of_range(slot as i64, 4))?;
+            .castle_anims
+            .get(slot as usize * 2)
+            .ok_or(Fault::index_out_of_range(slot as i64 * 2, 8))?;
 
-        ctx.set_i32_at(AppContext::CAT_GOD_ANIM_FRAME, get_anim_len(&anim[0])?)?;
+        ctx.set_i32_at(AppContext::CAT_GOD_ANIM_FRAME, get_anim_len(anim)?)?;
 
         let finished = match ctx.i32_at(AppContext::CAT_GOD_SELECTED)? {
             0 => {
-                let length = get_anim_len(&ctx.miracle_anims[1][1])?;
+                let length = get_anim_len(&ctx.castle_anims[3])?;
 
                 for bolt in 0..3usize {
                     let at = AppContext::CAT_GOD_FRAMES + bolt * 4;
@@ -1198,7 +1198,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 } else {
                     frames
                 };
-                let length = get_anim_len(&ctx.miracle_anims[2][1])?;
+                let length = get_anim_len(&ctx.castle_anims[5])?;
 
                 if frames < length {
                     false
@@ -1271,10 +1271,10 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 for wave in 0..10usize {
                     let at = AppContext::CAT_GOD_FRAMES + wave * 4;
                     let current = ctx.i32_at(at)?;
-                    let length = get_anim_len(&ctx.miracle_anims[0][1])?;
+                    let length = get_anim_len(&ctx.castle_anims[1])?;
 
                     if current >= length {
-                        ctx.set_i32_at(at, get_anim_len(&ctx.miracle_anims[0][1])?)?;
+                        ctx.set_i32_at(at, get_anim_len(&ctx.castle_anims[1])?)?;
                         done = wave == 9;
                     }
                 }
