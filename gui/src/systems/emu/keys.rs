@@ -12,6 +12,7 @@ const LEAVE_AFTER: u16 = 15;
 const PAN_STEP: i32 = 0x18;
 const PAN_MARGIN: i32 = 0x50;
 const ZOOM_STEP: i32 = 6;
+const STILL_FRAMES: u8 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -48,6 +49,7 @@ pub struct Keys {
     pan: i32,
     zoom: i32,
     drag: Option<i32>,
+    still: u8,
 }
 
 impl Keys {
@@ -239,12 +241,24 @@ impl Keys {
             return Ok(());
         };
 
+        if self.still > 0 {
+            self.still -= 1;
+
+            if self.still == 0 {
+                self.drag = None;
+
+                return runtime::queue_touch_release(ctx);
+            }
+
+            return Ok(());
+        }
+
         match (self.pan, self.drag) {
             (0, None) => Ok(()),
             (0, Some(_)) => {
-                self.drag = None;
+                self.still = STILL_FRAMES;
 
-                runtime::queue_touch_release(ctx)
+                Ok(())
             }
             (_, None) if self.down => Ok(()),
             (_, None) => {
@@ -256,9 +270,9 @@ impl Keys {
                 let next = at.wrapping_add(direction * PAN_STEP);
 
                 if (next - center).abs() > center - PAN_MARGIN {
-                    self.drag = None;
+                    self.still = STILL_FRAMES;
 
-                    return runtime::queue_touch_release(ctx);
+                    return Ok(());
                 }
 
                 self.drag = Some(next);
