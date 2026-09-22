@@ -117,6 +117,7 @@ pub enum SandboxTab {
     Lineup,
     Stage,
     Config,
+    Replay,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]

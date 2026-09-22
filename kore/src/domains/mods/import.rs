@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, trace};
 
 use crate::common::job::JobEvent;
+use crate::common::solid;
 use crate::domains::import::engine::keys;
 
 use super::{taken, ModMetadata};
@@ -62,7 +63,11 @@ pub fn run_bcm(path: PathBuf, enforce_validation: bool, emit: impl Fn(JobEvent) 
 
     let user_keys = keys::verify(enforce_validation, &log)?;
 
-    extract::run_archive(&path, &workspace_dir, &log, &user_keys)?;
+    if solid::sniff(&path) {
+        extract::run_solid(&path, &workspace_dir, &log, &user_keys)?;
+    } else {
+        extract::run_archive(&path, &workspace_dir, &log, &user_keys)?;
+    }
 
     let final_name = apply_metadata_rename(Path::new("mods"), &workspace_dir);
     info!("BCM import finished completely. Saved as {}", final_name);

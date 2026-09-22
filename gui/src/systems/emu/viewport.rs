@@ -13,6 +13,29 @@ use super::sink::Frame as EmuFrame;
 
 const PIXELS_PER_LINE: f32 = 40.0;
 const SPREAD_PER_LINE: f32 = 28.0;
+const BAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+
+struct Fit {
+    scale: f32,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
+fn fit(bounds: Rectangle, design_width: f32, aspect: Option<f32>) -> Fit {
+    let wide = if design_width > 0.0 { bounds.width / design_width } else { 1.0 };
+
+    let Some(aspect) = aspect.filter(|aspect| *aspect > 0.0 && design_width > 0.0) else {
+        return Fit { scale: wide, x: 0.0, y: 0.0, width: bounds.width, height: bounds.height };
+    };
+
+    let scale = wide.min(bounds.height / (design_width * aspect));
+    let width = design_width * scale;
+    let height = design_width * aspect * scale;
+
+    Fit { scale, x: (bounds.width - width) / 2.0, y: (bounds.height - height) / 2.0, width, height }
+}
 
 pub struct Viewport {
     frame: Rc<RefCell<EmuFrame>>,
@@ -22,6 +45,7 @@ pub struct Viewport {
     active: bool,
     covered: bool,
     frozen: bool,
+    aspect: Option<f32>,
 }
 
 #[derive(Default)]
@@ -59,7 +83,8 @@ impl<Message> shader::Program<Message> for Viewport {
             };
         }
 
-        let scale = if self.design_width > 0.0 { bounds.width / self.design_width } else { 1.0 };
+        let fit = fit(bounds, self.design_width, self.aspect);
+        let scale = fit.scale;
         let sheets = self.sheets.borrow();
         let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
         let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
@@ -105,8 +130,8 @@ impl<Message> shader::Program<Message> for Viewport {
 
             let clip = |point: [f32; 2]| {
                 [
-                    (point[0] * scale + bounds.x) / bounds.width * 2.0 - 1.0,
-                    1.0 - (point[1] * scale + bounds.y) / bounds.height * 2.0,
+                    (point[0] * scale + fit.x + bounds.x) / bounds.width * 2.0 - 1.0,
+                    1.0 - (point[1] * scale + fit.y + bounds.y) / bounds.height * 2.0,
                 ]
             };
             let corner = |slot: usize| Vertex {
@@ -132,6 +157,42 @@ impl<Message> shader::Program<Message> for Viewport {
                     *last_end = end;
                 }
                 _ => runs.push((key, quad.blend, start, end)),
+            }
+        }
+
+        if self.aspect.is_some() {
+            let bars = [
+                [0.0, 0.0, bounds.width, fit.y],
+                [0.0, fit.y + fit.height, bounds.width, bounds.height - fit.y - fit.height],
+                [0.0, fit.y, fit.x, fit.height],
+                [fit.x + fit.width, fit.y, bounds.width - fit.x - fit.width, fit.height],
+            ];
+            let start = vertices.len() as u32;
+
+            for [x, y, width, height] in bars.into_iter().filter(|bar| bar[2] > 0.0 && bar[3] > 0.0) {
+                let corner = |cx: f32, cy: f32| Vertex {
+                    position: [
+                        (cx + bounds.x) / bounds.width * 2.0 - 1.0,
+                        1.0 - (cy + bounds.y) / bounds.height * 2.0,
+                    ],
+                    uv: [0.0, 0.0],
+                    color: BAR_COLOR,
+                };
+
+                vertices.extend([
+                    corner(x, y),
+                    corner(x, y + height),
+                    corner(x + width, y + height),
+                    corner(x, y),
+                    corner(x + width, y + height),
+                    corner(x + width, y),
+                ]);
+            }
+
+            let end = vertices.len() as u32;
+
+            if end > start {
+                runs.push((None, 0, start, end));
             }
         }
 
@@ -287,6 +348,7 @@ pub struct Feed<'a> {
     pub covered: bool,
     pub frozen: bool,
     pub design_width: f32,
+    pub aspect: Option<f32>,
 }
 
 pub fn overlay<'a, Message: 'a>(
@@ -301,6 +363,7 @@ pub fn overlay<'a, Message: 'a>(
         covered,
         frozen,
         design_width,
+        aspect,
     } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
@@ -314,6 +377,7 @@ pub fn overlay<'a, Message: 'a>(
         active,
         covered,
         frozen,
+        aspect,
     })
     .width(Length::Fill)
     .height(Length::Fill);

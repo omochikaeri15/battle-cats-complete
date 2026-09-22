@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Entropy, Fault, ops};
+use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER, aku_realm_final_redirect,
@@ -555,7 +555,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
             while index + 1 < owned.len() {
                 let span = (owned.len() - 1 - index) as u64;
-                let offset = (Entropy::draw() % (span + 1)) as usize;
+                let offset = (ctx.entropy.roll() % (span + 1)) as usize;
 
                 if offset != 0 {
                     owned.swap(index, index + offset);

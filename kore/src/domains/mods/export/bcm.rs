@@ -1,16 +1,14 @@
-use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use tracing::{debug, error, info, info_span, trace, warn};
-use zip::write::SimpleFileOptions;
-use zip::{CompressionMethod, ZipWriter};
 
 use crate::common::job::JobEvent;
+use crate::common::solid;
 
-pub const BCM_COMPRESSION_MIN: i64 = 0;
-pub const BCM_COMPRESSION_MAX: i64 = 9;
-pub const BCM_COMPRESSION_DEFAULT: i64 = 6;
+pub const BCM_COMPRESSION_MIN: i64 = solid::MIN_LEVEL as i64;
+pub const BCM_COMPRESSION_MAX: i64 = solid::MAX_LEVEL as i64;
+pub const BCM_COMPRESSION_DEFAULT: i64 = solid::DEFAULT_LEVEL as i64;
 
 pub fn run(mod_folder: String, app_title: String, compression: i64, emit: impl Fn(JobEvent) + Sync) -> Result<(), String> {
     let _span = info_span!("bcm_export_worker", mod_id = %mod_folder).entered();
@@ -96,23 +94,8 @@ fn build_bcm_archive(
     compression_level: i64,
     log_callback: &impl Fn(String)
 ) -> Result<usize, String> {
-
-    let file = File::create(output_file).map_err(|e| format!("Failed to create BCM file: {}", e))?;
-    let mut zip = ZipWriter::new(file);
-
     let clamped_level = compression_level.clamp(BCM_COMPRESSION_MIN, BCM_COMPRESSION_MAX);
     trace!("Using compression level: {}", clamped_level);
-
-    let method = if clamped_level == 0 {
-        CompressionMethod::Stored
-    } else {
-        CompressionMethod::Deflated
-    };
-
-    let options = SimpleFileOptions::default()
-        .compression_method(method)
-        .compression_level(if method == CompressionMethod::Stored { None } else { Some(clamped_level) })
-        .unix_permissions(0o755);
 
     let target_directories = ["", "patch", "loose", "icons"];
     let total_files = count_target_files(source_dir, &target_directories);
@@ -121,8 +104,9 @@ fn build_bcm_archive(
         return Err("No files found to package.".to_string());
     }
 
+    let mut archive = solid::Writer::create(output_file, clamped_level as i32).map_err(|e| format!("Failed to create BCM file: {}", e))?;
     let log_interval = (total_files / 10).max(1);
-    let mut processed_files = 0;
+    let mut processed_files = 0usize;
 
     for dir_name in target_directories {
         let dir_path = source_dir.join(dir_name);
@@ -133,77 +117,49 @@ fn build_bcm_archive(
         }
 
         trace!("Indexing target directory: '{}'", if dir_name.is_empty() { "Mod Root" } else { dir_name });
-        if let Err(e) = write_flat_directory_to_zip(
-            &mut zip, &dir_path, dir_name, options, total_files, log_interval, &mut processed_files, log_callback
-        ) {
-            warn!("Directory '{}' packaging encountered an error: {}", dir_name, e);
-            return Err(e);
-        }
-    }
 
-    debug!("Finalizing zip stream...");
-    if let Err(e) = zip.finish() {
-        error!("Zip closure failed: {}", e);
-        return Err(format!("Archive finalization failed: {}", e));
-    }
+        let entries = fs::read_dir(&dir_path).map_err(|e| format!("Failed to read dir {}: {}", dir_path.display(), e))?;
 
-    Ok(processed_files)
-}
-
-#[allow(clippy::too_many_arguments)]
-fn write_flat_directory_to_zip(
-    zip: &mut ZipWriter<File>,
-    current_dir: &Path,
-    relative_prefix: &str,
-    options: SimpleFileOptions,
-    total_files: usize,
-    log_interval: usize,
-    processed_files: &mut usize,
-    log_callback: &impl Fn(String)
-) -> Result<(), String> {
-
-    let entries = fs::read_dir(current_dir).map_err(|e| format!("Failed to read dir {}: {}", current_dir.display(), e))?;
-
-    for entry_result in entries {
-        let Ok(entry) = entry_result else {
-            warn!("Skipped unreadable entry in {}", current_dir.display());
-            continue;
-        };
-
-        let path = entry.path();
-
-        if path.is_dir() {
-            trace!("Ignoring subfolder to enforce flat structure: {}", path.display());
-            continue;
-        }
-
-        if path.is_file() {
-            let file_name = path.file_name().unwrap_or_default().to_string_lossy();
-
-            let zip_path = if relative_prefix.is_empty() {
-                file_name.to_string()
-            } else {
-                format!("{}/{}", relative_prefix, file_name)
+        for entry_result in entries {
+            let Ok(entry) = entry_result else {
+                warn!("Skipped unreadable entry in {}", dir_path.display());
+                continue;
             };
 
-            trace!("Deflating file into archive: {}", zip_path);
+            let path = entry.path();
 
-            zip.start_file(&zip_path, options).map_err(|e| format!("Zip writer rejected file {}: {}", zip_path, e))?;
+            if !path.is_file() {
+                trace!("Ignoring subfolder to enforce flat structure: {}", path.display());
+                continue;
+            }
 
-            let mut file = File::open(&path).map_err(|e| format!("Failed to open file for read {}: {}", path.display(), e))?;
+            let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+            let archive_path = if dir_name.is_empty() {
+                file_name.to_string()
+            } else {
+                format!("{}/{}", dir_name, file_name)
+            };
 
-            let mut buffer = Vec::new();
-            file.read_to_end(&mut buffer).map_err(|e| format!("Failed reading file data {}: {}", path.display(), e))?;
+            trace!("Packing file into archive: {}", archive_path);
 
-            zip.write_all(&buffer).map_err(|e| format!("Failed writing zip data {}: {}", zip_path, e))?;
+            if let Err(e) = archive.add(&archive_path, &path) {
+                warn!("Directory '{}' packaging encountered an error: {}", dir_name, e);
+                return Err(format!("Failed writing archive data {}: {}", archive_path, e));
+            }
 
-            *processed_files += 1;
+            processed_files += 1;
 
-            if (*processed_files).is_multiple_of(log_interval) || *processed_files == total_files {
-                log_callback(format!("Packed {} files | Streaming: {}", *processed_files, file_name));
+            if processed_files.is_multiple_of(log_interval) || processed_files == total_files {
+                log_callback(format!("Packed {} files | Streaming: {}", processed_files, file_name));
             }
         }
     }
 
-    Ok(())
+    debug!("Finalizing archive stream...");
+    if let Err(e) = archive.finish() {
+        error!("Archive closure failed: {}", e);
+        return Err(format!("Archive finalization failed: {}", e));
+    }
+
+    Ok(processed_files)
 }

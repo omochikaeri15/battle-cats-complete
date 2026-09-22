@@ -4,6 +4,7 @@ pub mod keybind;
 pub mod lineup;
 pub mod orb;
 pub mod rules;
+pub mod replay;
 pub mod scored;
 
 pub use config::{Config, Tech, CHAPTERS, ITEMS, TECHS};

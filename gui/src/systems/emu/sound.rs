@@ -11,7 +11,7 @@ use rodio::mixer::Mixer;
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 use tracing::warn;
 
-use super::assets::FileIndex;
+use super::assets::{FileIndex, SharedLedger};
 #[cfg(target_os = "linux")]
 use super::server_audio::ServerLink;
 
@@ -87,6 +87,7 @@ impl Output {
 
 pub struct Speaker {
     files: Rc<RefCell<FileIndex>>,
+    ledger: SharedLedger,
     volumes: SharedVolumes,
     stream: SharedOutput,
     music: Option<(i32, Player)>,
@@ -95,9 +96,10 @@ pub struct Speaker {
 }
 
 impl Speaker {
-    pub fn new(files: Rc<RefCell<FileIndex>>, volumes: SharedVolumes, stream: SharedOutput) -> Self {
+    pub fn new(files: Rc<RefCell<FileIndex>>, ledger: SharedLedger, volumes: SharedVolumes, stream: SharedOutput) -> Self {
         Self {
             files,
+            ledger,
             volumes,
             stream,
             music: None,
@@ -108,6 +110,8 @@ impl Speaker {
 
     fn read(&self, name: &str) -> Option<Vec<u8>> {
         let path = self.files.borrow().get(name).cloned()?;
+
+        self.ledger.borrow_mut().note(name, &path);
 
         std::fs::read(path)
             .inspect_err(|error| warn!("emu: {name} could not be read: {error}"))

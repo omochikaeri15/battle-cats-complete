@@ -4,7 +4,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::Fault;
+use crate::{Entropy, Fault};
 
 use super::{
     AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
@@ -833,6 +833,7 @@ pub struct AppContext {
     pub map_options: MapOption,
     pub settings: BTreeMap<Vec<u8>, Vec<u8>>,
     pub failed_packs: BTreeSet<Vec<u8>>,
+    pub entropy: Entropy,
     pub dojo_chest_rows: Vec<DojoChestRow>,
     pub gold_cpu_rows: Vec<[i32; 4]>,
     pub lock_skip_rows: Vec<[i32; 2]>,
@@ -1940,6 +1941,7 @@ impl AppContext {
             map_options: Default::default(),
             settings: Default::default(),
             failed_packs: BTreeSet::new(),
+            entropy: Entropy::loose(),
             dojo_chest_rows: Vec::new(),
             gold_cpu_rows: Vec::new(),
             lock_skip_rows: Vec::new(),

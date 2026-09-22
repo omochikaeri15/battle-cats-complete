@@ -9,8 +9,10 @@ mod inert_scene;
 mod inert_ui;
 mod relayout;
 mod scene_sheets;
+mod seeds;
 mod setup;
 mod silent_sound;
+mod stamp;
 mod touch_input;
 
 pub use battle_options::{BattleOptions, apply_battle_options, read_battle_options};
@@ -27,8 +29,10 @@ pub use inert_scene::{InertScene, pump_stage_return};
 pub use inert_ui::InertUi;
 pub use relayout::relatch_battle_rects;
 pub use scene_sheets::load_scene_sheets;
+pub use seeds::{Seeds, plant_seeds};
 pub use setup::{CatGod, BATTLE_ITEMS, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
     select_stage, is_extra_entry, prepare_extra_entry,
 };
 pub use silent_sound::SilentSound;
+pub use stamp::VERSION;
 pub use touch_input::{pump_pinch, pump_touch, queue_touch_position, queue_touch_press, queue_touch_release};

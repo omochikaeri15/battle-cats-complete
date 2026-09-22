@@ -1,20 +1,23 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
+use std::mem;
 use std::rc::Rc;
 
 use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
-    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Setup, apply_battle_options,
-    fill_dummy_save, fill_dummy_talents, load_scene_sheets,
+    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
+    VERSION, fill_dummy_save, fill_dummy_talents, load_scene_sheets, plant_seeds, queue_touch_position, queue_touch_press, queue_touch_release,
     pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
+use kore::domains::sandbox::replay::{self as tape, Cue, Recording};
 use tracing::{info, trace, warn};
 
-use super::assets::{DiskAssets, FileIndex, SheetCache};
+use super::assets::{DiskAssets, FileIndex, Ledger, SharedLedger, SheetCache};
 use super::input::{Touch, TouchQueue};
 use super::keys::{Action, Keys};
+use super::replay;
 use super::sink::{Frame, Recorder};
 use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
 use super::text::{Formatter, LABEL_PREFIX};
@@ -30,6 +33,12 @@ const PINCH_LIFT_FRAMES: u32 = 2;
 const FULL_VOLUME: i32 = 100;
 const DIM_ALPHA: i32 = 0x80;
 const NOTCH_SHARE: f32 = 0.04;
+
+enum Tape {
+    Off,
+    Recording(Recording),
+    Playing { frames: Vec<Vec<Cue>>, at: usize },
+}
 
 pub struct Driver {
     ctx: Box<AppContext>,
@@ -53,6 +62,14 @@ pub struct Driver {
     booted: bool,
     forgiven: HashSet<Site>,
     tripped: Option<Site>,
+    ledger: SharedLedger,
+    seeds: Seeds,
+    tape: Tape,
+    pending: Vec<Cue>,
+    window: (f32, f32),
+    applied: (f32, f32),
+    wanted_phone: bool,
+    finished: bool,
 }
 
 impl Driver {
@@ -97,6 +114,14 @@ impl Driver {
             booted: false,
             forgiven: HashSet::new(),
             tripped: None,
+            ledger: Rc::new(RefCell::new(Ledger::default())),
+            seeds: Seeds::draw(),
+            tape: Tape::Off,
+            pending: Vec::new(),
+            window: (0.0, 0.0),
+            applied: (0.0, 0.0),
+            wanted_phone: false,
+            finished: false,
         };
 
         driver.host();
@@ -106,12 +131,17 @@ impl Driver {
     fn host(&mut self) {
         let ctx = &mut self.ctx;
 
-        ctx.set_assets(Box::new(DiskAssets::new(Rc::clone(&self.files), Rc::clone(&self.sheets))));
+        ctx.set_assets(Box::new(DiskAssets::new(
+            Rc::clone(&self.files),
+            Rc::clone(&self.sheets),
+            Rc::clone(&self.ledger),
+        )));
         ctx.set_platform(Box::new(InertPlatform {
             profile: Rc::clone(&self.profile),
         }));
         ctx.set_sound(Box::new(Speaker::new(
             Rc::clone(&self.files),
+            Rc::clone(&self.ledger),
             Rc::clone(&self.volumes),
             self.output.share(),
         )));
@@ -132,9 +162,16 @@ impl Driver {
         self.forgiven.clear();
         self.tripped = None;
 
-        let width = self.ctx.device_screen_w as f32;
-        let height = self.ctx.device_screen_h as f32;
+        let (width, height) = if self.watching() {
+            self.phone = self.wanted_phone;
+            self.window
+        } else {
+            (self.ctx.device_screen_w as f32, self.ctx.device_screen_h as f32)
+        };
         let options = self.options;
+
+        self.close_tape();
+        self.seeds = Seeds::draw();
 
         *self.ctx = AppContext::default();
         self.sheets.borrow_mut().retain(|name, _| !name.starts_with(LABEL_PREFIX));
@@ -145,8 +182,99 @@ impl Driver {
         self.keys.reset();
         self.booted = false;
         self.host();
-        self.resize(width, height);
+        self.apply_size(width, height);
         self.set_options(options);
+    }
+
+    fn close_tape(&mut self) {
+        if let Tape::Recording(recording) = &mut self.tape
+            && let Err(error) = recording.finish()
+        {
+            warn!("emu: the latest battle could not be written out: {error}");
+        }
+
+        self.tape = Tape::Off;
+        self.pending.clear();
+        self.finished = false;
+        self.ledger.borrow_mut().disarm();
+    }
+
+    pub fn arm_recording(&mut self) {
+        self.close_tape();
+
+        let Some(dir) = tape::scratch() else {
+            warn!("emu: there is no state folder, so this battle is not recorded");
+
+            return;
+        };
+
+        let recording = match Recording::begin(&dir) {
+            Ok(recording) => recording,
+            Err(error) => {
+                warn!("emu: the latest battle could not be started at {}: {error}", dir.display());
+
+                return;
+            }
+        };
+        let save = tape::Save {
+            version: VERSION.to_owned(),
+            seeds: replay::seeds_to(self.seeds),
+            screen: tape::Screen {
+                width: self.applied.0,
+                height: self.applied.1,
+                phone: self.phone,
+            },
+            options: replay::options_to(self.options),
+            setup: replay::setup_to(&self.setup),
+        };
+
+        if let Err(error) = recording.write_save(&save) {
+            warn!("emu: the latest battle's save could not be written: {error}");
+
+            return;
+        }
+
+        self.ledger.borrow_mut().arm();
+        self.tape = Tape::Recording(recording);
+    }
+
+    pub fn arm_playback(&mut self, save: &tape::Save, frames: Vec<Vec<Cue>>, index: FileIndex) {
+        self.close_tape();
+        self.set_setup(replay::setup_from(&save.setup));
+        self.phone = save.screen.phone;
+        self.apply_size(save.screen.width, save.screen.height);
+        self.set_options(replay::options_from(save.options));
+        self.seeds = replay::seeds_from(save.seeds);
+        self.adopt_index(index);
+        self.tape = Tape::Playing { frames, at: 0 };
+    }
+
+    pub fn watching(&self) -> bool {
+        matches!(self.tape, Tape::Playing { .. })
+    }
+
+    pub fn reel_finished(&self) -> bool {
+        self.finished
+    }
+
+    pub fn screen(&self) -> (i32, i32) {
+        (self.ctx.device_screen_w, self.ctx.device_screen_h)
+    }
+
+    pub fn keep_assets(&mut self) {
+        let Tape::Recording(recording) = &mut self.tape else {
+            return;
+        };
+
+        let requested = self.ledger.borrow_mut().drain();
+
+        if requested.is_empty() {
+            return;
+        }
+
+        for (name, error) in recording.keep(requested) {
+            warn!("emu: {name} could not be kept for the replay: {error}");
+        }
     }
 
     pub fn resolved(&self) -> usize {
@@ -159,8 +287,10 @@ impl Driver {
     }
 
     pub fn reindex(&mut self, vfs: &Vfs) {
-        let fresh = DiskAssets::index(vfs);
+        self.adopt_index(DiskAssets::index(vfs));
+    }
 
+    fn adopt_index(&mut self, fresh: FileIndex) {
         {
             let held = self.files.borrow();
 
@@ -183,6 +313,14 @@ impl Driver {
     }
 
     pub fn key(&mut self, action: Action, pressed: bool) {
+        if self.watching() {
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Key(replay::key_of(action), pressed));
+        }
+
         if pressed {
             self.keys.press(action);
         } else {
@@ -190,37 +328,49 @@ impl Driver {
         }
     }
 
-    fn pump_input(&mut self) {
+    fn pump_input(&mut self, script: Option<Vec<Cue>>) -> Vec<Cue> {
         self.keys.pump(&mut self.ctx, &mut self.spread, &mut self.gap);
 
-        let keyed = self.keys.busy();
-        let mut pending: std::collections::VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
+        let mut played: Vec<Cue> = Vec::new();
 
-        while let Some(touch) = pending.pop_front() {
-            let fed = match touch {
-                Touch::Pinched { spread: step } => {
-                    self.spread = self.spread.wrapping_add(step);
+        match script {
+            Some(cues) => {
+                self.touches.borrow_mut().clear();
 
-                    Ok(())
+                for cue in cues.into_iter().filter(|cue| !cue.before_input()) {
+                    self.play(cue);
                 }
-                Touch::Moved { .. } | Touch::Pressed { .. } | Touch::Released if keyed => Ok(()),
-                Touch::Moved { x, y } => {
-                    emu::runtime::queue_touch_position(&mut self.ctx, x, y)
-                }
-                Touch::Pressed { .. } if self.gap.is_some() => {
-                    self.spread = 0;
-                    self.gap = None;
-                    pending.push_front(touch);
-                    self.touches.borrow_mut().extend(pending.drain(..));
+            }
+            None => {
+                let keyed = self.keys.busy();
+                let mut pending: VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
 
-                    Ok(())
-                }
-                Touch::Pressed { x, y } => emu::runtime::queue_touch_press(&mut self.ctx, x, y),
-                Touch::Released => emu::runtime::queue_touch_release(&mut self.ctx),
-            };
+                while let Some(touch) = pending.pop_front() {
+                    let cue = match touch {
+                        Touch::Pinched { spread: step } => Some(Cue::Pinch(step)),
+                        Touch::Moved { .. } | Touch::Pressed { .. } | Touch::Released if keyed => None,
+                        Touch::Moved { x, y } => Some(Cue::Move(x, y)),
+                        Touch::Pressed { .. } if self.gap.is_some() => {
+                            pending.push_front(touch);
+                            self.touches.borrow_mut().extend(pending.drain(..));
 
-            if let Err(fault) = fed {
-                warn!("emu: touch could not be queued: {fault}");
+                            Some(Cue::Settle)
+                        }
+                        Touch::Pressed { x, y } => Some(Cue::Press(x, y)),
+                        Touch::Released => Some(Cue::Release),
+                    };
+
+                    let Some(cue) = cue else {
+                        continue;
+                    };
+
+                    self.play(cue);
+
+                    match (played.last_mut(), cue) {
+                        (Some(last @ Cue::Move(..)), Cue::Move(..)) => *last = cue,
+                        _ => played.push(cue),
+                    }
+                }
             }
         }
 
@@ -233,10 +383,59 @@ impl Driver {
         if let Err(fault) = emu::runtime::pump_touch(&mut self.ctx) {
             warn!("emu: touch could not be pumped: {fault}");
         }
+
+        played
+    }
+
+    fn play(&mut self, cue: Cue) {
+        let fed = match cue {
+            Cue::Pinch(step) => {
+                self.spread = self.spread.wrapping_add(step);
+
+                Ok(())
+            }
+            Cue::Settle => {
+                self.spread = 0;
+                self.gap = None;
+
+                Ok(())
+            }
+            Cue::Move(x, y) => queue_touch_position(&mut self.ctx, x, y),
+            Cue::Press(x, y) => queue_touch_press(&mut self.ctx, x, y),
+            Cue::Release => queue_touch_release(&mut self.ctx),
+            Cue::Key(key, pressed) => {
+                let action = replay::action_of(key);
+
+                if pressed {
+                    self.keys.press(action);
+                } else {
+                    self.keys.release(action);
+                }
+
+                Ok(())
+            }
+            Cue::Resize(width, height) => {
+                self.apply_size(width, height);
+
+                Ok(())
+            }
+            Cue::Phone(phone) => {
+                let (width, height) = self.screen();
+
+                self.phone = phone;
+                self.apply_size(width as f32, height as f32);
+
+                Ok(())
+            }
+        };
+
+        if let Err(fault) = fed {
+            warn!("emu: touch could not be queued: {fault}");
+        }
     }
 
     fn ease_pinch(&mut self) {
-        let spread = std::mem::take(&mut self.spread);
+        let spread = mem::take(&mut self.spread);
 
         let Some(gap) = self.gap else {
             if spread != 0 {
@@ -274,6 +473,26 @@ impl Driver {
             return;
         }
 
+        self.window = (width, height);
+
+        if self.watching() {
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Resize(width, height));
+        }
+
+        self.apply_size(width, height);
+    }
+
+    fn apply_size(&mut self, width: f32, height: f32) {
+        if width < 1.0 || height < 1.0 {
+            return;
+        }
+
+        self.applied = (width, height);
+
         self.ctx.device_screen_w = width as i32;
         self.ctx.device_screen_h = height as i32;
         self.profile.tablet.set(!self.phone);
@@ -295,12 +514,22 @@ impl Driver {
     }
 
     pub fn set_phone(&mut self, phone: bool) {
+        self.wanted_phone = phone;
+
+        if self.watching() {
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Phone(phone));
+        }
+
         self.phone = phone;
 
         let width = self.ctx.device_screen_w as f32;
         let height = self.ctx.device_screen_h as f32;
 
-        self.resize(width, height);
+        self.apply_size(width, height);
     }
 
     pub fn design_width(&self) -> f32 {
@@ -321,6 +550,8 @@ impl Driver {
         if self.booted {
             return true;
         }
+
+        plant_seeds(&mut self.ctx, self.seeds);
 
         if let Err(fault) = emu::engine::load_misc_data_tables(&mut self.ctx) {
             warn!("emu: text tables failed to load: {fault}");
@@ -457,7 +688,39 @@ impl Driver {
             return Ok(());
         }
 
-        self.pump_input();
+        let script = match &mut self.tape {
+            Tape::Playing { frames, at } => {
+                let Some(cues) = frames.get_mut(*at).map(mem::take) else {
+                    self.finished = true;
+
+                    return Ok(());
+                };
+
+                *at += 1;
+
+                Some(cues)
+            }
+            Tape::Off | Tape::Recording(_) => None,
+        };
+
+        if let Some(cues) = &script {
+            for cue in cues.iter().copied().filter(|cue| cue.before_input()) {
+                self.play(cue);
+            }
+        }
+
+        let before = mem::take(&mut self.pending);
+        let played = self.pump_input(script);
+
+        if let Tape::Recording(recording) = &mut self.tape {
+            let line: Vec<Cue> = before.into_iter().chain(played).collect();
+
+            if let Err(error) = recording.frame(&line) {
+                warn!("emu: the latest battle's input could not be written: {error}");
+            }
+        }
+
+        self.keep_assets();
         emu::engine::dialog_manager_process(&mut self.ctx)
             .map_err(|fault| (fault.site(), format!("dialog_manager_process:{fault}")))?;
 
@@ -570,7 +833,9 @@ impl Driver {
     }
 
     pub fn take_options(&mut self) -> Option<BattleOptions> {
-        std::mem::take(&mut self.changed).then_some(self.options)
+        let changed = mem::take(&mut self.changed);
+
+        (changed && !self.watching()).then_some(self.options)
     }
 
     fn sync_options(&mut self) {

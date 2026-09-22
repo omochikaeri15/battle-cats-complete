@@ -1,13 +1,16 @@
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use emu::runtime::BattleOptions;
 use kore::Vfs;
+use kore::domains::sandbox::replay as tape;
+use kore::domains::settings::ReplaySource;
 use tracing::warn;
 
 use super::driver::Driver;
-use super::assets::SheetCache;
+use super::assets::{DiskAssets, SheetCache};
 use super::input::TouchQueue;
 use super::keys::Action;
 use super::sink::Frame;
@@ -17,6 +20,12 @@ const CLOSED_FRAME: i32 = 0xc;
 const LAST_FRAME: i32 = 0x18;
 const FRAME_TIME: Duration = Duration::from_millis(33);
 const STEP_TIME: Duration = Duration::from_millis(30);
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Reel {
+    Latest,
+    Bundle(PathBuf),
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
@@ -42,6 +51,8 @@ pub struct Session {
     failure: Option<String>,
     stale: bool,
     again: bool,
+    reel: Option<(Reel, ReplaySource)>,
+    recording: bool,
 }
 
 impl Session {
@@ -62,7 +73,13 @@ impl Session {
             discard: false,
             stepped: Instant::now(),
             failure: None,
+            reel: None,
+            recording: true,
         }
+    }
+
+    pub fn set_recording(&mut self, recording: bool) {
+        self.recording = recording;
     }
 
     pub fn frame(&self) -> &Rc<RefCell<Frame>> {
@@ -103,10 +120,31 @@ impl Session {
         )
     }
 
+    pub fn watching(&self) -> bool {
+        self.driver.watching()
+    }
+
+    pub fn aspect(&self) -> Option<f32> {
+        let (width, height) = self.driver.screen();
+
+        (self.driver.watching() && width > 0).then(|| height as f32 / width as f32)
+    }
+
+    pub fn watch(&mut self, reel: Reel, source: ReplaySource) {
+        if self.in_transition() {
+            return;
+        }
+
+        self.begin();
+        self.reel = Some((reel, source));
+    }
+
     pub fn begin(&mut self) {
         if self.in_transition() {
             return;
         }
+
+        self.reel = None;
 
         self.phase = Phase::Covering;
         self.sweep = 0;
@@ -217,8 +255,25 @@ impl Session {
                     self.driver.renew();
                 }
 
-                self.driver.reindex(vfs);
-                self.load();
+                match self.reel.take() {
+                    Some((reel, source)) => match self.cue(&reel, source, vfs) {
+                        Ok(()) => self.load(),
+                        Err(reason) => {
+                            warn!("emu: the replay could not be loaded: {reason}");
+                            self.failure = Some(reason);
+                        }
+                    },
+                    None => {
+                        self.driver.reindex(vfs);
+
+                        if self.recording {
+                            self.driver.arm_recording();
+                        }
+
+                        self.load();
+                        self.driver.keep_assets();
+                    }
+                }
 
                 if self.entered {
                     self.phase = Phase::Running;
@@ -263,7 +318,7 @@ impl Session {
     }
 
     pub fn restart(&mut self) {
-        if self.phase != Phase::Running {
+        if self.phase != Phase::Running || self.driver.watching() {
             return;
         }
 
@@ -280,6 +335,14 @@ impl Session {
         self.stepped = Instant::now();
 
         if let Err(reason) = self.driver.advance() {
+            if self.driver.watching() {
+                self.failure = Some(format!("the replay ended on a fault\n{reason}"));
+                self.terminate();
+                self.discard = false;
+
+                return;
+            }
+
             self.failure = Some(reason);
             self.phase = Phase::Faulted;
             self.entered = false;
@@ -290,7 +353,7 @@ impl Session {
             return;
         }
 
-        if self.driver.exit_requested() {
+        if self.driver.exit_requested() || self.driver.reel_finished() {
             self.terminate();
 
             return;
@@ -304,6 +367,29 @@ impl Session {
             self.started = Instant::now();
             self.driver.draw_curtain(self.sweep);
         }
+    }
+
+    fn cue(&mut self, reel: &Reel, source: ReplaySource, vfs: &Vfs) -> Result<(), String> {
+        let dir = match reel {
+            Reel::Latest => tape::scratch().ok_or("there is no state folder to hold the latest battle")?,
+            Reel::Bundle(bundle) => {
+                let dir = tape::theater().ok_or("there is no state folder to unpack the replay into")?;
+
+                tape::unpack(bundle, &dir)?;
+
+                dir
+            }
+        };
+        let save = tape::read_save(&dir)?;
+        let frames = tape::read_input(&dir)?;
+        let index = match source {
+            ReplaySource::Bcv => tape::index(&dir).map_err(|error| format!("the replay's asset list could not be read: {error}"))?,
+            ReplaySource::Vfs => DiskAssets::index(vfs),
+        };
+
+        self.driver.arm_playback(&save, frames, index);
+
+        Ok(())
     }
 
     fn load(&mut self) {

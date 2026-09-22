@@ -2,6 +2,7 @@ mod combos;
 mod config;
 mod lineup;
 mod orbs;
+mod replay;
 
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, markdown, row, rule, scrollable, stack, text, Space};
@@ -11,13 +12,14 @@ use tracing::warn;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES};
+use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
 use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::TECHS;
-use kore::domains::settings::Settings;
+use kore::domains::sandbox::replay as replay_tape;
+use kore::domains::settings::{ReplaySource, Settings};
 
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
@@ -39,6 +41,7 @@ You can accept the agreement by clicking the "Agree" button below. Selecting "Di
 "#;
 const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
 const FAULT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Fault, Size::new(460.0, 260.0));
+const VERSION_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayVersion, Size::new(460.0, 320.0));
 const BODY_SIZE: f32 = 14.0;
 const SPEED_UP_ITEM: i32 = 0;
 const CAT_CPU_ITEM: i32 = 3;
@@ -78,6 +81,12 @@ pub enum Message {
     Continue,
     Key(String, bool),
     StatusExpired,
+    Replay(replay::Message),
+    Watch(bool),
+    VersionPopup(popup::Message),
+    CloseVersion,
+    IgnoreVersion,
+    Restamped(Result<(), String>),
 }
 
 pub struct State {
@@ -91,6 +100,10 @@ pub struct State {
     tapped: Option<std::time::Instant>,
     lineup: lineup::State,
     config: config::State,
+    replay: replay::State,
+    was_running: bool,
+    version: popup::State,
+    foreign: Option<String>,
 }
 
 impl Default for State {
@@ -106,6 +119,10 @@ impl Default for State {
             tapped: None,
             lineup: lineup::State::new(0),
             config: config::State::default(),
+            replay: replay::State::default(),
+            was_running: false,
+            version: popup::State::default(),
+            foreign: None,
         }
     }
 }
@@ -314,15 +331,52 @@ impl State {
         self.session.as_ref().map(Session::touches)
     }
 
+    pub fn aspect(&self) -> Option<f32> {
+        self.session.as_ref().and_then(Session::aspect)
+    }
+
+    fn unit_name(lineup: &lineup::State, id: u32, form: usize) -> String {
+        lineup.inspector().cat(id).map_or_else(|| format!("Unit {id}"), |cat| cat.display_name(form))
+    }
+
+    fn refresh_replays(&mut self) {
+        let lineup = &self.lineup;
+
+        self.replay.refresh(&|id, form| Self::unit_name(lineup, id, form));
+    }
+
+    pub(crate) fn watch(&mut self, width: f32, height: f32, options: &SandboxState, source: ReplaySource, checked: bool) {
+        let Some(reel) = self.replay.reel() else {
+            return;
+        };
+
+        if !checked && let Some(recorded) = self.replay.foreign_version() {
+            self.foreign = Some(if recorded.is_empty() { "Unknown".to_owned() } else { recorded.to_owned() });
+
+            return;
+        }
+
+        self.foreign = None;
+
+        let session = self.session.get_or_insert_with(Session::new);
+
+        session.set_phone(options.device == SandboxDevice::Phone);
+        session.resize(width, height);
+        session.watch(reel, source);
+        self.status = String::new();
+        self.reported = String::new();
+    }
+
     pub fn resize(&mut self, width: f32, height: f32) {
         if let Some(session) = self.session.as_mut() {
             session.resize(width, height);
         }
     }
 
-    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup) {
+    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, recording: bool) {
         let session = self.session.get_or_insert_with(Session::new);
 
+        session.set_recording(recording);
         session.equip(setup);
         session.set_phone(options.device == SandboxDevice::Phone);
         session.resize(width, height);
@@ -364,7 +418,48 @@ impl State {
 
                 Task::none()
             }
-            Message::Play => Task::none(),
+            Message::Play | Message::Watch(_) => Task::none(),
+            Message::VersionPopup(msg) => {
+                if self.version.update(msg, VERSION_POPUP) {
+                    self.foreign = None;
+                }
+
+                Task::none()
+            }
+            Message::CloseVersion => {
+                self.foreign = None;
+
+                Task::none()
+            }
+            Message::IgnoreVersion => {
+                self.foreign = None;
+
+                let Some(target) = self.replay.target() else {
+                    return Task::none();
+                };
+
+                self.status = "Updating the replay's version…".to_owned();
+
+                Task::perform(smol::unblock(move || replay_tape::restamp(&target, VERSION)), Message::Restamped)
+            }
+            Message::Restamped(outcome) => {
+                self.status.clear();
+                self.refresh_replays();
+
+                match outcome {
+                    Ok(()) => Task::done(Message::Watch(true)),
+                    Err(reason) => {
+                        self.status = format!("The replay's version could not be updated: {reason}");
+
+                        Task::future(smol::Timer::after(STATUS_LIFETIME)).map(|_| Message::StatusExpired)
+                    }
+                }
+            }
+            Message::Replay(msg) => {
+                let lineup = &self.lineup;
+
+                self.replay.update(msg, &|id, form| Self::unit_name(lineup, id, form)).map(Message::Replay)
+            }
             Message::FaultPopup(msg) => {
                 if self.fault.update(msg, FAULT_POPUP) {
                     return Task::done(Message::Terminate);
@@ -391,6 +486,14 @@ impl State {
                 let Some(bind) = settings.sandbox.keys.bound(&name) else {
                     return Task::none();
                 };
+
+                if session.watching() {
+                    if pressed && bind == Bind::Pause {
+                        session.terminate();
+                    }
+
+                    return Task::none();
+                }
 
                 let action = match bind {
                     Bind::Slot(slot) => Action::Slot(i32::from(slot)),
@@ -434,6 +537,10 @@ impl State {
             Message::Tab(tab) => {
                 app_state.sandbox.tab = tab;
 
+                if tab == SandboxTab::Replay {
+                    self.refresh_replays();
+                }
+
                 Task::none()
             }
             Message::Stage(_) => Task::none(),
@@ -450,6 +557,14 @@ impl State {
                 Task::none()
             }
             Message::Tick => {
+                let running = self.session.as_ref().is_some_and(Session::running);
+
+                if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
+                    self.refresh_replays();
+                }
+
+                self.was_running = running;
+
                 if let Some(session) = self.session.as_mut() {
                     session.tick(&ctx.vault.vfs);
 
@@ -510,6 +625,42 @@ impl State {
             .into()
     }
 
+    pub fn version_popup_open(&self) -> bool {
+        self.foreign.is_some()
+    }
+
+    pub fn version_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        let recorded = self.foreign.as_deref()?;
+
+        Some(self.version.view("Version Mismatch", VERSION_POPUP, window, Message::VersionPopup, move || Self::version_content(recorded), None))
+    }
+
+    fn version_content(recorded: &str) -> Element<'_, Message> {
+        let notice = format!(
+            "This replay was recorded in game version {recorded}, but Sandbox currently replicates game version {VERSION}.\n\n\
+             Replays recorded in a different game version may play out differently, desync, or crash partway through. \
+             If the replay crashes due to missing files, try setting Replay Source to VFS under Settings > Sandbox.\n\n\
+             Ignore marks this replay as working in game version {VERSION}, so you won't be asked again until the game version changes."
+        );
+
+        column![
+            smooth_scroll(scrollable(text(notice).size(BODY_SIZE)).width(Length::Fill).height(Length::Fill).spacing(SCROLLBAR_GAP)),
+            Space::new().height(CHOICE_GAP),
+            row![
+                theme::sized_button("Close", theme::POPUP_ACTION_BUTTON_WIDTH, theme::danger_button).on_press(Message::CloseVersion),
+                theme::sized_button("Ignore", theme::POPUP_ACTION_BUTTON_WIDTH, theme::warning_button).on_press(Message::IgnoreVersion),
+                theme::sized_button("Continue", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button).on_press(Message::Watch(true)),
+            ]
+                .spacing(CHOICE_SPACING),
+        ]
+            .spacing(OPTION_SPACING)
+            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(BODY_PADDING)
+            .into()
+    }
+
     pub fn prompt_open(&self) -> bool {
         self.prompt_open
     }
@@ -558,7 +709,12 @@ impl State {
         playable: bool,
     ) -> Element<'a, Message> {
         let options = &app_state.sandbox;
-        let tabs = [(SandboxTab::Lineup, "Lineup"), (SandboxTab::Stage, "Stage"), (SandboxTab::Config, "Config")];
+        let tabs = [
+            (SandboxTab::Lineup, "Lineup"),
+            (SandboxTab::Stage, "Stage"),
+            (SandboxTab::Config, "Config"),
+            (SandboxTab::Replay, "Replay"),
+        ];
         let mut bar = row![].spacing(TAB_SPACING);
 
         for (tab, label) in tabs {
@@ -576,6 +732,7 @@ impl State {
         let body: Element<'a, Message> = match (options.tab, staged) {
             (SandboxTab::Stage, Some(staged)) => staged.map(Message::Stage),
             (SandboxTab::Config, _) => self.config.view(options, PLAY_RESERVE).map(Message::Config),
+            (SandboxTab::Replay, _) => self.replay.view(PLAY_RESERVE).map(Message::Replay),
             _ => self.lineup.view(app_state).map(Message::Lineup),
         };
 
@@ -587,10 +744,17 @@ impl State {
             .width(Length::Fill)
             .height(Length::Fill);
 
+        let launch = if options.tab == SandboxTab::Replay {
+            theme::sized_button("Watch", PLAY_WIDTH, theme::primary_button)
+                .on_press_maybe(self.replay.reel().is_some().then_some(Message::Watch(false)))
+        } else {
+            theme::sized_button("Play", PLAY_WIDTH, theme::primary_button).on_press_maybe(playable.then_some(Message::Play))
+        };
+
         let play = container(
             column![
                 text(self.status.as_str()).size(BODY_SIZE),
-                theme::sized_button("Play", PLAY_WIDTH, theme::primary_button).on_press_maybe(playable.then_some(Message::Play)),
+                launch,
             ]
                 .spacing(4)
                 .align_x(Alignment::Center),

@@ -105,6 +105,28 @@ pub struct UtilitiesSettings {
 pub struct SandboxSettings {
     pub banner_form: usize,
     pub keys: crate::domains::sandbox::keybind::Keybinds,
+    pub replay_source: ReplaySource,
+    pub disable_replays: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum ReplaySource {
+    #[default]
+    Bcv,
+    Vfs,
+}
+
+impl ReplaySource {
+    pub const ALL: [Self; 2] = [Self::Bcv, Self::Vfs];
+}
+
+impl std::fmt::Display for ReplaySource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Bcv => "BCV",
+            Self::Vfs => "VFS",
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]

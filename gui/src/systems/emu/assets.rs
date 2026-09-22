@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
+use std::mem;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -41,18 +42,68 @@ fn stripped(name: &str) -> Option<(&str, &str)> {
     APP_LANGUAGES.iter().any(|&(language, _)| language == code).then_some((head, extension))
 }
 
+#[derive(Default)]
+pub struct Ledger {
+    armed: bool,
+    seen: BTreeSet<Box<str>>,
+    fresh: Vec<(Box<str>, PathBuf)>,
+}
+
+impl Ledger {
+    pub fn arm(&mut self) {
+        self.armed = true;
+        self.seen.clear();
+        self.fresh.clear();
+    }
+
+    pub fn disarm(&mut self) {
+        self.armed = false;
+        self.seen.clear();
+        self.fresh.clear();
+    }
+
+    pub fn note(&mut self, name: &str, path: &Path) {
+        if self.armed && !self.seen.contains(name) {
+            self.seen.insert(Box::from(name));
+            self.fresh.push((Box::from(name), path.to_path_buf()));
+        }
+    }
+
+    fn wants(&self, name: &str) -> bool {
+        self.armed && !self.seen.contains(name)
+    }
+
+    pub fn drain(&mut self) -> Vec<(Box<str>, PathBuf)> {
+        mem::take(&mut self.fresh)
+    }
+}
+
+pub type SharedLedger = Rc<RefCell<Ledger>>;
+
 pub struct DiskAssets {
     files: Rc<RefCell<FileIndex>>,
     sheets: Rc<RefCell<SheetCache>>,
+    ledger: SharedLedger,
     missing: Vec<Box<str>>,
 }
 
 impl DiskAssets {
-    pub fn new(files: Rc<RefCell<FileIndex>>, sheets: Rc<RefCell<SheetCache>>) -> Self {
+    pub fn new(files: Rc<RefCell<FileIndex>>, sheets: Rc<RefCell<SheetCache>>, ledger: SharedLedger) -> Self {
         Self {
             files,
             sheets,
+            ledger,
             missing: Vec::new(),
+        }
+    }
+
+    fn note(&self, name: &str) {
+        if !self.ledger.borrow().wants(name) {
+            return;
+        }
+
+        if let Some(path) = self.resolve(name) {
+            self.ledger.borrow_mut().note(name, &path);
         }
     }
 
@@ -182,6 +233,9 @@ impl DiskAssets {
 impl AssetSource for DiskAssets {
     fn open(&mut self, name: &[u8], _packed: u8, _encrypted: u8) -> Option<Vec<u8>> {
         let name = std::str::from_utf8(name).ok()?;
+
+        self.note(name);
+
         let found = self.table(name);
 
         if found.is_none() && !self.missing.iter().any(|seen| seen.as_ref() == name) {
@@ -194,6 +248,9 @@ impl AssetSource for DiskAssets {
 
     fn load_png(&mut self, name: &[u8]) -> Option<SheetImage> {
         let name = std::str::from_utf8(name).ok()?;
+
+        self.note(name);
+
         let sheet = self.decode(name)?;
 
         Some(SheetImage {
@@ -205,6 +262,7 @@ impl AssetSource for DiskAssets {
 
     fn upload(&mut self, name: &[u8]) {
         if let Ok(name) = std::str::from_utf8(name) {
+            self.note(name);
             self.decode(name);
         }
     }

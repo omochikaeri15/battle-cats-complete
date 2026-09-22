@@ -1,4 +1,4 @@
-use crate::{Entropy, Fault};
+use crate::Fault;
 
 use super::{AppContext, call_rng};
 
@@ -61,7 +61,7 @@ pub fn roll_filibuster_stage(ctx: &mut AppContext) -> Result<(), Fault> {
 
         while index + 1 < open.len() {
             let span = (open.len() - 1 - index) as u64;
-            let offset = (Entropy::draw() % (span + 1)) as usize;
+            let offset = (ctx.entropy.roll() % (span + 1)) as usize;
 
             if offset != 0 {
                 open.swap(index, index + offset);

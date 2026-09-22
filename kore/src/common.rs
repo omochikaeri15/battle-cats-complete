@@ -14,3 +14,4 @@ pub mod keys;
 pub mod preview;
 pub mod process;
 pub mod region;
+pub mod solid;

@@ -216,11 +216,12 @@ enum ActivePopup {
     SandboxFilter,
     SandboxUnit,
     SandboxOrb,
+    SandboxVersion,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 25] = [
+    const ALL: [Self; 26] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -246,6 +247,7 @@ impl ActivePopup {
         Self::SandboxFilter,
         Self::SandboxUnit,
         Self::SandboxOrb,
+        Self::SandboxVersion,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -275,6 +277,7 @@ impl ActivePopup {
             Self::SandboxFilter => popup::Kind::SandboxFilter,
             Self::SandboxUnit => popup::Kind::SandboxUnit,
             Self::SandboxOrb => popup::Kind::SandboxOrb,
+            Self::SandboxVersion => popup::Kind::ReplayVersion,
         }
     }
 }
@@ -1516,12 +1519,20 @@ impl BattleCatsApp {
                     return self.update(Message::Stage(staged));
                 }
 
+                if let sandbox::Message::Watch(checked) = msg {
+                    let source = self.settings.sandbox.replay_source;
+
+                    self.sandbox_state.watch(self.window_size.width, self.window_size.height, &self.app_state.sandbox, source, checked);
+                }
+
                 if matches!(msg, sandbox::Message::Play)
                     && let Some(entry) = self.staged_entry()
                 {
                     let setup = self.sandbox_state.setup(&self.app_state, entry);
 
-                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup);
+                    let recording = !self.settings.sandbox.disable_replays;
+
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, recording);
                 }
 
                 let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
@@ -1691,6 +1702,7 @@ impl BattleCatsApp {
                 covered: self.sandbox_state.curtain_covered(),
                 frozen: self.sandbox_state.frozen(),
                 design_width: self.sandbox_state.design_width(),
+                aspect: self.sandbox_state.aspect(),
             },
         )
     }
@@ -1740,6 +1752,7 @@ impl BattleCatsApp {
         self.sync_popup(ActivePopup::SandboxFilter, self.sandbox_state.filter_popup_open());
         self.sync_popup(ActivePopup::SandboxUnit, self.sandbox_state.unit_popup_open());
         self.sync_popup(ActivePopup::SandboxOrb, self.sandbox_state.orb_popup_open());
+        self.sync_popup(ActivePopup::SandboxVersion, self.sandbox_state.version_popup_open());
     }
 
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
@@ -1932,6 +1945,13 @@ impl BattleCatsApp {
                         }
 
                         self.sandbox_state.orb_popup_view(self.window_size, &self.app_state).map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxVersion => {
+                        if !matches!(self.current_page, Page::Sandbox) {
+                            return None;
+                        }
+
+                        self.sandbox_state.version_view(self.window_size).map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SandboxAcknowledge => {
                         if !matches!(self.current_page, Page::Sandbox) {

@@ -14,7 +14,7 @@ use iced::{Alignment, Element, Length, Size, Task};
 
 use kore::domains::cat::files as cat_files;
 use kore::domains::sandbox::keybind::Bind;
-use kore::domains::settings::{lang, nightly, ContextScope, EditorMode, Utf8Mode};
+use kore::domains::settings::{lang, nightly, ContextScope, EditorMode, ReplaySource, Utf8Mode};
 use kore::domains::settings::{
     ExportBehavior, FrameCount, ImportStructure, ScrubBehavior, Settings as CoreSettings,
     SidebarBehavior,
@@ -59,6 +59,8 @@ pub enum Message {
     General(general::Message),
     PreferredBannerSelected(usize),
     SandboxBannerSelected(usize),
+    ReplaySourceSelected(ReplaySource),
+    ToggleDisableReplays(bool),
     KeyCapture(Bind),
     KeyCaptured(String),
     KeysReset,
@@ -205,6 +207,14 @@ impl State {
             }
             Message::SandboxBannerSelected(val) => {
                 core_settings.sandbox.banner_form = val;
+                Task::none()
+            }
+            Message::ReplaySourceSelected(source) => {
+                core_settings.sandbox.replay_source = source;
+                Task::none()
+            }
+            Message::ToggleDisableReplays(val) => {
+                core_settings.sandbox.disable_replays = val;
                 Task::none()
             }
             Message::ToggleInvalidCats(val) => {
@@ -489,6 +499,22 @@ impl State {
 
         column![
             header_section(text("Lineup List").size(24), list_content),
+            header_section(
+                text("Replay").size(24),
+                column![
+                    combo_row(
+                        "Replay Source",
+                        "BCV plays a replay with the game files it was recorded with, VFS plays it with your own game files instead",
+                        ReplaySource::ALL,
+                        Some(core_settings.sandbox.replay_source),
+                        Some(Message::ReplaySourceSelected),
+                    ),
+                    hover_hint(
+                        toggle_row(core_settings.sandbox.disable_replays, text("Disable Replays"), Some(Message::ToggleDisableReplays)),
+                        "Disables the replay set-up path\nMay improve battle start speeds",
+                    ),
+                ].spacing(10),
+            ),
             header_section(text("Keybinds").size(24), binds),
         ].spacing(20).into()
     }

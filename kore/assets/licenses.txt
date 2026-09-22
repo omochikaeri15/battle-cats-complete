@@ -152,14 +152,15 @@ unmodified.
 CRATE DEPENDENCIES (MIT / APACHE-2.0 / PERMISSIVE)
 ========================================================================
 The following open-source crates are utilized under their respective
-permissive licenses (MIT, Apache-2.0, Zlib, Unlicense, CC0-1.0):
+permissive licenses (MIT, Apache-2.0, BSD-3-Clause, Zlib, Unlicense,
+CC0-1.0):
 
-ab_glyph, anyhow, arboard, base64, bincode, bytemuck, byteorder,
-directories, gif, hex, iced, image, imageproc, indexmap, md-5, md5, naga,
-notify, open, postcard, pulseaudio, rasn, rasn-pkix, rayon, regex,
+ab_glyph, aes, arboard, base64, block-padding, byteorder, bytemuck, cbc,
+cipher, directories, ecb, gif, hex, iced, image, imageproc, indexmap,
+md-5, notify, open, postcard, pulseaudio, rasn, rasn-pkix, rayon, regex,
 reqwest, resand, rfd, rodio, rsa, rustc-hash, self_update, serde,
-serde_json, sha2, smol, swash, tar, thiserror, tracing,
-tracing-subscriber, webp-animation, winres, zip, zstd.
+serde_json, sha2, smol, tar, thiserror, tracing, tracing-subscriber,
+webp-animation, winres, zip, zstd.
 
 ------------------------------------------------------------------------
 The MIT License (MIT)

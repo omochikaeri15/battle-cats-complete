@@ -1,4 +1,4 @@
-use crate::{Entropy, Fault, ops};
+use crate::{Fault, ops};
 
 use super::{AppContext, call_rng, get_stage_index, labyrinth_load_floors};
 
@@ -76,7 +76,7 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
 
     while index + 1 < lineup.len() {
         let span = (lineup.len() - 1 - index) as u64;
-        let offset = (Entropy::draw() % (span + 1)) as usize;
+        let offset = (ctx.entropy.roll() % (span + 1)) as usize;
 
         if offset != 0 {
             lineup.swap(index, index + offset);
