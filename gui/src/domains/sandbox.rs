@@ -153,6 +153,11 @@ impl State {
     pub(crate) fn enter(&mut self, app_state: &AppState, settings: &Settings, ctx: GlobalContext<'_>) -> Task<Message> {
         self.prompt_open = !app_state.sandbox.acknowledged;
         self.config.enter(&ctx.vault.vfs);
+
+        if app_state.sandbox.tab == SandboxTab::Replay {
+            self.refresh_replays();
+        }
+
         self.lineup.set_banner_form(settings.sandbox.banner_form);
         self.lineup.enter(app_state, ctx).map(Message::Lineup)
     }

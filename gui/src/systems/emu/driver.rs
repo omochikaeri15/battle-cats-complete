@@ -249,6 +249,19 @@ impl Driver {
         self.tape = Tape::Playing { frames, at: 0 };
     }
 
+    pub fn end_playback(&mut self) {
+        if !self.watching() {
+            return;
+        }
+
+        self.close_tape();
+        self.phone = self.wanted_phone;
+
+        let (width, height) = self.window;
+
+        self.apply_size(width, height);
+    }
+
     pub fn watching(&self) -> bool {
         matches!(self.tape, Tape::Playing { .. })
     }

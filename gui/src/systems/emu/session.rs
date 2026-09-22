@@ -233,6 +233,11 @@ impl Session {
 
                 if self.sweep >= CLOSED_FRAME {
                     self.phase = if self.again { Phase::Loading } else { Phase::Leaving };
+
+                    if self.driver.watching() {
+                        self.driver.end_playback();
+                        self.driver.draw_curtain(self.sweep);
+                    }
                     self.started = Instant::now();
                 }
             }
@@ -257,7 +262,10 @@ impl Session {
 
                 match self.reel.take() {
                     Some((reel, source)) => match self.cue(&reel, source, vfs) {
-                        Ok(()) => self.load(),
+                        Ok(()) => {
+                            self.driver.draw_curtain(self.sweep);
+                            self.load();
+                        }
                         Err(reason) => {
                             warn!("emu: the replay could not be loaded: {reason}");
                             self.failure = Some(reason);
@@ -281,6 +289,7 @@ impl Session {
                 } else {
                     self.phase = Phase::Leaving;
                     self.started = Instant::now();
+                    self.driver.end_playback();
                     self.driver.draw_curtain(self.sweep);
                 }
             }
@@ -364,6 +373,7 @@ impl Session {
             self.driver.silence();
             self.phase = Phase::Leaving;
             self.sweep = CLOSED_FRAME;
+            self.driver.end_playback();
             self.started = Instant::now();
             self.driver.draw_curtain(self.sweep);
         }
