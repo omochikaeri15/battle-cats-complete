@@ -30,7 +30,6 @@ const CHAPTER_ROWS: usize = 0xa;
 const CHAPTER_ROW_STRIDE: usize = 0xd0;
 const CHAPTER_STAGES: usize = 0x30;
 const STAGE_CLEARED: i32 = 1;
-const SPEED_MODES: usize = 3;
 const TWO_ROWS_UNLOCKED: i32 = 2;
 const TUTORIALS_SEEN: [usize; 4] = [
     AppContext::TUTORIAL_DECK_SEEN,
@@ -93,10 +92,6 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
             *part,
             vec![0, levels.cannon.wrapping_sub(1), levels.foundation, levels.style],
         );
-    }
-
-    for mode in 0..SPEED_MODES {
-        ctx.set_block_at::<1>(AppContext::POWERUP_AVAILABLE + mode, [1])?;
     }
 
     let mut food = [0u8; 8];

@@ -1,9 +1,9 @@
 use crate::{
     Fault,
-    engine::{AppContext, obfuscate_value},
+    engine::{AppContext, is_score_stage, map_type_of_map_id, obfuscate_value},
 };
 
-use super::{DECK_SLOTS, Setup};
+use super::{BATTLE_ITEMS, DECK_SLOTS, Setup};
 
 const EMPTY_SLOT: i32 = -1;
 const DECK_BIAS: i32 = 2;
@@ -13,6 +13,12 @@ const TRUE_FORM: i32 = 2;
 const ULTRA_FORM: i32 = 3;
 const FORM_UNLOCKED: i32 = 2;
 const TALENT_SLOTS: usize = 8;
+const SPEED_MODES: usize = 3;
+const SPEED_UP_ITEM: usize = 0;
+const LABYRINTH_TYPE: i32 = -0x15;
+const GAUNTLET_TYPE: i32 = -0x18;
+const SCORED_STAGE_ITEMS: [bool; BATTLE_ITEMS] = [true, false, false, true, false, false];
+const GAUNTLET_ITEMS: [bool; BATTLE_ITEMS] = [true, false, false, false, false, false];
 const TALENT_STRIDE: usize = 0xe;
 const TALENT_ABILITY: usize = 1;
 const TALENT_MAX_LEVEL: usize = 2;
@@ -82,16 +88,38 @@ pub fn fill_dummy_talents(ctx: &mut AppContext, setup: &Setup) {
     }
 }
 
+pub fn usable_items(map_id: i32, scored: bool) -> [bool; BATTLE_ITEMS] {
+    if map_type_of_map_id(map_id) == GAUNTLET_TYPE {
+        return GAUNTLET_ITEMS;
+    }
+
+    if scored || map_type_of_map_id(map_id) == LABYRINTH_TYPE {
+        return SCORED_STAGE_ITEMS;
+    }
+
+    [true; BATTLE_ITEMS]
+}
+
 pub fn stock_battle_items(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
+    let usable = usable_items(setup.stage.map_id, is_score_stage(ctx.event_items.as_ref()));
+    let allowed = |item: usize| usable.get(item).copied().unwrap_or(true);
+    let speed_up = setup.items.first().copied().unwrap_or(false) && allowed(SPEED_UP_ITEM);
+
     for (item, stocked) in setup.items.iter().enumerate() {
         let mut cell = [0u8; 8];
+        let stocked = &(*stocked && allowed(item));
         let held = if *stocked { ITEM_STOCK } else { 0 };
+        let selected = *stocked || (item == SPEED_UP_ITEM && setup.speed_engaged);
 
         cell[..4].copy_from_slice(&held.to_le_bytes());
         obfuscate_value(&mut cell);
         ctx.set_block_at(AppContext::ITEM_COUNTS_KIND_3 + item * 8, cell)?;
-        ctx.set_block_at::<1>(AppContext::ITEMS_SELECTED + item, [u8::from(*stocked)])?;
-        ctx.set_block_at::<1>(AppContext::ITEMS_SELECTED_SCORE_MODE + item, [u8::from(*stocked)])?;
+        ctx.set_block_at::<1>(AppContext::ITEMS_SELECTED + item, [u8::from(selected)])?;
+        ctx.set_block_at::<1>(AppContext::ITEMS_SELECTED_SCORE_MODE + item, [u8::from(selected)])?;
+    }
+
+    for mode in 0..SPEED_MODES {
+        ctx.set_block_at::<1>(AppContext::POWERUP_AVAILABLE + mode, [u8::from(speed_up)])?;
     }
 
     Ok(())

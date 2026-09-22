@@ -1704,6 +1704,17 @@ impl BattleCatsApp {
             Some(kore::domains::sandbox::rules::Rules::of(stage, data.registry.maps.get(&map), self.stage_state.selected_crown as i8))
         });
 
+        let global = data.selected_stage.as_ref().and_then(|picked| {
+            let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+
+            i32::try_from(data.registry.addresses.get(&map)?.global?).ok()
+        });
+
+        let scored = kore::domains::sandbox::scored::score_stage_maps(&self.vault.vfs);
+
+        self.app_state.sandbox.usable_items = global.map_or([true; 6], |map_id| {
+            ::emu::runtime::usable_items(map_id, scored.contains(&map_id))
+        });
         self.sandbox_state.set_rules(rules.unwrap_or_default(), &self.app_state);
     }
 

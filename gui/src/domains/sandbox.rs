@@ -270,6 +270,8 @@ impl State {
             }
         }
 
+        setup.speed_engaged = options.config.start_speed.engaged();
+
         setup.cannon = options.config.cannon.unwrap_or(0);
         setup.style = options.config.style.unwrap_or(0);
         setup.foundation = options.config.foundation.unwrap_or(0);

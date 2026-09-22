@@ -2,7 +2,7 @@ use iced::widget::{column, container, scrollable, text, Column};
 use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
-use kore::domains::sandbox::config::CatGod;
+use kore::domains::sandbox::config::{CatGod, StartSpeed};
 use kore::domains::sandbox::{config, CHAPTERS, ITEMS, TECHS};
 use kore::Vfs;
 
@@ -72,6 +72,7 @@ pub enum Message {
     Item(usize, bool),
     Altar(String),
     CatGod(CatGod),
+    StartSpeed(StartSpeed),
 }
 
 #[derive(Default)]
@@ -139,6 +140,7 @@ impl State {
                 Slot::Foundation => options.config.foundation = Some(part.id),
             },
             Message::CatGod(picked) => options.config.cat_god = picked,
+            Message::StartSpeed(picked) => options.config.start_speed = picked,
             Message::Altar(entry) => {
                 if typable(&entry) {
                     options.config.altar_level = entry;
@@ -247,12 +249,25 @@ impl State {
     }
 
     fn items(options: &SandboxState) -> Element<'_, Message> {
-        let mut rows = Column::new().spacing(ROW_SPACING);
+        let speed_up = options.usable_items.first().copied().unwrap_or(true)
+            && !options.config.items_off.first().copied().unwrap_or(false);
+        let shown = if speed_up { StartSpeed::Triple } else { options.config.start_speed };
+        let mut rows = Column::new().spacing(ROW_SPACING).push(combo_row(
+            "Start Speed",
+            "The speed the battle opens at.\n1x: the speed button starts off\n2x: it starts engaged\nStocking Speed Up raises the ceiling to 3x and the battle opens there",
+            StartSpeed::SELECTABLE,
+            Some(shown),
+            (!speed_up).then_some(Message::StartSpeed),
+        ));
 
         for (item, name) in ITEMS.iter().enumerate() {
-            let stocked = !options.config.items_off.get(item).copied().unwrap_or(false);
+            let allowed = options.usable_items.get(item).copied().unwrap_or(true);
+            let stocked = allowed && !options.config.items_off.get(item).copied().unwrap_or(false);
+            let label = text(*name).style(move |theme: &iced::Theme| text::Style {
+                color: (!allowed).then(|| theme::weak_text_color(theme)),
+            });
 
-            rows = rows.push(toggle_row(stocked, text(*name), Some(move |enabled| Message::Item(item, enabled))));
+            rows = rows.push(toggle_row(stocked, label, allowed.then_some(move |enabled| Message::Item(item, enabled))));
         }
 
         section("Battle Items", Length::Fill, rows)

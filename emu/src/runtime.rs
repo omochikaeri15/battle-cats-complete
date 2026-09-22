@@ -14,7 +14,7 @@ mod silent_sound;
 mod touch_input;
 
 pub use battle_options::{BattleOptions, apply_battle_options, read_battle_options};
-pub use dummy_lineup::{fill_dummy_lineup, fill_dummy_talents, stock_battle_items};
+pub use dummy_lineup::{fill_dummy_lineup, fill_dummy_talents, stock_battle_items, usable_items};
 pub use dummy_save::{fill_dummy_save, seed_altar_records, seed_cat_god, unlock_dummy_combos};
 pub use inert_draw::InertDraw;
 pub use keys::{

@@ -77,7 +77,33 @@ impl std::fmt::Display for CatGod {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StartSpeed {
+    #[default]
+    Single,
+    Double,
+    Triple,
+}
+
+impl StartSpeed {
+    pub const SELECTABLE: [Self; 2] = [Self::Single, Self::Double];
+
+    pub fn engaged(self) -> bool {
+        self != Self::Single
+    }
+}
+
+impl std::fmt::Display for StartSpeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Single => "1x",
+            Self::Double => "2x",
+            Self::Triple => "3x",
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub treasures: [String; 9],
@@ -89,8 +115,28 @@ pub struct Config {
     pub style_level: String,
     pub foundation_level: String,
     pub items_off: [bool; 6],
+    pub start_speed: StartSpeed,
     pub altar_level: String,
     pub cat_god: CatGod,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            treasures: Default::default(),
+            techs: Default::default(),
+            cannon: None,
+            style: None,
+            foundation: None,
+            cannon_level: String::new(),
+            style_level: String::new(),
+            foundation_level: String::new(),
+            items_off: [true; 6],
+            start_speed: StartSpeed::Single,
+            altar_level: String::new(),
+            cat_god: CatGod::default(),
+        }
+    }
 }
 
 impl Config {
@@ -128,6 +174,12 @@ mod tests {
         assert_eq!(config.tech(1), (10, 0), "cannon range stops at ten and has no plus levels");
         assert_eq!(level("", 30), 30);
         assert_eq!(config.altar(), None, "no entry means the altar is already destroyed");
+        // A fresh Sandbox starts with no battle items, so nothing is silently
+        // buffing a stage the user is trying to read straight.
+        assert_eq!(config.items_off, [true; 6]);
+        // Triple is never stored, only shown, so the picker must not offer it.
+        assert_eq!(config.start_speed, StartSpeed::Single);
+        assert!(!StartSpeed::SELECTABLE.contains(&StartSpeed::Triple));
         assert_eq!(config.cat_god, CatGod::Present);
     }
 

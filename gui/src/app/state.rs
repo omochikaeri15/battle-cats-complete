@@ -144,6 +144,7 @@ pub(crate) struct SandboxState {
     pub two_rows: bool,
     pub vibrate: bool,
     pub device: SandboxDevice,
+    pub usable_items: [bool; 6],
 }
 
 impl Default for SandboxState {
@@ -161,6 +162,7 @@ impl Default for SandboxState {
             two_rows: false,
             vibrate: false,
             device: SandboxDevice::default(),
+            usable_items: [true; 6],
         }
     }
 }
