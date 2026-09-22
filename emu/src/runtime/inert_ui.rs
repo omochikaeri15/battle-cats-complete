@@ -3,8 +3,6 @@ use crate::engine::UiHost;
 pub struct InertUi;
 
 impl UiHost for InertUi {
-    fn message_set(&mut self, _layer: i32, _text: &[u8], _size: i32, _width: i32) {}
-    fn message_clear(&mut self, _layer: i32) {}
     fn option_window_build(&mut self, _kind: i32) {}
     fn option_window_draw(&mut self) {}
     fn title_option_window_set_touchable(&mut self, _touchable: u8) {}

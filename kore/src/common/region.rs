@@ -54,11 +54,6 @@ impl std::str::FromStr for Region {
     }
 }
 
-const JAPANESE: &str = "ja";
-
 pub fn text_separator(name: &str) -> Separator {
-    let stem = name.rsplit_once('.').map_or(name, |(head, _)| head);
-    let japanese = stem.rsplit_once('_').is_some_and(|(_, code)| code == JAPANESE);
-
-    if japanese { Separator::Comma } else { Separator::Pipe }
+    Separator::localized(name)
 }

@@ -26,6 +26,7 @@ pub struct TextLine {
 #[derive(Clone, Default, Debug)]
 pub struct TextBlock {
     pub lines: Vec<TextLine>,
+    pub width: i32,
     pub blink: i32,
     pub spacing: i32,
 }

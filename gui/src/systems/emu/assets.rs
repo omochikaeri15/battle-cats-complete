@@ -8,6 +8,7 @@ use std::sync::Arc;
 use emu::engine::{AssetSource, SheetImage};
 use kore::common::io::APP_LANGUAGES;
 use kore::Vfs;
+use nyanko::combat::Separator;
 use rayon::prelude::*;
 use tracing::{debug, info, warn};
 
@@ -27,7 +28,6 @@ impl Sheet {
     }
 }
 
-const NATIVE_REGION: &str = "ja";
 pub(super) const WIDE_COMMA: &str = "\u{ff0c}";
 
 pub type SheetCache = BTreeMap<Box<str>, Sheet>;
@@ -116,35 +116,25 @@ impl DiskAssets {
     fn table(&self, name: &str) -> Option<Vec<u8>> {
         let path = self.resolve(name)?;
         let bytes = std::fs::read(&path).ok()?;
-        let regional = path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .and_then(|stem| stem.rsplit_once('_'))
-            .is_some_and(|(_, code)| {
-                code.len() == 2 && code != NATIVE_REGION && code.bytes().all(|letter| letter.is_ascii_lowercase())
-            });
+        let piped = path
+            .file_name()
+            .and_then(|found| found.to_str())
+            .is_some_and(|found| Separator::localized(found) == Separator::Pipe);
         let tabular = path
             .extension()
             .and_then(|extension| extension.to_str())
             .is_some_and(|extension| extension == "csv");
 
-        if !regional || !tabular {
+        if !piped || !tabular || !bytes.contains(&b'|') {
             return Some(bytes);
         }
 
-        let delimiter = if bytes.contains(&b'|') {
-            b'|'
-        } else if bytes.contains(&b'\t') {
-            b'\t'
-        } else {
-            return Some(bytes);
-        };
         let mut rewritten = Vec::with_capacity(bytes.len());
 
         for byte in bytes {
             match byte {
                 b',' => rewritten.extend_from_slice(WIDE_COMMA.as_bytes()),
-                found if found == delimiter => rewritten.push(b','),
+                b'|' => rewritten.push(b','),
                 other => rewritten.push(other),
             }
         }

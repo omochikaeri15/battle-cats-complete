@@ -727,16 +727,8 @@ fn fitted(label: &str) -> String {
     label.chars().take(ROOM).chain("...".chars()).collect()
 }
 
-const JAPANESE: &str = "ja";
-
 pub(super) fn separator(name: &str) -> char {
-    localized(name).char()
-}
-
-fn localized(name: &str) -> Separator {
-    let japanese = name.rsplit_once('_').is_some_and(|(_, tail)| tail.starts_with(JAPANESE));
-
-    if japanese { Separator::Comma } else { Separator::Pipe }
+    Separator::localized(name).char()
 }
 
 pub(super) fn seated(plan: &Plan) -> bool {

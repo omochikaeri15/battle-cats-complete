@@ -13,7 +13,5 @@ pub fn text_block_draw(
     align: i32,
     scale: f32,
 ) -> Result<(), Fault> {
-    blocks.get_mut(&key).map_or(Ok(()), |block| {
-        text_block_render(sink, block, x, y, align, scale)
-    })
+    text_block_render(sink, blocks.entry(key).or_default(), x, y, align, scale)
 }

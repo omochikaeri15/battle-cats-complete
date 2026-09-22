@@ -905,7 +905,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     if ctx.i32_at(AppContext::TOOLTIP_ITEM)? == 0
                                         && ctx.u8_at(AppContext::SPEED_UP_LATCH)? == 0
                                     {
-                                        message_layer_clear(ctx, 0)?;
+                                        message_layer_clear(ctx, 0);
 
                                         let key = std_string_from_cstr(b"speedup_message");
                                         let text = query_localizable(ctx, &key);

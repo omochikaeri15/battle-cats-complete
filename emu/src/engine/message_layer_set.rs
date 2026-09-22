@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, TextBlock, message_layer_layout};
 
 pub fn message_layer_set(
     ctx: &mut AppContext,
@@ -9,9 +9,14 @@ pub fn message_layer_set(
     size: i32,
     width: i32,
 ) -> Result<(), Fault> {
-    ctx.ui()
-        .ok_or(Fault::host_missing())?
-        .message_set(layer, text, size, width);
+    if ctx.text_blocks.contains_key(&layer) {
+        return Ok(());
+    }
 
-    Ok(())
+    let mut block = TextBlock::default();
+    let laid = message_layer_layout(ctx, &mut block, text, size, width);
+
+    ctx.text_blocks.insert(layer, block);
+
+    laid
 }

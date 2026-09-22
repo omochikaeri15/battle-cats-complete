@@ -65,8 +65,6 @@ pub struct DialogManager {
 }
 
 pub trait UiHost {
-    fn message_set(&mut self, layer: i32, text: &[u8], size: i32, width: i32);
-    fn message_clear(&mut self, layer: i32);
     fn option_window_build(&mut self, kind: i32);
     fn option_window_draw(&mut self);
     fn title_option_window_set_touchable(&mut self, touchable: u8);
