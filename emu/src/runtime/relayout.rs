@@ -31,7 +31,7 @@ enum Down {
     Footer(i32),
 }
 
-const LATCHED: [(usize, Across, Down); 27] = [
+const LATCHED: [(usize, Across, Down); 26] = [
     (AppContext::CANNON_RECT, Across::Inset(-0x92), Down::Corner(0x1fe)),
     (AppContext::WORKER_RECT, Across::Left(-0x30), Down::Corner(0x207)),
     (AppContext::COMBO_SKIP_RECT, Across::Edge(-0x5c), Down::Kept),
@@ -48,7 +48,6 @@ const LATCHED: [(usize, Across, Down); 27] = [
     (AppContext::HUD_RECTS + 0xa0, Across::Center(0xfb), Down::Kept),
     (AppContext::HUD_RECTS + 0xb0, Across::Center(0x21d), Down::Kept),
     (AppContext::HUD_RECTS + 0xc0, Across::Center(0x1f4), Down::Kept),
-    (AppContext::CAT_GOD_BUTTON_RECT, Across::Center(0xf6), Down::Raised),
     (AppContext::CAT_GOD_MIRACLE_RECTS, Across::Center(0xf6), Down::Kept),
     (AppContext::CAT_GOD_MIRACLE_RECTS + 0x10, Across::Center(0x1aa), Down::Kept),
     (AppContext::CAT_GOD_MIRACLE_RECTS + 0x20, Across::Center(0x25e), Down::Kept),
