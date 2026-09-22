@@ -10,7 +10,7 @@ const GATE_FRAMES: u16 = 90;
 const SWAP_SETTLE: u8 = 4;
 const LEAVE_AFTER: u16 = 15;
 const PAN_STEP: i32 = 0x18;
-const PAN_MARGIN: i32 = 0x50;
+const PAN_REACH: i32 = 1 << 20;
 const ZOOM_STEP: i32 = 10;
 const STILL_FRAMES: u8 = 2;
 
@@ -322,7 +322,7 @@ impl Keys {
                 Ok(())
             }
             (_, None) if self.down => Ok(()),
-            (direction, None) => {
+            (_, None) => {
                 if gap.is_some() {
                     *spread = 0;
                     *gap = None;
@@ -332,23 +332,19 @@ impl Keys {
                     return Ok(());
                 }
 
-                let start = center.wrapping_sub(direction.wrapping_mul(center - PAN_MARGIN));
-
-                self.drag = Some(start);
+                self.drag = Some(center);
                 self.touch_down = true;
 
-                runtime::queue_spot_press(ctx, start, y)
+                runtime::queue_spot_press(ctx, center, y)
             }
             (direction, Some(at)) => {
                 let next = at.wrapping_add(direction * PAN_STEP);
 
-                if (next - center).abs() > center - PAN_MARGIN {
-                    let start = center.wrapping_sub(direction.wrapping_mul(center - PAN_MARGIN));
-
-                    self.drag = Some(start);
+                if next.abs() > PAN_REACH {
+                    self.drag = Some(center);
                     self.touch_down = true;
 
-                    return runtime::queue_spot_press(ctx, start, y);
+                    return runtime::queue_spot_press(ctx, center, y);
                 }
 
                 self.drag = Some(next);
