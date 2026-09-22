@@ -32,6 +32,10 @@ fn rect_center(ctx: &AppContext, rect: usize) -> Result<Option<(i32, i32)>, Faul
     Ok((width > 0 && height > 0).then(|| (x.wrapping_add(width / 2), y.wrapping_add(height / 2))))
 }
 
+pub fn pinch_latched(ctx: &AppContext) -> Result<bool, Fault> {
+    Ok(ctx.u8_at(AppContext::PINCH_ZOOMED)? != 0)
+}
+
 pub fn deck_row_hidden(ctx: &AppContext, slot: i32) -> Result<bool, Fault> {
     if ctx.u8_at(AppContext::DECK_TWO_LINES)? != 0 {
         return Ok(false);

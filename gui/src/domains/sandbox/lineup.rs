@@ -11,7 +11,7 @@ use kore::domains::cat::scanner::CatEntry;
 use kore::domains::cat::game::stats::get_final_stats;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::rules::Rules;
-use kore::domains::sandbox::{Cell, Lineup, Member, BENCH_SLOTS, LINEUP_SLOTS};
+use kore::domains::sandbox::{Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
 use kore::domains::settings::Settings;
 
 use crate::app::state::AppState;
@@ -363,11 +363,21 @@ impl State {
         self.combos.refresh(ctx, lineup);
     }
 
-    fn recruit(&self, id: u32, form: Option<usize>, settings: &Settings) -> Option<Member> {
+    fn recruit(&self, id: u32, form: Option<usize>, settings: &Settings, roster: &Roster) -> Option<Member> {
         let (lowest, level) = self.inspector.seeded(id, self.banner_form, settings)?;
         let slots = 0;
 
-        Some(Member { id, form: form.unwrap_or(lowest), level, talents: HashMap::new(), orbs: vec![None; slots] })
+        let Some(past) = roster.recall(id) else {
+            return Some(Member { id, form: form.unwrap_or(lowest), level, talents: HashMap::new(), orbs: vec![None; slots] });
+        };
+
+        Some(Member {
+            id,
+            form: form.unwrap_or(past.form),
+            level: past.level.clone(),
+            talents: past.talents.clone(),
+            orbs: past.orbs.clone(),
+        })
     }
 
     fn open(&mut self, cell: Cell, lineup: &Lineup) {
@@ -432,6 +442,7 @@ impl State {
     pub fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         let task = self.update_inner(message, settings, app_state, ctx);
 
+        app_state.sandbox.roster.remember();
         self.settle(app_state, ctx);
 
         task
@@ -447,7 +458,7 @@ impl State {
                         return Task::none();
                     }
                     Some(Picked::Chosen(id)) => {
-                        if let Some(member) = self.recruit(id, None, settings) {
+                        if let Some(member) = self.recruit(id, None, settings, &app_state.sandbox.roster) {
                             app_state.sandbox.roster.current_mut().add(self.fitted(member, ctx));
                         }
 
@@ -485,7 +496,7 @@ impl State {
                     let mut lineup = std::mem::take(app_state.sandbox.roster.current_mut());
 
                     lineup.adopt(row, |id, form| {
-                        self.recruit(id, Some(form), settings)
+                        self.recruit(id, Some(form), settings, &app_state.sandbox.roster)
                             .map_or_else(|| Member { id, form, ..Member::default() }, |member| self.fitted(member, ctx))
                     });
 
@@ -553,7 +564,7 @@ impl State {
 
                 match settled {
                     Drag::Pressed { cargo: Cargo::Fresh(id), .. } => {
-                        if let Some(member) = self.recruit(id, None, settings) {
+                        if let Some(member) = self.recruit(id, None, settings, &app_state.sandbox.roster) {
                             app_state.sandbox.roster.current_mut().add(self.fitted(member, ctx));
                         }
                     }
@@ -568,7 +579,7 @@ impl State {
                         }
                     }
                     Drag::Moving { cargo: Cargo::Fresh(id), onto: Some(onto), .. } => {
-                        if let Some(member) = self.recruit(id, None, settings) {
+                        if let Some(member) = self.recruit(id, None, settings, &app_state.sandbox.roster) {
                             app_state.sandbox.roster.current_mut().place(self.fitted(member, ctx), onto);
                         }
                     }
@@ -777,7 +788,7 @@ impl State {
 
         if self.drag != Drag::Idle {
             let ghost: Element<'_, Message> = match self.drag {
-                Drag::Moving { cargo, at, .. } => self.ghost(cargo, at, lineup),
+                Drag::Moving { cargo, at, .. } => self.ghost(cargo, at, lineup, &app_state.sandbox.roster),
                 _ => Space::new().width(Length::Fill).height(Length::Fill).into(),
             };
 
@@ -792,15 +803,17 @@ impl State {
         layers.into()
     }
 
-    fn ghost<'a>(&'a self, cargo: Cargo, at: Point, lineup: Option<&'a Lineup>) -> Element<'a, Message> {
+    fn ghost<'a>(&'a self, cargo: Cargo, at: Point, lineup: Option<&'a Lineup>, roster: &Roster) -> Element<'a, Message> {
         let metrics = self.metrics;
         let handle = match cargo {
             Cargo::Held(cell) => lineup.and_then(|lineup| lineup.get(cell)).and_then(|member| self.icons.get(&(member.id, member.form))).cloned(),
             Cargo::Fresh(id) => self.inspector.cat(id).and_then(|cat| {
-                let form = cat::State::shown_form(cat, self.banner_form);
+                let shown = cat::State::shown_form(cat, self.banner_form);
+                let form = roster.recall(id).map_or(shown, |past| past.form);
 
                 cat.deploy_icon_paths
                     .get(form)
+                    .or_else(|| cat.deploy_icon_paths.get(shown))
                     .and_then(Option::as_ref)
                     .and_then(|path| header_icon::load(&self.decoded, path))
                     .map(|icon| icon.handle)

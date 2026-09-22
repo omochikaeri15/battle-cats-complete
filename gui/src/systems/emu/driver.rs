@@ -191,7 +191,7 @@ impl Driver {
     }
 
     fn pump_input(&mut self) {
-        self.keys.pump(&mut self.ctx, &mut self.spread);
+        self.keys.pump(&mut self.ctx, &mut self.spread, &mut self.gap);
 
         let keyed = self.keys.busy();
         let mut pending: std::collections::VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();

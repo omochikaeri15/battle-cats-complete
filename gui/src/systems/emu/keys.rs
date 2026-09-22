@@ -11,7 +11,7 @@ const SWAP_SETTLE: u8 = 4;
 const LEAVE_AFTER: u16 = 15;
 const PAN_STEP: i32 = 0x18;
 const PAN_MARGIN: i32 = 0x50;
-const ZOOM_STEP: i32 = 6;
+const ZOOM_STEP: i32 = 10;
 const STILL_FRAMES: u8 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,8 +46,12 @@ pub struct Keys {
     down: bool,
     back: bool,
     paused: Option<u16>,
+    touch_down: bool,
+    drop_pinch: bool,
     pan: i32,
+    pan_key: Option<Action>,
     zoom: i32,
+    zoom_key: Option<Action>,
     drag: Option<i32>,
     still: u8,
 }
@@ -63,10 +67,24 @@ impl Keys {
 
     pub fn press(&mut self, action: Action) {
         match action {
-            Action::ZoomIn => self.zoom = 1,
-            Action::ZoomOut => self.zoom = -1,
-            Action::PanLeft => self.pan = 1,
-            Action::PanRight => self.pan = -1,
+            Action::ZoomIn => {
+                self.zoom = 1;
+                self.zoom_key = Some(action);
+            }
+            Action::ZoomOut => {
+                self.zoom = -1;
+                self.zoom_key = Some(action);
+            }
+            Action::PanLeft => {
+                self.release_touch();
+                self.pan = 1;
+                self.pan_key = Some(action);
+            }
+            Action::PanRight => {
+                self.release_touch();
+                self.pan = -1;
+                self.pan_key = Some(action);
+            }
             Action::Pause => self.paused = self.paused.or(Some(0)),
             Action::Slot(slot) => self.tap(action, Spot::Deck(slot), Some(slot)),
             Action::Item(item) => self.tap(action, Spot::Item(item), None),
@@ -77,8 +95,16 @@ impl Keys {
 
     pub fn release(&mut self, action: Action) {
         match action {
-            Action::ZoomIn | Action::ZoomOut => self.zoom = 0,
-            Action::PanLeft | Action::PanRight => self.pan = 0,
+            Action::ZoomIn | Action::ZoomOut if self.zoom_key == Some(action) => {
+                self.zoom = 0;
+                self.zoom_key = None;
+                self.drop_pinch = true;
+            }
+            Action::PanLeft | Action::PanRight if self.pan_key == Some(action) => {
+                self.pan = 0;
+                self.pan_key = None;
+            }
+            Action::ZoomIn | Action::ZoomOut | Action::PanLeft | Action::PanRight => (),
             Action::Pause => {
                 let tapped = self.paused.take().is_some_and(|held| held < LEAVE_AFTER);
 
@@ -101,12 +127,30 @@ impl Keys {
         }
     }
 
+    fn release_touch(&mut self) {
+        if self.down {
+            self.cancel();
+        }
+    }
+
+    fn cancel(&mut self) {
+        self.plan.clear();
+        self.still = 0;
+        self.drag = None;
+        self.down = false;
+        self.owner = None;
+
+        if self.touch_down {
+            self.plan.push_back(Step::Release);
+        }
+    }
+
     fn tap(&mut self, action: Action, spot: Spot, slot: Option<i32>) {
         if self.owner == Some(action) {
             return;
         }
 
-        self.lift();
+        self.cancel();
 
         if let Some(slot) = slot {
             self.plan.extend([Step::Swap(slot), Step::AwaitRow(slot, GATE_FRAMES)]);
@@ -135,14 +179,14 @@ impl Keys {
         ]);
     }
 
-    pub fn pump(&mut self, ctx: &mut AppContext, spread: &mut i32) {
-        if let Err(fault) = self.advance(ctx, spread) {
+    pub fn pump(&mut self, ctx: &mut AppContext, spread: &mut i32, gap: &mut Option<i32>) {
+        if let Err(fault) = self.advance(ctx, spread, gap) {
             warn!("emu: a key could not be played: {fault}");
             self.reset();
         }
     }
 
-    fn advance(&mut self, ctx: &mut AppContext, spread: &mut i32) -> Result<(), emu::Fault> {
+    fn advance(&mut self, ctx: &mut AppContext, spread: &mut i32, gap: &mut Option<i32>) -> Result<(), emu::Fault> {
         if std::mem::take(&mut self.back) {
             runtime::queue_back(ctx, false)?;
         }
@@ -157,17 +201,32 @@ impl Keys {
 
         *spread = spread.wrapping_add(self.zoom * ZOOM_STEP);
 
+        if std::mem::take(&mut self.drop_pinch) {
+            *spread = 0;
+            *gap = None;
+        }
+
         let Some(step) = self.plan.front().copied() else {
-            return self.pan_field(ctx);
+            return self.pan_field(ctx, spread, gap);
         };
 
         let done = match step {
             Step::Press(spot) => {
-                if let Some((x, y)) = runtime::spot_center(ctx, spot)? {
-                    runtime::queue_spot_press(ctx, x, y)?;
+                if gap.is_some() {
+                    *spread = 0;
+                    *gap = None;
                 }
 
-                true
+                if runtime::pinch_latched(ctx)? {
+                    false
+                } else {
+                    if let Some((x, y)) = runtime::spot_center(ctx, spot)? {
+                        runtime::queue_spot_press(ctx, x, y)?;
+                        self.touch_down = true;
+                    }
+
+                    true
+                }
             }
             Step::Hold(frames) => {
                 if frames > 1 {
@@ -178,6 +237,7 @@ impl Keys {
             }
             Step::Release => {
                 runtime::queue_touch_release(ctx)?;
+                self.touch_down = false;
 
                 true
             }
@@ -236,7 +296,7 @@ impl Keys {
         false
     }
 
-    fn pan_field(&mut self, ctx: &mut AppContext) -> Result<(), emu::Fault> {
+    fn pan_field(&mut self, ctx: &mut AppContext, spread: &mut i32, gap: &mut Option<i32>) -> Result<(), emu::Fault> {
         let Some((center, y)) = runtime::spot_center(ctx, Spot::Field)? else {
             return Ok(());
         };
@@ -246,6 +306,7 @@ impl Keys {
 
             if self.still == 0 {
                 self.drag = None;
+                self.touch_down = false;
 
                 return runtime::queue_touch_release(ctx);
             }
@@ -261,18 +322,33 @@ impl Keys {
                 Ok(())
             }
             (_, None) if self.down => Ok(()),
-            (_, None) => {
-                self.drag = Some(center);
+            (direction, None) => {
+                if gap.is_some() {
+                    *spread = 0;
+                    *gap = None;
+                }
 
-                runtime::queue_spot_press(ctx, center, y)
+                if runtime::pinch_latched(ctx)? {
+                    return Ok(());
+                }
+
+                let start = center.wrapping_sub(direction.wrapping_mul(center - PAN_MARGIN));
+
+                self.drag = Some(start);
+                self.touch_down = true;
+
+                runtime::queue_spot_press(ctx, start, y)
             }
             (direction, Some(at)) => {
                 let next = at.wrapping_add(direction * PAN_STEP);
 
                 if (next - center).abs() > center - PAN_MARGIN {
-                    self.still = STILL_FRAMES;
+                    let start = center.wrapping_sub(direction.wrapping_mul(center - PAN_MARGIN));
 
-                    return Ok(());
+                    self.drag = Some(start);
+                    self.touch_down = true;
+
+                    return runtime::queue_spot_press(ctx, start, y);
                 }
 
                 self.drag = Some(next);

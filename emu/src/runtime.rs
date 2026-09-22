@@ -18,7 +18,7 @@ pub use dummy_lineup::{fill_dummy_lineup, fill_dummy_talents, stock_battle_items
 pub use dummy_save::{fill_dummy_save, seed_altar_records, seed_cat_god, unlock_dummy_combos};
 pub use inert_draw::InertDraw;
 pub use keys::{
-    CONFIRM_BUTTON, LEAVE_BUTTON, Spot, deck_row_hidden, deck_row_swapping, dialog_open, option_menu_open, queue_back,
+    CONFIRM_BUTTON, LEAVE_BUTTON, Spot, deck_row_hidden, deck_row_swapping, dialog_open, option_menu_open, pinch_latched, queue_back,
     queue_spot_move, queue_spot_press, spot_center, start_deck_row_swap,
 };
 pub use inert_meta::InertMeta;

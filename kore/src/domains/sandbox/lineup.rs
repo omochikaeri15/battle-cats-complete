@@ -242,22 +242,59 @@ impl Lineup {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Loadout {
+    pub form: usize,
+    pub level: String,
+    pub talents: HashMap<u8, u8>,
+    pub orbs: Vec<Option<u32>>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Roster {
     pub lineups: Vec<Lineup>,
     pub selected: usize,
+    pub remembered: HashMap<u32, Loadout>,
 }
 
 impl Default for Roster {
     fn default() -> Self {
-        Self { lineups: vec![Lineup::default()], selected: 0 }
+        Self { lineups: vec![Lineup::default()], selected: 0, remembered: HashMap::new() }
     }
 }
 
 impl Roster {
     pub fn current(&self) -> Option<&Lineup> {
         self.lineups.get(self.selected)
+    }
+
+    pub fn remember(&mut self) {
+        let Some(lineup) = self.lineups.get(self.selected) else {
+            return;
+        };
+        let seen: Vec<(u32, Loadout)> = lineup
+            .slots
+            .iter()
+            .chain(lineup.bench.iter().flatten())
+            .map(|member| {
+                let loadout = Loadout {
+                    form: member.form,
+                    level: member.level.clone(),
+                    talents: member.talents.clone(),
+                    orbs: member.orbs.clone(),
+                };
+
+                (member.id, loadout)
+            })
+            .collect();
+
+        self.remembered.extend(seen);
+    }
+
+    pub fn recall(&self, id: u32) -> Option<&Loadout> {
+        self.remembered.get(&id)
     }
 
     pub fn current_mut(&mut self) -> &mut Lineup {
@@ -294,6 +331,32 @@ mod tests {
 
     fn unit(id: u32) -> Member {
         Member { id, level: "30".to_owned(), ..Member::default() }
+    }
+
+    #[test]
+    fn a_units_loadout_comes_back_when_it_is_recruited_again() {
+        let mut roster = Roster::default();
+        let mut dressed = unit(7);
+
+        dressed.form = 2;
+        dressed.level = "50+10".to_owned();
+        dressed.talents.insert(3, 6);
+        dressed.orbs = vec![Some(11), None];
+
+        roster.current_mut().add(dressed);
+        roster.remember();
+
+        // Dropping the unit must not forget it - that is the whole point.
+        roster.current_mut().slots.clear();
+        roster.remember();
+
+        let past = roster.recall(7).expect("unit 7 remembered");
+
+        assert_eq!(past.form, 2);
+        assert_eq!(past.level, "50+10");
+        assert_eq!(past.talents.get(&3), Some(&6));
+        assert_eq!(past.orbs, vec![Some(11), None]);
+        assert!(roster.recall(8).is_none());
     }
 
     fn combo(members: &[(i32, i32)]) -> NyancomboData {

@@ -1900,14 +1900,18 @@ impl BattleCatsApp {
                     }
                     ActivePopup::SandboxFault => None,
                     ActivePopup::SandboxFilter => {
-                        if !matches!(self.current_page, Page::Sandbox) {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Lineup
+                        {
                             return None;
                         }
 
                         self.sandbox_state.filter_popup_view(self.window_size).map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SandboxUnit => {
-                        if !matches!(self.current_page, Page::Sandbox) {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Lineup
+                        {
                             return None;
                         }
 
@@ -1921,7 +1925,9 @@ impl BattleCatsApp {
                             .map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SandboxOrb => {
-                        if !matches!(self.current_page, Page::Sandbox) {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Lineup
+                        {
                             return None;
                         }
 
