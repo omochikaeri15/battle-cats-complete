@@ -296,7 +296,7 @@ impl Session {
     fn load(&mut self) {
         if !self.driver.boot() {
             self.failure = Some(format!(
-                "game data did not load ({} files visible to the emulator)",
+                "game data did not load\n{} files visible to the emulator",
                 self.driver.resolved()
             ));
 

@@ -2,6 +2,7 @@ pub mod authoring;
 pub mod cost;
 pub mod filter;
 pub mod fixedlineup;
+pub mod lottery;
 pub mod materials;
 pub mod names;
 pub mod navigate;

@@ -1369,6 +1369,8 @@ impl AppContext {
     pub const LABYRINTH_MAP_ID: usize = 0x1020;
     pub const LABYRINTH_FLOOR_REACHED: usize = 0x103c;
     pub const LABYRINTH_FLOOR_BEST: usize = 0x1040;
+    pub const LABYRINTH_STAGE_IDS: usize = 0xe30;
+    pub const LABYRINTH_SLOTS: usize = 0x64;
     pub const DECK_BACK_ROW_ENABLED: usize = 0x32b392;
     pub const DRAG_LATCHED: usize = 0x32c8e4;
     pub const CPU_ENABLED: usize = 0x328560;

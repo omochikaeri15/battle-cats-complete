@@ -31,6 +31,7 @@ const ENEMY_SIDE: i32 = 2;
 pub struct StageEntry {
     pub map_id: i32,
     pub stage: i32,
+    pub layout: Option<i32>,
     pub crown: i32,
 }
 
@@ -124,6 +125,15 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
         ctx.set_i32_at(AppContext::OUTRO_ENTRY_STAGE, 0)?;
         ctx.set_i32_at(AppContext::EX_MAP, index)?;
         ctx.set_i32_at(AppContext::EX_STAGE, entry.stage)?;
+    }
+
+    if let Some(layout) = entry.layout
+        && (entry.stage as u32) < AppContext::LABYRINTH_SLOTS as u32
+    {
+        ctx.set_i32_at(
+            AppContext::LABYRINTH_STAGE_IDS.wrapping_add((entry.stage as i64 as usize).wrapping_mul(4)),
+            layout,
+        )?;
     }
 
     ctx.set_i32_at(AppContext::ENTRY_STAGE, entry.stage)?;

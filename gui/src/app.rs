@@ -20,6 +20,7 @@ use kore::domains::cat::files as cat_files;
 use kore::domains::mods as kore_mods;
 use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
+use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::GlobalMapId;
 use kore::{ContentStore, Vault};
 
@@ -1706,10 +1707,14 @@ impl BattleCatsApp {
         let picked = self.stage_state.data.selected_stage.as_ref()?;
         let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
         let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
+        let map_id = i32::try_from(global).ok()?;
+        let layout = i32::try_from(picked.stage).ok()?;
+        let slot = Lottery::load(&self.vault.vfs).slot_for(map_id, layout);
 
         Some(::emu::runtime::StageEntry {
-            map_id: i32::try_from(global).ok()?,
-            stage: i32::try_from(picked.stage).ok()?,
+            map_id,
+            stage: slot.unwrap_or(layout),
+            layout: slot.map(|_| layout),
             crown: i32::from(self.stage_state.selected_crown),
         })
     }

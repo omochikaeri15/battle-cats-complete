@@ -28,31 +28,11 @@ impl Sheet {
 }
 
 const NATIVE_REGION: &str = "ja";
-const BLANK_PIXEL: [u8; 4] = [0, 0, 0, 0];
 pub(super) const WIDE_COMMA: &str = "\u{ff0c}";
 
 pub type SheetCache = BTreeMap<Box<str>, Sheet>;
 
 pub type FileIndex = BTreeMap<Box<str>, PathBuf>;
-
-fn labyrinth_plate(name: &str) -> bool {
-    let Some(stem) = name.strip_suffix(".png").and_then(|stem| stem.strip_prefix("mapsn")) else {
-        return false;
-    };
-    let fields: Vec<&str> = stem.split('_').collect();
-    let coded = match fields.as_slice() {
-        [map, floor, "l"] => Some((map, floor)),
-        [map, floor, "l", lang] => APP_LANGUAGES
-            .iter()
-            .any(|&(language, _)| language == *lang)
-            .then_some((map, floor)),
-        _ => None,
-    };
-
-    coded.is_some_and(|(map, floor)| {
-        map.len() == 3 && !floor.is_empty() && map.bytes().chain(floor.bytes()).all(|digit| digit.is_ascii_digit())
-    })
-}
 
 fn stripped(name: &str) -> Option<(&str, &str)> {
     let (stem, extension) = name.rsplit_once('.')?;
@@ -197,11 +177,6 @@ impl DiskAssets {
                 let (width, height) = (decoded.width(), decoded.height());
 
                 Sheet::new(width, height, decoded.into_raw().as_slice())
-            }
-            None if labyrinth_plate(name) => {
-                warn!("emu: {name} is unavailable, standing in a blank floor plate");
-
-                Sheet::new(1, 1, &BLANK_PIXEL)
             }
             None => return None,
         };
