@@ -152,6 +152,7 @@ impl Session {
             return;
         }
 
+        self.driver.forgive();
         self.failure = None;
         self.entered = true;
         self.phase = Phase::Running;

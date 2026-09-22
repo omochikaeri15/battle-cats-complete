@@ -4,4 +4,4 @@ mod fault;
 pub mod ops;
 pub mod runtime;
 
-pub use fault::Fault;
+pub use fault::{Fault, Site};

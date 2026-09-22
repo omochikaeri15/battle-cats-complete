@@ -1,14 +1,16 @@
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use emu::engine::AppContext;
+use emu::Site;
 use emu::runtime::{
     BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Setup, apply_battle_options,
     fill_dummy_save, fill_dummy_talents, load_scene_sheets,
     pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use super::assets::{DiskAssets, FileIndex, SheetCache};
 use super::input::{Touch, TouchQueue};
@@ -49,6 +51,8 @@ pub struct Driver {
     reach: i32,
     idle: u32,
     booted: bool,
+    forgiven: HashSet<Site>,
+    tripped: Option<Site>,
 }
 
 impl Driver {
@@ -91,6 +95,8 @@ impl Driver {
             reach: FINGER_GAP,
             idle: 0,
             booted: false,
+            forgiven: HashSet::new(),
+            tripped: None,
         };
 
         driver.host();
@@ -123,6 +129,9 @@ impl Driver {
     }
 
     pub fn renew(&mut self) {
+        self.forgiven.clear();
+        self.tripped = None;
+
         let width = self.ctx.device_screen_w as f32;
         let height = self.ctx.device_screen_h as f32;
         let options = self.options;
@@ -414,20 +423,46 @@ impl Driver {
     }
 
     pub fn advance(&mut self) -> Result<(), String> {
+        match self.run_frame() {
+            Ok(()) => Ok(()),
+            Err((site, reason)) if self.forgiven.contains(&site) => {
+                trace!("emu: {reason} (forgiven for this battle)");
+
+                Ok(())
+            }
+            Err((site, reason)) => {
+                self.tripped = Some(site);
+
+                Err(reason)
+            }
+        }
+    }
+
+    pub fn forgive(&mut self) {
+        let Some(site) = self.tripped.take() else {
+            return;
+        };
+
+        if self.forgiven.insert(site) {
+            info!("emu: {site} was continued past, so it stays quiet for the rest of this battle");
+        }
+    }
+
+    fn run_frame(&mut self) -> Result<(), (Site, String)> {
         if !self.in_battle() {
             return Ok(());
         }
 
         self.pump_input();
         emu::engine::dialog_manager_process(&mut self.ctx)
-            .map_err(|fault| format!("dialog_manager_process:{fault}"))?;
+            .map_err(|fault| (fault.site(), format!("dialog_manager_process:{fault}")))?;
 
         emu::engine::button_bank_process(&mut self.ctx)
-            .map_err(|fault| format!("button_bank_process:{fault}"))?;
+            .map_err(|fault| (fault.site(), format!("button_bank_process:{fault}")))?;
         emu::engine::main_battle_loop(&mut self.ctx)
-            .map_err(|fault| format!("main_battle_loop:{fault}"))?;
+            .map_err(|fault| (fault.site(), format!("main_battle_loop:{fault}")))?;
         pump_stage_return(&mut self.ctx, &self.returning)
-            .map_err(|fault| format!("pump_stage_return:{fault}"))?;
+            .map_err(|fault| (fault.site(), format!("pump_stage_return:{fault}")))?;
         self.sync_options();
 
         if !self.in_battle() {
@@ -436,9 +471,10 @@ impl Driver {
 
         self.frame.borrow_mut().clear();
         self.begin_draw();
-        emu::engine::main_draw(&mut self.ctx, 0).map_err(|fault| format!("main_draw:{fault}"))?;
+        emu::engine::main_draw(&mut self.ctx, 0)
+            .map_err(|fault| (fault.site(), format!("main_draw:{fault}")))?;
         emu::engine::dialog_manager_draw(&mut self.ctx)
-            .map_err(|fault| format!("dialog_manager_draw:{fault}"))?;
+            .map_err(|fault| (fault.site(), format!("dialog_manager_draw:{fault}")))?;
         self.draw_letterbox_bars();
 
         Ok(())

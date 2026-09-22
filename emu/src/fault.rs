@@ -37,6 +37,21 @@ pub enum Fault {
 }
 
 impl Fault {
+    pub fn site(&self) -> Site {
+        match self {
+            Self::DivideByZero { site }
+            | Self::DivideOverflow { site }
+            | Self::IndexOutOfRange { site, .. }
+            | Self::KeyNotFound { site, .. }
+            | Self::HostMissing { site }
+            | Self::InvalidArgument { site }
+            | Self::NullPointer { site }
+            | Self::BadFunctionCall { site }
+            | Self::OutOfRange { site }
+            | Self::Unrepresentable { site, .. } => *site,
+        }
+    }
+
     #[track_caller]
     pub fn divide(divisor: i64) -> Self {
         if divisor == 0 {
@@ -107,7 +122,7 @@ impl Fault {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Site {
     file: &'static str,
     line: u32,
