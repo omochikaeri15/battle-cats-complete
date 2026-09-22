@@ -122,7 +122,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         glow_set(draw_context(&mut ctx.draw)?, 1);
 
         for spark in 0..100usize {
-            let record = AppContext::BG_PARTICLES.wrapping_add(8).wrapping_add(spark * 0x14);
+            let record = AppContext::BG_PARTICLES.wrapping_add(spark * 0x14);
             let life = ctx.i32_at(record)?;
 
             if life < 0 {
@@ -136,7 +136,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 0x64i32.wrapping_sub(folded >> 3)
             } else {
-                ops::mul_high(life.wrapping_mul(0x64) as u8 as i32, 0xab) >> 9
+                ops::div_3(life.wrapping_mul(0x64) as u8 as i32)
             };
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;

@@ -132,30 +132,30 @@ fn here() -> Site {
 impl std::fmt::Display for Fault {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::DivideByZero { site } => write!(f, "{site} divided by zero"),
+            Self::DivideByZero { site } => write!(f, "{site} → divided by zero"),
             Self::DivideOverflow { site } => {
-                write!(f, "{site} produced a quotient too large to store")
+                write!(f, "{site} → produced a quotient too large to store")
             }
             Self::KeyNotFound { site, key } => {
-                write!(f, "{site} looked up {key}, which its table does not hold")
+                write!(f, "{site} → looked up {key}, which its table does not hold")
             }
             Self::Unrepresentable { site, reason } => {
                 write!(
                     f,
-                    "{site} stopped where the game itself would have carried on: {reason}"
+                    "{site} → stopped where the game itself would have carried on: {reason}"
                 )
             }
-            Self::HostMissing { site } => write!(f, "{site} has no host attached"),
-            Self::NullPointer { site } => write!(f, "{site} followed a pointer that was never set"),
+            Self::HostMissing { site } => write!(f, "{site} → has no host attached"),
+            Self::NullPointer { site } => write!(f, "{site} → followed a pointer that was never set"),
             Self::BadFunctionCall { site } => {
-                write!(f, "{site} called a handler that was never set")
+                write!(f, "{site} → called a handler that was never set")
             }
             Self::InvalidArgument { site } => {
-                write!(f, "{site} was given text that holds no number")
+                write!(f, "{site} → was given text that holds no number")
             }
-            Self::OutOfRange { site } => write!(f, "{site} was given a number too large to store"),
+            Self::OutOfRange { site } => write!(f, "{site} → was given a number too large to store"),
             Self::IndexOutOfRange { site, index, limit } => {
-                write!(f, "{site} reached {index}, past its limit of {limit}")
+                write!(f, "{site} → reached {index}, past its limit of {limit}")
             }
         }
     }
