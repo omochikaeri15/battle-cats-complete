@@ -367,17 +367,9 @@ impl State {
         let (lowest, level) = self.inspector.seeded(id, self.banner_form, settings)?;
         let slots = 0;
 
-        let Some(past) = roster.recall(id) else {
-            return Some(Member { id, form: form.unwrap_or(lowest), level, talents: HashMap::new(), orbs: vec![None; slots] });
-        };
+        let fresh = Member { id, form: form.unwrap_or(lowest), level, talents: HashMap::new(), orbs: vec![None; slots] };
 
-        Some(Member {
-            id,
-            form: form.unwrap_or(past.form),
-            level: past.level.clone(),
-            talents: past.talents.clone(),
-            orbs: past.orbs.clone(),
-        })
+        Some(roster.dress(fresh, form))
     }
 
     fn open(&mut self, cell: Cell, lineup: &Lineup) {

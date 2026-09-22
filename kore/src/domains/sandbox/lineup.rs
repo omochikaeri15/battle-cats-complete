@@ -297,6 +297,18 @@ impl Roster {
         self.remembered.get(&id)
     }
 
+    pub fn dress(&self, mut member: Member, least: Option<usize>) -> Member {
+        let Some(past) = self.remembered.get(&member.id) else {
+            return member;
+        };
+
+        member.form = least.map_or(past.form, |wanted| wanted.max(past.form));
+        member.level = past.level.clone();
+        member.talents = past.talents.clone();
+        member.orbs = past.orbs.clone();
+        member
+    }
+
     pub fn current_mut(&mut self) -> &mut Lineup {
         if self.lineups.is_empty() {
             self.lineups.push(Lineup::default());
@@ -357,6 +369,33 @@ mod tests {
         assert_eq!(past.talents.get(&3), Some(&6));
         assert_eq!(past.orbs, vec![Some(11), None]);
         assert!(roster.recall(8).is_none());
+    }
+
+    #[test]
+    fn a_combo_form_is_a_floor_not_an_override() {
+        let mut roster = Roster::default();
+        let mut dressed = unit(7);
+
+        dressed.form = 2;
+        dressed.talents.insert(1, 4);
+        roster.current_mut().add(dressed);
+        roster.remember();
+
+        // The combo wants a lower form than the one remembered, so the
+        // remembered one wins and the kit still comes back.
+        let kept = roster.dress(unit(7), Some(1));
+
+        assert_eq!(kept.form, 2);
+        assert_eq!(kept.talents.get(&1), Some(&4));
+
+        // Below what the combo needs, the form is bumped up to meet it.
+        let bumped = roster.dress(unit(7), Some(3));
+
+        assert_eq!(bumped.form, 3);
+        assert_eq!(bumped.talents.get(&1), Some(&4));
+
+        // With nothing remembered the member is left exactly as built.
+        assert_eq!(roster.dress(unit(9), Some(1)).form, 0);
     }
 
     fn combo(members: &[(i32, i32)]) -> NyancomboData {
