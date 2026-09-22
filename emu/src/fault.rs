@@ -34,6 +34,10 @@ pub enum Fault {
         site: Site,
         reason: &'static str,
     },
+    InfiniteLoop {
+        site: Site,
+        reason: &'static str,
+    },
 }
 
 impl Fault {
@@ -48,7 +52,8 @@ impl Fault {
             | Self::NullPointer { site }
             | Self::BadFunctionCall { site }
             | Self::OutOfRange { site }
-            | Self::Unrepresentable { site, .. } => *site,
+            | Self::Unrepresentable { site, .. }
+            | Self::InfiniteLoop { site, .. } => *site,
         }
     }
 
@@ -120,6 +125,14 @@ impl Fault {
             reason,
         }
     }
+
+    #[track_caller]
+    pub fn infinite_loop(reason: &'static str) -> Self {
+        Self::InfiniteLoop {
+            site: here(),
+            reason,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -171,6 +184,9 @@ impl std::fmt::Display for Fault {
             Self::OutOfRange { site } => write!(f, "{site} → was given a number too large to store"),
             Self::IndexOutOfRange { site, index, limit } => {
                 write!(f, "{site} → reached {index}, past its limit of {limit}")
+            }
+            Self::InfiniteLoop { site, reason } => {
+                write!(f, "{site} → would never finish reading this input: {reason}")
             }
         }
     }

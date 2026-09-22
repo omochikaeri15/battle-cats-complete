@@ -108,6 +108,12 @@ pub fn message_layer_layout(
                         }
                     }
 
+                    if close == NOT_FOUND {
+                        return Err(Fault::infinite_loop(
+                            "a color marker with no closing bracket",
+                        ));
+                    }
+
                     if text.len() < cursor {
                         return Err(Fault::out_of_range());
                     }
