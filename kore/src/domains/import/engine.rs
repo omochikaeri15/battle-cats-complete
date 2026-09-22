@@ -1,5 +1,6 @@
 pub mod apk;
 pub(crate) mod audit;
+pub(crate) mod forms;
 pub(crate) mod hardcoded;
 pub mod keys;
 pub(crate) mod manifest;
@@ -579,10 +580,25 @@ pub(crate) fn run_universal_import(
                 }
             });
 
-            let Some(winning_candidate) = decrypted_candidates.pop() else {
+            let Some(mut winning_candidate) = decrypted_candidates.pop() else {
                 advance_progress();
                 return None;
             };
+
+            if resolved_filename == forms::FILE {
+                let mut donors: Vec<Vec<u8>> = decrypted_candidates.iter().map(|candidate| candidate.clean_data.clone()).collect();
+
+                if let Ok(held) = fs::read(&target_destination_path) {
+                    donors.push(held);
+                }
+
+                if let Some((merged, filled)) = forms::adopt_declared_forms(&winning_candidate.clean_data, &donors) {
+                    let units = filled.iter().map(|unit| format!("{unit:03}")).collect::<Vec<_>>().join(", ");
+
+                    emit(JobEvent::Log(format!("{resolved_filename}: kept the evolved forms another region declares for unit {units}")));
+                    winning_candidate.clean_data = merged;
+                }
+            }
 
             let winning_checksum = manifest::hash(&winning_candidate.clean_data);
             let winning_size = winning_candidate.clean_data.len();

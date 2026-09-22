@@ -181,7 +181,7 @@ impl BattleCatsApp {
 
     pub(super) fn report_conflicts(&mut self) {
         self.init_errors
-            .report_conflicts(self.vault.vfs.conflicts(), self.settings.general.ignore_conflict_errors);
+            .report_conflicts(self.vault.vfs.conflicts(), self.vault.vfs.withheld(), self.settings.general.ignore_conflict_errors);
         self.sync_popup(ActivePopup::InitErrors, self.init_errors.is_open());
     }
 

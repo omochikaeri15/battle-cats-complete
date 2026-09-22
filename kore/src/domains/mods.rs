@@ -103,7 +103,9 @@ pub fn enable(vault: &Vault, name: &str) -> Result<Vec<Conflict>, VfsError> {
     let path = Path::new(MODS_ROOT).join(name);
     let conflicts = vault.vfs.create(path.as_path())?;
 
-    let keys = vault.vfs.keys(name);
+    let mut keys = vault.vfs.keys(name);
+
+    keys.extend(conflicts.iter().map(|conflict| conflict.key.clone()));
     debug!(mod_name = name, files = keys.len(), "mod mounted, evicting shadowed game content");
 
     vault.purge(&keys);
@@ -113,8 +115,9 @@ pub fn enable(vault: &Vault, name: &str) -> Result<Vec<Conflict>, VfsError> {
 
 pub fn disable(vault: &Vault, name: &str) {
     let path = Path::new(MODS_ROOT).join(name);
-    let keys = vault.vfs.keys(name);
+    let mut keys = vault.vfs.keys(name);
 
+    keys.extend(vault.vfs.contested(name));
     vault.vfs.destroy(path.as_path());
 
     debug!(mod_name = name, files = keys.len(), "mod unmounted, evicting stale mod content");

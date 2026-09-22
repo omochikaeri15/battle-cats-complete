@@ -26,6 +26,9 @@ const ACKNOWLEDGE_SIZE: f32 = 16.0;
 const CONFLICT_INTRO: &str = "Found conflicting file names in the following directories. \
 The files listed below were not loaded into the Virtual File System and won't be read by the app this session.";
 
+const CONFLICT_WITHHELD: &str = "The copy in game/ is held back as well, so nothing loads under this name \
+until the clash is resolved.";
+
 const WATCHER_CROWDED: &str = "Failed to start the File Watcher because this system has no free watch \
 slots left. Live reload has been disabled for this session.";
 
@@ -45,6 +48,7 @@ and run it from there.";
 pub(super) struct State {
     popup: popup::State,
     conflicts: Vec<Conflict>,
+    withheld: Vec<Box<str>>,
     watcher_failed: Option<Lapse>,
     watcher_shown: bool,
     volatile: Option<PathBuf>,
@@ -55,8 +59,9 @@ impl State {
         self.volatile = Some(home.to_path_buf());
     }
 
-    pub(super) fn report_conflicts(&mut self, conflicts: Vec<Conflict>, ignored: bool) {
+    pub(super) fn report_conflicts(&mut self, conflicts: Vec<Conflict>, withheld: Vec<Box<str>>, ignored: bool) {
         self.conflicts = if ignored { Vec::new() } else { conflicts };
+        self.withheld = if ignored { Vec::new() } else { withheld };
     }
 
     pub(super) fn report_watcher_failure(&mut self, lapse: Lapse, ignored: bool) {
@@ -130,6 +135,14 @@ impl State {
 
             for path in &conflict.paths {
                 entry = entry.push(text(path.display().to_string()).size(PATH_SIZE));
+            }
+
+            if self.withheld.contains(&conflict.key) {
+                entry = entry.push(
+                    text(CONFLICT_WITHHELD)
+                        .size(PATH_SIZE)
+                        .style(|theme: &iced::Theme| text::Style { color: Some(theme::weak_text_color(theme)) }),
+                );
             }
 
             entries = entries.push(entry);

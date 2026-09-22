@@ -54,6 +54,12 @@ impl MountedDir {
             return vec![name.into()];
         }
 
+        if let Some(name) = relative.file_name().and_then(OsStr::to_str)
+            && self.settle(relative, name)
+        {
+            return vec![name.into()];
+        }
+
         let targets: Vec<MountKey> = self
             .dirs
             .keys()
@@ -81,6 +87,42 @@ impl MountedDir {
         }
 
         removed
+    }
+
+    fn settle(&mut self, relative: &Path, name: &str) -> bool {
+        let Some(at) = self.conflicts.iter().position(|conflict| conflict.key.as_ref() == name) else {
+            return false;
+        };
+
+        let absolute = self.root.join(relative);
+
+        self.conflicts[at].paths.retain(|held| held != &absolute);
+        self.unlink(relative, name, true);
+
+        if self.conflicts[at].paths.len() > 1 {
+            return true;
+        }
+
+        let conflict = self.conflicts.remove(at);
+
+        let Some(survivor) = conflict.paths.first().cloned() else {
+            return true;
+        };
+        let Some(kept) = within(&self.root, &survivor) else {
+            return true;
+        };
+        let Some((mtime, len)) = walk::stat(&survivor) else {
+            return true;
+        };
+
+        if let Some(parent) = kept.parent().map(Path::to_path_buf) {
+            admit(self.dirs.entry(parent.to_string_lossy().into()).or_default(), name);
+            link(self, &parent);
+        }
+
+        self.files.insert(name.into(), Entry { path: kept, mtime, len });
+
+        true
     }
 
     fn unlink(&mut self, relative: &Path, name: &str, is_file: bool) {
@@ -309,7 +351,7 @@ impl Vfs {
 
         regional::interleaved(filenames, &order)
             .find_map(|candidate| modded(&mounts, &candidate))
-            .or_else(|| regional::interleaved(filenames, &order).find_map(|candidate| vanilla(&mounts, &candidate)))
+            .or_else(|| regional::interleaved(filenames, &order).find_map(|candidate| fallback(&mounts, &candidate)))
     }
 
     fn collect(&self, filenames: &[&str]) -> Vec<PathBuf> {
@@ -330,7 +372,7 @@ impl Vfs {
                 continue;
             }
 
-            if let Some(path) = vanilla(&mounts, &candidate) {
+            if let Some(path) = fallback(&mounts, &candidate) {
                 originals.push(path);
             }
         }
@@ -575,6 +617,33 @@ impl Vfs {
         print
     }
 
+    pub fn tracked(&self, mount: &str, path: &Path) -> bool {
+        let Ok(mounts) = self.mounts.read() else {
+            return false;
+        };
+
+        let Some(name) = path.file_name().and_then(OsStr::to_str) else {
+            return false;
+        };
+
+        mounts.get(mount).is_some_and(|indexed| {
+            let Some(relative) = within(&indexed.root, path) else {
+                return false;
+            };
+
+            if indexed.files.get(name).is_some_and(|entry| entry.path == relative) {
+                return true;
+            }
+
+            let absolute = indexed.root.join(&relative);
+
+            indexed
+                .conflicts
+                .iter()
+                .any(|conflict| conflict.key.as_ref() == name && conflict.paths.contains(&absolute))
+        })
+    }
+
     pub fn indexed(&self, mount: &str, path: &Path) -> bool {
         let Ok(mounts) = self.mounts.read() else {
             return false;
@@ -663,6 +732,37 @@ impl Vfs {
         mounts
             .get(mount)
             .map_or_else(Vec::new, |indexed| indexed.files.keys().cloned().collect())
+    }
+
+    pub fn withheld(&self) -> Vec<Box<str>> {
+        let Ok(mounts) = self.mounts.read() else {
+            return Vec::new();
+        };
+        let Some(game) = mounts.get(MOUNT_GAME) else {
+            return Vec::new();
+        };
+
+        let mut names: Vec<Box<str>> = mounts
+            .iter()
+            .filter(|(key, _)| key.as_ref() != MOUNT_GAME)
+            .flat_map(|(_, mount)| mount.conflicts.iter())
+            .map(|conflict| conflict.key.clone())
+            .filter(|key| game.files.contains_key(key.as_ref()))
+            .collect();
+
+        names.sort_unstable();
+        names.dedup();
+        names
+    }
+
+    pub fn contested(&self, mount: &str) -> Vec<Box<str>> {
+        let Ok(mounts) = self.mounts.read() else {
+            return Vec::new();
+        };
+
+        mounts.get(mount).map_or_else(Vec::new, |indexed| {
+            indexed.conflicts.iter().map(|conflict| conflict.key.clone()).collect()
+        })
     }
 
     pub fn children(&self, dir: &Path) -> Vec<PathBuf> {
@@ -945,7 +1045,22 @@ fn within(root: &Path, file: &Path) -> Option<PathBuf> {
 }
 
 fn resolve(mounts: &Index, name: &str) -> Option<PathBuf> {
-    modded(mounts, name).or_else(|| vanilla(mounts, name))
+    modded(mounts, name).or_else(|| fallback(mounts, name))
+}
+
+fn fallback(mounts: &Index, name: &str) -> Option<PathBuf> {
+    if contested(mounts, name) {
+        return None;
+    }
+
+    vanilla(mounts, name)
+}
+
+fn contested(mounts: &Index, name: &str) -> bool {
+    mounts
+        .iter()
+        .filter(|(key, _)| key.as_ref() != MOUNT_GAME)
+        .any(|(_, mount)| mount.conflicts.iter().any(|conflict| conflict.key.as_ref() == name))
 }
 
 fn modded(mounts: &Index, name: &str) -> Option<PathBuf> {
@@ -1022,6 +1137,159 @@ mod tests {
 
         assert_eq!(files, ["unit001.csv", "unit050.csv", "unit099.csv"]);
         assert_eq!(folders, ["alpha", "zeta"]);
+    }
+
+    #[test]
+    fn a_mod_conflict_hides_the_game_copy_but_leaves_every_other_name_alone() {
+        // Two copies of one name inside a mod are both excluded, so without this
+        // the name resolves to game/ and the modder's edits look ignored while the
+        // app quietly reads vanilla. Only the clashing name is withheld.
+        let mut mounts = Index::default();
+        let mut game = MountedDir { root: PathBuf::from("game"), ..MountedDir::default() };
+
+        for name in ["clash.csv", "calm.csv"] {
+            game.files.insert(name.into(), Entry { path: PathBuf::from(name), mtime: 0, len: 0 });
+        }
+
+        let mut patch = MountedDir { root: PathBuf::from("mods/Patch"), ..MountedDir::default() };
+
+        patch.files.insert("own.csv".into(), Entry { path: PathBuf::from("own.csv"), mtime: 0, len: 0 });
+        patch.conflicts.push(Conflict {
+            key: "clash.csv".into(),
+            paths: vec![PathBuf::from("a/clash.csv"), PathBuf::from("b/clash.csv")],
+        });
+
+        mounts.insert(MOUNT_GAME.into(), game);
+        mounts.insert("Patch".into(), patch);
+
+        assert_eq!(resolve(&mounts, "clash.csv"), None);
+        assert_eq!(resolve(&mounts, "calm.csv"), Some(PathBuf::from("game/calm.csv")));
+        assert_eq!(resolve(&mounts, "own.csv"), Some(PathBuf::from("mods/Patch/own.csv")));
+
+        // The popup needs to say that the game copy went with it, but only for a
+        // name game/ actually holds.
+        let vfs = Vfs::detached();
+
+        if let Some(mut held) = vfs.mutate() {
+            let mut patch = MountedDir { root: PathBuf::from("mods/Patch"), ..MountedDir::default() };
+
+            patch.conflicts.push(Conflict {
+                key: "clash.csv".into(),
+                paths: vec![PathBuf::from("a/clash.csv"), PathBuf::from("b/clash.csv")],
+            });
+            patch.conflicts.push(Conflict {
+                key: "mod_only.csv".into(),
+                paths: vec![PathBuf::from("a/mod_only.csv"), PathBuf::from("b/mod_only.csv")],
+            });
+
+            let mut game = MountedDir { root: PathBuf::from("game"), ..MountedDir::default() };
+
+            game.files.insert("clash.csv".into(), Entry { path: PathBuf::from("clash.csv"), mtime: 0, len: 0 });
+            held.insert(MOUNT_GAME.into(), game);
+            held.insert("Patch".into(), patch);
+        }
+
+        assert_eq!(vfs.withheld(), vec![Box::<str>::from("clash.csv")]);
+
+        // With the mod gone the name falls back exactly as it always did.
+        mounts.remove("Patch");
+
+        assert_eq!(resolve(&mounts, "clash.csv"), Some(PathBuf::from("game/clash.csv")));
+    }
+
+    #[test]
+    fn a_contested_copy_is_still_tracked_so_a_mod_need_not_remount() {
+        // indexed() deliberately says no for a contested name, and the mods page
+        // used that to decide a deletion was surgical. It fell back to re-walking
+        // the whole mod, so the removal has to be recognisable some other way.
+        let scratch = Scratch::new("tracked");
+        let root = &scratch.0;
+        let patch = root.join("patch");
+        let spare = patch.join("spare");
+
+        fs::create_dir_all(&spare).expect("nested dir");
+
+        let first = patch.join("clash.csv");
+        let second = spare.join("clash.csv");
+
+        fs::write(&first, "one\n").expect("seed file");
+        fs::write(&second, "two\n").expect("seed file");
+
+        let vfs = Vfs::with_priority(&[]);
+        vfs.create(root.as_path()).expect("mount the scratch dir");
+
+        let mount = root.file_name().and_then(OsStr::to_str).expect("mount key");
+
+        assert!(!vfs.indexed(mount, &second), "a contested name is no longer a single entry");
+        assert!(vfs.tracked(mount, &second), "but the mount still owns that exact path");
+        assert!(!vfs.tracked(mount, &patch.join("stranger.csv")), "a path the mount never held is not tracked");
+
+        fs::remove_file(&second).expect("drop the duplicate");
+        vfs.destroy((mount, second.as_path()));
+
+        assert!(vfs.conflicts().is_empty(), "the clash is resolved without a remount");
+        assert_eq!(vfs.locate("clash.csv"), Some(first.clone()));
+        assert!(vfs.tracked(mount, &first), "the survivor is a plain entry again");
+    }
+
+    #[test]
+    fn deleting_one_copy_settles_the_clash_and_brings_the_survivor_back() {
+        // The popup tells the modder to resolve the clash, so resolving it has to
+        // take effect live. Without settling, the name stays unreadable and the
+        // warning keeps firing for a duplicate that is already gone.
+        let scratch = Scratch::new("settle");
+        let root = &scratch.0;
+        let patch = root.join("patch");
+        let spare = patch.join("spare");
+
+        fs::create_dir_all(&spare).expect("nested dir");
+
+        let first = patch.join("clash.csv");
+        let second = spare.join("clash.csv");
+
+        fs::write(&first, "one\n").expect("seed file");
+        fs::write(&second, "two\n").expect("seed file");
+
+        let vfs = Vfs::with_priority(&[]);
+        vfs.create(root.as_path()).expect("mount the scratch dir");
+
+        let mount = root.file_name().and_then(OsStr::to_str).expect("mount key");
+
+        assert_eq!(vfs.conflicts().len(), 1);
+        assert_eq!(vfs.locate("clash.csv"), None);
+
+        fs::remove_file(&second).expect("drop the duplicate");
+
+        let dropped = vfs.prune(mount, second.as_path());
+
+        assert_eq!(dropped, vec![Box::<str>::from("clash.csv")], "the name must be purged from the byte cache");
+        assert!(vfs.conflicts().is_empty(), "the clash is resolved");
+        assert_eq!(vfs.locate("clash.csv"), Some(first.clone()), "the survivor is readable again");
+        assert!(vfs.browse(mount, Path::new("patch")).is_some_and(|listing| listing.files.iter().any(|name| name.as_ref() == "clash.csv")));
+    }
+
+    #[test]
+    fn deleting_one_of_three_copies_keeps_the_clash_standing() {
+        let scratch = Scratch::new("settle-three");
+        let root = &scratch.0;
+        let patch = root.join("patch");
+
+        for dir in ["a", "b", "c"] {
+            fs::create_dir_all(patch.join(dir)).expect("nested dir");
+            fs::write(patch.join(dir).join("clash.csv"), "x\n").expect("seed file");
+        }
+
+        let vfs = Vfs::with_priority(&[]);
+        vfs.create(root.as_path()).expect("mount the scratch dir");
+
+        let mount = root.file_name().and_then(OsStr::to_str).expect("mount key");
+        let doomed = patch.join("c").join("clash.csv");
+
+        fs::remove_file(&doomed).expect("drop one copy");
+        vfs.prune(mount, doomed.as_path());
+
+        assert_eq!(vfs.conflicts().len(), 1, "two copies still clash");
+        assert_eq!(vfs.locate("clash.csv"), None);
     }
 
     #[test]

@@ -696,7 +696,7 @@ impl BattleCatsApp {
                         .create((mount.as_str(), path.as_path()))
                         .inspect_err(|err| warn!(path = %path.display(), "Failed to re-index a changed mod file: {}", err))
                         .is_ok()
-                } else if self.vault.vfs.indexed(mount.as_str(), path.as_path()) {
+                } else if self.vault.vfs.tracked(mount.as_str(), path.as_path()) {
                     self.vault.vfs.destroy((mount.as_str(), path.as_path()));
 
                     true
@@ -751,6 +751,8 @@ impl BattleCatsApp {
         if pruned {
             self.sync_home_status();
         }
+
+        self.report_conflicts();
 
         if !remounted_mods.is_empty() {
             self.mods_state.resync(&self.vault, &remounted_mods);
@@ -1344,6 +1346,8 @@ impl BattleCatsApp {
                 if !mount_settled {
                     return task;
                 }
+
+                self.report_conflicts();
 
                 if self.rebuild_queued {
                     info!("Changes landed while mounting, indexing again");
