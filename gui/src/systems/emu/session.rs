@@ -159,8 +159,14 @@ impl Session {
     }
 
     pub fn terminate(&mut self) {
-        if self.phase != Phase::Faulted {
+        if !matches!(self.phase, Phase::Faulted | Phase::Running) {
             return;
+        }
+
+        if self.phase == Phase::Running {
+            self.entered = false;
+            self.driver.silence();
+            self.frozen = self.frame.borrow().quads.len();
         }
 
         self.phase = Phase::Closing;
@@ -280,6 +286,12 @@ impl Session {
             self.driver.silence();
             self.driver.dim();
             self.frozen = self.frame.borrow().quads.len();
+
+            return;
+        }
+
+        if self.driver.exit_requested() {
+            self.terminate();
 
             return;
         }

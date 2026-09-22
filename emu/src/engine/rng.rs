@@ -1,5 +1,4 @@
-use std::collections::hash_map::RandomState;
-use std::hash::{BuildHasher, Hasher};
+use crate::Entropy;
 
 const SEED_SPAN: u64 = 0x7fff_ffff;
 
@@ -9,7 +8,7 @@ pub fn rng(seed: &mut u32, bound: i32) -> i32 {
     }
 
     while *seed == 0 {
-        let drawn = RandomState::new().build_hasher().finish();
+        let drawn = Entropy::draw();
         *seed = (drawn % SEED_SPAN) as u32 + 1;
     }
 

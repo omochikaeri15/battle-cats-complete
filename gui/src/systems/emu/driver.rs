@@ -438,6 +438,10 @@ impl Driver {
         }
     }
 
+    pub fn exit_requested(&mut self) -> bool {
+        self.keys.take_exit()
+    }
+
     pub fn forgive(&mut self) {
         let Some(site) = self.tripped.take() else {
             return;

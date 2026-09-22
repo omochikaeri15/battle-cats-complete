@@ -5,7 +5,6 @@ use emu::runtime::{self, Spot};
 use tracing::warn;
 
 const TAP_FRAMES: u8 = 2;
-const SETTLE_FRAMES: u8 = 10;
 const GATE_FRAMES: u16 = 90;
 const SWAP_SETTLE: u8 = 4;
 const LEAVE_AFTER: u16 = 15;
@@ -35,8 +34,6 @@ enum Step {
     Back,
     Swap(i32),
     AwaitRow(i32, u16),
-    AwaitMenu(u16),
-    AwaitDialog(u16),
 }
 
 #[derive(Default)]
@@ -47,6 +44,7 @@ pub struct Keys {
     back: bool,
     paused: Option<u16>,
     touch_down: bool,
+    exit: bool,
     drop_pinch: bool,
     pan: i32,
     pan_key: Option<Action>,
@@ -162,21 +160,12 @@ impl Keys {
     }
 
     fn leave(&mut self) {
-        self.lift();
-        self.owner = None;
-        self.plan.extend([
-            Step::Back,
-            Step::AwaitMenu(GATE_FRAMES),
-            Step::Hold(SETTLE_FRAMES),
-            Step::Press(Spot::Button(runtime::LEAVE_BUTTON)),
-            Step::Hold(TAP_FRAMES),
-            Step::Release,
-            Step::AwaitDialog(GATE_FRAMES),
-            Step::Hold(SETTLE_FRAMES),
-            Step::Press(Spot::DialogButton(runtime::CONFIRM_BUTTON)),
-            Step::Hold(TAP_FRAMES),
-            Step::Release,
-        ]);
+        self.cancel();
+        self.exit = true;
+    }
+
+    pub fn take_exit(&mut self) -> bool {
+        std::mem::take(&mut self.exit)
     }
 
     pub fn pump(&mut self, ctx: &mut AppContext, spread: &mut i32, gap: &mut Option<i32>) {
@@ -267,8 +256,6 @@ impl Keys {
                     self.gate(left, shown, |left| Step::AwaitRow(slot, left))
                 }
             }
-            Step::AwaitMenu(left) => self.gate(left, runtime::option_menu_open(ctx)?, Step::AwaitMenu),
-            Step::AwaitDialog(left) => self.gate(left, runtime::dialog_open(ctx), Step::AwaitDialog),
         };
 
         if done && !self.plan.is_empty() {

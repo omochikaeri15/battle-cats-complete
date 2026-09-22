@@ -1,9 +1,4 @@
-use std::{
-    collections::hash_map::RandomState,
-    hash::{BuildHasher, Hasher},
-};
-
-use crate::Fault;
+use crate::{Entropy, Fault};
 
 use super::{AppContext, call_rng};
 
@@ -66,7 +61,7 @@ pub fn roll_filibuster_stage(ctx: &mut AppContext) -> Result<(), Fault> {
 
         while index + 1 < open.len() {
             let span = (open.len() - 1 - index) as u64;
-            let offset = (RandomState::new().build_hasher().finish() % (span + 1)) as usize;
+            let offset = (Entropy::draw() % (span + 1)) as usize;
 
             if offset != 0 {
                 open.swap(index, index + offset);
