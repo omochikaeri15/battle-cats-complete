@@ -7,12 +7,14 @@ use iced::widget::{button, column, container, image as iced_image, mouse_area, r
 use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Theme};
 
 use kore::common::context::GlobalContext;
-use kore::domains::cat::scanner::CatEntry;
+use kore::domains::cat::scanner::{self, CatEntry};
 use kore::domains::cat::game::stats::get_final_stats;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::rules::Rules;
 use kore::domains::sandbox::{Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
 use kore::domains::settings::Settings;
+use kore::Vfs;
+use nyanko::combat::Entity;
 
 use crate::app::state::AppState;
 use crate::app::theme;
@@ -39,7 +41,7 @@ const TOP_PAD: f32 = 10.0;
 const CARD_GAP: f32 = 10.0;
 const COLUMNS: usize = 5;
 const DECK_SHARE: f32 = 0.68;
-const SMALLEST: f32 = 0.45;
+pub(super) const SMALLEST: f32 = 0.45;
 const TEXT_FLOOR: f32 = 0.8;
 
 const LEVEL_SIZE: f32 = 11.0;
@@ -59,12 +61,12 @@ const ORB_HEADER_SIZE: f32 = 18.0;
 const ECHO: Duration = Duration::from_millis(80);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Metrics {
-    scale: f32,
+pub(super) struct Metrics {
+    pub(super) scale: f32,
     pad: f32,
-    cell_width: f32,
-    cell_height: f32,
-    gap: f32,
+    pub(super) cell_width: f32,
+    pub(super) cell_height: f32,
+    pub(super) gap: f32,
     header: f32,
     header_gap: f32,
     bench_gap: f32,
@@ -73,9 +75,9 @@ struct Metrics {
 }
 
 impl Metrics {
-    const FULL: Self = Self::at(1.0);
+    pub(super) const FULL: Self = Self::at(1.0);
 
-    const fn at(scale: f32) -> Self {
+    pub(super) const fn at(scale: f32) -> Self {
         Self {
             scale,
             pad: 12.0 * scale,
@@ -101,7 +103,7 @@ impl Metrics {
         Self::at(across.min(down).clamp(SMALLEST, 1.0))
     }
 
-    fn grid_width(&self) -> f32 {
+    pub(super) fn grid_width(&self) -> f32 {
         self.cell_width * COLUMNS as f32 + self.gap * (COLUMNS as f32 - 1.0)
     }
 
@@ -121,7 +123,7 @@ impl Metrics {
         self.bench_top() + self.cell_height + self.pad
     }
 
-    fn text(&self, size: f32) -> f32 {
+    pub(super) fn text(&self, size: f32) -> f32 {
         size * self.scale.max(TEXT_FLOOR)
     }
 }
@@ -157,6 +159,7 @@ pub enum Message {
     PressCell(Cell),
     DragMove(Point),
     DragEnd,
+    DragCancel,
     UnitPopup(popup::Message),
     OrbPopup(popup::Message),
     Drop(Cell),
@@ -168,10 +171,15 @@ pub enum Message {
     Search(String),
 }
 
+fn abandoned(event: iced::Event, _status: iced::event::Status, _window: iced::window::Id) -> Option<Message> {
+    matches!(event, iced::Event::Mouse(mouse::Event::CursorLeft) | iced::Event::Window(iced::window::Event::Unfocused)).then_some(Message::DragCancel)
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 struct Priced {
     cost: i32,
     barred: bool,
+    talented: bool,
 }
 
 pub struct State {
@@ -197,6 +205,8 @@ pub struct State {
     deleting: Confirm<()>,
     search: String,
     found: Vec<usize>,
+    altar: Option<u32>,
+    orphans: HashMap<u32, [Option<Entity>; 4]>,
 }
 
 impl State {
@@ -224,15 +234,16 @@ impl State {
             deleting: Confirm::default(),
             search: String::new(),
             found: Vec::new(),
+            altar: None,
+            orphans: HashMap::new(),
         }
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
-        if self.editing.is_none() {
-            return iced::Subscription::none();
-        }
+        let inspecting = if self.editing.is_some() { self.inspector.subscription().map(Message::Cat) } else { iced::Subscription::none() };
+        let dragging = if self.drag == Drag::Idle { iced::Subscription::none() } else { iced::event::listen_with(abandoned) };
 
-        self.inspector.subscription().map(Message::Cat)
+        iced::Subscription::batch([inspecting, dragging])
     }
 
     pub fn icon_stream(&mut self) -> Task<Message> {
@@ -278,6 +289,10 @@ impl State {
         &self.inspector
     }
 
+    pub fn set_altar(&mut self, cap: Option<u32>) {
+        self.altar = cap;
+    }
+
     pub fn set_rules(&mut self, rules: Rules, app_state: &AppState) {
         if self.rules == rules {
             return;
@@ -300,21 +315,24 @@ impl State {
         let mut fielded: Vec<usize> = Vec::new();
 
         for (cell, member) in slots.chain(bench) {
-            let Some(cat) = self.inspector.cat(member.id) else {
-                continue;
+            let cat = self.inspector.cat(member.id);
+            let stats = match cat {
+                Some(cat) => cat.stats.get(member.form).and_then(Option::as_ref),
+                None => self.orphans.get(&member.id).and_then(|stats| stats.get(member.form)).and_then(Option::as_ref),
             };
-            let Some(stats) = cat.stats.get(member.form).and_then(Option::as_ref) else {
-                continue;
-            };
-
             let talents = (member.form >= FIRST_TALENT_FORM).then_some(&member.talents);
             let (level, plus) = member.levels();
-            let grown = get_final_stats(stats, cat.curve.as_ref(), (level + plus) as i32, cat.talent_data.as_ref(), talents);
-            let rarity = usize::try_from(cat.unitbuy.rarity).unwrap_or(0);
-            let cost = self.rules.cost(grown.eoc1_cost, rarity);
+            let base = stats.map_or(0, |stats| {
+                get_final_stats(stats, cat.and_then(|cat| cat.curve.as_ref()), (level + plus) as i32, cat.and_then(|cat| cat.talent_data.as_ref()), talents)
+                    .eoc1_cost
+            });
+            let rarity = cat.and_then(|cat| usize::try_from(cat.unitbuy.rarity).ok()).unwrap_or(0);
+            let cost = self.rules.cost(base, rarity);
+            let groups = cat.and_then(|cat| cat.talent_data.as_ref()).map_or(0, |talent| talent.groups.len());
+            let talented = member.talented() && member.talents.iter().any(|(index, level)| *level > 0 && usize::from(*index) < groups);
             let earlier = fielded.iter().filter(|held| **held == rarity).count();
 
-            self.priced.insert(cell, Priced { cost, barred: self.rules.bars(member.id, rarity, cost, earlier, match cell {
+            self.priced.insert(cell, Priced { cost, talented, barred: self.rules.bars(member.id, rarity, cost, earlier, match cell {
                 Cell::Slot(slot) => Some(slot),
                 Cell::Bench(_) => None,
             }) });
@@ -326,6 +344,16 @@ impl State {
     }
 
     fn settle(&mut self, app_state: &AppState, ctx: GlobalContext<'_>) {
+        self.orphans.clear();
+
+        let members = app_state.sandbox.roster.current().into_iter().flat_map(|lineup| lineup.slots.iter().chain(lineup.bench.iter().flatten()));
+
+        for member in members {
+            if self.inspector.cat(member.id).is_none() && !self.orphans.contains_key(&member.id) {
+                self.orphans.insert(member.id, scanner::orphan_stats(&ctx.vault.vfs, member.id));
+            }
+        }
+
         self.reprice(app_state);
 
         let roster = &app_state.sandbox.roster;
@@ -342,9 +370,12 @@ impl State {
         }
 
         for member in lineup.into_iter().flat_map(|lineup| lineup.slots.iter().chain(lineup.bench.iter().flatten())) {
-            let path = self.inspector.cat(member.id).and_then(|cat| cat.deploy_icon_paths.get(member.form)).and_then(Option::as_ref);
+            let path = match self.inspector.cat(member.id) {
+                Some(cat) => scanner::deploy_icon(&ctx.vault.vfs, cat, member.form),
+                None => scanner::orphan_icon(&ctx.vault.vfs, member.id, member.form),
+            };
 
-            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, path)) {
+            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, &path)) {
                 self.icons.insert((member.id, member.form), icon.handle);
             }
         }
@@ -372,11 +403,12 @@ impl State {
         Some(roster.dress(fresh, form))
     }
 
-    fn open(&mut self, cell: Cell, lineup: &Lineup) {
+    fn open(&mut self, cell: Cell, lineup: &Lineup, vfs: &Vfs) {
         let Some(member) = lineup.get(cell) else {
             return;
         };
 
+        self.inspector.reveal(member.id, member.form, vfs);
         self.inspector.inspect(member.id, member.form, &member.level, &member.talents);
         self.editing = Some(member.id);
         self.orb_slot = None;
@@ -551,6 +583,11 @@ impl State {
 
                 Task::none()
             }
+            Message::DragCancel => {
+                self.drag = Drag::Idle;
+
+                Task::none()
+            }
             Message::DragEnd => {
                 let settled = std::mem::take(&mut self.drag);
 
@@ -567,7 +604,7 @@ impl State {
                         self.clicked = (!doubled).then_some((cell, now));
 
                         if doubled && let Some(lineup) = app_state.sandbox.roster.current() {
-                            self.open(cell, lineup);
+                            self.open(cell, lineup, &ctx.vault.vfs);
                         }
                     }
                     Drag::Moving { cargo: Cargo::Fresh(id), onto: Some(onto), .. } => {
@@ -914,7 +951,10 @@ impl State {
             |handle| iced_image(handle.clone()).width(width).height(height).into(),
         );
 
-        let (level, plus) = member.levels();
+        let (level, plus) = match (member.levels(), self.altar) {
+            ((level, _), Some(cap)) => (level.min(cap.saturating_add(1)), 0),
+            (levels, None) => levels,
+        };
         let shown = if plus > 0 { format!("Lv{level}+{plus}") } else { format!("Lv{level}") };
         let badge = container(theme::bold_text(shown).size(metrics.text(BADGE_SIZE)).color(Color::WHITE)).padding([1, 6]).style(|_: &Theme| container::Style {
             background: Some(Color { a: BADGE_FILL, ..Color::BLACK }.into()),
@@ -935,7 +975,7 @@ impl State {
         let coin: Element<'a, Message> = self
             .coin
             .clone()
-            .filter(|_| member.talented())
+            .filter(|_| self.priced.get(&cell).is_some_and(|priced| priced.talented))
             .map_or_else(|| Space::new().into(), |handle| iced_image(handle).height(Length::Fixed(COIN_SIZE * metrics.scale)).into());
 
         let corner = |content: Element<'a, Message>, across: Horizontal, down: Vertical| {

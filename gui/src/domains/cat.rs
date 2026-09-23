@@ -108,6 +108,27 @@ pub enum Message {
     Animation(animation::Message),
 }
 
+impl Message {
+    pub(crate) fn views_only(&self) -> bool {
+        matches!(
+            self,
+            Self::AnimationTick
+                | Self::SheetsCheck
+                | Self::Img015Loaded(..)
+                | Self::Img022Loaded(..)
+                | Self::SelectTab(_)
+                | Self::ToggleTalents(_)
+                | Self::ToggleOrigin(_)
+                | Self::ToggleParts(_)
+                | Self::ToggleWorld(_)
+                | Self::Abilities(_)
+                | Self::Animation(_)
+                | Self::Talents(talents::Message::ToggleGroup(..))
+                | Self::Export(_)
+        )
+    }
+}
+
 impl std::fmt::Debug for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -335,6 +356,21 @@ impl State {
 
     pub(crate) fn cat(&self, id: u32) -> Option<&CatEntry> {
         self.data.cats.iter().find(|cat| cat.id == id)
+    }
+
+    pub(crate) fn reveal(&mut self, id: u32, form: usize, vfs: &Vfs) {
+        let Some(cat) = self.data.cats.iter_mut().find(|cat| cat.id == id) else {
+            return;
+        };
+        let Some(present) = cat.forms.get_mut(form) else {
+            return;
+        };
+
+        *present = true;
+
+        if cat.deploy_icon_paths[form].is_none() {
+            cat.deploy_icon_paths[form] = scanner::deploy_icon(vfs, cat, form);
+        }
     }
 
     pub(crate) fn list_scrollable_id() -> Id {

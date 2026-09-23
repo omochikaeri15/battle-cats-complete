@@ -57,13 +57,15 @@ pub fn options_from(options: tape::Options) -> BattleOptions {
     }
 }
 
-pub fn setup_to(setup: &Setup) -> tape::Setup {
+pub fn setup_to(setup: &Setup, map_name: &str, stage_name: &str) -> tape::Setup {
     tape::Setup {
         stage: tape::Stage {
             map_id: setup.stage.map_id,
             stage: setup.stage.stage,
             layout: setup.stage.layout,
             crown: setup.stage.crown,
+            map_name: map_name.to_owned(),
+            stage_name: stage_name.to_owned(),
         },
         lineup: setup
             .lineup

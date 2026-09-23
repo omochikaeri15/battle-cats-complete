@@ -11,7 +11,7 @@ use imageproc::rect::Rect;
 use nyanko::combat::Identity;
 use nyanko::files::img015;
 
-use crate::common::assets;
+use crate::common::{assets, frames};
 use crate::common::formats::SpriteSheet;
 use crate::systems::combat::{AbilityItem, CustomIcon};
 use crate::common::gfx::autocrop;
@@ -604,8 +604,8 @@ pub fn build_statblock_image(
     Ok(final_background_layer)
 }
 
-fn frame_text(frames: i32) -> String {
-    format!("{:.2}s^{}f", frames as f32 / 30.0, frames)
+fn frame_text(count: i32) -> String {
+    frames::label(count)
 }
 
 pub fn save_to_disk(image: &RgbaImage, is_cat: bool, id_str: &str, top_value: &str) -> Result<PathBuf, String> {

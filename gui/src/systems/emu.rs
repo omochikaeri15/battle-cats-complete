@@ -12,6 +12,7 @@ mod sound;
 mod text;
 mod viewport;
 
+pub(crate) use driver::Label;
 pub(crate) use session::{Reel, Session};
 pub(crate) use assets::SheetCache;
 pub(crate) use sink::Frame;

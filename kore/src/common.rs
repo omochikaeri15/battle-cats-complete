@@ -4,6 +4,7 @@ pub mod changelog;
 pub mod context;
 pub mod dirs;
 pub mod formats;
+pub mod frames;
 pub mod game;
 pub mod gfx;
 pub mod github;

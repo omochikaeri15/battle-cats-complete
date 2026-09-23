@@ -1,12 +1,13 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{HashSet, VecDeque};
 use std::mem;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
-    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
+    BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
     VERSION, fill_dummy_save, fill_dummy_talents, load_scene_sheets, plant_seeds, queue_touch_position, queue_touch_press, queue_touch_release,
     pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
@@ -33,6 +34,7 @@ const PINCH_LIFT_FRAMES: u32 = 2;
 const FULL_VOLUME: i32 = 100;
 const DIM_ALPHA: i32 = 0x80;
 const NOTCH_SHARE: f32 = 0.04;
+const ALTAR_ROW_SHIFT: i32 = -2;
 
 enum Tape {
     Off,
@@ -70,6 +72,15 @@ pub struct Driver {
     applied: (f32, f32),
     wanted_phone: bool,
     finished: bool,
+    label: Label,
+    recorded: Option<tape::Save>,
+}
+
+#[derive(Default)]
+pub struct Label {
+    pub map: String,
+    pub stage: String,
+    pub keepsakes: Vec<(Box<str>, PathBuf)>,
 }
 
 impl Driver {
@@ -122,6 +133,8 @@ impl Driver {
             applied: (0.0, 0.0),
             wanted_phone: false,
             finished: false,
+            label: Label::default(),
+            recorded: None,
         };
 
         driver.host();
@@ -194,6 +207,7 @@ impl Driver {
         }
 
         self.tape = Tape::Off;
+        self.recorded = None;
         self.pending.clear();
         self.finished = false;
         self.ledger.borrow_mut().disarm();
@@ -225,7 +239,10 @@ impl Driver {
                 phone: self.phone,
             },
             options: replay::options_to(self.options),
-            setup: replay::setup_to(&self.setup),
+            setup: replay::setup_to(&self.setup, &self.label.map, &self.label.stage),
+            icons: Vec::new(),
+            costs: Vec::new(),
+            altar_cap: None,
         };
 
         if let Err(error) = recording.write_save(&save) {
@@ -234,8 +251,51 @@ impl Driver {
             return;
         }
 
-        self.ledger.borrow_mut().arm();
+        {
+            let mut ledger = self.ledger.borrow_mut();
+
+            ledger.arm();
+
+            for (name, path) in &self.label.keepsakes {
+                ledger.note(name, path);
+            }
+        }
+
         self.tape = Tape::Recording(recording);
+        self.recorded = Some(save);
+    }
+
+    pub fn stamp_deck(&mut self) {
+        let Tape::Recording(recording) = &self.tape else {
+            return;
+        };
+        let Some(save) = self.recorded.as_mut() else {
+            return;
+        };
+
+        save.icons = self
+            .ctx
+            .unit_icon_textures
+            .iter()
+            .map(|texture| texture.as_ref().map_or_else(String::new, |texture| String::from_utf8_lossy(&texture.png).into_owned()))
+            .collect();
+        save.costs = (0..DECK_SLOTS as i32)
+            .map(|slot| emu::engine::get_effective_deploy_cost(&mut self.ctx, 0, slot).map_or(-1, emu::ops::div_100))
+            .collect();
+        save.altar_cap = emu::engine::get_castle_enemy_row(&self.ctx).ok().and_then(|row| {
+            let enemy = row.wrapping_add(ALTAR_ROW_SHIFT);
+            let sealed = emu::engine::stage_not_sealed(&self.ctx, enemy).is_ok_and(|open| !open);
+
+            sealed.then(|| emu::engine::get_altar_level_cap(&self.ctx, enemy).unwrap_or(-1))
+        });
+
+        if let Err(error) = recording.write_save(save) {
+            warn!("emu: the latest battle's deck icons could not be written: {error}");
+        }
+    }
+
+    pub fn label(&mut self, label: Label) {
+        self.label = label;
     }
 
     pub fn arm_playback(&mut self, save: &tape::Save, frames: Vec<Vec<Cue>>, index: FileIndex) {
@@ -268,6 +328,16 @@ impl Driver {
 
     pub fn reel_finished(&self) -> bool {
         self.finished
+    }
+
+    pub fn frame_aspect(&self) -> f32 {
+        let width = self.ctx.screen_metrics.design_w;
+
+        if width <= 0 {
+            return 0.0;
+        }
+
+        emu::engine::get_design_height2(&self.ctx) as f32 / width as f32
     }
 
     pub fn screen(&self) -> (i32, i32) {

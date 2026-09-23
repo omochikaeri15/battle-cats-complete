@@ -20,6 +20,8 @@ use crate::domains::cat::waiter::unitexplanation;
 use crate::domains::settings::ScannerConfig;
 use crate::{Vfs, Vault};
 
+
+const MISSING_ROW_EGGS: (i32, i32) = (0, 0);
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CatEntry {
     pub id: u32,
@@ -175,6 +177,30 @@ fn verdict(vfs: &Vfs, id: u32, images: &Images, config: &ScannerConfig) -> bool 
 
 pub fn icon(vfs: &Vfs, entry: &CatEntry, form: usize, config: &ScannerConfig) -> Option<PathBuf> {
     resolve_icon(vfs, entry.id, form, entry.egg_ids.unwrap_or((-1, -1)), config)
+}
+
+pub fn deploy_icon(vfs: &Vfs, entry: &CatEntry, form: usize) -> Option<PathBuf> {
+    entry
+        .deploy_icon_paths
+        .get(form)
+        .cloned()
+        .flatten()
+        .or_else(|| vfs.find(files::icon_file(entry.id, form, entry.egg_ids.unwrap_or((-1, -1))).as_str()))
+}
+
+pub fn orphan_stats(vfs: &Vfs, id: u32) -> [Option<Entity>; 4] {
+    let mut stats: [Option<Entity>; 4] = [const { None }; 4];
+    let parsed = vfs.find(&files::stats_file(id)).and_then(|path| fs::read(path).ok()).and_then(|bytes| unitid::parse(&bytes, None).ok());
+
+    for (form, profile) in parsed.into_iter().flatten().enumerate().take(stats.len()) {
+        stats[form] = Some(profile);
+    }
+
+    stats
+}
+
+pub fn orphan_icon(vfs: &Vfs, id: u32, form: usize) -> Option<PathBuf> {
+    vfs.find(files::icon_file(id, form, MISSING_ROW_EGGS).as_str())
 }
 
 pub fn listable(vfs: &Vfs, entry: &CatEntry, config: &ScannerConfig) -> bool {

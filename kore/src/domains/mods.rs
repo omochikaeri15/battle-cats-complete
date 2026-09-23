@@ -24,8 +24,12 @@ pub const ICON: &str = "icon.png";
 
 pub const PATCH: &str = "patch";
 
+pub fn reserved(name: &str) -> bool {
+    [architecture::GAME, architecture::REPLAY].iter().any(|key| name.eq_ignore_ascii_case(key))
+}
+
 pub fn taken(mods_root: &Path, candidate: &str) -> bool {
-    if candidate.eq_ignore_ascii_case(architecture::GAME) {
+    if reserved(candidate) {
         return true;
     }
 
@@ -289,6 +293,11 @@ impl ModDataState {
             for entry in entries.flatten() {
                 if entry.path().is_dir() {
                     let folder_name = entry.file_name().to_string_lossy().to_string();
+
+                    if reserved(&folder_name) {
+                        continue;
+                    }
+
                     current_folders.insert(folder_name.clone());
 
                     if !self.loaded_mods.iter().any(|m| m.folder_name == folder_name) {

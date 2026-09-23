@@ -5,11 +5,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::UNIX_EPOCH;
 
 use rayon::prelude::*;
 use tracing::warn;
 
 use crate::common::{architecture, dirs, solid};
+use crate::domains::cat::files;
+use crate::domains::cat::scanner::{self, CatEntry};
+use crate::domains::settings::ScannerConfig;
+use crate::Vault;
 
 pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Unit};
 pub use tape::{Cue, Key, format_frame, parse};
@@ -19,9 +24,27 @@ pub const EXTENSION: &str = "bcv";
 const SAVE: &str = "save";
 const INPUT: &str = "input";
 const MANIFEST: &str = "manifest";
-const ASSETS: &str = "assets";
+const ASSETS: &str = architecture::REPLAY;
 const SCRATCH: &str = "replay";
 const THEATER: &str = "theater";
+const GALLERY: &str = "gallery";
+const BASE_FORMS: usize = 2;
+const STAMP: &str = "stamp";
+const KEEPSAKE_TABLES: [&str; 13] = [
+    "unitbuy",
+    "unitlevel",
+    "SkillAcquisition",
+    "SkillLevel",
+    "SkillDescriptions",
+    "unitevolve",
+    "Nyancombo",
+    "equipment",
+    "gatyaitemD_07_f",
+    "uni.png",
+    "Skill_name_",
+    "img015",
+    "img022",
+];
 const BUNDLE_STEM: &str = "Replay";
 
 pub fn scratch() -> Option<PathBuf> {
@@ -30,6 +53,130 @@ pub fn scratch() -> Option<PathBuf> {
 
 pub fn theater() -> Option<PathBuf> {
     dirs::state().map(|state| state.join(THEATER))
+}
+
+pub fn gallery() -> Option<PathBuf> {
+    dirs::state().map(|state| state.join(GALLERY))
+}
+
+pub fn keepsakes(vault: &Vault, units: &[(u32, usize)]) -> Vec<(Box<str>, PathBuf)> {
+    let vfs = &vault.vfs;
+    let buys = vault.vds.cats.unitbuy(vfs);
+    let mut prefixes: Vec<String> = KEEPSAKE_TABLES.iter().map(|table| (*table).to_owned()).collect();
+
+    for &(id, form) in units {
+        let number = id + 1;
+        let eggs = buys.get(&id).map_or((-1, -1), |row| (row.egg_id_normal, row.egg_id_evolved));
+
+        prefixes.extend([
+            format!("unit{number:03}"),
+            files::icon_file(id, form, eggs),
+            files::anim_base_filename(id, form, eggs),
+            format!("Unit_Explanation{number}_"),
+        ]);
+    }
+
+    prefixes
+        .iter()
+        .flat_map(|prefix| vfs.glob(prefix))
+        .filter_map(|name| vfs.locate(&name).map(|path| (name, path)))
+        .collect()
+}
+
+fn signature(path: &Path) -> Option<String> {
+    let meta = fs::metadata(path).ok()?;
+    let modified = meta.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_nanos();
+
+    Some(format!("{}:{}:{modified}", path.display(), meta.len()))
+}
+
+pub fn stamp(target: &Path) -> Option<String> {
+    if !target.is_dir() {
+        return signature(target);
+    }
+
+    let parts: Option<Vec<String>> = [SAVE, INPUT, MANIFEST].iter().map(|name| signature(&target.join(name))).collect();
+
+    parts.map(|parts| parts.join("|"))
+}
+
+pub struct Staged {
+    pub summary: Summary,
+    pub vault: Vault,
+    pub cats: Vec<CatEntry>,
+}
+
+pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
+    let bundle = !target.is_dir();
+    let dir = if bundle {
+        let dir = gallery().ok_or("there is no state folder to unpack the replay into")?;
+        let wanted = stamp(target);
+        let held = fs::read_to_string(dir.join(STAMP)).ok();
+
+        if wanted.is_none() || held != wanted {
+            unpack(target, &dir)?;
+
+            if let Some(wanted) = &wanted
+                && let Err(error) = fs::write(dir.join(STAMP), wanted)
+            {
+                warn!("Replay stamp could not be written: {error}");
+            }
+        }
+
+        dir
+    } else {
+        target.to_path_buf()
+    };
+    let mut summary = inspect_dir(&dir);
+
+    if bundle {
+        summary.bytes = fs::metadata(target).map_or(0, |meta| meta.len());
+    }
+
+    let vault = Vault::with_priority(&config.language_priority);
+
+    vault
+        .vfs
+        .create(dir.join(ASSETS).as_path())
+        .map_err(|error| format!("the replay's files could not be read: {error}"))?;
+
+    let mut units: Vec<u32> = summary
+        .save
+        .iter()
+        .flat_map(|save| save.setup.lineup.iter())
+        .filter_map(|unit| u32::try_from(unit.unit).ok())
+        .collect();
+
+    units.dedup();
+
+    let lenient = ScannerConfig { show_invalid_cats: true, ..config.clone() };
+    let mut cats: Vec<CatEntry> = units.into_iter().filter_map(|id| scanner::scan_single(id, &vault, &lenient)).collect();
+
+    for unit in summary.save.iter().flat_map(|save| save.setup.lineup.iter()) {
+        let fielded = cats
+            .iter_mut()
+            .find(|cat| i32::try_from(cat.id).is_ok_and(|id| id == unit.unit))
+            .zip(usize::try_from(unit.form).ok())
+            .and_then(|(cat, form)| cat.forms.get_mut(form));
+
+        if let Some(present) = fielded {
+            *present = true;
+        }
+    }
+
+    for cat in &mut cats {
+        for form in 0..BASE_FORMS {
+            cat.forms[form] |= cat.stats[form].is_some();
+        }
+
+        for form in 0..cat.forms.len() {
+            if cat.forms[form] && cat.deploy_icon_paths[form].is_none() {
+                cat.deploy_icon_paths[form] = scanner::deploy_icon(&vault.vfs, cat, form);
+            }
+        }
+    }
+
+    Ok(Staged { summary, vault, cats })
 }
 
 pub fn library() -> PathBuf {
@@ -145,6 +292,10 @@ impl Recording {
         self.input.flush()?;
         self.manifest.flush()
     }
+}
+
+fn bundled(name: &str) -> bool {
+    name.strip_prefix(ASSETS).is_some_and(|rest| rest.starts_with('/'))
 }
 
 pub fn index(dir: &Path) -> io::Result<BTreeMap<Box<str>, PathBuf>> {
@@ -348,7 +499,7 @@ pub fn inspect_dir(dir: &Path) -> Summary {
     }
 
     let bytes = files.iter().filter_map(|(_, path)| fs::metadata(path).ok()).map(|meta| meta.len()).sum();
-    let assets = files.iter().filter(|(name, _)| name.starts_with(ASSETS)).count();
+    let assets = files.iter().filter(|(name, _)| bundled(name)).count();
 
     Summary {
         save: read_save(dir).ok(),
@@ -384,7 +535,7 @@ fn read_head(bundle: &Path, whole: bool) -> Option<Head> {
                     head.input = Some(text);
                 }
             }
-            _ if name.starts_with(ASSETS) => head.assets += 1,
+            _ if bundled(&name) => head.assets += 1,
             _ => (),
         }
 

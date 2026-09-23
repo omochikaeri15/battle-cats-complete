@@ -80,7 +80,11 @@ fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> V
     let unitbuy = vds.cats.unitbuy(vfs);
     let groups = vds.stages.charagroups(vfs);
 
-    let joined: Vec<(usize, &NyancomboData)> = rows.iter().enumerate().filter(|(_, row)| wanted(row)).collect();
+    let joined: Vec<(usize, &NyancomboData)> = rows
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| wanted(row) && row.slots().into_iter().any(|slot| slot.is_occupied()))
+        .collect();
 
     if joined.is_empty() {
         return Vec::new();

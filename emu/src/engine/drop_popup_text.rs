@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, UNIT_BUY, UNIT_BUY_STRIDE, find_item_index, format_string3, format_string3_int3,
-    format_string3_int4, get_item_name, get_orb_def, level_cell_base, level_cell_plus, orb_name,
+    format_string3_int4, get_item_name, get_orb_def, level_cell_plus, level_cell_base, orb_name,
     query_localizable, reward_unit_id, std_string_from_cstr, substitute_tokens, unit_buy_field,
     xor_row46_get,
 };
@@ -188,10 +188,10 @@ pub fn drop_popup_text(
             }
             1 | 2 => {
                 let raised = mode.wrapping_sub(2) == 1;
-                let plus = level_cell_plus(ctx, levels)?;
                 let base = level_cell_base(ctx, levels)?;
+                let plus = level_cell_plus(ctx, levels)?;
 
-                if level_cell_base(ctx, levels)? != 1 {
+                if level_cell_plus(ctx, levels)? != 1 {
                     let key = if raised {
                         b"drop_popup_chara_levelup2".as_slice()
                     } else {
@@ -207,10 +207,10 @@ pub fn drop_popup_text(
                         &rarity,
                         &name,
                         [
-                            plus.wrapping_add(1),
-                            base.wrapping_sub(1),
-                            plus.wrapping_add(1),
-                            base,
+                            base.wrapping_add(1),
+                            plus.wrapping_sub(1),
+                            base.wrapping_add(1),
+                            plus,
                         ],
                     )
                 } else {
@@ -228,7 +228,7 @@ pub fn drop_popup_text(
                         &reward_name,
                         &rarity,
                         &name,
-                        [plus.wrapping_add(1), plus.wrapping_add(1), base],
+                        [base.wrapping_add(1), base.wrapping_add(1), plus],
                     )
                 }
             }

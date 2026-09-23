@@ -23,7 +23,7 @@ const CAT_GOD_INTRO_DONE: i32 = 4;
 const DISCOUNT_CHAPTER: usize = 7;
 const CHAPTER_CLEARED: u32 = 0x30;
 const COMBO_UNLOCKED: i32 = 0;
-const PLUS_SHIFT: u32 = 0x10;
+const BASE_SHIFT: u32 = 0x10;
 const CAT_FOOD: u32 = 45_000;
 const ZOOM_ANCHOR: i32 = 0x208;
 const CHAPTER_ROWS: usize = 0xa;
@@ -64,7 +64,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
 
     for (tech, held) in setup.tech.iter().enumerate() {
         let mut cell = [0u8; 8];
-        let packed = held.plus << PLUS_SHIFT | held.level.saturating_sub(1);
+        let packed = held.level.saturating_sub(1) << BASE_SHIFT | held.plus;
 
         cell[..4].copy_from_slice(&packed.to_le_bytes());
         obfuscate_value(&mut cell);

@@ -31,6 +31,8 @@ use crate::app::theme;
 use crate::common::fonts;
 use crate::widget::{slide, smooth_scroll, status, Slide};
 
+pub(crate) use crowns::CROWN_GLYPH;
+
 const SIDEBAR_PUSH_GAP: f32 = 10.0;
 const SIDEBAR_PADDING: f32 = 15.0;
 const TOGGLE_BUTTON_SIZE: f32 = 30.0;

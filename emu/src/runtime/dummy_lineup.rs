@@ -7,7 +7,7 @@ use super::{BATTLE_ITEMS, DECK_SLOTS, Setup};
 
 const EMPTY_SLOT: i32 = -1;
 const DECK_BIAS: i32 = 2;
-const PLUS_SHIFT: u32 = 0x10;
+const BASE_SHIFT: u32 = 0x10;
 const UNIT_OWNED: i32 = 1;
 const TRUE_FORM: i32 = 2;
 const ULTRA_FORM: i32 = 3;
@@ -38,7 +38,7 @@ pub fn fill_dummy_lineup(ctx: &mut AppContext, setup: &Setup) -> Result<(), Faul
     for member in setup.lineup.iter().take(DECK_SLOTS) {
         let unit = member.unit as usize;
         let mut cell = [0u8; 8];
-        let packed = member.plus << PLUS_SHIFT | member.level.saturating_sub(1);
+        let packed = member.level.saturating_sub(1) << BASE_SHIFT | member.plus;
 
         cell[..4].copy_from_slice(&packed.to_le_bytes());
         obfuscate_value(&mut cell);

@@ -10,6 +10,7 @@ use iced::{Alignment, Element, Length, Size, Task, Theme};
 use tracing::warn;
 
 use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 
 use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
@@ -17,6 +18,7 @@ use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
 use kore::domains::sandbox::keybind::Bind;
+use kore::domains::sandbox::altar::Altars;
 use kore::domains::sandbox::TECHS;
 use kore::domains::sandbox::replay as replay_tape;
 use kore::domains::settings::{ReplaySource, Settings};
@@ -24,7 +26,7 @@ use kore::domains::settings::{ReplaySource, Settings};
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
 use crate::domains::{cat, stage};
-use crate::systems::emu::{Action, Frame as EmuFrame, Session};
+use crate::systems::emu::{Action, Frame as EmuFrame, Label, Session};
 use crate::systems::emu::SheetCache;
 use crate::widget::{popup, smooth_scroll};
 
@@ -104,6 +106,8 @@ pub struct State {
     was_running: bool,
     version: popup::State,
     foreign: Option<String>,
+    altars: Altars,
+    castle: Option<i32>,
 }
 
 impl Default for State {
@@ -119,10 +123,12 @@ impl Default for State {
             tapped: None,
             lineup: lineup::State::new(0),
             config: config::State::default(),
-            replay: replay::State::default(),
+            replay: replay::State::new(),
             was_running: false,
             version: popup::State::default(),
             foreign: None,
+            altars: Altars::default(),
+            castle: None,
         }
     }
 }
@@ -153,13 +159,25 @@ impl State {
     pub(crate) fn enter(&mut self, app_state: &AppState, settings: &Settings, ctx: GlobalContext<'_>) -> Task<Message> {
         self.prompt_open = !app_state.sandbox.acknowledged;
         self.config.enter(&ctx.vault.vfs);
+        self.altars = Altars::load(&ctx.vault.vfs);
+        self.clamp(app_state);
 
-        if app_state.sandbox.tab == SandboxTab::Replay {
-            self.refresh_replays();
-        }
+        let replays = if app_state.sandbox.tab == SandboxTab::Replay { self.refresh_replays(settings) } else { Task::none() };
 
         self.lineup.set_banner_form(settings.sandbox.banner_form);
-        self.lineup.enter(app_state, ctx).map(Message::Lineup)
+
+        Task::batch([self.lineup.enter(app_state, ctx).map(Message::Lineup), replays])
+    }
+
+    pub(crate) fn set_castle(&mut self, castle: Option<i32>, app_state: &AppState) {
+        self.castle = castle;
+        self.clamp(app_state);
+    }
+
+    fn clamp(&mut self, app_state: &AppState) {
+        let cap = self.castle.and_then(|castle| self.altars.level_cap(castle, app_state.sandbox.config.altar()));
+
+        self.lineup.set_altar(cap);
     }
 
     pub(crate) fn set_rules(&mut self, rules: kore::domains::sandbox::rules::Rules, app_state: &AppState) {
@@ -177,7 +195,7 @@ impl State {
             return iced::event::listen_with(game_key);
         }
 
-        self.lineup.subscription().map(Message::Lineup)
+        iced::Subscription::batch([self.lineup.subscription().map(Message::Lineup), self.replay.subscription().map(Message::Replay)])
     }
 
     pub(crate) fn icon_stream(&mut self) -> Task<Message> {
@@ -340,14 +358,30 @@ impl State {
         self.session.as_ref().and_then(Session::aspect)
     }
 
-    fn unit_name(lineup: &lineup::State, id: u32, form: usize) -> String {
-        lineup.inspector().cat(id).map_or_else(|| format!("Unit {id}"), |cat| cat.display_name(form))
+    pub(crate) fn is_replay(path: &Path) -> bool {
+        replay::is_bundle(path)
     }
 
-    fn refresh_replays(&mut self) {
-        let lineup = &self.lineup;
+    pub(crate) fn relist_replays(&mut self, settings: &Settings) -> Task<Message> {
+        self.replay.relist(settings.scanner_config(None)).map(Message::Replay)
+    }
 
-        self.replay.refresh(&|id, form| Self::unit_name(lineup, id, form));
+    fn refresh_replays(&mut self, settings: &Settings) -> Task<Message> {
+        self.replay.refresh(settings.scanner_config(None)).map(Message::Replay)
+    }
+
+    pub(crate) fn replay_unit_open(&self) -> bool {
+        self.replay.unit_open()
+    }
+
+    pub(crate) fn replay_unit_view<'a>(
+        &'a self,
+        window: Size,
+        settings: &'a Settings,
+        app_state: &'a AppState,
+        ctx: GlobalContext<'a>,
+    ) -> Option<Element<'a, Message>> {
+        self.replay.unit_popup_view(window, settings, app_state, ctx).map(|view| view.map(Message::Replay))
     }
 
     pub(crate) fn watch(&mut self, width: f32, height: f32, options: &SandboxState, source: ReplaySource, checked: bool) {
@@ -378,10 +412,11 @@ impl State {
         }
     }
 
-    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, recording: bool) {
+    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, label: Option<Label>) {
         let session = self.session.get_or_insert_with(Session::new);
 
-        session.set_recording(recording);
+        session.set_recording(label.is_some());
+        session.label(label.unwrap_or_default());
         session.equip(setup);
         session.set_phone(options.device == SandboxDevice::Phone);
         session.resize(width, height);
@@ -449,7 +484,6 @@ impl State {
             }
             Message::Restamped(outcome) => {
                 self.status.clear();
-                self.refresh_replays();
 
                 match outcome {
                     Ok(()) => Task::done(Message::Watch(true)),
@@ -460,11 +494,7 @@ impl State {
                     }
                 }
             }
-            Message::Replay(msg) => {
-                let lineup = &self.lineup;
-
-                self.replay.update(msg, &|id, form| Self::unit_name(lineup, id, form)).map(Message::Replay)
-            }
+            Message::Replay(msg) => self.replay.update(msg, settings, app_state, ctx).map(Message::Replay),
             Message::FaultPopup(msg) => {
                 if self.fault.update(msg, FAULT_POPUP) {
                     return Task::done(Message::Terminate);
@@ -543,7 +573,7 @@ impl State {
                 app_state.sandbox.tab = tab;
 
                 if tab == SandboxTab::Replay {
-                    self.refresh_replays();
+                    return self.refresh_replays(settings);
                 }
 
                 Task::none()
@@ -552,6 +582,7 @@ impl State {
             Message::Lineup(msg) => self.lineup.update(msg, settings, app_state, ctx).map(Message::Lineup),
             Message::Config(msg) => {
                 self.config.update(msg, &mut app_state.sandbox);
+                self.clamp(app_state);
 
                 if let Some(session) = self.session.as_mut() {
                     session.set_phone(app_state.sandbox.device == SandboxDevice::Phone);
@@ -564,9 +595,11 @@ impl State {
             Message::Tick => {
                 let running = self.session.as_ref().is_some_and(Session::running);
 
-                if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
-                    self.refresh_replays();
-                }
+                let replays = if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
+                    self.refresh_replays(settings)
+                } else {
+                    Task::none()
+                };
 
                 self.was_running = running;
 
@@ -587,12 +620,12 @@ impl State {
                         self.status = failure;
 
                         if !self.status.is_empty() {
-                            return Task::future(smol::Timer::after(STATUS_LIFETIME)).map(|_| Message::StatusExpired);
+                            return Task::batch([replays, Task::future(smol::Timer::after(STATUS_LIFETIME)).map(|_| Message::StatusExpired)]);
                         }
                     }
                 }
 
-                Task::none()
+                replays
             }
         }
     }

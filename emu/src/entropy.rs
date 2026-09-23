@@ -1,6 +1,5 @@
 use std::cell::Cell;
-use std::collections::hash_map::RandomState;
-use std::hash::{BuildHasher, Hasher};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
 
@@ -26,9 +25,12 @@ pub struct Entropy {
 impl Entropy {
     pub fn draw() -> u64 {
         COUNTER.with(|counter| {
-            let seeded = counter
-                .get()
-                .unwrap_or_else(|| RandomState::new().build_hasher().finish());
+            let seeded = counter.get().unwrap_or_else(|| {
+                let clock = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_nanos() as u64);
+                let place = counter as *const Cell<Option<u64>> as usize as u64;
+
+                clock ^ place.rotate_left(32)
+            });
             let state = seeded.wrapping_add(GAMMA);
 
             counter.set(Some(state));

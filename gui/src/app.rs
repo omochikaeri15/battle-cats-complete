@@ -217,11 +217,12 @@ enum ActivePopup {
     SandboxUnit,
     SandboxOrb,
     SandboxVersion,
+    SandboxReplayUnit,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 26] = [
+    const ALL: [Self; 27] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -248,6 +249,7 @@ impl ActivePopup {
         Self::SandboxUnit,
         Self::SandboxOrb,
         Self::SandboxVersion,
+        Self::SandboxReplayUnit,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -278,6 +280,7 @@ impl ActivePopup {
             Self::SandboxUnit => popup::Kind::SandboxUnit,
             Self::SandboxOrb => popup::Kind::SandboxOrb,
             Self::SandboxVersion => popup::Kind::ReplayVersion,
+            Self::SandboxReplayUnit => popup::Kind::ReplayUnit,
         }
     }
 }
@@ -1224,10 +1227,17 @@ impl BattleCatsApp {
                 self.rebuild_content()
             }
             Message::FilesChanged(Change::Batch(paths)) => {
+                let replays = paths.iter().any(|path| sandbox::State::is_replay(path));
                 let task = self.apply_changes(paths);
                 self.sync_editor(true);
 
-                task
+                if !replays {
+                    return task;
+                }
+
+                let relisted = self.sandbox_state.relist_replays(&self.settings).map(Message::Sandbox);
+
+                Task::batch([task, relisted])
             }
             Message::IndexPersisted => {
                 self.index_persisting = false;
@@ -1530,9 +1540,9 @@ impl BattleCatsApp {
                 {
                     let setup = self.sandbox_state.setup(&self.app_state, entry);
 
-                    let recording = !self.settings.sandbox.disable_replays;
+                    let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label(&setup));
 
-                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, recording);
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
                 }
 
                 let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
@@ -1727,7 +1737,27 @@ impl BattleCatsApp {
         self.app_state.sandbox.usable_items = global.map_or([true; 6], |map_id| {
             ::emu::runtime::usable_items(map_id, scored.contains(&map_id))
         });
+        let castle = data.selected_stage.as_ref().and_then(|picked| data.registry.stages.get(picked)).and_then(|stage| i32::try_from(stage.anim_base_id).ok());
+
         self.sandbox_state.set_rules(rules.unwrap_or_default(), &self.app_state);
+        self.sandbox_state.set_castle(castle, &self.app_state);
+    }
+
+    fn replay_label(&self, setup: &::emu::runtime::Setup) -> emu::Label {
+        let data = &self.stage_state.data;
+        let picked = data.selected_stage.as_ref();
+        let map = picked.map(|picked| kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map });
+        let units: Vec<(u32, usize)> = setup
+            .lineup
+            .iter()
+            .filter_map(|unit| Some((u32::try_from(unit.unit).ok()?, usize::try_from(unit.form).ok()?)))
+            .collect();
+
+        emu::Label {
+            map: map.and_then(|map| data.registry.maps.get(&map)).map(|map| map.name.clone()).unwrap_or_default(),
+            stage: picked.and_then(|picked| data.registry.stages.get(picked)).map(|stage| stage.name.clone()).unwrap_or_default(),
+            keepsakes: kore::domains::sandbox::replay::keepsakes(&self.vault, &units),
+        }
     }
 
     fn staged_entry(&self) -> Option<::emu::runtime::StageEntry> {
@@ -1753,6 +1783,7 @@ impl BattleCatsApp {
         self.sync_popup(ActivePopup::SandboxUnit, self.sandbox_state.unit_popup_open());
         self.sync_popup(ActivePopup::SandboxOrb, self.sandbox_state.orb_popup_open());
         self.sync_popup(ActivePopup::SandboxVersion, self.sandbox_state.version_popup_open());
+        self.sync_popup(ActivePopup::SandboxReplayUnit, self.sandbox_state.replay_unit_open());
     }
 
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
@@ -1945,6 +1976,22 @@ impl BattleCatsApp {
                         }
 
                         self.sandbox_state.orb_popup_view(self.window_size, &self.app_state).map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxReplayUnit => {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Replay
+                        {
+                            return None;
+                        }
+
+                        self.sandbox_state
+                            .replay_unit_view(
+                                self.window_size,
+                                &self.settings,
+                                &self.app_state,
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                            )
+                            .map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SandboxVersion => {
                         if !matches!(self.current_page, Page::Sandbox) {

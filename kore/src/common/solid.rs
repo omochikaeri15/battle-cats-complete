@@ -1,12 +1,16 @@
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Read};
 use std::path::Path;
+use std::thread;
+
+use zstd::stream::raw::CParameter;
 
 pub const DEFAULT_LEVEL: i32 = 19;
 pub const MIN_LEVEL: i32 = 1;
 pub const MAX_LEVEL: i32 = 19;
 
 const MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
+const JOB_SIZE: u32 = 2 << 20;
 const FILE_MODE: u32 = 0o644;
 
 pub type Reader = tar::Archive<zstd::Decoder<'static, BufReader<File>>>;
@@ -24,7 +28,12 @@ pub struct Writer {
 impl Writer {
     pub fn create(out: &Path, level: i32) -> io::Result<Self> {
         let file = BufWriter::new(File::create(out)?);
-        let encoder = zstd::Encoder::new(file, level.clamp(MIN_LEVEL, MAX_LEVEL))?;
+        let mut encoder = zstd::Encoder::new(file, level.clamp(MIN_LEVEL, MAX_LEVEL))?;
+        let workers = thread::available_parallelism().map_or(1, |count| u32::try_from(count.get()).unwrap_or(1));
+
+        encoder.multithread(workers)?;
+        encoder.set_parameter(CParameter::JobSize(JOB_SIZE))?;
+
         let mut builder = tar::Builder::new(encoder);
 
         builder.mode(tar::HeaderMode::Deterministic);

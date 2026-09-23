@@ -9,7 +9,7 @@ use kore::domains::sandbox::replay as tape;
 use kore::domains::settings::ReplaySource;
 use tracing::warn;
 
-use super::driver::Driver;
+use super::driver::{Driver, Label};
 use super::assets::{DiskAssets, SheetCache};
 use super::input::TouchQueue;
 use super::keys::Action;
@@ -125,9 +125,7 @@ impl Session {
     }
 
     pub fn aspect(&self) -> Option<f32> {
-        let (width, height) = self.driver.screen();
-
-        (self.driver.watching() && width > 0).then(|| height as f32 / width as f32)
+        self.driver.watching().then(|| self.driver.frame_aspect()).filter(|aspect| *aspect > 0.0)
     }
 
     pub fn watch(&mut self, reel: Reel, source: ReplaySource) {
@@ -163,6 +161,10 @@ impl Session {
 
     pub fn equip(&mut self, setup: emu::runtime::Setup) {
         self.driver.set_setup(setup);
+    }
+
+    pub fn label(&mut self, label: Label) {
+        self.driver.label(label);
     }
 
     pub fn configure(&mut self, options: BattleOptions) {
@@ -279,6 +281,7 @@ impl Session {
                         }
 
                         self.load();
+                        self.driver.stamp_deck();
                         self.driver.keep_assets();
                     }
                 }

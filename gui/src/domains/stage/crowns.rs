@@ -12,7 +12,7 @@ const CROWN_BTN_HEIGHT: f32 = 30.0;
 const CROWN_BTN_SPACING: f32 = 5.0;
 const CROWN_TEXT_SIZE: f32 = 14.0;
 
-const CROWN_GLYPH: &str = "\u{1F732}";
+pub(crate) const CROWN_GLYPH: &str = "\u{1F732}";
 
 pub fn view(stage: &Stage, selected_crown: u8) -> Element<'_, super::Message> {
     if stage.max_crowns <= 1 {

@@ -11,6 +11,7 @@ pub const GAME: &str = "game";
 pub const MODS: &str = "mods";
 pub const STUDIO: &str = "studio";
 pub const SANDBOX: &str = "sandbox";
+pub const REPLAY: &str = "replay";
 pub const WORK: &str = ".work";
 
 struct Anchor {

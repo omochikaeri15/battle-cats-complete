@@ -97,7 +97,7 @@ fn spawn_watcher(sender: Sender<Hit>) -> Result<RecommendedWatcher, Lapse> {
         Lapse::Broken
     })?;
 
-    for root in [architecture::MODS, architecture::GAME, architecture::STUDIO] {
+    for root in [architecture::MODS, architecture::GAME, architecture::STUDIO, architecture::SANDBOX] {
         let path = Path::new(root);
 
         if !path.exists() && let Err(err) = fs::create_dir_all(path) {
@@ -166,7 +166,7 @@ fn is_relevant(path: &Path) -> bool {
         .collect();
 
     let watched = |part: &String| {
-        part == architecture::GAME || part == architecture::MODS || part == architecture::STUDIO
+        part == architecture::GAME || part == architecture::MODS || part == architecture::STUDIO || part == architecture::SANDBOX
     };
 
     let Some(root) = parts.iter().position(watched) else {

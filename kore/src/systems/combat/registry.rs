@@ -6,6 +6,7 @@ use nyanko::combat::{AttrValue, Entity, Faction, Identity, REGISTRY};
 use nyanko::files::{img015, Param};
 use serde::{Deserialize, Serialize};
 
+use crate::common::frames;
 use crate::systems::combat::CustomIcon;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -85,7 +86,7 @@ fn finite(value: AttrValue) -> i32 {
 }
 
 fn fmt_time(frames: i32) -> String {
-    format!("{:.2}s^{}f", frames as f32 / 30.0, frames)
+    frames::label(frames)
 }
 
 fn fmt_range(min_range: i32, max_range: i32) -> String {
@@ -1357,7 +1358,7 @@ pub const STAT_COOLDOWN: StatsDef = StatsDef {
     name: "Cooldown",
     display_name: "Cooldown",
     get_value: |ctx| (ctx.stats.cooldown - 264).max(60),
-    formatter: |cooldown| format!("{:.2}s^{}f", cooldown as f32 / 30.0, cooldown),
+    formatter: frames::label,
     talent_fmt: Some(|cooldown| format!("{}f", cooldown)),
     linked_talent_id: Some(26),
     talent_modifier_fmt: Some(|frames, _| format!("(-{}f)", frames)),

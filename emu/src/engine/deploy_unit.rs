@@ -7,8 +7,8 @@ use super::{
     get_castle_enemy_row, get_deck_cooldown, get_effective_deploy_cost, get_global_map_id,
     get_money, get_orb_value_max, get_pos_x, get_setting, get_slot_unit_id, get_special_rule,
     get_special_rule_params, get_standing_range, get_unit_max_level, get_unit_rarity,
-    get_unit_recharge, has_fixed_lineup, is_deploy_blocked, is_score_stage, level_cell_base,
-    level_cell_plus, max_i32, min_i32, orb_deploy_condition, play_sound, set_attack_end_mode,
+    get_unit_recharge, has_fixed_lineup, is_deploy_blocked, is_score_stage, level_cell_plus,
+    level_cell_base, max_i32, min_i32, orb_deploy_condition, play_sound, set_attack_end_mode,
     set_attacks_remaining, set_boss_wave_immune, set_conjure_deck_slot, set_deck_cooldown,
     set_dodge_chance, set_dodge_duration, set_entity_state, set_paid_cost, set_pos_x,
     slot_conjure_ready, slot_deploy_permitted, slot_occupied, sound_manager, spawn_entity,
@@ -66,14 +66,14 @@ pub fn deploy_unit(
             }
         }
 
-        let mut base_cap = 0x3e7i32;
         let mut plus_cap = 0x3e7i32;
+        let mut base_cap = 0x3e7i32;
 
         if !stage_not_sealed(ctx, get_castle_enemy_row(ctx)?.wrapping_add(-2))? {
             let cap = get_altar_level_cap(ctx, get_castle_enemy_row(ctx)?.wrapping_add(-2))?;
 
-            plus_cap = if cap != -1 { cap } else { 0x3e7 };
-            base_cap = 0;
+            base_cap = if cap != -1 { cap } else { 0x3e7 };
+            plus_cap = 0;
         }
 
         'spent: {
@@ -94,14 +94,6 @@ pub fn deploy_unit(
                 }
 
                 let spirit_button = slot.wrapping_add(0xb);
-                let plus = min_i32(
-                    level_cell_plus(
-                        ctx,
-                        ((get_button_unit_id(ctx, faction, slot)? as i64) * 8
-                            + AppContext::UNIT_LEVELS as i64) as usize,
-                    )?,
-                    plus_cap,
-                );
                 let base = min_i32(
                     level_cell_base(
                         ctx,
@@ -110,7 +102,15 @@ pub fn deploy_unit(
                     )?,
                     base_cap,
                 );
-                let mut level = base.wrapping_add(plus);
+                let plus = min_i32(
+                    level_cell_plus(
+                        ctx,
+                        ((get_button_unit_id(ctx, faction, slot)? as i64) * 8
+                            + AppContext::UNIT_LEVELS as i64) as usize,
+                    )?,
+                    plus_cap,
+                );
+                let mut level = plus.wrapping_add(base);
                 let mut last = level;
 
                 if level
@@ -207,14 +207,6 @@ pub fn deploy_unit(
                 break 'spent;
             }
 
-            let plus = min_i32(
-                level_cell_plus(
-                    ctx,
-                    ((get_button_unit_id(ctx, faction, slot)? as i64) * 8
-                        + AppContext::UNIT_LEVELS as i64) as usize,
-                )?,
-                plus_cap,
-            );
             let base = min_i32(
                 level_cell_base(
                     ctx,
@@ -223,7 +215,15 @@ pub fn deploy_unit(
                 )?,
                 base_cap,
             );
-            let mut level = base.wrapping_add(plus);
+            let plus = min_i32(
+                level_cell_plus(
+                    ctx,
+                    ((get_button_unit_id(ctx, faction, slot)? as i64) * 8
+                        + AppContext::UNIT_LEVELS as i64) as usize,
+                )?,
+                plus_cap,
+            );
+            let mut level = plus.wrapping_add(base);
 
             if has_fixed_lineup(ctx, -1, -1, -1)? && !ctx.fixed_lineup_store.units.is_empty() {
                 let mut listed = 0usize;

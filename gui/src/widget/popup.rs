@@ -122,9 +122,10 @@ pub enum Kind {
     SandboxUnit,
     SandboxOrb,
     ReplayVersion,
+    ReplayUnit,
 }
 
-pub(crate) const KIND_COUNT: usize = 47;
+pub(crate) const KIND_COUNT: usize = 48;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -174,6 +175,7 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::SandboxUnit,
     Kind::SandboxOrb,
     Kind::ReplayVersion,
+    Kind::ReplayUnit,
 ];
 
 impl Kind {
@@ -226,6 +228,7 @@ impl Kind {
             Self::SandboxUnit => "sandbox_unit",
             Self::SandboxOrb => "sandbox_orb",
             Self::ReplayVersion => "replay_version",
+            Self::ReplayUnit => "replay_unit",
         }
     }
 

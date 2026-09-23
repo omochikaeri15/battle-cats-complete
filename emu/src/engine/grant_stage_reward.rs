@@ -3,7 +3,7 @@ use crate::Fault;
 use super::{
     AppContext, FormatArg, UNIT_BUY, UNIT_BUY_STRIDE, add_resource, analytics_params,
     event_unit_slot_by_item, find_item_index, get_global_map_id, get_powerup, get_stage_index,
-    get_crown_level, level_cell_add, level_cell_base, mission_progress, orb_inventory_add,
+    get_crown_level, level_cell_add, level_cell_plus, mission_progress, orb_inventory_add,
     reward_unit_id, unit_buy_field, xor_row46_get,
 };
 
@@ -162,12 +162,12 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
         let cell = ((unit as i64) * 8 + AppContext::UNIT_LEVELS as i64) as usize;
         let buy = (((unit as i64) << 8) + UNIT_BUY as i64) as usize;
 
-        if level_cell_base(ctx, cell)? >= unit_buy_field(ctx.bytes_from(buy)?, 0x13)? {
+        if level_cell_plus(ctx, cell)? >= unit_buy_field(ctx.bytes_from(buy)?, 0x13)? {
             return Ok(5);
         }
 
         let result = 3
-            + (level_cell_base(ctx, cell)?
+            + (level_cell_plus(ctx, cell)?
                 >= unit_buy_field(ctx.bytes_from(buy)?, 0x13)?.wrapping_sub(1))
                 as i32;
 

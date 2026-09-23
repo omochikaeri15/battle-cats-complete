@@ -23,12 +23,15 @@ pub struct Options {
     pub vibrate: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(default)]
 pub struct Stage {
     pub map_id: i32,
     pub stage: i32,
     pub layout: Option<i32>,
     pub crown: i32,
+    pub map_name: String,
+    pub stage_name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
@@ -86,4 +89,7 @@ pub struct Save {
     pub screen: Screen,
     pub options: Options,
     pub setup: Setup,
+    pub icons: Vec<String>,
+    pub costs: Vec<i32>,
+    pub altar_cap: Option<i32>,
 }

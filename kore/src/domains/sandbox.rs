@@ -1,3 +1,4 @@
+pub mod altar;
 pub mod base;
 pub mod config;
 pub mod keybind;
