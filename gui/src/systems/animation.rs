@@ -199,7 +199,7 @@ impl State {
     }
 
     pub fn selected_anim(&self) -> Option<&PathBuf> {
-        self.data.current_motion().and_then(|motion| motion.file.as_ref())
+        self.data.current_motion().and_then(|motion| motion.file.as_ref().map(|file| &file.path))
     }
 
     fn sync_playhead(&mut self) {

@@ -5,7 +5,6 @@ mod enemy;
 mod item;
 mod stage;
 
-use std::fs;
 use std::sync::{Arc, RwLock};
 
 use tracing::warn;
@@ -95,9 +94,11 @@ fn named(vfs: &Vfs, filename: &str) -> Vec<(String, Vec<u8>)> {
     vfs.list(filename)
         .iter()
         .filter_map(|path| {
-            let bytes = fs::read(path)
+            let bytes = vfs
+                .read(path)
                 .inspect_err(|err| warn!(path = %path.display(), "vds layered read failed: {}", err))
-                .ok()?;
+                .ok()?
+                .to_vec();
 
             let name = path.file_name()?.to_string_lossy().into_owned();
 

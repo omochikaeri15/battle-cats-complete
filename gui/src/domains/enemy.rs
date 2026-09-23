@@ -761,13 +761,13 @@ impl EnemyState {
 
     fn enemy_icon(&self, path: Option<&PathBuf>, vfs: &Vfs) -> HeaderIcon {
         if let Some(path) = path
-            && let Some(icon) = header_icon::load(&self.header_icon_cache, path)
+            && let Some(icon) = header_icon::load(&self.header_icon_cache, &vfs.source(path))
         {
             return icon;
         }
 
         vfs.find(EMPTY_CAT_ICON)
-            .and_then(|fallback| header_icon::load(&self.header_icon_cache, &fallback))
+            .and_then(|fallback| header_icon::load(&self.header_icon_cache, &vfs.source(&fallback)))
             .unwrap_or_else(|| self.header_icon_dummy.clone())
     }
 

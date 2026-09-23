@@ -93,4 +93,5 @@ pub struct Save {
     pub icons: Vec<String>,
     pub costs: Vec<i32>,
     pub altar_cap: Option<i32>,
+    pub terminated: bool,
 }

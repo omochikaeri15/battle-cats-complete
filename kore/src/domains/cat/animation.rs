@@ -66,7 +66,7 @@ fn spirit_motion(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<Motion> {
     let spirit_id = conjure_id as u32;
     let base = vec![files::anim_base_filename(spirit_id, 0, (-1, -1))];
     let rig = animation::rigging(vfs, &format!("spirit_{}", spirit_id), &base)?;
-    let anim = vfs.find(&files::maanim_file(spirit_id, 0, (-1, -1), SPIRIT_ATTACK))?;
+    let anim = vfs.find(&files::maanim_file(spirit_id, 0, (-1, -1), SPIRIT_ATTACK)).map(|path| vfs.source(&path))?;
 
     Some(Motion {
         name: Some("Spirit".to_string()),

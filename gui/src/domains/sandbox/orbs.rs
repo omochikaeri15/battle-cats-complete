@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fs;
 use std::sync::Arc;
 
 use iced::alignment::Vertical;
@@ -318,7 +317,8 @@ fn effect_names(vfs: &Vfs) -> Vec<String> {
     let named = vfs.variants(EXPLANATION).into_iter().next().unwrap_or_else(|| EXPLANATION.to_owned());
 
     vfs.find(named.as_str())
-        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|path| vfs.read(&path).ok())
+        .and_then(|bytes| String::from_utf8(bytes.to_vec()).ok())
         .map_or_else(Vec::new, |content| {
             content
                 .lines()

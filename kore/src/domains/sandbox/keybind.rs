@@ -16,12 +16,13 @@ pub enum Bind {
     Right,
     Pause,
     Restart,
+    Diagnostics,
 }
 
 const SLOT_KEYS: [&str; 10] = ["q", "w", "e", "r", "t", "a", "s", "d", "f", "g"];
 
 impl Bind {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Slot(0),
         Self::Slot(1),
         Self::Slot(2),
@@ -43,6 +44,7 @@ impl Bind {
         Self::Right,
         Self::Pause,
         Self::Restart,
+        Self::Diagnostics,
     ];
 
     pub fn id(self) -> String {
@@ -59,6 +61,7 @@ impl Bind {
             Self::Right => "right".to_owned(),
             Self::Pause => "pause".to_owned(),
             Self::Restart => "restart".to_owned(),
+            Self::Diagnostics => "diagnostics".to_owned(),
         }
     }
 
@@ -76,6 +79,7 @@ impl Bind {
             Self::Right => "Move Camera Right".to_owned(),
             Self::Pause => "Pause (hold to Escape)".to_owned(),
             Self::Restart => "Restart Battle (double tap)".to_owned(),
+            Self::Diagnostics => "Toggle Live Diagnostics".to_owned(),
         }
     }
 
@@ -93,6 +97,7 @@ impl Bind {
             Self::Right => "ArrowRight",
             Self::Pause => "Escape",
             Self::Restart => "`",
+            Self::Diagnostics => "F3",
         }
     }
 }

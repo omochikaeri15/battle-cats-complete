@@ -356,7 +356,7 @@ pub struct Feed<'a> {
 
 pub fn overlay<'a, Message: 'a>(
     base: Element<'a, Message>,
-    above: Option<Element<'a, Message>>,
+    above: Element<'a, Message>,
     feed: Feed<'_>,
 ) -> Element<'a, Message> {
     let Feed {
@@ -385,8 +385,5 @@ pub fn overlay<'a, Message: 'a>(
     .width(Length::Fill)
     .height(Length::Fill);
 
-    match above {
-        Some(above) => iced::widget::stack![base, painted, above].into(),
-        None => iced::widget::stack![base, painted].into(),
-    }
+    iced::widget::stack![base, painted, above].into()
 }

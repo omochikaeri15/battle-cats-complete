@@ -113,11 +113,15 @@ impl Speaker {
     }
 
     fn read(&self, name: &str) -> Option<Vec<u8>> {
-        let path = self.files.borrow().get(name).cloned()?;
+        let source = self.files.borrow().get(name).cloned()?;
 
-        self.ledger.borrow_mut().note(name, &path);
+        if !source.in_memory() {
+            self.ledger.borrow_mut().note(name, &source.path);
+        }
 
-        std::fs::read(path)
+        source
+            .read()
+            .map(|bytes| bytes.to_vec())
             .inspect_err(|error| warn!("emu: {name} could not be read: {error}"))
             .ok()
     }

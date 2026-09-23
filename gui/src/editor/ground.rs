@@ -12,6 +12,7 @@ use kore::common::preview::{self, Stamp};
 use kore::domains::mods;
 use kore::domains::settings::EditorMode;
 use kore::Vfs;
+use kore::Source;
 
 use super::figures::resolved::Rule;
 
@@ -1542,7 +1543,7 @@ impl State {
         }
 
         let path = enemies.get(&id)?.icon_path.as_ref()?;
-        let handle = crate::common::item_icon::load_scaled(path, ICON_SIZE as u32)?;
+        let handle = crate::common::item_icon::load_scaled(&Source::disk(path), ICON_SIZE as u32)?;
         self.icons.borrow_mut().insert(id, handle.clone());
 
         Some(handle)

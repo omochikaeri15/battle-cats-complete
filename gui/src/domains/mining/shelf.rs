@@ -1,5 +1,6 @@
 use super::*;
 use iced::widget::{column, container, Column, Space};
+use kore::Source;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Seam {
@@ -298,7 +299,7 @@ impl State {
             let loaded = wanted
                 .into_iter()
                 .map(|path| {
-                    let handle = item_icon::load_boxed(&path, ART_CANVAS);
+                    let handle = item_icon::load_boxed(&Source::disk(&path), ART_CANVAS);
 
                     (path, handle)
                 })

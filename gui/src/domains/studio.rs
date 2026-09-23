@@ -27,12 +27,12 @@ use nyanko::graphics::tools::timeline as curve;
 use crate::app::state::{AnimState, StudioState};
 use crate::app::theme;
 use crate::editor::{self, Target};
-use crate::systems::animation::{self as viewer, controls, overlay, PLAYING_TICK, RESTING_TICK};
+use crate::systems::animation::{self as viewer, controls, PLAYING_TICK, RESTING_TICK};
 
 use crate::common::feedback::{self, Slot, LOCKED_NOTICE};
 use crate::common::{dialog, fonts, glyphs};
 use crate::common::row_window::{self, RowWindow};
-use crate::widget::{branches, list_row, open_mark, picture, popup, slide, smooth_scroll, Guide, Slide, Tracer, SLIDE_DURATION};
+use crate::widget::{branches, list_row, open_mark, picture, popup, smooth_scroll, toast, Guide, Tone, Tracer, SLIDE_DURATION};
 
 mod blame;
 mod documents;
@@ -93,10 +93,6 @@ const KEY_ROW_INSET: f32 = 2.0;
 const RECALL_CAP: usize = 5;
 const HISTORY_SETS: usize = 3;
 const NOTICE_EXPIRY: Duration = Duration::from_secs(6);
-const NOTICE_PAD_X: f32 = 7.0;
-const NOTICE_PAD_Y: f32 = 7.0;
-const NOTICE_OVERHANG: f32 = 4.0;
-const NOTICE_TEXT_SIZE: f32 = 13.0;
 const RENAME_DELAY: Duration = Duration::from_millis(700);
 const KEY_HEAD_HEIGHT: f32 = 19.0;
 const PAGE_DIALS: usize = 8;
@@ -2906,7 +2902,7 @@ impl Session {
             side,
             attacking: self.faulting.attacking(),
             rigged: self.blame.rigged(),
-            motions: self.viewer.motions().map(|(index, motion)| (index, motion.file.clone())).collect(),
+            motions: self.viewer.motions().map(|(index, motion)| (index, motion.file.as_ref().map(|file| file.path.clone()))).collect(),
             open: self.draft.as_ref().map(|draft| (draft.backing.read_from.clone(), draft.doc.shared())),
         };
 

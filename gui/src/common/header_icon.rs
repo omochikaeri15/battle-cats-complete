@@ -2,9 +2,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use kore::Source;
+
 use iced::widget::image::Handle;
 
-use kore::common::gfx::autocrop;
+use kore::common::gfx::{autocrop, open_image};
 
 #[derive(Clone)]
 pub(crate) struct HeaderIcon {
@@ -27,23 +29,19 @@ impl HeaderIcon {
 
 pub(crate) type Cache = RefCell<HashMap<PathBuf, Option<HeaderIcon>>>;
 
-pub(crate) fn load(cache: &Cache, path: &PathBuf) -> Option<HeaderIcon> {
-    if let Some(cached) = cache.borrow().get(path) {
+pub(crate) fn load(cache: &Cache, source: &Source) -> Option<HeaderIcon> {
+    if let Some(cached) = cache.borrow().get(&source.path) {
         return cached.clone();
     }
 
-    let icon = decode(path);
-    cache.borrow_mut().insert(path.clone(), icon.clone());
+    let icon = decode(source);
+    cache.borrow_mut().insert(source.path.clone(), icon.clone());
 
     icon
 }
 
-fn decode(path: &PathBuf) -> Option<HeaderIcon> {
-    if !path.exists() {
-        return None;
-    }
-
-    let img = image::open(path).ok()?;
+fn decode(source: &Source) -> Option<HeaderIcon> {
+    let img = open_image(source)?;
     let rgba = autocrop(img.to_rgba8());
     let (width, height) = rgba.dimensions();
 

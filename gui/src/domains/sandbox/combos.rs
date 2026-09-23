@@ -381,7 +381,7 @@ impl State {
         let mut icons = Row::new().spacing(ICON_GAP).align_y(Vertical::Center);
 
         for member in &card.combo.members {
-            let drawn = member.icon.as_ref().and_then(|path| header_icon::load(&self.decoded, path));
+            let drawn = member.icon.as_ref().and_then(|source| header_icon::load(&self.decoded, source));
 
             let slot: Element<'a, Message> = match drawn {
                 Some(icon) => {

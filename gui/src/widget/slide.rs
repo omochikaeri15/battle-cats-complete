@@ -202,6 +202,10 @@ impl<'a, Message> Widget<Message, Theme, iced::Renderer> for Sliding<'a, Message
         let state: &mut SlideState = tree.state.downcast_mut();
         let animating = state.animation.is_animating(*now);
 
+        if self.floating {
+            state.factor = state.animation.interpolate(0.0, 1.0, *now).clamp(0.0, 1.0);
+        }
+
         if !self.floating && (animating || state.was_animating) && state.settled != Some(*now) {
             state.settled = Some(*now);
             shell.invalidate_layout();

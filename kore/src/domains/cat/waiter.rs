@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use nyanko::cat::unitid;
@@ -18,7 +17,7 @@ pub fn unitexplanation(vfs: &Vfs, cat_id: u32) -> UnitExplanation {
     let base_filename = format!("Unit_Explanation{}.csv", cat_id + 1);
 
     for file_path in vfs.list(&base_filename) {
-        let Ok(bytes) = fs::read(&file_path) else {
+        let Ok(bytes) = vfs.read(&file_path) else {
             continue;
         };
 
@@ -42,7 +41,7 @@ pub fn unitexplanation_source(vfs: &Vfs, cat_id: u32, form: usize) -> Option<Pat
     let mut fallback = None;
 
     for file_path in vfs.list(&base_filename) {
-        let Ok(bytes) = fs::read(&file_path) else {
+        let Ok(bytes) = vfs.read(&file_path) else {
             continue;
         };
 
@@ -70,7 +69,7 @@ pub fn unitid(vfs: &Vfs, cat_id: i32) -> Option<Vec<Entity>> {
 
     let resolved_path = vfs.find(&file_name)?;
 
-    let bytes = fs::read(resolved_path).ok()?;
+    let bytes = vfs.read(&resolved_path).ok()?;
 
     unitid::parse(&bytes, None).ok()
 }
@@ -105,7 +104,7 @@ pub(crate) fn nyancombodata(vfs: &Vfs) -> Vec<NyancomboData> {
         return Vec::new();
     };
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         return Vec::new();
     };
 
@@ -119,7 +118,7 @@ pub(crate) fn nyancombofilter(vfs: &Vfs) -> Vec<NyancomboFilter> {
         return Vec::new();
     };
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         return Vec::new();
     };
 
@@ -133,7 +132,7 @@ pub(crate) fn nyancomboparam(vfs: &Vfs) -> Vec<NyancomboParam> {
         return Vec::new();
     };
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         return Vec::new();
     };
 
@@ -147,7 +146,7 @@ pub(crate) fn equipmentlist(vfs: &Vfs) -> Vec<Equipment> {
         return Vec::new();
     };
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         return Vec::new();
     };
 
@@ -161,7 +160,7 @@ pub(crate) fn equipmentslot(vfs: &Vfs) -> HashMap<u32, usize> {
         return HashMap::new();
     };
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         return HashMap::new();
     };
 
@@ -177,7 +176,7 @@ pub fn nyancombo_source(vfs: &Vfs, line: usize) -> Option<PathBuf> {
     let mut fallback = None;
 
     for file_path in vfs.list(table.file()) {
-        let Ok(bytes) = fs::read(&file_path) else {
+        let Ok(bytes) = vfs.read(&file_path) else {
             continue;
         };
 
@@ -200,7 +199,7 @@ pub(crate) fn nyancombo(vfs: &Vfs, table: ComboText) -> Vec<Option<String>> {
     let mut merged: Vec<Option<String>> = Vec::new();
 
     for file_path in vfs.list(table.file()) {
-        let Ok(bytes) = fs::read(&file_path) else {
+        let Ok(bytes) = vfs.read(&file_path) else {
             continue;
         };
 
@@ -233,6 +232,7 @@ fn delimiter(path: &Path) -> Separator {
 #[cfg(test)]
 mod tests {
     use std::env;
+    use std::fs;
 
     use super::*;
 

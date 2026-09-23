@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use iced::widget::image::Handle;
 use nyanko::cat::unit::TalentGroup;
 
-use kore::common::gfx::autocrop;
+use kore::common::gfx::{autocrop, open_image};
 use kore::Vfs;
 
 pub(crate) type Cache = RefCell<HashMap<String, Option<Handle>>>;
@@ -24,7 +24,7 @@ pub(crate) fn load(cache: &Cache, group: &TalentGroup, vfs: &Vfs, pristine: bool
         return cached.clone();
     }
 
-    let handle = image::open(&path).ok().map(|image| {
+    let handle = open_image(&vfs.source(&path)).map(|image| {
         let rgba = autocrop(image.to_rgba8());
 
         Handle::from_rgba(rgba.width(), rgba.height(), rgba.into_raw())

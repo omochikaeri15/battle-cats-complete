@@ -16,6 +16,7 @@ use kore::domains::sandbox::replay::{self as tape, Cue, Recording};
 use tracing::{info, trace, warn};
 
 use super::assets::{DiskAssets, FileIndex, Ledger, SharedLedger, SheetCache};
+use super::diagnostics::{self, Diagnostics};
 use super::input::{Touch, TouchQueue};
 use super::keys::{Action, Keys, LEAVE_AFTER};
 use super::replay;
@@ -81,6 +82,7 @@ pub struct Driver {
     listener: Option<SharedLog>,
     leaving: Option<u16>,
     fielded: Option<BTreeSet<u32>>,
+    cut: bool,
 }
 
 #[derive(Default)]
@@ -163,6 +165,7 @@ impl Driver {
             listener,
             leaving: None,
             fielded: None,
+            cut: false,
         };
 
         driver.host();
@@ -243,6 +246,7 @@ impl Driver {
         self.finished = false;
         self.leaving = None;
         self.fielded = None;
+        self.cut = false;
         self.ledger.borrow_mut().disarm();
     }
 
@@ -277,6 +281,7 @@ impl Driver {
             icons: Vec::new(),
             costs: Vec::new(),
             altar_cap: None,
+            terminated: false,
         };
 
         if let Err(error) = recording.write_save(&save) {
@@ -366,6 +371,41 @@ impl Driver {
         self.seeds = replay::seeds_from(save.seeds);
         self.adopt_index(index);
         self.tape = Tape::Playing { frames, at: 0 };
+        self.cut = save.terminated;
+    }
+
+    pub fn cut_recording(&mut self) -> bool {
+        if self.cut {
+            return false;
+        }
+
+        let Tape::Recording(recording) = &mut self.tape else {
+            return false;
+        };
+
+        self.cut = true;
+
+        if let Some(save) = self.recorded.as_mut() {
+            save.terminated = true;
+
+            if let Err(error) = recording.write_save(save) {
+                warn!("emu: the latest battle could not be marked as terminated: {error}");
+            }
+        }
+
+        if let Err(error) = recording.finish() {
+            warn!("emu: the latest battle could not be written out: {error}");
+        }
+
+        true
+    }
+
+    pub fn cut(&self) -> bool {
+        self.cut
+    }
+
+    pub fn diagnose(&self) -> Diagnostics {
+        diagnostics::read(&self.ctx)
     }
 
     pub fn end_playback(&mut self) {
@@ -872,7 +912,9 @@ impl Driver {
         let before = mem::take(&mut self.pending);
         let played = self.pump_input(script);
 
-        if let Tape::Recording(recording) = &mut self.tape {
+        if !self.cut
+            && let Tape::Recording(recording) = &mut self.tape
+        {
             let line: Vec<Cue> = before.into_iter().chain(played).collect();
 
             if let Err(error) = recording.frame(&line) {

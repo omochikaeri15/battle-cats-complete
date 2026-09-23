@@ -35,6 +35,7 @@ use kore::domains::settings::{ScannerConfig, Settings};
 use kore::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
 use kore::common::context::GlobalContext;
 use kore::Vfs;
+use kore::Source;
 
 use crate::app::theme;
 
@@ -994,7 +995,7 @@ impl State {
             return cached.clone();
         }
 
-        let handle = item_icon::load_cropped(path)
+        let handle = item_icon::load_cropped(&Source::disk(path))
             .and_then(|(handle, width, height)| {
                 (width >= PLACEHOLDER_EDGE && height >= PLACEHOLDER_EDGE).then_some(handle)
             });
@@ -1012,9 +1013,9 @@ impl State {
         }
 
         let handle = if fill {
-            item_icon::load_scaled(path, PORTRAIT_CANVAS)
+            item_icon::load_scaled(&Source::disk(path), PORTRAIT_CANVAS)
         } else {
-            item_icon::load_boxed(path, PORTRAIT_CANVAS)
+            item_icon::load_boxed(&Source::disk(path), PORTRAIT_CANVAS)
         };
 
         self.portraits.borrow_mut().insert(key, handle.clone());

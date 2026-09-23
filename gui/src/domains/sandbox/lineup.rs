@@ -15,6 +15,8 @@ use kore::domains::sandbox::rules::Rules;
 use kore::domains::sandbox::{mount_of, Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
 use kore::domains::settings::Settings;
 use kore::Vfs;
+use kore::Source;
+use kore::common::gfx::open_image;
 use nyanko::combat::Entity;
 
 use crate::app::state::AppState;
@@ -373,7 +375,7 @@ impl State {
         self.icons.clear();
 
         if self.coin.is_none() {
-            self.coin = ctx.vault.vfs.find(NP_ICON).and_then(|path| image::open(path).ok()).map(|opened| {
+            self.coin = ctx.vault.vfs.find(NP_ICON).and_then(|path| open_image(&ctx.vault.vfs.source(&path))).map(|opened| {
                 let cropped = kore::common::gfx::autocrop(opened.to_rgba8());
 
                 Handle::from_rgba(cropped.width(), cropped.height(), cropped.into_raw())
@@ -386,7 +388,7 @@ impl State {
                 None => scanner::orphan_icon(&ctx.vault.vfs, member.id, member.form),
             };
 
-            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, &path)) {
+            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, &ctx.vault.vfs.source(&path))) {
                 self.icons.insert((member.id, member.form), icon.handle);
             }
         }
@@ -855,7 +857,7 @@ impl State {
                     .get(form)
                     .or_else(|| cat.deploy_icon_paths.get(shown))
                     .and_then(Option::as_ref)
-                    .and_then(|path| header_icon::load(&self.decoded, path))
+                    .and_then(|path| header_icon::load(&self.decoded, &Source::disk(path)))
                     .map(|icon| icon.handle)
             }),
         };

@@ -3,13 +3,13 @@ pub mod export;
 pub mod posing;
 
 use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use nyanko::graphics::rig::Animation;
 use serde::{Deserialize, Serialize};
 
-use crate::Vfs;
+use crate::{Source, Vfs};
 
 const LOOP_CEILING: i32 = 999_999;
 
@@ -47,9 +47,9 @@ pub enum Loop {
 
 pub struct Rigging {
     pub id: String,
-    pub png: PathBuf,
-    pub cut: PathBuf,
-    pub model: PathBuf,
+    pub png: Source,
+    pub cut: Source,
+    pub model: Source,
 }
 
 pub struct Motion {
@@ -58,7 +58,7 @@ pub struct Motion {
     pub role: Option<Role>,
     pub looping: Loop,
     pub rig: Arc<Rigging>,
-    pub file: Option<PathBuf>,
+    pub file: Option<Source>,
 }
 
 #[derive(Default)]
@@ -122,8 +122,8 @@ impl Motion {
         }
 
         self.file
-            .as_deref()
-            .and_then(Path::file_stem)
+            .as_ref()
+            .and_then(|file| file.path.file_stem())
             .and_then(OsStr::to_str)
             .map_or_else(|| self.rig.id.clone(), str::to_string)
     }
@@ -150,9 +150,10 @@ pub(crate) fn standard(index: usize) -> Option<(&'static str, usize, Role)> {
 }
 
 pub(crate) fn rigging(vfs: &Vfs, id: &str, bases: &[String]) -> Option<Arc<Rigging>> {
-    let resolve = |ext: &str| -> Option<PathBuf> {
+    let resolve = |ext: &str| -> Option<Source> {
         let names: Vec<String> = bases.iter().map(|base| format!("{}.{}", base, ext)).collect();
-        vfs.find(names.as_slice())
+
+        vfs.find(names.as_slice()).map(|path| vfs.source(&path))
     };
 
     Some(Arc::new(Rigging {
@@ -197,8 +198,8 @@ fn maanim_files(vfs: &Vfs, bases: &[String]) -> Vec<(String, String, PathBuf)> {
     found
 }
 
-pub(crate) fn maanims(vfs: &Vfs, bases: &[String]) -> Vec<(String, PathBuf)> {
-    maanim_files(vfs, bases).into_iter().map(|(suffix, _, path)| (suffix, path)).collect()
+pub(crate) fn maanims(vfs: &Vfs, bases: &[String]) -> Vec<(String, Source)> {
+    maanim_files(vfs, bases).into_iter().map(|(suffix, _, path)| (suffix, vfs.source(&path))).collect()
 }
 
 pub struct RigFiles {

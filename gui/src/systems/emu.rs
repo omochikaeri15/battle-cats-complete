@@ -1,4 +1,5 @@
 mod assets;
+mod diagnostics;
 mod driver;
 mod input;
 mod keys;
@@ -14,6 +15,7 @@ mod text;
 mod video;
 mod viewport;
 
+pub(crate) use diagnostics::{Diagnostics, Occupant, Vitals};
 pub(crate) use driver::Label;
 pub(crate) use session::{Reel, Session};
 pub(crate) use assets::SheetCache;

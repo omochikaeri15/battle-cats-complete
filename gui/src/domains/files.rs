@@ -26,7 +26,7 @@ use crate::common::feedback::{LOCKED_NOTICE, MANIFEST_BUILDING_NOTICE, MANIFEST_
 use crate::common::feedback::Slot;
 use crate::common::fonts;
 use crate::common::watcher;
-use crate::widget::{slide, Slide};
+use crate::widget::{slide, toast, Slide, Tone};
 
 const PANEL_WIDTH: f32 = 320.0;
 const PANEL_PADDING: f32 = 8.0;
@@ -60,10 +60,6 @@ const SCROLLBAR_WIDTH: f32 = 6.0;
 const SCROLLBAR_MARGIN: f32 = 2.0;
 const SCROLLBAR_ALLOWANCE: f32 = 14.0;
 
-const NOTICE_PADDING_X: f32 = 7.0;
-const NOTICE_PADDING_Y: f32 = 7.0;
-const NOTICE_OVERHANG: f32 = 4.0;
-const NOTICE_TEXT_SIZE: f32 = 13.0;
 const NOTICE_EXPIRY: Duration = Duration::from_secs(3);
 
 const EMPTY_LABEL: &str = "No Files Found on Mount";
@@ -665,22 +661,7 @@ impl State {
     }
 
     fn view_notice(&self) -> Element<'_, Message> {
-        let banner = container(theme::centered_text(self.notice_text).size(NOTICE_TEXT_SIZE))
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center)
-            .padding(Padding {
-                top: NOTICE_OVERHANG + NOTICE_PADDING_Y,
-                right: NOTICE_PADDING_X,
-                bottom: NOTICE_PADDING_Y,
-                left: NOTICE_PADDING_X,
-            })
-            .style(theme::notice_banner);
-
-        container(slide(banner, self.notice.get().is_some(), Slide::Up))
-            .width(Length::Fill)
-            .align_x(Horizontal::Center)
-            .padding(Padding::default().top(-NOTICE_OVERHANG))
-            .into()
+        toast(self.notice_text, None, self.notice.get().is_some(), Tone::Alert)
     }
 
     fn view_toggle(&self) -> Element<'_, Message> {

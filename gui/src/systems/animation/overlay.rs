@@ -1,23 +1,14 @@
-use iced::alignment::{Horizontal, Vertical};
-use iced::border::Radius;
 use iced::mouse;
 use iced::widget::canvas;
 use iced::widget::canvas::{Geometry, Path, Stroke};
-use iced::widget::{container, text};
-use iced::{Background, Border, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector};
+use iced::{Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector};
 
-use crate::app::theme;
-use crate::widget::{slide, Slide};
+use crate::widget::{toast, Tone};
 
 use super::canvas as viewer;
 
 const MIN_SELECTION_AREA: f32 = 25.0;
 const HINT_TEXT: &str = "Right click & drag to set camera";
-const HINT_TEXT_SIZE: f32 = 13.0;
-const HINT_WIDTH: f32 = 260.0;
-const HINT_HEIGHT: f32 = 28.0;
-const HINT_ALPHA: f32 = 160.0 / 255.0;
-const HINT_SHADE: f32 = 0.15;
 const DIM_ALPHA: f32 = 125.0 / 255.0;
 
 #[derive(Default)]
@@ -53,43 +44,7 @@ impl State {
     }
 
     pub fn hint_view<'a, M: 'a>(&self) -> Element<'a, M> {
-        hint(HINT_TEXT, self.selecting)
-    }
-}
-
-pub fn hint<'a, M: 'a>(label: &'a str, showing: bool) -> Element<'a, M> {
-    let banner = container(text(label).size(HINT_TEXT_SIZE).color(Color::WHITE))
-        .width(Length::Fixed(HINT_WIDTH))
-        .height(Length::Fixed(HINT_HEIGHT))
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .style(hint_style);
-
-    container(slide(banner, showing, Slide::Up).floating())
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Top)
-        .into()
-}
-
-fn hint_style(theme: &Theme) -> container::Style {
-    let palette = theme.palette();
-    let shade = |c: f32| c * HINT_SHADE;
-
-    container::Style {
-        background: Some(Background::Color(Color {
-            r: shade(palette.background.r),
-            g: shade(palette.background.g),
-            b: shade(palette.background.b),
-            a: HINT_ALPHA,
-        })),
-        border: Border {
-            color: theme.extended_palette().background.strong.color,
-            width: 1.0,
-            radius: Radius { top_left: 0.0, top_right: 0.0, bottom_left: theme::RADIUS_LG, bottom_right: theme::RADIUS_LG },
-        },
-        ..container::Style::default()
+        toast(HINT_TEXT, None, self.selecting, Tone::Hint)
     }
 }
 

@@ -62,35 +62,7 @@ impl State {
     }
 
     fn view_notice(&self) -> Element<'_, Message> {
-        let mut said = column![theme::centered_text(self.notice_text.as_str()).size(NOTICE_TEXT_SIZE)]
-            .align_x(Horizontal::Center);
-
-        if let Some(hint) = self.notice_hint {
-            said = said.push(
-                theme::centered_text(hint)
-                    .size(LABEL_SIZE)
-                    .style(|theme: &Theme| text::Style { color: Some(theme::weak_text_color(theme)) }),
-            );
-        }
-
-        let banner = container(said)
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center)
-            .padding(Padding {
-                top: NOTICE_OVERHANG + NOTICE_PAD_Y,
-                right: NOTICE_PAD_X,
-                bottom: NOTICE_PAD_Y,
-                left: NOTICE_PAD_X,
-            })
-            .style(theme::notice_banner);
-
-        container(slide(banner, self.raised, Slide::Up).floating())
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Top)
-            .padding(Padding::default().top(-NOTICE_OVERHANG))
-            .into()
+        toast(self.notice_text.as_str(), self.notice_hint, self.raised, Tone::Alert)
     }
 }
 
@@ -234,7 +206,7 @@ impl Session {
 
         stack![
             editor::suppress(console_card(showing), framing),
-            overlay::hint(FRAME_HINT, framing),
+            toast(FRAME_HINT, None, framing, Tone::Hint),
             console_edge()
         ]
         .into()

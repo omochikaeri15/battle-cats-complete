@@ -9,6 +9,7 @@ use nyanko::graphics::tools::joint::{self, Joint};
 use nyanko::graphics::tools::part;
 
 use kore::common::preview::{self, Stamp};
+use kore::Source;
 use kore::systems::animation::{cycle, loop_frame, restart, restart_frame, Motion, MotionSet, Loop, Offset, Placement, Rigging, Role, NO_OFFSET};
 
 pub(super) const COLUMNS: usize = 4;
@@ -231,14 +232,14 @@ impl State {
         self.motions.iter().any(|motion| motion.role.is_some() && motion.file.is_some())
     }
 
-    pub fn role_paths(&self) -> Vec<(Role, PathBuf)> {
+    pub fn role_paths(&self) -> Vec<(Role, Source)> {
         self.motions
             .iter()
             .filter_map(|motion| Some((motion.role?, motion.file.clone()?)))
             .collect()
     }
 
-    pub fn role_path(&self, role: Role) -> Option<&PathBuf> {
+    pub fn role_path(&self, role: Role) -> Option<&Source> {
         self.motions
             .iter()
             .find(|motion| motion.role == Some(role))
@@ -359,13 +360,13 @@ impl State {
     }
 
     pub fn selected_model(&self) -> Option<&Path> {
-        self.current_motion().map(|motion| motion.rig.model.as_path())
+        self.current_motion().map(|motion| motion.rig.model.path.as_path())
     }
 
     pub fn anim_paths(&self) -> Vec<PathBuf> {
         let mut found: Vec<PathBuf> = Vec::with_capacity(self.motions.len());
 
-        for path in self.motions.iter().filter_map(|motion| motion.file.as_ref()) {
+        for path in self.motions.iter().filter_map(|motion| motion.file.as_ref().map(|file| &file.path)) {
             if !found.contains(path) {
                 found.push(path.clone());
             }
@@ -375,11 +376,11 @@ impl State {
     }
 
     pub fn selected_sheet(&self) -> Option<&Path> {
-        self.current_motion().map(|motion| motion.rig.png.as_path())
+        self.current_motion().map(|motion| motion.rig.png.path.as_path())
     }
 
     pub fn selected_cuts(&self) -> Option<&Path> {
-        self.current_motion().map(|motion| motion.rig.cut.as_path())
+        self.current_motion().map(|motion| motion.rig.cut.path.as_path())
     }
 
     pub fn adopt_model(&mut self, model: Arc<Model>) {
@@ -399,7 +400,7 @@ impl State {
     }
 
     pub fn adopt_sheet(&mut self, cuts: &Path, sheet: Arc<SpriteSheet>) {
-        let Some(motion) = self.current_motion().filter(|motion| motion.rig.cut == cuts && self.is_loaded(&motion.rig.id)) else {
+        let Some(motion) = self.current_motion().filter(|motion| motion.rig.cut.path == cuts && self.is_loaded(&motion.rig.id)) else {
             return;
         };
 
@@ -423,7 +424,7 @@ impl State {
         let showing = self
             .selected
             .and_then(|index| self.motions.get(index))
-            .and_then(|motion| motion.file.as_deref());
+            .and_then(|motion| motion.file.as_ref().map(|file| file.path.as_path()));
 
         if showing == Some(path) {
             self.current_anim = Some(anim);
@@ -603,7 +604,7 @@ impl State {
         }
 
         let stamp = RigStamp::of(&rig);
-        let sources = (std::fs::read(&rig.png), std::fs::read(&rig.cut), std::fs::read(&rig.model));
+        let sources = (rig.png.read(), rig.cut.read(), rig.model.read());
 
         let loaded_unit = match sources {
             (Ok(png), Ok(cut), Ok(model)) => Rig::parse(&png, &cut, &model).ok(),
@@ -637,19 +638,20 @@ impl State {
             return;
         };
 
-        if let Some(anim) = self.cache.anim(&self.loaded_rig, &path) {
+        if let Some(anim) = self.cache.anim(&self.loaded_rig, &path.path) {
             self.current_anim = Some(anim);
             return;
         }
 
-        let stamp = preview::stamp(&path);
-        let parsed = std::fs::read(&path)
+        let stamp = preview::stamp_of(&path);
+        let parsed = path
+            .read()
             .ok()
             .and_then(|bytes| Animation::parse(&bytes).ok())
             .map(Arc::new);
 
         if let (Some(stamp), Some(anim)) = (stamp, &parsed) {
-            self.cache.store_anim(&self.loaded_rig, &path, stamp, anim.clone());
+            self.cache.store_anim(&self.loaded_rig, &path.path, stamp, anim.clone());
         }
 
         self.current_anim = parsed;
@@ -712,22 +714,22 @@ fn settle(slots: &mut Vec<Option<usize>>, from: usize, stride: usize, index: usi
 
 pub struct PreloadRequest {
     rig_id: String,
-    png: PathBuf,
-    cut: PathBuf,
-    model: PathBuf,
-    anim: Option<PathBuf>,
+    png: Source,
+    cut: Source,
+    model: Source,
+    anim: Option<Source>,
 }
 
 impl PreloadRequest {
     pub fn run(self) -> PreloadResult {
         let stamp = RigStamp {
-            png: preview::stamp(&self.png),
-            cut: preview::stamp(&self.cut),
-            model: preview::stamp(&self.model),
+            png: preview::stamp_of(&self.png),
+            cut: preview::stamp_of(&self.cut),
+            model: preview::stamp_of(&self.model),
         };
-        let stamps = Box::new(Stamps { rig: stamp, anim: self.anim.as_deref().and_then(preview::stamp) });
+        let stamps = Box::new(Stamps { rig: stamp, anim: self.anim.as_ref().and_then(preview::stamp_of) });
 
-        let unit = match (std::fs::read(&self.png), std::fs::read(&self.cut), std::fs::read(&self.model)) {
+        let unit = match (self.png.read(), self.cut.read(), self.model.read()) {
             (Ok(png_bytes), Ok(cut_bytes), Ok(model_bytes)) => Rig::parse(&png_bytes, &cut_bytes, &model_bytes).ok(),
             _ => None,
         };
@@ -739,12 +741,12 @@ impl PreloadRequest {
         let anim = self
             .anim
             .as_ref()
-            .and_then(|path| std::fs::read(path).ok())
+            .and_then(|path| path.read().ok())
             .and_then(|bytes| Animation::parse(&bytes).ok());
 
         PreloadResult {
             rig_id: self.rig_id,
-            anim_path: self.anim,
+            anim_path: self.anim.map(|anim| anim.path),
             unit: unit.map(Arc::new),
             anim: anim.map(Arc::new),
             stamps,
@@ -789,9 +791,9 @@ struct RigStamp {
 impl RigStamp {
     fn of(rig: &Rigging) -> Self {
         Self {
-            png: preview::stamp(&rig.png),
-            cut: preview::stamp(&rig.cut),
-            model: preview::stamp(&rig.model),
+            png: preview::stamp_of(&rig.png),
+            cut: preview::stamp_of(&rig.cut),
+            model: preview::stamp_of(&rig.model),
         }
     }
 
@@ -878,9 +880,9 @@ mod tests {
     fn rigging() -> Arc<Rigging> {
         Arc::new(Rigging {
             id: "test".to_owned(),
-            png: PathBuf::from("t.png"),
-            cut: PathBuf::from("t.imgcut"),
-            model: PathBuf::from("t.mamodel"),
+            png: Source::disk("t.png"),
+            cut: Source::disk("t.imgcut"),
+            model: Source::disk("t.mamodel"),
         })
     }
 
@@ -891,7 +893,7 @@ mod tests {
             role,
             looping: Loop::Auto,
             rig: rigging(),
-            file: anim.map(PathBuf::from),
+            file: anim.map(Source::disk),
         }
     }
 

@@ -7,7 +7,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use iced::futures::channel::mpsc;
-use iced::widget::{button, column, container, markdown, opaque, operation, row, scrollable, stack};
+use iced::widget::{button, column, container, markdown, opaque, operation, row, scrollable, stack, Space};
 use iced::{task, window, Element, Length, Size, Subscription, Task, Theme};
 use nyanko::files::{Localizable, Param};
 use rustc_hash::FxHasher;
@@ -218,11 +218,12 @@ enum ActivePopup {
     SandboxOrb,
     SandboxVersion,
     SandboxReplayUnit,
+    SandboxDiagnostics,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 27] = [
+    const ALL: [Self; 28] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -250,6 +251,7 @@ impl ActivePopup {
         Self::SandboxOrb,
         Self::SandboxVersion,
         Self::SandboxReplayUnit,
+        Self::SandboxDiagnostics,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -281,6 +283,7 @@ impl ActivePopup {
             Self::SandboxOrb => popup::Kind::SandboxOrb,
             Self::SandboxVersion => popup::Kind::ReplayVersion,
             Self::SandboxReplayUnit => popup::Kind::ReplayUnit,
+            Self::SandboxDiagnostics => popup::Kind::Diagnostics,
         }
     }
 }
@@ -1642,6 +1645,8 @@ impl BattleCatsApp {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
+        popup::begin_view();
+
         let content = match self.current_page {
             Page::Home => self.home_state.view(self.settings.general.enable_nightly).map(Message::Home),
             Page::Cats => self.cat_state.view(&self.settings, &self.app_state, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault }).map(Message::Cat),
@@ -1712,11 +1717,18 @@ impl BattleCatsApp {
 
         let watched = editor::watch(layers, &self.editor, Message::Editor);
 
-        let fault = self.sandbox_state.fault_view(self.window_size).map(|view| view.map(Message::Sandbox));
+        let above: Vec<Element<'_, Message>> = [
+            self.sandbox_state.diagnostics_view(self.window_size),
+            self.sandbox_state.fault_view(self.window_size),
+            Some(self.sandbox_state.cut_toast()),
+        ]
+            .into_iter()
+            .map(|view| view.map_or_else(|| Space::new().into(), |view| view.map(Message::Sandbox)))
+            .collect();
 
         emu::overlay(
             watched,
-            fault,
+            iced::widget::Stack::with_children(above).width(iced::Length::Fill).height(iced::Length::Fill).into(),
             emu::Feed {
                 frame: self.sandbox_state.curtain_frame(),
                 sheets: self.sandbox_state.curtain_sheets(),
@@ -1787,6 +1799,7 @@ impl BattleCatsApp {
     fn sync_sandbox_popups(&mut self) {
         self.sync_popup(ActivePopup::SandboxAcknowledge, self.sandbox_state.prompt_open());
         self.sync_popup(ActivePopup::SandboxFault, self.sandbox_state.fault_open());
+        self.sync_popup(ActivePopup::SandboxDiagnostics, self.sandbox_state.diagnostics_open());
         self.sync_popup(ActivePopup::SandboxFilter, self.sandbox_state.filter_popup_open());
         self.sync_popup(ActivePopup::SandboxUnit, self.sandbox_state.unit_popup_open());
         self.sync_popup(ActivePopup::SandboxOrb, self.sandbox_state.orb_popup_open());
@@ -1950,7 +1963,7 @@ impl BattleCatsApp {
 
                         self.studio_state.export_popup_view(self.window_size).map(|view| view.map(Message::Studio))
                     }
-                    ActivePopup::SandboxFault => None,
+                    ActivePopup::SandboxFault | ActivePopup::SandboxDiagnostics => None,
                     ActivePopup::SandboxFilter => {
                         if !matches!(self.current_page, Page::Sandbox)
                             || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Lineup

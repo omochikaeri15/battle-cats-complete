@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -56,11 +54,11 @@ impl CatEntry {
 }
 
 const PLACEHOLDER_EDGE: u32 = 1;
+const PNG_HEAD: usize = 25;
 
-fn is_valid_png(path: &Path) -> bool {
-    let Ok(mut file_handle) = fs::File::open(path) else { return false; };
-    let mut buffer = [0u8; 25];
-    if file_handle.read_exact(&mut buffer).is_err() { return false; }
+fn is_valid_png(vfs: &Vfs, path: &Path) -> bool {
+    let Ok(buffer) = vfs.source(path).head(PNG_HEAD) else { return false; };
+    if buffer.len() < PNG_HEAD { return false; }
     const PNG_SIG: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     if buffer[0..8] != PNG_SIG { return false; }
     if buffer[24] < 8 { return false; }
@@ -123,7 +121,7 @@ fn resolve_images(vfs: &Vfs, id: u32, egg_ids: (i32, i32), ub_row: &UnitBuy, con
         let banner = resolve_banner(vfs, id, form, egg_ids, config);
         let icon = resolve_icon(vfs, id, form, egg_ids, config);
 
-        real[form] = !config.show_invalid_cats && banner.as_deref().is_some_and(is_valid_png);
+        real[form] = !config.show_invalid_cats && banner.as_deref().is_some_and(|banner| is_valid_png(vfs, banner));
 
         forms[form] = match form {
             0 | 1 => base_form_present(form, banner.is_some(), icon.is_some(), real[form], config.show_invalid_cats),
@@ -190,7 +188,7 @@ pub fn deploy_icon(vfs: &Vfs, entry: &CatEntry, form: usize) -> Option<PathBuf> 
 
 pub fn orphan_stats(vfs: &Vfs, id: u32) -> [Option<Entity>; 4] {
     let mut stats: [Option<Entity>; 4] = [const { None }; 4];
-    let parsed = vfs.find(&files::stats_file(id)).and_then(|path| fs::read(path).ok()).and_then(|bytes| unitid::parse(&bytes, None).ok());
+    let parsed = vfs.find(&files::stats_file(id)).and_then(|path| vfs.read(&path).ok()).and_then(|bytes| unitid::parse(&bytes, None).ok());
 
     for (form, profile) in parsed.into_iter().flatten().enumerate().take(stats.len()) {
         stats[form] = Some(profile);
@@ -354,7 +352,7 @@ fn process_cat_entry(
         let anim_name = files::maanim_file(cat_id, i, egg_ids, 2);
 
         if let Some(resolved) = vfs.find(&anim_name)
-            && let Ok(bytes) = fs::read(&resolved) {
+            && let Ok(bytes) = vfs.read(&resolved) {
             let content = String::from_utf8_lossy(&bytes);
             *frames = Animation::scan_length(content.as_bytes()).unwrap_or(0).max(0);
         }
@@ -362,7 +360,7 @@ fn process_cat_entry(
 
     let mut cat_stats: [Option<Entity>; 4] = [const { None }; 4];
     if let Some(resolved) = resolved_stats
-        && let Ok(bytes) = fs::read(&resolved) {
+        && let Ok(bytes) = vfs.read(&resolved) {
 
         if let Ok(parsed_profiles) = unitid::parse(&bytes, None) {
             for (line_index, profile) in parsed_profiles.into_iter().enumerate().take(4) {

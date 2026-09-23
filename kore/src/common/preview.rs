@@ -6,6 +6,8 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use tracing::{error, warn};
 
+use crate::Source;
+
 pub const MAX_IMAGE_BYTES: u64 = 16 * 1024 * 1024;
 pub const MAX_TEXT_BYTES: u64 = 256 * 1024;
 
@@ -41,6 +43,10 @@ pub enum Preview {
     Oversized,
     Binary,
     Unavailable,
+}
+
+pub fn stamp_of(source: &Source) -> Option<Stamp> {
+    source.memory_len().map_or_else(|| stamp(&source.path), |len| Some(Stamp { mtime: 0, len: len as u64 }))
 }
 
 pub fn stamp(path: &Path) -> Option<Stamp> {

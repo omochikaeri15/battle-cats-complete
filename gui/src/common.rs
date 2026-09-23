@@ -13,7 +13,6 @@ pub(crate) mod skill_name;
 pub mod udi_loader;
 pub mod watcher;
 
-use std::path::{Path, PathBuf};
 use std::thread;
 
 use iced::futures::channel::mpsc::unbounded;
@@ -26,6 +25,7 @@ use kore::common::assets::{
     UNKNOWN,
 };
 use kore::common::formats::{imgcut, SpriteSheet as CoreSpriteSheet};
+use kore::Source;
 use kore::systems::combat::CustomIcon;
 use kore::Vfs;
 
@@ -138,18 +138,17 @@ impl SpriteSheet {
         self.failed
     }
 
-    pub fn load(&mut self, png_path: &Path, imgcut_path: &Path, id_str: String) -> Task<Option<CoreSpriteSheet>> {
+    pub fn load(&mut self, png: &Source, imgcut: &Source, id_str: String) -> Task<Option<CoreSpriteSheet>> {
         debug!("Loading SpriteSheet identifier: {}", id_str);
         self.loading = true;
 
-        let png_path = png_path.to_path_buf();
-        let imgcut_path = imgcut_path.to_path_buf();
+        let (png, imgcut) = (png.clone(), imgcut.clone());
         let (tx, rx) = unbounded();
 
         thread::spawn(move || {
-            let parsed = imgcut::parse(&png_path, &imgcut_path);
+            let parsed = imgcut::parse(&png, &imgcut);
             if parsed.is_none() {
-                warn!("Failed to parse sprite sheet '{}' from {:?}", id_str, png_path);
+                warn!("Failed to parse sprite sheet '{}' from {:?}", id_str, png.path);
             }
 
             let result = parsed.map(|sheet| CoreSpriteSheet {
@@ -189,8 +188,8 @@ impl SpriteSheet {
     }
 }
 pub(crate) struct SheetLayer {
-    pub(crate) png: PathBuf,
-    pub(crate) imgcut: Option<PathBuf>,
+    pub(crate) png: Source,
+    pub(crate) imgcut: Option<Source>,
     pub(crate) stem: String,
 }
 
@@ -202,9 +201,9 @@ pub(crate) fn sheet_layers(vfs: &Vfs, name: &str, pristine: bool) -> Vec<SheetLa
         .into_iter()
         .map(|png| {
             let stem = png.file_stem().map_or_else(|| name.to_string(), |stem| stem.to_string_lossy().into_owned());
-            let imgcut = vfs.locate(&format!("{}.imgcut", stem)).or_else(|| vfs.locate(&format!("{}.imgcut", name)));
+            let imgcut = vfs.locate(&format!("{}.imgcut", stem)).or_else(|| vfs.locate(&format!("{}.imgcut", name))).map(|cut| vfs.source(&cut));
 
-            SheetLayer { png, imgcut, stem }
+            SheetLayer { png: vfs.source(&png), imgcut, stem }
         })
         .collect()
 }

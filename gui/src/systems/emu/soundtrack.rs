@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, BufWriter, Cursor, Write};
 use std::path::Path;
 use std::rc::Rc;
@@ -150,9 +150,9 @@ struct Library<'a> {
 
 impl Library<'_> {
     fn read(&self, name: &str) -> Option<Vec<u8>> {
-        let path = self.files.get(name)?;
+        let source = self.files.get(name)?;
 
-        fs::read(path).inspect_err(|error| warn!("emu: {name} could not be read for the video: {error}")).ok()
+        source.read().map(|bytes| bytes.to_vec()).inspect_err(|error| warn!("emu: {name} could not be read for the video: {error}")).ok()
     }
 
     fn track(&mut self, sound_id: i32) -> Option<Arc<[f32]>> {

@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::Path;
 use std::path::PathBuf;
 
 use iced::alignment::{Horizontal, Vertical};
@@ -13,6 +12,7 @@ use kore::common::io;
 use kore::domains::cat::combo::{self, CatCombo, ComboMember};
 use kore::domains::cat::scanner::CatEntry;
 use kore::Vfs;
+use kore::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;
@@ -95,7 +95,7 @@ impl State {
             return cached.clone();
         }
 
-        let handle = io::gatya_item_icon(vfs, id).and_then(|path| item_icon::load_boxed(&path, MATERIAL_CANVAS));
+        let handle = io::gatya_item_icon(vfs, id).and_then(|path| item_icon::load_boxed(&vfs.source(&path), MATERIAL_CANVAS));
         self.boxed_icons.borrow_mut().insert(id, handle.clone());
         handle
     }
@@ -106,19 +106,19 @@ impl State {
         }
 
         let loaded = io::gatya_item_icon(vfs, id)
-            .and_then(|path| item_icon::load_cropped(&path))
+            .and_then(|path| item_icon::load_cropped(&vfs.source(&path)))
             .map(|(handle, width, height)| TrimmedIcon { handle, width, height });
         self.trimmed_icons.borrow_mut().insert(id, loaded.clone());
         loaded
     }
 
-    fn slot_icon(&self, path: &Path) -> Option<Handle> {
-        if let Some(cached) = self.slot_icons.borrow().get(path) {
+    fn slot_icon(&self, source: &Source) -> Option<Handle> {
+        if let Some(cached) = self.slot_icons.borrow().get(&source.path) {
             return cached.clone();
         }
 
-        let handle = item_icon::load_boxed(path, COMBO_UNI_SIZE as u32);
-        self.slot_icons.borrow_mut().insert(path.to_path_buf(), handle.clone());
+        let handle = item_icon::load_boxed(source, COMBO_UNI_SIZE as u32);
+        self.slot_icons.borrow_mut().insert(source.path.clone(), handle.clone());
         handle
     }
 
@@ -235,8 +235,8 @@ impl State {
     fn view_member(&self, member: &ComboMember, cat_id: u32) -> Element<'static, Message> {
         let icon: Element<'static, Message> = member
             .icon
-            .as_deref()
-            .and_then(|path| self.slot_icon(path))
+            .as_ref()
+            .and_then(|source| self.slot_icon(source))
             .map_or_else(
                 || container(Space::new())
                     .width(Length::Fixed(COMBO_UNI_SIZE))

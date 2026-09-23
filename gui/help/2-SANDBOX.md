@@ -49,5 +49,7 @@ Every file that the game loads is saved in the `.bcv` file. This means any Repla
 
 Exporting to video formats requires the FFMPEG Addon, which you can install under `Settings > Addons > FFMPEG`.
 
+Encountering a Fault or enabling the Live Diagnostics pop-up both terminate the current replay recording, a toast will tell you so.
+
 ## Keybinds
 Battle can be controlled using Keybinds defined under `Settings > Sandbox > Keybinds`. There are even some Keybind exclusive behaviors, such as quickly restarting or ending a battle.

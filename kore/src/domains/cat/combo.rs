@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
 
 use nyanko::cat::unit::{ComboSlot, NyancomboData, UnitBuy, UnitExplanation};
 use tracing::trace;
@@ -7,13 +6,13 @@ use tracing::trace;
 use crate::common::context::GlobalContext;
 use crate::domains::cat::files;
 use crate::domains::cat::waiter::unitexplanation;
-use crate::{Vault, Vfs};
+use crate::{Source, Vault, Vfs};
 
 pub struct ComboMember {
     pub id: Option<u32>,
     pub form: usize,
     pub name: Option<String>,
-    pub icon: Option<PathBuf>,
+    pub icon: Option<Source>,
     pub unresolved: bool,
 }
 
@@ -90,7 +89,7 @@ fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> V
         return Vec::new();
     }
 
-    let empty_icon = vfs.find(files::EMPTY_ICON);
+    let empty_icon = vfs.find(files::EMPTY_ICON).map(|path| vfs.source(&path));
     let mut explanations: HashMap<u32, UnitExplanation> = HashMap::new();
 
     joined
@@ -112,7 +111,7 @@ fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> V
                 .map(|key| ctx.localizable.lookup(key).unwrap_or(key).to_string());
 
             let members = row.slots().map(|slot| {
-                member(vfs, &unitbuy, &mut explanations, slot, empty_icon.as_deref())
+                member(vfs, &unitbuy, &mut explanations, slot, empty_icon.as_ref())
             });
 
             CatCombo {
@@ -139,7 +138,7 @@ fn member(
     unitbuy: &HashMap<u32, UnitBuy>,
     explanations: &mut HashMap<u32, UnitExplanation>,
     slot: ComboSlot,
-    empty_icon: Option<&Path>,
+    empty_icon: Option<&Source>,
 ) -> ComboMember {
     let unit = slot.is_occupied().then(|| u32::try_from(slot.unit_id).ok()).flatten();
 
@@ -148,7 +147,7 @@ fn member(
             id: None,
             form: 0,
             name: None,
-            icon: empty_icon.map(Path::to_path_buf),
+            icon: empty_icon.cloned(),
             unresolved: false,
         };
     };
@@ -156,7 +155,7 @@ fn member(
     let form = usize::try_from(slot.form).unwrap_or(0).min(files::FORM_COUNT - 1);
     let egg_ids = unitbuy.get(&id).map_or((-1, -1), |row| (row.egg_id_normal, row.egg_id_evolved));
 
-    let icon = vfs.find(&files::icon_file(id, form, egg_ids));
+    let icon = vfs.find(&files::icon_file(id, form, egg_ids)).map(|path| vfs.source(&path));
     let unresolved = icon.is_none();
 
     let explanation = explanations.entry(id).or_insert_with(|| unitexplanation(vfs, id));
@@ -172,7 +171,7 @@ fn member(
         id: Some(id),
         form,
         name,
-        icon: icon.or_else(|| empty_icon.map(Path::to_path_buf)),
+        icon: icon.or_else(|| empty_icon.cloned()),
         unresolved,
     }
 }

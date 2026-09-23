@@ -1,5 +1,3 @@
-use std::fs;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread;
@@ -19,6 +17,7 @@ use kore::systems::animation::export::process::calculate_export_time;
 use kore::systems::animation::export::{EncoderMessage, ExportMode, FrameTiming, ShowcaseLengths};
 use kore::domains::settings::Scope;
 use kore::systems::animation::{multiply_mat3, Role};
+use kore::Source;
 
 use crate::systems::animation;
 
@@ -363,7 +362,7 @@ struct Take<'a> {
 pub struct Job {
     pub unit: Arc<Rig>,
     pub animation: Option<Arc<Animation>>,
-    pub role_paths: Vec<(Role, PathBuf)>,
+    pub role_paths: Vec<(Role, Source)>,
     pub offset: Option<usize>,
     pub timing: FrameTiming,
     pub lengths: ShowcaseLengths,
@@ -474,10 +473,10 @@ struct ShowcaseMotions {
 }
 
 impl ShowcaseMotions {
-    fn load(role_paths: &[(Role, PathBuf)]) -> Self {
+    fn load(role_paths: &[(Role, Source)]) -> Self {
         let parse = |role: Role| -> Option<Animation> {
             let (_, path) = role_paths.iter().find(|(known, _)| *known == role)?;
-            let bytes = fs::read(path).ok()?;
+            let bytes = path.read().ok()?;
             Animation::parse(&bytes).ok()
         };
 

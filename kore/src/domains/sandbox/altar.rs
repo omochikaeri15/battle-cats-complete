@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::fs;
 
 use nyanko::chapter::map::{DemonCastleDefine, DemonCastleLimit};
 
@@ -17,7 +16,7 @@ pub struct Altars {
 
 impl Altars {
     pub fn load(vfs: &Vfs) -> Self {
-        let read = |name: &str| vfs.locate(name).and_then(|path| fs::read(path).ok());
+        let read = |name: &str| vfs.locate(name).and_then(|path| vfs.read(&path).ok());
         let limits = read(LIMIT_FILE)
             .and_then(|bytes| DemonCastleLimit::parse(bytes, None).ok())
             .unwrap_or_default()

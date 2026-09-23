@@ -18,14 +18,13 @@ use tracing::{error, info, warn};
 use kore::Vfs;
 use kore::common::architecture::Workspace;
 use kore::common::job::JobOutcome;
-use kore::domains::sandbox::replay as tape;
 use kore::domains::settings::ReplaySource;
 use kore::systems::addons::ffmpeg::video::{self, Quality, VideoFormat, VideoWriter};
 
 use super::assets::{DiskAssets, FileIndex};
 use super::driver::Driver;
 use super::pipeline::{Pipeline, Run};
-use super::session::{Reel as Source, CLOSED_FRAME};
+use super::session::{self, Reel as Source, CLOSED_FRAME};
 use super::soundtrack::{self, SharedLog, SoundLog, GAME_FPS};
 use super::viewport::{paint, Scene};
 
@@ -106,22 +105,9 @@ fn run(job: &VideoJob, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
 }
 
 fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
-    let dir = match &job.reel {
-        Source::Latest => {
-            tape::latest().ok_or("there is no state folder holding the latest battle")?
-        }
-        Source::Bundle(bundle) => {
-            tape::unpack(bundle, work)?;
-
-            work.to_path_buf()
-        }
-    };
-    let save = tape::read_save(&dir)?;
-    let frames = tape::read_input(&dir)?;
-    let index = match &job.index {
-        Some(index) => index.clone(),
-        None => tape::index(&dir).map_err(|failure| format!("the replay's asset list could not be read: {failure}"))?,
-    };
+    let opened = session::open(&job.reel)?;
+    let (save, frames) = (opened.save, opened.frames);
+    let index = job.index.clone().unwrap_or(opened.index);
     let total = u32::try_from(frames.len()).unwrap_or(u32::MAX);
     let (width, height) = (even(save.screen.width), even(save.screen.height));
 

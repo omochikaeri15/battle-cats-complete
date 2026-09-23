@@ -624,6 +624,8 @@ pub fn mock_console_container(theme: &Theme) -> container::Style {
 }
 
 const NOTICE_ALPHA: f32 = 220.0 / 255.0;
+const HINT_BANNER_ALPHA: f32 = 160.0 / 255.0;
+const HINT_BANNER_SHADE: f32 = 0.15;
 const NOTICE_SHADE: f32 = 0.0;
 
 pub fn plain_editor(theme: &Theme, status: text_editor::Status) -> text_editor::Style {
@@ -633,6 +635,26 @@ pub fn plain_editor(theme: &Theme, status: text_editor::Status) -> text_editor::
         background: Background::Color(Color::TRANSPARENT),
         border: Border::default(),
         ..style
+    }
+}
+
+pub fn hint_banner(theme: &Theme) -> container::Style {
+    let palette = theme.palette();
+    let shade = |c: f32| c * HINT_BANNER_SHADE;
+
+    container::Style {
+        background: Some(Background::Color(Color {
+            r: shade(palette.background.r),
+            g: shade(palette.background.g),
+            b: shade(palette.background.b),
+            a: HINT_BANNER_ALPHA,
+        })),
+        border: Border {
+            color: theme.extended_palette().background.strong.color,
+            width: 1.0,
+            radius: Radius { top_left: 0.0, top_right: 0.0, bottom_left: RADIUS_LG, bottom_right: RADIUS_LG },
+        },
+        ..container::Style::default()
     }
 }
 

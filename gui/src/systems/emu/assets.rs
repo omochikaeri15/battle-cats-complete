@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use emu::engine::{AssetSource, SheetImage};
 use kore::common::io::APP_LANGUAGES;
-use kore::Vfs;
+use kore::{Source, Vfs};
 use nyanko::combat::Separator;
 use rayon::prelude::*;
 use tracing::{debug, info, warn};
@@ -33,7 +33,7 @@ pub(super) const WIDE_COMMA: &str = "\u{ff0c}";
 
 pub type SheetCache = BTreeMap<Box<str>, Sheet>;
 
-pub type FileIndex = BTreeMap<Box<str>, PathBuf>;
+pub type FileIndex = BTreeMap<Box<str>, Source>;
 
 fn stripped(name: &str) -> Option<(&str, &str)> {
     let (stem, extension) = name.rsplit_once('.')?;
@@ -102,8 +102,8 @@ impl DiskAssets {
             return;
         }
 
-        if let Some(path) = self.resolve(name) {
-            self.ledger.borrow_mut().note(name, &path);
+        if let Some(source) = self.resolve(name).filter(|source| !source.in_memory()) {
+            self.ledger.borrow_mut().note(name, &source.path);
         }
     }
 
@@ -112,7 +112,7 @@ impl DiskAssets {
         let listed = vfs.glob("");
         let mut files: FileIndex = listed
             .par_iter()
-            .filter_map(|name| vfs.locate(name).map(|path| (name.clone(), path)))
+            .filter_map(|name| vfs.locate(name).map(|path| (name.clone(), vfs.source(&path))))
             .collect();
 
         let bare: Vec<Box<str>> = files
@@ -128,7 +128,7 @@ impl DiskAssets {
             .filter_map(|name| {
                 let path = vfs.variants(&name).into_iter().find_map(|variant| vfs.locate(&variant))?;
 
-                Some((name, path))
+                Some((name, vfs.source(&path)))
             })
             .collect::<Vec<_>>();
 
@@ -146,7 +146,7 @@ impl DiskAssets {
         files
     }
 
-    fn resolve(&self, name: &str) -> Option<PathBuf> {
+    fn resolve(&self, name: &str) -> Option<Source> {
         let files = self.files.borrow();
 
         if let Some(path) = files.get(name) {
@@ -159,14 +159,13 @@ impl DiskAssets {
     }
 
     fn read(&self, name: &str) -> Option<Vec<u8>> {
-        let path = self.resolve(name)?;
-
-        std::fs::read(path).ok()
+        self.resolve(name)?.read().ok().map(|bytes| bytes.to_vec())
     }
 
     fn table(&self, name: &str) -> Option<Vec<u8>> {
-        let path = self.resolve(name)?;
-        let bytes = std::fs::read(&path).ok()?;
+        let source = self.resolve(name)?;
+        let bytes = source.read().ok()?.to_vec();
+        let path = &source.path;
         let piped = path
             .file_name()
             .and_then(|found| found.to_str())

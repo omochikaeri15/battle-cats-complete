@@ -20,6 +20,7 @@ use tracing::warn;
 use crate::domains::settings::{Settings, lang};
 
 const MOUNT_GAME: &str = "game";
+const MEMORY_ROOT: &str = "::memory::";
 
 type MountKey = Box<str>;
 type Index = FxHashMap<MountKey, MountedDir>;
@@ -37,6 +38,8 @@ struct Entry {
 struct MountedDir {
     root: PathBuf,
     files: FxHashMap<MountKey, Entry>,
+    #[serde(skip)]
+    blobs: FxHashMap<MountKey, Arc<[u8]>>,
     dirs: FxHashMap<Box<str>, Vec<Box<str>>>,
     folders: FxHashMap<Box<str>, Vec<Box<str>>>,
     conflicts: Vec<Conflict>,
@@ -206,6 +209,85 @@ pub trait Mount {
     fn unmount(self, vfs: &Vfs);
 }
 
+#[derive(Clone, Debug)]
+pub struct Source {
+    pub path: PathBuf,
+    blob: Option<Arc<[u8]>>,
+}
+
+impl Source {
+    pub fn disk(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into(), blob: None }
+    }
+
+    pub fn memory(name: impl AsRef<Path>, bytes: Arc<[u8]>) -> Self {
+        Self { path: Path::new(MEMORY_ROOT).join(name), blob: Some(bytes) }
+    }
+
+    pub fn read(&self) -> std::io::Result<Arc<[u8]>> {
+        self.blob.as_ref().map_or_else(|| fs::read(&self.path).map(Arc::from), |bytes| Ok(Arc::clone(bytes)))
+    }
+
+    pub fn head(&self, len: usize) -> std::io::Result<Vec<u8>> {
+        if let Some(bytes) = &self.blob {
+            return Ok(bytes.get(..len).unwrap_or(bytes).to_vec());
+        }
+
+        let mut buffer = vec![0u8; len];
+        let read = std::io::Read::read(&mut fs::File::open(&self.path)?, &mut buffer)?;
+
+        buffer.truncate(read);
+        Ok(buffer)
+    }
+
+    pub fn in_memory(&self) -> bool {
+        self.blob.is_some()
+    }
+
+    pub fn memory_len(&self) -> Option<usize> {
+        self.blob.as_ref().map(|bytes| bytes.len())
+    }
+}
+
+impl PartialEq for Source {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path
+    }
+}
+
+impl Eq for Source {}
+
+pub struct Memory<'a> {
+    pub key: &'a str,
+    pub files: Vec<(Box<str>, Arc<[u8]>)>,
+}
+
+impl Mount for Memory<'_> {
+    fn mount(self, vfs: &Vfs) -> Result<Vec<Conflict>, VfsError> {
+        let root = Path::new(MEMORY_ROOT).join(self.key);
+        let mut mount = MountedDir { root, ..MountedDir::default() };
+
+        for (name, bytes) in self.files {
+            mount.files.insert(name.clone(), Entry { path: PathBuf::from(name.as_ref()), mtime: 0, len: bytes.len() as u64 });
+            mount.blobs.insert(name, bytes);
+        }
+
+        let Some(mut mounts) = vfs.mutate() else {
+            return Err(VfsError::Unavailable);
+        };
+
+        mounts.insert(self.key.into(), mount);
+
+        Ok(Vec::new())
+    }
+
+    fn unmount(self, vfs: &Vfs) {
+        if let Some(mut mounts) = vfs.mutate() {
+            mounts.remove(self.key);
+        }
+    }
+}
+
 pub struct Vfs {
     mounts: RwLock<Index>,
     cache: RwLock<FxHashMap<MountKey, Arc<[u8]>>>,
@@ -274,6 +356,22 @@ impl Vfs {
             printed: RwLock::new(None),
             trace: Some(Mutex::new(BTreeSet::new())),
         }
+    }
+
+    pub fn source(&self, path: &Path) -> Source {
+        let held = self.mounts.read().ok().and_then(|mounts| {
+            mounts.values().filter(|mount| !mount.blobs.is_empty()).find_map(|mount| {
+                let name = path.strip_prefix(&mount.root).ok()?.to_str()?;
+
+                mount.blobs.get(name).map(Arc::clone)
+            })
+        });
+
+        Source { path: path.to_path_buf(), blob: held }
+    }
+
+    pub fn read(&self, path: &Path) -> std::io::Result<Arc<[u8]>> {
+        self.source(path).read()
     }
 
     pub fn traced(&self) -> BTreeSet<PathBuf> {
@@ -433,11 +531,10 @@ impl Vfs {
         }
 
         let path = self.find(filename)?;
-        let raw = fs::read(&path)
+        let bytes = self
+            .read(&path)
             .inspect_err(|err| warn!(file = filename, path = %path.display(), "vfs read failed: {}", err))
             .ok()?;
-
-        let bytes = Arc::<[u8]>::from(raw);
 
         if let Ok(mut cache) = self.cache.write() {
             cache.insert(filename.into(), Arc::clone(&bytes));
@@ -1180,6 +1277,32 @@ mod tests {
         assert!(!names.contains(&"unseen.csv".to_owned()));
         assert!(vfs.traced().is_empty(), "the live vfs never traces");
         assert!(fork.traced().is_empty(), "reading the record drains it");
+    }
+
+    #[test]
+    fn a_memory_mount_serves_its_bytes_without_touching_disk() {
+        // Saved replays are decompressed straight into memory. Every lookup has to resolve
+        // and read those bytes, the path handed out must not exist anywhere on disk, and
+        // unmounting must take the files away again.
+        let vfs = Vfs::with_priority(&[String::new()]);
+        let held: Arc<[u8]> = Arc::from(&b"1,2\n"[..]);
+
+        vfs.create(Memory { key: "replay", files: vec![(Box::from("held.csv"), Arc::clone(&held))] }).expect("mount");
+
+        let path = vfs.find("held.csv").expect("resolves");
+
+        assert!(!path.exists());
+        assert_eq!(vfs.read(&path).expect("read").as_ref(), held.as_ref());
+        assert_eq!(vfs.load("held.csv").as_deref(), Some(held.as_ref()));
+
+        let fork = vfs.fork();
+        let forked = fork.find("held.csv").expect("the fork resolves it too");
+
+        assert_eq!(fork.read(&forked).expect("the fork reads it").as_ref(), held.as_ref());
+
+        vfs.destroy(Memory { key: "replay", files: Vec::new() });
+
+        assert!(vfs.find("held.csv").is_none());
     }
 
     #[test]

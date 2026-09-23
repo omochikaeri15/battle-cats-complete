@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use iced::Size;
@@ -9,7 +9,7 @@ use kore::common::context::GlobalContext;
 use kore::common::formats::{fitting_cut, imgcut};
 use kore::domains::sandbox::replay::{self as tape, Save, Summary};
 use kore::domains::settings::{ScannerConfig, Settings};
-use kore::Vault;
+use kore::{Source, Vault};
 
 use crate::app::state::AppState;
 use crate::common::sheet_layers;
@@ -54,7 +54,7 @@ pub(crate) fn gather(vault: &Vault, save: Save, config: &ScannerConfig) -> Vec<(
         .collect()
 }
 
-fn drawable(png: &Path, cut: &Path) -> BTreeSet<usize> {
+fn drawable(png: &Source, cut: &Source) -> BTreeSet<usize> {
     let Some(sheet) = imgcut::parse(png, cut) else {
         return BTreeSet::new();
     };
@@ -96,13 +96,13 @@ fn shadowed_layers(probe: &Vault, traced: &BTreeSet<PathBuf>) -> BTreeSet<PathBu
             let icons = drawable(&layer.png, cut);
 
             if icons.is_subset(&covered) {
-                let own = cut.file_stem().and_then(|stem| stem.to_str()) == Some(layer.stem.as_str());
+                let own = cut.path.file_stem().and_then(|stem| stem.to_str()) == Some(layer.stem.as_str());
 
                 if own {
-                    shadowed.insert(cut.clone());
+                    shadowed.insert(cut.path.clone());
                 }
 
-                shadowed.insert(layer.png);
+                shadowed.insert(layer.png.path);
             } else {
                 covered.extend(icons);
             }

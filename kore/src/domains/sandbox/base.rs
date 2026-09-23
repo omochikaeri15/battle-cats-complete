@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::fs;
 
 use tracing::trace;
 
@@ -54,7 +53,7 @@ pub fn name(part: i32) -> String {
 fn growth(vfs: &Vfs, file: &str) -> BTreeMap<i32, i32> {
     let mut highest: BTreeMap<i32, i32> = BTreeMap::new();
 
-    let Some(content) = vfs.find(file).and_then(|path| fs::read_to_string(path).ok()) else {
+    let Some(content) = vfs.find(file).and_then(|path| vfs.read(&path).ok()).and_then(|bytes| String::from_utf8(bytes.to_vec()).ok()) else {
         return highest;
     };
 

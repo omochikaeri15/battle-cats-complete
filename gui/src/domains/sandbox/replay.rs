@@ -21,6 +21,7 @@ use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::replay::{self as tape, Staged, Summary, Unit};
 use kore::domains::settings::{ScannerConfig, Settings};
 use kore::Vault;
+use kore::common::gfx::open_image;
 
 use crate::app::state::AppState;
 use crate::app::theme;
@@ -370,7 +371,7 @@ impl State {
         let adopted = self.inspector.adopt_cats(&staged.cats, &staged.vault).map(Message::Cat);
         let orbs = self.orbs.load(&staged.vault).map(Message::Orbs);
 
-        self.coin = staged.vault.vfs.find(NP_ICON).and_then(|path| image::open(path).ok()).map(|opened| {
+        self.coin = staged.vault.vfs.find(NP_ICON).and_then(|path| open_image(&staged.vault.vfs.source(&path))).map(|opened| {
             let cropped = kore::common::gfx::autocrop(opened.to_rgba8());
 
             Handle::from_rgba(cropped.width(), cropped.height(), cropped.into_raw())
@@ -396,7 +397,7 @@ impl State {
                 FORM_LETTERS.get(tile.form).and_then(|letter| staged.vault.vfs.find(format!("uni{:03}_{letter}00.png", tile.id).as_str()))
             });
 
-            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, &path)) {
+            if let Some(icon) = path.and_then(|path| header_icon::load(&self.decoded, &staged.vault.vfs.source(&path))) {
                 self.icons.insert((tile.id, tile.form), icon.handle);
             }
         }

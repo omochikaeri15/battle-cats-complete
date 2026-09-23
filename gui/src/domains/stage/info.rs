@@ -11,6 +11,7 @@ use nyanko::chapter::Category;
 
 use kore::domains::stage::{cost, files as stage_files, Map, Stage, StageDataState};
 use kore::{ItemStore, Vfs};
+use kore::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;
@@ -99,7 +100,7 @@ impl State {
             return Some(cached.clone());
         }
 
-        let loaded = item_icon::load_cropped(path)?;
+        let loaded = item_icon::load_cropped(&Source::disk(path))?;
         self.icon_cache.borrow_mut().insert(key.to_string(), loaded.clone());
         Some(loaded)
     }

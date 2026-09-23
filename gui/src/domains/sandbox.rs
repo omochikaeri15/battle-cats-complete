@@ -28,9 +28,10 @@ use kore::Vault;
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
 use crate::domains::{cat, stage};
-use crate::systems::emu::{Action, Frame as EmuFrame, Label, Session};
+use crate::systems::emu::{Action, Diagnostics, Frame as EmuFrame, Label, Occupant, Session, Vitals};
 use crate::systems::emu::SheetCache;
-use crate::widget::{popup, smooth_scroll};
+use crate::common::feedback::Slot;
+use crate::widget::{headline, popup, smooth_scroll};
 
 const ACKNOWLEDGEMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
@@ -45,12 +46,20 @@ You can accept the agreement by clicking the "Agree" button below. Selecting "Di
 "#;
 const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
 const FAULT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Fault, Size::new(460.0, 260.0));
+const DIAGNOSTICS_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Diagnostics, Size::new(520.0, 360.0));
 const VERSION_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayVersion, Size::new(460.0, 320.0));
 const BODY_SIZE: f32 = 14.0;
+const READOUT_SIZE: f32 = 13.0;
+const READOUT_VALUE_WIDTH: f32 = 90.0;
+const READOUT_CELL_PADDING: [u16; 2] = [4, 8];
+const READOUT_SPACING: f32 = 4.0;
+const READOUT_GAP: f32 = 16.0;
 const SPEED_UP_ITEM: i32 = 0;
 const CAT_CPU_ITEM: i32 = 3;
 const SNIPER_ITEM: i32 = 5;
 const STATUS_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
+const CUT_LIFETIME: std::time::Duration = std::time::Duration::from_secs(3);
+const REPLAY_TERMINATED: &str = "Replay terminated!";
 const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
@@ -81,10 +90,12 @@ pub enum Message {
     Config(config::Message),
     Stage(stage::Message),
     FaultPopup(popup::Message),
+    DiagnosticsPopup(popup::Message),
     Terminate,
     Continue,
     Key(String, bool),
     StatusExpired,
+    CutExpired,
     Replay(replay::Message),
     Watch(bool),
     VersionPopup(popup::Message),
@@ -99,9 +110,14 @@ pub struct State {
     prompt_open: bool,
     prompt: popup::State,
     fault: popup::State,
+    diagnostics: popup::State,
+    diagnosing: bool,
+    probe: Option<Diagnostics>,
+    readout: Readout,
     terms: Vec<markdown::Item>,
     status: String,
     reported: String,
+    cut: Slot<()>,
     session: Option<Session>,
     tapped: Option<std::time::Instant>,
     lineup: lineup::State,
@@ -121,9 +137,14 @@ impl Default for State {
             prompt_open: false,
             prompt: popup::State::default(),
             fault: popup::State::default(),
+            diagnostics: popup::State::default(),
+            diagnosing: false,
+            probe: None,
+            readout: Readout::default(),
             terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
             status: String::new(),
             reported: String::new(),
+            cut: Slot::default(),
             session: None,
             tapped: None,
             lineup: lineup::State::new(0),
@@ -134,6 +155,37 @@ impl Default for State {
             foreign: None,
             altars: Altars::default(),
             castle: None,
+        }
+    }
+}
+
+#[derive(Default)]
+struct Readout {
+    seed: String,
+    cats: Vec<(String, String)>,
+    enemies: Vec<(String, String)>,
+}
+
+impl Readout {
+    fn of(probe: &Diagnostics) -> Self {
+        let rows = |side: &[Vitals], base: &str, fallback: &str| {
+            side.iter()
+                .map(|vitals| {
+                    let label = match &vitals.occupant {
+                        Occupant::Base => base.to_owned(),
+                        Occupant::Unit { id, name } if name.is_empty() => format!("{fallback} {id:03}"),
+                        Occupant::Unit { name, .. } => name.clone(),
+                    };
+
+                    (label, vitals.hp.to_string())
+                })
+                .collect()
+        };
+
+        Self {
+            seed: probe.rng.to_string(),
+            cats: rows(&probe.cats, "Cat Base", "Cat"),
+            enemies: rows(&probe.enemies, "Enemy Base", "Enemy"),
         }
     }
 }
@@ -517,6 +569,13 @@ impl State {
                 }
             }
             Message::Replay(msg) => self.replay.update(msg, settings, app_state, ctx).map(Message::Replay),
+            Message::DiagnosticsPopup(msg) => {
+                if self.diagnostics.update(msg, DIAGNOSTICS_POPUP) {
+                    self.close_diagnostics();
+                }
+
+                Task::none()
+            }
             Message::FaultPopup(msg) => {
                 if self.fault.update(msg, FAULT_POPUP) {
                     return Task::done(Message::Terminate);
@@ -528,6 +587,11 @@ impl State {
                 if let Some(session) = self.session.as_mut() {
                     session.resume();
                 }
+
+                Task::none()
+            }
+            Message::CutExpired => {
+                self.cut.expire();
 
                 Task::none()
             }
@@ -544,11 +608,7 @@ impl State {
                     return Task::none();
                 };
 
-                if session.watching() {
-                    if bind == Bind::Pause {
-                        session.key(Action::Pause, pressed);
-                    }
-
+                if session.watching() && !matches!(bind, Bind::Pause | Bind::Diagnostics) {
                     return Task::none();
                 }
 
@@ -564,6 +624,13 @@ impl State {
                     Bind::Left => Action::PanLeft,
                     Bind::Right => Action::PanRight,
                     Bind::Pause => Action::Pause,
+                    Bind::Diagnostics => {
+                        if pressed {
+                            self.diagnosing = !self.diagnosing;
+                        }
+
+                        return Task::none();
+                    }
                     Bind::Restart => {
                         if pressed {
                             let now = std::time::Instant::now();
@@ -617,7 +684,7 @@ impl State {
             Message::Tick => {
                 let running = self.session.as_ref().is_some_and(Session::running);
 
-                let replays = if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
+                let mut replays = if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
                     self.refresh_replays(settings)
                 } else {
                     Task::none()
@@ -628,6 +695,21 @@ impl State {
                 if let Some(session) = self.session.as_mut() {
                     session.tick(&ctx.vault.vfs);
 
+                    match session.diagnose().filter(|_| self.diagnosing) {
+                        Some(probe) => {
+                            session.cut_recording();
+
+                            if self.probe.as_ref() != Some(&probe) {
+                                self.readout = Readout::of(&probe);
+                                self.probe = Some(probe);
+                            }
+                        }
+                        None => {
+                            self.diagnosing = false;
+                            self.probe = None;
+                        }
+                    }
+
                     if let Some(options) = session.take_options() {
                         app_state.sandbox.music_volume = options.music;
                         app_state.sandbox.effects_volume = options.effects;
@@ -635,7 +717,9 @@ impl State {
                         app_state.sandbox.vibrate = options.vibrate;
                     }
 
+                    let cut = session.take_cut().then(|| self.cut.set_after((), Message::CutExpired, CUT_LIFETIME));
                     let failure = session.failure().filter(|_| !session.faulted()).map_or_else(String::new, str::to_owned);
+                    replays = Task::batch([replays, cut.unwrap_or_else(Task::none)]);
 
                     if failure != self.reported {
                         self.reported.clone_from(&failure);
@@ -650,6 +734,90 @@ impl State {
                 replays
             }
         }
+    }
+
+    fn close_diagnostics(&mut self) {
+        self.diagnosing = false;
+        self.probe = None;
+    }
+
+    pub fn diagnostics_open(&self) -> bool {
+        self.probe.is_some()
+    }
+
+    pub fn diagnostics_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        self.probe.as_ref()?;
+
+        Some(self.diagnostics.view("Live Diagnostics", DIAGNOSTICS_POPUP, window, Message::DiagnosticsPopup, move || self.diagnostics_content(), None))
+    }
+
+    fn diagnostics_content(&self) -> Element<'_, Message> {
+        column![
+            column![
+                container(theme::bold_text("Seed").size(READOUT_SIZE)).style(theme::zebra_table_header).padding(READOUT_CELL_PADDING).width(Length::Fill).align_x(Horizontal::Center),
+                container(text(self.readout.seed.as_str()).size(READOUT_SIZE))
+                    .style(|theme: &Theme| theme::zebra_table_row(theme, 0))
+                    .padding(READOUT_CELL_PADDING)
+                    .width(Length::Fill)
+                    .align_x(Horizontal::Center),
+            ],
+            row![Self::readout_side("Enemies", &self.readout.enemies), Self::readout_side("Cats", &self.readout.cats)].spacing(READOUT_GAP).height(Length::Fill),
+        ]
+            .spacing(OPTION_SPACING)
+            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(BODY_PADDING)
+            .into()
+    }
+
+    fn readout_header<'a>(label: String, value: &'a str) -> Element<'a, Message> {
+        container(
+            row![
+                theme::bold_text(label).size(READOUT_SIZE).width(Length::Fill),
+                theme::bold_text(value).size(READOUT_SIZE).width(Length::Fixed(READOUT_VALUE_WIDTH)).align_x(Horizontal::Right),
+            ]
+                .spacing(READOUT_SPACING)
+                .align_y(Alignment::Center),
+        )
+            .style(theme::zebra_table_header)
+            .padding(READOUT_CELL_PADDING)
+            .width(Length::Fill)
+            .into()
+    }
+
+    fn readout_row<'a>(index: usize, name: &'a str, value: &'a str) -> Element<'a, Message> {
+        container(
+            row![
+                text(name).size(READOUT_SIZE).width(Length::Fill),
+                text(value).size(READOUT_SIZE).width(Length::Fixed(READOUT_VALUE_WIDTH)).align_x(Horizontal::Right),
+            ]
+                .spacing(READOUT_SPACING)
+                .align_y(Alignment::Center),
+        )
+            .style(move |theme: &Theme| theme::zebra_table_row(theme, index))
+            .padding(READOUT_CELL_PADDING)
+            .width(Length::Fill)
+            .into()
+    }
+
+    fn readout_side<'a>(title: &'a str, rows: &'a [(String, String)]) -> Element<'a, Message> {
+        let listed = rows
+            .iter()
+            .enumerate()
+            .fold(column![], |listed, (index, (name, hp))| listed.push(Self::readout_row(index, name, hp)));
+
+        column![
+            Self::readout_header(format!("{title} ({})", rows.len()), "HP"),
+            smooth_scroll(scrollable(listed).width(Length::Fill).height(Length::Fill).spacing(SCROLLBAR_GAP)),
+        ]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    pub fn cut_toast(&self) -> Element<'_, Message> {
+        headline(REPLAY_TERMINATED, self.cut.is_set())
     }
 
     pub fn fault_open(&self) -> bool {

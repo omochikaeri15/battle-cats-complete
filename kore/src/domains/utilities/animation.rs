@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::domains::settings::FrameCount;
 use crate::systems::animation::{Motion, MotionSet, Rigging};
+use crate::Source;
 
 pub fn key(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: FrameCount) -> String {
     let mut key = format!("{:?}|{}", frames, rig_id(png, cut, model));
@@ -18,9 +19,9 @@ pub fn key(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: Fram
 pub fn motions(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: FrameCount) -> MotionSet {
     let rig = Arc::new(Rigging {
         id: rig_id(png, cut, model),
-        png: png.to_path_buf(),
-        cut: cut.to_path_buf(),
-        model: model.to_path_buf(),
+        png: Source::disk(png),
+        cut: Source::disk(cut),
+        model: Source::disk(model),
     });
 
     let mut motions: Vec<Motion> = anims
@@ -31,7 +32,7 @@ pub fn motions(png: &Path, cut: &Path, model: &Path, anims: &[PathBuf], frames: 
             role: None,
             looping: frames.looping(),
             rig: rig.clone(),
-            file: Some(anim.clone()),
+            file: Some(Source::disk(anim.clone())),
         })
         .collect();
 

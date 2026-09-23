@@ -1,5 +1,10 @@
-use image::imageops;
-use image::RgbaImage;
+use image::{imageops, DynamicImage, RgbaImage};
+
+use crate::Source;
+
+pub fn open_image(source: &Source) -> Option<DynamicImage> {
+    image::load_from_memory(&source.read().ok()?).ok()
+}
 
 pub fn autocrop(img: RgbaImage) -> RgbaImage {
     let (width, height) = img.dimensions();

@@ -1,12 +1,11 @@
-use std::path::Path;
-
 use iced::widget::image::Handle;
 use image::imageops;
 
-use kore::common::gfx::autocrop;
+use kore::common::gfx::{autocrop, open_image};
+use kore::Source;
 
-pub fn load_scaled(path: &Path, max_size: u32) -> Option<Handle> {
-    let raw = image::open(path).ok()?;
+pub fn load_scaled(source: &Source, max_size: u32) -> Option<Handle> {
+    let raw = open_image(source)?;
     let cropped = autocrop(raw.to_rgba8());
     let (width, height) = cropped.dimensions();
     if width == 0 || height == 0 {
@@ -22,8 +21,8 @@ pub fn load_scaled(path: &Path, max_size: u32) -> Option<Handle> {
     Some(Handle::from_rgba(resized.width(), resized.height(), resized.into_raw()))
 }
 
-pub fn load_boxed(path: &Path, canvas: u32) -> Option<Handle> {
-    let raw = image::open(path).ok()?;
+pub fn load_boxed(source: &Source, canvas: u32) -> Option<Handle> {
+    let raw = open_image(source)?;
     let cropped = autocrop(raw.to_rgba8());
     let (width, height) = cropped.dimensions();
     if width == 0 || height == 0 {
@@ -47,8 +46,8 @@ pub fn load_boxed(path: &Path, canvas: u32) -> Option<Handle> {
     Some(Handle::from_rgba(canvas, canvas, boxed.into_raw()))
 }
 
-pub fn load_cropped(path: &Path) -> Option<(Handle, u32, u32)> {
-    let raw = image::open(path).ok()?;
+pub fn load_cropped(source: &Source) -> Option<(Handle, u32, u32)> {
+    let raw = open_image(source)?;
     if raw.width() <= 1 && raw.height() <= 1 {
         return None;
     }

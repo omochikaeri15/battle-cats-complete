@@ -69,15 +69,16 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
             read_cell_stream(stm, 0).to_vec(),
             read_cell_stream(stm, 1).to_vec(),
             read_cell_stream(stm, 2).to_vec(),
-            read_cell_stream(stm, 3).to_vec(),
-            read_cell_stream(stm, 4).to_vec(),
         ];
+        ctx.enemy_names.resize(ctx.enemy_names.len().max(2), Vec::new());
+        ctx.enemy_names[0] = read_cell_stream(stm, 3).to_vec();
+        ctx.enemy_names[1] = read_cell_stream(stm, 4).to_vec();
     }
 
     if let Some(bytes) = open_asset_stream(ctx, b"Enemyname.tsv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
-        ctx.enemy_names.clear();
+        ctx.enemy_names.resize(2, Vec::new());
 
         while read_tsv_row(stm) {
             ctx.enemy_names.push(read_cell_stream(stm, 0).to_vec());

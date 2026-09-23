@@ -13,6 +13,7 @@ use tracing::warn;
 use kore::common::context::GlobalContext;
 use kore::domains::enemy::scanner::EnemyEntry;
 use kore::domains::stage::{restrictions, Map, Stage};
+use kore::Source;
 
 use crate::app::theme;
 use crate::editor;
@@ -234,7 +235,7 @@ impl State {
             return Some(cached.clone());
         }
 
-        let handle = item_icon::load_scaled(path, MAX_ICON_SIZE as u32)?;
+        let handle = item_icon::load_scaled(&Source::disk(path), MAX_ICON_SIZE as u32)?;
         self.icon_cache.borrow_mut().insert(id, handle.clone());
         Some(handle)
     }

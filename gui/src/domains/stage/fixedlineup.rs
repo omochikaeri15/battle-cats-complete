@@ -10,6 +10,7 @@ use nyanko::chapter::stage::{AbilityType, CannonType, CertificationPreset, Evolu
 use kore::domains::cat::waiter::unitexplanation;
 use kore::domains::stage::fixedlineup::{ResolvedFixedLineup, ResolvedSlot};
 use kore::Vfs;
+use kore::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;
@@ -50,7 +51,7 @@ impl State {
             return Some(cached.clone());
         }
 
-        let (handle, _, _) = item_icon::load_cropped(path)?;
+        let (handle, _, _) = item_icon::load_cropped(&Source::disk(path))?;
         self.icon_cache.borrow_mut().insert(key, handle.clone());
         Some(handle)
     }

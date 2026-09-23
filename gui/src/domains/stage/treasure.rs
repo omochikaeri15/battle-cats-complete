@@ -12,6 +12,7 @@ use nyanko::chapter::stage::RewardStructure;
 use kore::domains::stage::treasure;
 use kore::domains::stage::Stage;
 use kore::{ItemStore, Vfs};
+use kore::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;
@@ -61,7 +62,7 @@ impl State {
             return Some(cached.clone());
         }
 
-        let handle = item_icon::load_scaled(path, MAX_ICON_SIZE as u32)?;
+        let handle = item_icon::load_scaled(&Source::disk(path), MAX_ICON_SIZE as u32)?;
         self.icon_cache.borrow_mut().insert(id, handle.clone());
         Some(handle)
     }

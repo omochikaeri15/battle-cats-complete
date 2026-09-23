@@ -3,9 +3,10 @@ mod tape;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use rayon::prelude::*;
@@ -16,7 +17,7 @@ use crate::common::architecture::{self, Workspace};
 use crate::common::{dirs, solid};
 use crate::domains::cat::scanner::{self, CatEntry};
 use crate::domains::settings::ScannerConfig;
-use crate::Vault;
+use crate::{Memory, Source, Vault};
 
 pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Unit};
 pub use tape::{Cue, Key, format_frame, parse};
@@ -29,8 +30,6 @@ const INPUT: &str = "input";
 const MANIFEST: &str = "manifest";
 const ASSETS: &str = architecture::REPLAY;
 const LATEST: &str = "sandbox";
-pub const THEATER: &str = "theater";
-const GALLERY: &str = "gallery";
 const BASE_FORMS: usize = 2;
 const BUNDLE_STEM: &str = "Replay";
 const EXPORTS: &str = "exports";
@@ -62,35 +61,26 @@ pub struct Staged {
     pub summary: Summary,
     pub vault: Vault,
     pub cats: Vec<CatEntry>,
-    _workspace: Option<Workspace>,
 }
 
 pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
-    let workspace = if target.is_dir() {
-        None
-    } else {
-        let work = Workspace::claim(GALLERY).map_err(|error| format!("the work folder could not be created: {error}"))?;
-
-        unpack(target, work.path())?;
-
-        Some(work)
-    };
-    let bundle = workspace.is_some();
-    let dir = workspace.as_ref().map_or_else(|| target.to_path_buf(), |work| work.path().to_path_buf());
-    let mut summary = inspect_dir(&dir);
-
-    if bundle {
-        summary.bytes = fs::metadata(target).map_or(0, |meta| meta.len());
-    }
-
     let vault = Vault::with_priority(&config.language_priority);
 
-    vault
-        .vfs
-        .create(dir.join(ASSETS).as_path())
-        .map_err(|error| format!("the replay's files could not be read: {error}"))?;
+    let summary = if target.is_dir() {
+        vault
+            .vfs
+            .create(target.join(ASSETS).as_path())
+            .map_err(|error| format!("the replay's files could not be read: {error}"))?;
 
-    Ok(Staged { _workspace: workspace, ..staged(summary, vault, config) })
+        inspect_dir(target)
+    } else {
+        let bundle = Bundle::open(target)?;
+
+        bundle.mount(&vault)?;
+        bundle.summary()
+    };
+
+    Ok(staged(summary, vault, config))
 }
 
 pub fn staged(summary: Summary, vault: Vault, config: &ScannerConfig) -> Staged {
@@ -130,7 +120,7 @@ pub fn staged(summary: Summary, vault: Vault, config: &ScannerConfig) -> Staged 
         }
     }
 
-    Staged { summary, vault, cats, _workspace: None }
+    Staged { summary, vault, cats }
 }
 
 pub fn library() -> PathBuf {
@@ -252,20 +242,87 @@ fn bundled(name: &str) -> bool {
     name.strip_prefix(ASSETS).is_some_and(|rest| rest.starts_with('/'))
 }
 
-pub fn index(dir: &Path) -> io::Result<BTreeMap<Box<str>, PathBuf>> {
-    let manifest = BufReader::new(File::open(dir.join(MANIFEST))?);
+pub fn index(dir: &Path) -> io::Result<BTreeMap<Box<str>, Source>> {
+    let manifest = fs::read_to_string(dir.join(MANIFEST))?;
     let assets = dir.join(ASSETS);
-    let mut index = BTreeMap::new();
 
-    for line in manifest.lines() {
-        let line = line?;
+    Ok(requests(&manifest).map(|(requested, stored)| (Box::from(requested), Source::disk(assets.join(stored)))).collect())
+}
 
-        if let Some((requested, stored)) = line.split_once('\t') {
-            index.insert(Box::from(requested), assets.join(stored));
+fn requests(manifest: &str) -> impl Iterator<Item = (&str, &str)> {
+    manifest.lines().filter_map(|line| line.split_once('\t'))
+}
+
+pub struct Bundle {
+    entries: BTreeMap<Box<str>, Arc<[u8]>>,
+    bytes: u64,
+}
+
+impl Bundle {
+    pub fn open(bundle: &Path) -> Result<Self, String> {
+        let mut archive = solid::open(bundle).map_err(|error| format!("{} could not be opened: {error}", bundle.display()))?;
+        let mut entries = BTreeMap::new();
+
+        for entry in archive.entries().map_err(|error| format!("{} is not a replay: {error}", bundle.display()))? {
+            let mut entry = entry.map_err(|error| format!("{} is damaged: {error}", bundle.display()))?;
+            let name = entry.path().map_err(|error| format!("{} is damaged: {error}", bundle.display()))?.to_string_lossy().into_owned();
+            let mut bytes = Vec::new();
+
+            entry.read_to_end(&mut bytes).map_err(|error| format!("{name} could not be read from {}: {error}", bundle.display()))?;
+            entries.insert(Box::from(name), Arc::from(bytes));
+        }
+
+        Ok(Self { entries, bytes: fs::metadata(bundle).map_or(0, |meta| meta.len()) })
+    }
+
+    fn text(&self, name: &str) -> Option<&str> {
+        self.entries.get(name).and_then(|bytes| std::str::from_utf8(bytes).ok())
+    }
+
+    pub fn save(&self) -> Result<Save, String> {
+        let text = self.text(SAVE).ok_or("the replay has no readable save")?;
+
+        serde_json::from_str(text).map_err(|error| format!("the replay save is malformed: {error}"))
+    }
+
+    pub fn input(&self) -> Result<Vec<Vec<Cue>>, String> {
+        parse(self.text(INPUT).ok_or("the replay has no readable input")?)
+    }
+
+    fn assets(&self) -> impl Iterator<Item = (&str, &Arc<[u8]>)> {
+        self.entries.iter().filter_map(|(name, bytes)| Some((name.strip_prefix(ASSETS)?.strip_prefix('/')?, bytes)))
+    }
+
+    pub fn summary(&self) -> Summary {
+        Summary {
+            save: self.save().ok(),
+            frames: self.text(INPUT).and_then(frames_in),
+            assets: self.assets().count(),
+            bytes: self.bytes,
         }
     }
 
-    Ok(index)
+    pub fn mount(&self, vault: &Vault) -> Result<(), String> {
+        let files = self.assets().map(|(name, bytes)| (Box::from(name), Arc::clone(bytes))).collect();
+
+        vault
+            .vfs
+            .create(Memory { key: ASSETS, files })
+            .map(|_| ())
+            .map_err(|error| format!("the replay's files could not be mounted: {error}"))
+    }
+
+    pub fn index(&self) -> BTreeMap<Box<str>, Source> {
+        let stored: BTreeMap<&str, &Arc<[u8]>> = self.assets().collect();
+
+        self.text(MANIFEST)
+            .map(|manifest| {
+                requests(manifest)
+                    .filter_map(|(requested, name)| Some((Box::from(requested), Source::memory(Path::new(ASSETS).join(name), Arc::clone(stored.get(name)?)))))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
 }
 
 pub fn read_save(dir: &Path) -> Result<Save, String> {
@@ -425,25 +482,6 @@ fn pack_into(dir: &Path, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> 
     writer.finish().map_err(|error| format!("the replay file could not be finished: {error}"))?;
 
     Ok(!abort.load(Ordering::Relaxed))
-}
-
-pub fn unpack(bundle: &Path, dir: &Path) -> Result<(), String> {
-    if dir.exists() {
-        fs::remove_dir_all(dir).map_err(|error| format!("the previous replay could not be cleared: {error}"))?;
-    }
-
-    fs::create_dir_all(dir).map_err(|error| format!("{} could not be created: {error}", dir.display()))?;
-
-    let mut archive = solid::open(bundle).map_err(|error| format!("{} could not be opened: {error}", bundle.display()))?;
-    let entries = archive.entries().map_err(|error| format!("{} is not a replay: {error}", bundle.display()))?;
-
-    for entry in entries {
-        let mut entry = entry.map_err(|error| format!("{} is damaged: {error}", bundle.display()))?;
-
-        entry.unpack_in(dir).map_err(|error| format!("{} could not be unpacked: {error}", bundle.display()))?;
-    }
-
-    Ok(())
 }
 
 pub fn restamp(target: &Path, version: &str) -> Result<(), String> {

@@ -123,9 +123,10 @@ pub enum Kind {
     SandboxOrb,
     ReplayVersion,
     ReplayUnit,
+    Diagnostics,
 }
 
-pub(crate) const KIND_COUNT: usize = 48;
+pub(crate) const KIND_COUNT: usize = 49;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -176,6 +177,7 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::SandboxOrb,
     Kind::ReplayVersion,
     Kind::ReplayUnit,
+    Kind::Diagnostics,
 ];
 
 impl Kind {
@@ -229,6 +231,7 @@ impl Kind {
             Self::SandboxOrb => "sandbox_orb",
             Self::ReplayVersion => "replay_version",
             Self::ReplayUnit => "replay_unit",
+            Self::Diagnostics => "diagnostics",
         }
     }
 
@@ -320,6 +323,41 @@ thread_local! {
     static RAISES: Cell<u64> = const { Cell::new(0) };
     static ORDER: Cell<[u64; KIND_COUNT]> = const { Cell::new([0; KIND_COUNT]) };
     static SHARED: Cell<[bool; KIND_COUNT]> = const { Cell::new([false; KIND_COUNT]) };
+    static VIEWS: Cell<u64> = const { Cell::new(0) };
+    static SEEN: Cell<[u64; KIND_COUNT]> = const { Cell::new([0; KIND_COUNT]) };
+    static SHOWN: Cell<[u64; KIND_COUNT]> = const { Cell::new([0; KIND_COUNT]) };
+}
+
+pub(crate) fn begin_view() {
+    VIEWS.with(|views| views.set(views.get().saturating_add(1)));
+}
+
+fn current_view() -> u64 {
+    VIEWS.with(Cell::get)
+}
+
+fn shown_at(kind: Kind) -> u64 {
+    SHOWN.with(|shown| shown.get()[kind.slot()])
+}
+
+fn note_view(kind: Kind) {
+    let now = current_view();
+    let seen = SEEN.with(|seen| {
+        let mut slots = seen.get();
+        let last = slots[kind.slot()];
+        slots[kind.slot()] = now;
+        seen.set(slots);
+
+        last
+    });
+
+    if seen.saturating_add(1) < now {
+        SHOWN.with(|shown| {
+            let mut slots = shown.get();
+            slots[kind.slot()] = now;
+            shown.set(slots);
+        });
+    }
 }
 
 fn next_raise() -> u64 {
@@ -387,6 +425,7 @@ pub struct State {
     drag: Drag,
     hovered: Option<Edge>,
     raised: u64,
+    since: u64,
     fit: RefCell<Fit>,
 }
 
@@ -448,15 +487,31 @@ impl State {
         self.raised
     }
 
+    fn stale(&self, kind: Kind) -> bool {
+        shown_at(kind) > self.since
+    }
+
     pub fn update(&mut self, message: Message, spec: Spec) -> bool {
+        if self.stale(spec.kind) {
+            self.drag = Drag::Idle;
+            self.hovered = None;
+        }
+
         match message {
             Message::Raise => self.raised = raise(spec.kind),
-            Message::HeaderPressed => self.drag = Drag::Pressed,
+            Message::HeaderPressed => {
+                self.since = current_view();
+                self.drag = Drag::Pressed;
+            }
             Message::EdgePressed(edge) => {
+                self.since = current_view();
                 self.raised = raise(spec.kind);
                 self.drag = Drag::Grabbed { edge };
             }
-            Message::EdgeEntered(edge) => self.hovered = Some(edge),
+            Message::EdgeEntered(edge) => {
+                self.since = current_view();
+                self.hovered = Some(edge);
+            }
             Message::EdgeExited(edge) => {
                 if self.hovered == Some(edge) {
                     self.hovered = None;
@@ -498,6 +553,8 @@ impl State {
         content: impl Fn() -> Element<'a, M> + 'a,
         body_alpha: Option<f32>,
     ) -> Element<'a, M> {
+        note_view(spec.kind);
+
         let body_alpha = body_alpha.unwrap_or(DEFAULT_BODY_ALPHA);
 
         let bounds = if window.width < 1.0 || window.height < 1.0 { MINIMUM_WINDOW } else { window };
@@ -553,9 +610,11 @@ impl State {
 
         let mut layers = vec![focused(frame, position, to_message(Message::Raise))];
 
-        let lit = match self.drag {
+        let (drag, hovered) = if self.stale(spec.kind) { (Drag::Idle, None) } else { (self.drag, self.hovered) };
+
+        let lit = match drag {
             Drag::Grabbed { edge } | Drag::Resizing { edge, .. } => Some(edge),
-            Drag::Idle => self.hovered,
+            Drag::Idle => hovered,
             Drag::Pressed | Drag::Moving { .. } => None,
         };
 
@@ -567,8 +626,8 @@ impl State {
 
         let mut drag_layer = mouse_area(Space::new().width(Length::Fill).height(Length::Fill));
 
-        if !matches!(self.drag, Drag::Idle) {
-            let interaction = match self.drag {
+        if !matches!(drag, Drag::Idle) {
+            let interaction = match drag {
                 Drag::Grabbed { edge } | Drag::Resizing { edge, .. } => edge.interaction(),
                 _ => Interaction::Grabbing,
             };

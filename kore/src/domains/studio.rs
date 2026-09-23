@@ -19,6 +19,7 @@ pub use crate::domains::mods::patch_root;
 use crate::common::architecture::{GAME, MODS, STUDIO};
 use crate::domains::settings::FrameCount;
 use crate::systems::animation::{self, Motion, MotionSet, Rigging};
+use crate::Source;
 
 pub use blank::SEED_SUFFIX;
 
@@ -161,9 +162,9 @@ impl Set {
 
         let rig = Arc::new(Rigging {
             id: self.rig_id(),
-            png: sheet.clone(),
-            cut: cuts.clone(),
-            model: model.clone(),
+            png: Source::disk(sheet.clone()),
+            cut: Source::disk(cuts.clone()),
+            model: Source::disk(model.clone()),
         });
 
         let unit = self.addressed();
@@ -180,7 +181,7 @@ impl Set {
                     role: named.map(|(_, _, role)| role),
                     looping: frames.looping(),
                     rig: Arc::clone(&rig),
-                    file: Some(anim.clone()),
+                    file: Some(Source::disk(anim.clone())),
                 }
             })
             .collect();

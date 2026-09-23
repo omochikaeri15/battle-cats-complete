@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread;
@@ -409,7 +408,7 @@ impl State {
         self.scanned_showcase = Some(export_name.to_string());
 
         let parse_anim = |role: Role| -> Option<Animation> {
-            let bytes = fs::read(data.role_path(role)?).ok()?;
+            let bytes = data.role_path(role)?.read().ok()?;
             Animation::parse(&bytes).ok()
         };
 
@@ -981,7 +980,7 @@ impl State {
                             }
 
                             if let Some((_, path)) = role_paths.iter().find(|(known, _)| *known == role)
-                                && let Ok(bytes) = fs::read(path)
+                                && let Ok(bytes) = path.read()
                                 && let Ok(anim) = Animation::parse(&bytes) {
                                 showcase_motions.push((anim, length));
                             }
@@ -1618,10 +1617,10 @@ fn derive_name_prefix(raw_id: &str, type_string: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use std::sync::Arc;
 
     use kore::systems::animation::{Motion, MotionSet, Loop, Rigging, Role};
+    use kore::Source;
 
     use super::*;
 
@@ -1633,11 +1632,11 @@ mod tests {
             looping: Loop::Auto,
             rig: Arc::new(Rigging {
                 id: "test".to_owned(),
-                png: PathBuf::from("t.png"),
-                cut: PathBuf::from("t.imgcut"),
-                model: PathBuf::from("t.mamodel"),
+                png: Source::disk("t.png"),
+                cut: Source::disk("t.imgcut"),
+                model: Source::disk("t.mamodel"),
             }),
-            file: Some(PathBuf::from("000_f00.maanim")),
+            file: Some(Source::disk("000_f00.maanim")),
         }
     }
 
