@@ -17,7 +17,7 @@ use tracing::{info, trace, warn};
 
 use super::assets::{DiskAssets, FileIndex, Ledger, SharedLedger, SheetCache};
 use super::input::{Touch, TouchQueue};
-use super::keys::{Action, Keys};
+use super::keys::{Action, Keys, LEAVE_AFTER};
 use super::replay;
 use super::sink::{Frame, Recorder};
 use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
@@ -76,6 +76,7 @@ pub struct Driver {
     label: Label,
     recorded: Option<tape::Save>,
     listener: Option<SharedLog>,
+    leaving: Option<u16>,
 }
 
 #[derive(Default)]
@@ -146,6 +147,7 @@ impl Driver {
             label: Label::default(),
             recorded: None,
             listener,
+            leaving: None,
         };
 
         driver.host();
@@ -224,6 +226,7 @@ impl Driver {
         self.recorded = None;
         self.pending.clear();
         self.finished = false;
+        self.leaving = None;
         self.ledger.borrow_mut().disarm();
     }
 
@@ -412,6 +415,10 @@ impl Driver {
 
     pub fn key(&mut self, action: Action, pressed: bool) {
         if self.watching() {
+            if action == Action::Pause {
+                self.leaving = pressed.then(|| self.leaving.unwrap_or(0));
+            }
+
             return;
         }
 
@@ -752,6 +759,10 @@ impl Driver {
     }
 
     pub fn advance(&mut self) -> Result<(), String> {
+        if let Some(held) = self.leaving.as_mut() {
+            *held = held.saturating_add(1);
+        }
+
         match self.run_frame() {
             Ok(()) => Ok(()),
             Err((site, reason)) if self.forgiven.contains(&site) => {
@@ -768,7 +779,13 @@ impl Driver {
     }
 
     pub fn exit_requested(&mut self) -> bool {
-        self.keys.take_exit()
+        let held = self.leaving.is_some_and(|held| held >= LEAVE_AFTER);
+
+        if held {
+            self.leaving = None;
+        }
+
+        self.keys.take_exit() || held
     }
 
     pub fn forgive(&mut self) {

@@ -523,8 +523,8 @@ impl State {
                 };
 
                 if session.watching() {
-                    if pressed && bind == Bind::Pause {
-                        session.terminate();
+                    if bind == Bind::Pause {
+                        session.key(Action::Pause, pressed);
                     }
 
                     return Task::none();

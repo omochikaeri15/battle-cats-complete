@@ -7,7 +7,7 @@ use tracing::warn;
 const TAP_FRAMES: u8 = 2;
 const GATE_FRAMES: u16 = 90;
 const SWAP_SETTLE: u8 = 4;
-const LEAVE_AFTER: u16 = 15;
+pub(super) const LEAVE_AFTER: u16 = 15;
 const PAN_STEP: i32 = 0x18;
 const PAN_REACH: i32 = 1 << 20;
 const ZOOM_STEP: i32 = 10;

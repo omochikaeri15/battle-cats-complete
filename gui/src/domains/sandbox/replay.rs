@@ -50,6 +50,7 @@ const TITLE_SIZE: f32 = 22.0;
 const TITLE_PADDING: f32 = 8.0;
 const RULE_THICKNESS: f32 = 1.0;
 const RULE_PADDING: f32 = 8.0;
+const TITLE_GAP: f32 = 6.0;
 const SECTION_GAP: f32 = 16.0;
 const DETAILS_PADDING: f32 = 16.0;
 const FIELD_LABEL_WIDTH: f32 = 90.0;
@@ -812,7 +813,7 @@ impl State {
 
         let mut content = column![
             title,
-            Space::new().height(RULE_PADDING),
+            Space::new().height(TITLE_GAP),
             content_rule(),
             Space::new().height(RULE_PADDING),
             content_card("Meta", rows(&details.meta)),
