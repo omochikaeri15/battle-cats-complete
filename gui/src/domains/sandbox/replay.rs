@@ -146,6 +146,7 @@ pub struct State {
     open: Option<usize>,
     clicked: Option<(usize, Instant)>,
     search: String,
+    names: Vec<String>,
     shown: Vec<usize>,
     rename: String,
     manage: manage::State,
@@ -476,11 +477,16 @@ impl State {
                 Task::none()
             }
             Message::RenameInput(name) => {
-                self.rename = name;
+                self.rename = tape::clean_name(&name);
+                self.rename_live();
 
                 Task::none()
             }
-            Message::CommitRename => self.commit_rename(settings),
+            Message::CommitRename => {
+                self.settle_rename();
+
+                Task::none()
+            }
             Message::Press(slot) => {
                 let now = Instant::now();
                 let doubled = self.clicked.take().is_some_and(|(held, at)| held == slot && now.duration_since(at) <= DOUBLE_CLICK);
@@ -545,42 +551,41 @@ impl State {
     fn filter(&mut self) {
         let query = self.search.to_lowercase();
 
+        self.names = self.bundles.iter().map(|path| bundle_name(path)).collect();
         self.shown = self
-            .bundles
+            .names
             .iter()
             .enumerate()
-            .filter(|(_, path)| query.is_empty() || bundle_name(path).to_lowercase().contains(&query))
+            .filter(|(_, name)| query.is_empty() || name.to_lowercase().contains(&query))
             .map(|(index, _)| index)
             .collect();
     }
 
-    fn commit_rename(&mut self, settings: &Settings) -> Task<Message> {
+    fn rename_live(&mut self) {
         let Some(Pick::Bundle(old)) = self.picked.clone() else {
-            return Task::none();
+            return;
         };
-        let current = bundle_name(&old);
-        let wanted = self.rename.trim().to_owned();
 
-        if wanted.is_empty() || wanted == current || self.manage.busy(&Pick::Bundle(old.clone())) {
-            self.rename = current;
-
-            return Task::none();
+        if self.manage.busy(&Pick::Bundle(old.clone())) {
+            return;
         }
 
-        let renamed = match tape::rename(&old, &wanted) {
-            Ok(renamed) => renamed,
+        let renamed = match tape::rename(&old, &self.rename) {
+            Ok(Some(renamed)) => renamed,
+            Ok(None) => return,
             Err(reason) => {
                 warn!("Replay could not be renamed: {reason}");
-                self.rename = current;
 
-                return Task::none();
+                return;
             }
         };
         let stamp = tape::stamp(&renamed);
+        let stale = Pick::Bundle(old.clone());
         let fresh = Pick::Bundle(renamed.clone());
+        let name = bundle_name(&renamed);
 
         for (pick, seen, _) in &mut self.cache {
-            if *pick == Pick::Bundle(old.clone())
+            if *pick == stale
                 && let Some(stamp) = &stamp
             {
                 *pick = fresh.clone();
@@ -588,10 +593,23 @@ impl State {
             }
         }
 
-        self.manage.rekey(&Pick::Bundle(old), fresh.clone());
-        self.picked = Some(fresh);
+        if let Some(held) = self.bundles.iter_mut().find(|held| **held == old) {
+            *held = renamed;
+        }
 
-        self.refresh(settings)
+        if let Some(details) = &mut self.details {
+            details.title.clone_from(&name);
+        }
+
+        self.manage.rekey(&stale, fresh.clone());
+        self.picked = Some(fresh);
+        self.filter();
+    }
+
+    fn settle_rename(&mut self) {
+        if let Some(Pick::Bundle(path)) = &self.picked {
+            self.rename = bundle_name(path);
+        }
     }
 
     pub fn unit_popup_view<'a>(
@@ -655,11 +673,11 @@ impl State {
         } else {
             let mut rows = Column::with_capacity(self.shown.len()).spacing(LIST_SPACING).width(Length::Fill);
 
-            for path in self.shown.iter().filter_map(|index| self.bundles.get(*index)) {
+            for (path, name) in self.shown.iter().filter_map(|index| Some((self.bundles.get(*index)?, self.names.get(*index)?))) {
                 let picked = matches!(&self.picked, Some(Pick::Bundle(held)) if held == path);
                 let face = row![
                     Space::new().width(Length::Fixed(EDGE_GAP)),
-                    theme::centered_text(bundle_name(path)).size(ROW_TEXT_SIZE).width(Length::Fill),
+                    theme::centered_text(name.as_str()).size(ROW_TEXT_SIZE).width(Length::Fill),
                     Space::new().width(Length::Fixed(EDGE_GAP)),
                 ]
                     .align_y(Vertical::Center)

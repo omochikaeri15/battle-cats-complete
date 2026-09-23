@@ -205,6 +205,9 @@ pub fn mix(log: &SoundLog, files: &FileIndex, frames: u32, out: &Path, emit: &dy
 
     file.write_all(&header(frames as usize * SAMPLES_PER_FRAME * CHANNELS))?;
 
+    let mut block = [0.0f32; SAMPLES_PER_FRAME * CHANNELS];
+    let mut bytes: Vec<u8> = Vec::with_capacity(block.len() * 2);
+
     for frame in 0..frames {
         if abort.load(Ordering::Relaxed) {
             return Ok(());
@@ -247,32 +250,44 @@ pub fn mix(log: &SoundLog, files: &FileIndex, frames: u32, out: &Path, emit: &dy
             }
         }
 
-        for _ in 0..SAMPLES_PER_FRAME {
-            let mut pair = [0.0f32; CHANNELS];
+        block.fill(0.0);
 
-            if let Some((_, voice)) = song.as_mut()
-                && !voice.samples.is_empty()
-            {
-                for (channel, sample) in pair.iter_mut().enumerate() {
-                    *sample += voice.samples[(voice.at + channel) % voice.samples.len()] * voice.level;
+        if let Some((_, voice)) = song.as_mut()
+            && !voice.samples.is_empty()
+        {
+            let mut filled = 0;
+
+            while filled < block.len() {
+                let source = voice.samples.get(voice.at..).unwrap_or_default();
+                let taken = source.len().min(block.len() - filled);
+
+                for (slot, sample) in block[filled..filled + taken].iter_mut().zip(source) {
+                    *slot += sample * voice.level;
                 }
 
-                voice.at = (voice.at + CHANNELS) % voice.samples.len();
-            }
-
-            voices.retain(|_, voice| {
-                for (channel, sample) in pair.iter_mut().enumerate() {
-                    *sample += voice.samples.get(voice.at + channel).copied().unwrap_or(0.0) * voice.level;
-                }
-
-                voice.at += CHANNELS;
-                voice.at < voice.samples.len()
-            });
-
-            for sample in pair {
-                file.write_all(&((sample.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16).to_le_bytes())?;
+                filled += taken;
+                voice.at = (voice.at + taken) % voice.samples.len();
             }
         }
+
+        voices.retain(|_, voice| {
+            let source = voice.samples.get(voice.at..).unwrap_or_default();
+
+            for (slot, sample) in block.iter_mut().zip(source) {
+                *slot += sample * voice.level;
+            }
+
+            voice.at += block.len();
+            voice.at < voice.samples.len()
+        });
+
+        bytes.clear();
+
+        for sample in &block {
+            bytes.extend_from_slice(&((sample.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16).to_le_bytes());
+        }
+
+        file.write_all(&bytes)?;
     }
 
     file.flush()

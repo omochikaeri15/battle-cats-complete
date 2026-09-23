@@ -50,6 +50,7 @@ const KEEPSAKE_TABLES: [&str; 13] = [
 ];
 const BUNDLE_STEM: &str = "Replay";
 const EXPORTS: &str = "exports";
+const STAGING: &str = "replay";
 const FORBIDDEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
 pub fn scratch() -> Option<PathBuf> {
@@ -372,25 +373,29 @@ pub fn export(bundle: &Path) -> Result<PathBuf, String> {
     Ok(out)
 }
 
-pub fn rename(bundle: &Path, name: &str) -> Result<PathBuf, String> {
-    let clean: String = name.chars().filter(|c| !FORBIDDEN.contains(c)).collect();
-    let clean = clean.trim();
+pub fn clean_name(name: &str) -> String {
+    name.chars().filter(|c| !FORBIDDEN.contains(c)).collect()
+}
 
-    if clean.is_empty() {
-        return Err("a replay needs a name".to_owned());
+pub fn rename(bundle: &Path, name: &str) -> Result<Option<PathBuf>, String> {
+    let clean = clean_name(name);
+    let clean = clean.trim();
+    let current = bundle.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
+
+    if clean.is_empty() || clean == current {
+        return Ok(None);
     }
 
     let parent = bundle.parent().ok_or("the replay has no folder")?;
     let target = parent.join(format!("{clean}.{EXTENSION}"));
-    let recasing = bundle.file_stem().is_some_and(|stem| stem.to_string_lossy().eq_ignore_ascii_case(clean));
 
-    if !recasing && target.exists() {
-        return Err(format!("{clean} is already taken"));
+    if !current.eq_ignore_ascii_case(clean) && target.exists() {
+        return Ok(None);
     }
 
     fs::rename(bundle, &target).map_err(|error| format!("{} could not be renamed: {error}", bundle.display()))?;
 
-    Ok(target)
+    Ok(Some(target))
 }
 
 pub fn delete(bundle: &Path) -> Result<(), String> {
@@ -398,7 +403,9 @@ pub fn delete(bundle: &Path) -> Result<(), String> {
 }
 
 pub fn pack(dir: &Path, out: &Path, emit: impl Fn(f32), abort: &AtomicBool) -> JobOutcome {
-    let outcome = match pack_into(dir, out, &emit, abort) {
+    let _work = architecture::Scratch::claim();
+    let staging = Path::new(architecture::WORK).join(STAGING).join(out.file_name().unwrap_or_default());
+    let outcome = match pack_into(dir, &staging, &emit, abort).and_then(|packed| if packed { settle(&staging, out).map(|()| true) } else { Ok(false) }) {
         Ok(true) => return JobOutcome::Completed,
         Ok(false) => JobOutcome::Aborted,
         Err(reason) => {
@@ -408,13 +415,30 @@ pub fn pack(dir: &Path, out: &Path, emit: impl Fn(f32), abort: &AtomicBool) -> J
         }
     };
 
-    if out.exists()
-        && let Err(error) = fs::remove_file(out)
+    if staging.exists()
+        && let Err(error) = fs::remove_file(&staging)
     {
-        warn!("Partial replay {} could not be removed: {error}", out.display());
+        warn!("Partial replay {} could not be removed: {error}", staging.display());
     }
 
     outcome
+}
+
+fn settle(staging: &Path, out: &Path) -> Result<(), String> {
+    if !staging.exists() {
+        return Ok(());
+    }
+
+    if let Some(parent) = out.parent() {
+        fs::create_dir_all(parent).map_err(|error| format!("the replay folder could not be created: {error}"))?;
+    }
+
+    if fs::rename(staging, out).is_ok() {
+        return Ok(());
+    }
+
+    fs::copy(staging, out).map_err(|error| format!("the replay could not be moved into place: {error}"))?;
+    fs::remove_file(staging).map_err(|error| format!("{} could not be cleared: {error}", staging.display()))
 }
 
 fn pack_into(dir: &Path, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> Result<bool, String> {
