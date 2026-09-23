@@ -381,6 +381,46 @@ impl From<github::Error> for CheckError {
 fn check_remote() -> Result<Option<UpdateTarget>, CheckError> {
     let current_version = cargo_crate_version!();
 
+    let tag = match github::latest_tag(REPO_OWNER, REPO_NAME) {
+        Ok(Some(tag)) => tag,
+        Ok(None) => return Ok(None),
+        Err(err) => {
+            warn!("The latest release page could not be read, asking the GitHub API instead: {}", err);
+            return check_api(current_version);
+        }
+    };
+
+    let latest = github::Release { tag_name: tag, body: None, prerelease: false, assets: Vec::new() };
+
+    if !is_upgrade(current_version, &latest) {
+        return Ok(None);
+    }
+
+    for asset in asset_candidates() {
+        match github::has_download(REPO_OWNER, REPO_NAME, &latest.tag_name, &asset) {
+            Ok(true) => {
+                return Ok(Some(UpdateTarget {
+                    latest: latest.version().to_string(),
+                    version: latest.version().to_string(),
+                    tag: latest.tag_name,
+                    asset,
+                }));
+            }
+            Ok(false) => {}
+            Err(err) => {
+                warn!("{} could not be probed for {}, asking the GitHub API instead: {}", latest.tag_name, asset, err);
+                return check_api(current_version);
+            }
+        }
+    }
+
+    warn!("{} carries no asset this build understands; listing every release to find a step", latest.tag_name);
+
+    let releases = github::list_releases(REPO_OWNER, REPO_NAME)?;
+    select_target(&releases, current_version)
+}
+
+fn check_api(current_version: &str) -> Result<Option<UpdateTarget>, CheckError> {
     if let Some(latest) = github::latest_release(REPO_OWNER, REPO_NAME)? {
         if !is_upgrade(current_version, &latest) {
             return Ok(None);

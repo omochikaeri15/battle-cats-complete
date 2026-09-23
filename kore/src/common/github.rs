@@ -2,11 +2,15 @@ use std::fmt;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use reqwest::blocking::{Client, Response};
+use reqwest::header::LOCATION;
+use reqwest::redirect::Policy;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use tracing::{debug, warn};
 
 const API_ROOT: &str = "https://api.github.com";
+const WEB_ROOT: &str = "https://github.com";
+const TAG_PATH: &str = "/releases/tag/";
 const AGENT: &str = concat!("BattleCatsComplete/", env!("CARGO_PKG_VERSION"));
 const PER_PAGE: usize = 100;
 const MAX_PAGES: usize = 200;
@@ -86,6 +90,60 @@ pub fn latest_release(owner: &str, repo: &str) -> Result<Option<Release>, Error>
     serde_json::from_str(&body)
         .map(Some)
         .map_err(|err| Error::new(ErrorKind::Malformed, format!("could not parse the latest release: {}", err)))
+}
+
+pub fn latest_tag(owner: &str, repo: &str) -> Result<Option<String>, Error> {
+    let url = format!("{}/{}/{}/releases/latest", WEB_ROOT, owner, repo);
+    let response = probe(&url)?;
+    let status = response.status();
+
+    if status == StatusCode::NOT_FOUND {
+        return Err(Error::new(ErrorKind::InvalidUrl, format!("GitHub has no release page at {}", url)));
+    }
+
+    if !status.is_redirection() {
+        return Err(Error::new(ErrorKind::Malformed, format!("{} answered {} instead of pointing at a release", url, status)));
+    }
+
+    Ok(response.headers().get(LOCATION).and_then(|location| location.to_str().ok()).and_then(tag_of))
+}
+
+pub fn has_download(owner: &str, repo: &str, tag: &str, asset: &str) -> Result<bool, Error> {
+    let url = format!("{}/{}/{}/releases/download/{}/{}", WEB_ROOT, owner, repo, tag, asset);
+    let response = probe(&url)?;
+
+    match response.status() {
+        StatusCode::NOT_FOUND => Ok(false),
+        status if status.is_redirection() || status.is_success() => Ok(true),
+        status => Err(Error::new(ErrorKind::Network, format!("{} answered {}", url, status))),
+    }
+}
+
+fn tag_of(location: &str) -> Option<String> {
+    let (_, tag) = location.split_once(TAG_PATH)?;
+    let tag = tag.trim_end_matches('/');
+
+    (!tag.is_empty()).then(|| tag.to_owned())
+}
+
+fn probe(url: &str) -> Result<Response, Error> {
+    let client = Client::builder()
+        .user_agent(AGENT)
+        .timeout(TIMEOUT)
+        .redirect(Policy::none())
+        .build()
+        .map_err(|err| Error::new(ErrorKind::Network, format!("could not build the http client: {}", err)))?;
+
+    let response = client.head(url).send().map_err(|err| {
+        let kind = if err.is_builder() { ErrorKind::InvalidUrl } else { ErrorKind::Network };
+        Error::new(kind, format!("request to GitHub failed: {}", err))
+    })?;
+
+    if response.status() == StatusCode::TOO_MANY_REQUESTS {
+        return Err(Error::new(ErrorKind::RateLimited, format!("GitHub is throttling requests to {}", url)));
+    }
+
+    Ok(response)
 }
 
 pub fn list_releases(owner: &str, repo: &str) -> Result<Vec<Release>, Error> {
@@ -187,4 +245,22 @@ fn rate_limit_message(response: &Response) -> String {
             )
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_latest_redirect_names_its_tag() {
+        assert_eq!(tag_of("https://github.com/owner/repo/releases/tag/v4.1.2"), Some("v4.1.2".to_owned()));
+        assert_eq!(tag_of("https://github.com/owner/repo/releases/tag/v4.1.2/"), Some("v4.1.2".to_owned()));
+    }
+
+    // A repo with no releases bounces back to the listing, which names no tag at all.
+    #[test]
+    fn a_redirect_without_a_tag_means_no_release() {
+        assert_eq!(tag_of("https://github.com/owner/repo/releases"), None);
+        assert_eq!(tag_of("https://github.com/owner/repo/releases/tag/"), None);
+    }
 }
