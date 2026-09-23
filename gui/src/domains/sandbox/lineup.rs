@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use iced::alignment::{Horizontal, Vertical};
@@ -11,7 +12,7 @@ use kore::domains::cat::scanner::{self, CatEntry};
 use kore::domains::cat::game::stats::get_final_stats;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::rules::Rules;
-use kore::domains::sandbox::{Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
+use kore::domains::sandbox::{mount_of, Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
 use kore::domains::settings::Settings;
 use kore::Vfs;
 use nyanko::combat::Entity;
@@ -207,6 +208,8 @@ pub struct State {
     found: Vec<usize>,
     altar: Option<u32>,
     orphans: HashMap<u32, [Option<Entity>; 4]>,
+    mount: String,
+    orb_slots: Arc<HashMap<u32, usize>>,
 }
 
 impl State {
@@ -236,6 +239,8 @@ impl State {
             found: Vec::new(),
             altar: None,
             orphans: HashMap::new(),
+            mount: String::new(),
+            orb_slots: Arc::default(),
         }
     }
 
@@ -287,6 +292,10 @@ impl State {
 
     pub fn inspector(&self) -> &cat::State {
         &self.inspector
+    }
+
+    pub fn worn<'a>(&'a self, member: &'a Member) -> impl Iterator<Item = (usize, u32)> + 'a {
+        member.worn(self.orb_slots.get(&member.id).copied().unwrap_or(0), self.orbs.catalog())
     }
 
     pub fn set_altar(&mut self, cap: Option<u32>) {
@@ -345,6 +354,8 @@ impl State {
 
     fn settle(&mut self, app_state: &AppState, ctx: GlobalContext<'_>) {
         self.orphans.clear();
+        self.mount = mount_of(&ctx.vault.vfs);
+        self.orb_slots = ctx.vault.vds.cats.orb_slots(&ctx.vault.vfs);
 
         let members = app_state.sandbox.roster.current().into_iter().flat_map(|lineup| lineup.slots.iter().chain(lineup.bench.iter().flatten()));
 
@@ -400,7 +411,7 @@ impl State {
 
         let fresh = Member { id, form: form.unwrap_or(lowest), level, talents: HashMap::new(), orbs: vec![None; slots] };
 
-        Some(roster.dress(fresh, form))
+        Some(roster.dress(fresh, form, &self.mount))
     }
 
     fn open(&mut self, cell: Cell, lineup: &Lineup, vfs: &Vfs) {
@@ -466,8 +477,8 @@ impl State {
     pub fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         let task = self.update_inner(message, settings, app_state, ctx);
 
-        app_state.sandbox.roster.remember();
         self.settle(app_state, ctx);
+        app_state.sandbox.roster.remember(&self.mount);
 
         task
     }
@@ -838,7 +849,7 @@ impl State {
             Cargo::Held(cell) => lineup.and_then(|lineup| lineup.get(cell)).and_then(|member| self.icons.get(&(member.id, member.form))).cloned(),
             Cargo::Fresh(id) => self.inspector.cat(id).and_then(|cat| {
                 let shown = cat::State::shown_form(cat, self.banner_form);
-                let form = roster.recall(id).map_or(shown, |past| past.form);
+                let form = roster.recall(id, &self.mount).map_or(shown, |past| past.form);
 
                 cat.deploy_icon_paths
                     .get(form)
@@ -963,10 +974,10 @@ impl State {
         });
 
         let orb_size = ORB_SIZE * metrics.scale;
-        let spread = member.equipped().count().saturating_sub(1) as f32 * orb_size * ORB_STEP + orb_size;
+        let spread = self.worn(member).count().saturating_sub(1) as f32 * orb_size * ORB_STEP + orb_size;
         let mut worn = stack![Space::new().width(Length::Fixed(spread)).height(Length::Fixed(orb_size))];
 
-        for (place, (_, orb)) in member.equipped().enumerate() {
+        for (place, (_, orb)) in self.worn(member).enumerate() {
             let shifted = Padding::default().left(place as f32 * orb_size * ORB_STEP);
 
             worn = worn.push(container(self.orbs.picture(orb, orb_size)).padding(shifted));

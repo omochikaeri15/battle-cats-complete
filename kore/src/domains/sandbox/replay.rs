@@ -5,11 +5,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::UNIX_EPOCH;
 
 use rayon::prelude::*;
 use tracing::warn;
 
+use crate::common::job::JobOutcome;
 use crate::common::{architecture, dirs, solid};
 use crate::domains::cat::files;
 use crate::domains::cat::scanner::{self, CatEntry};
@@ -20,6 +22,7 @@ pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Un
 pub use tape::{Cue, Key, format_frame, parse};
 
 pub const EXTENSION: &str = "bcv";
+pub const VANILLA_APP: &str = "The Battle Cats";
 
 const SAVE: &str = "save";
 const INPUT: &str = "input";
@@ -46,6 +49,8 @@ const KEEPSAKE_TABLES: [&str; 13] = [
     "img022",
 ];
 const BUNDLE_STEM: &str = "Replay";
+const EXPORTS: &str = "exports";
+const FORBIDDEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
 pub fn scratch() -> Option<PathBuf> {
     dirs::state().map(|state| state.join(SCRATCH))
@@ -347,28 +352,72 @@ fn walk(dir: &Path, prefix: &str, found: &mut Vec<(String, PathBuf)>) -> io::Res
 
 pub fn next_bundle(library: &Path) -> PathBuf {
     (1usize..)
-        .map(|number| library.join(format!("{BUNDLE_STEM} {number}.{EXTENSION}")))
+        .map(|number| library.join(format!("{BUNDLE_STEM}{number}.{EXTENSION}")))
         .find(|path| !path.exists())
         .unwrap_or_else(|| library.join(format!("{BUNDLE_STEM}.{EXTENSION}")))
 }
 
-pub fn pack(dir: &Path, out: &Path) -> Result<(), String> {
-    let packed = pack_into(dir, out);
+pub fn export(bundle: &Path) -> Result<PathBuf, String> {
+    let folder = Path::new(EXPORTS);
+    let stem = bundle.file_stem().map_or_else(|| BUNDLE_STEM.to_owned(), |stem| stem.to_string_lossy().into_owned());
+    let out = (0usize..)
+        .map(|copy| if copy == 0 { format!("{stem}.{EXTENSION}") } else { format!("{stem}{copy}.{EXTENSION}") })
+        .map(|name| folder.join(name))
+        .find(|path| !path.exists())
+        .unwrap_or_else(|| folder.join(format!("{stem}.{EXTENSION}")));
 
-    if let Err(reason) = &packed {
-        warn!("Replay could not be saved to {}: {reason}", out.display());
+    fs::create_dir_all(folder).map_err(|error| format!("the exports folder could not be created: {error}"))?;
+    fs::copy(bundle, &out).map_err(|error| format!("{} could not be copied: {error}", bundle.display()))?;
 
-        if out.exists()
-            && let Err(error) = fs::remove_file(out)
-        {
-            warn!("Partial replay {} could not be removed: {error}", out.display());
-        }
-    }
-
-    packed
+    Ok(out)
 }
 
-fn pack_into(dir: &Path, out: &Path) -> Result<(), String> {
+pub fn rename(bundle: &Path, name: &str) -> Result<PathBuf, String> {
+    let clean: String = name.chars().filter(|c| !FORBIDDEN.contains(c)).collect();
+    let clean = clean.trim();
+
+    if clean.is_empty() {
+        return Err("a replay needs a name".to_owned());
+    }
+
+    let parent = bundle.parent().ok_or("the replay has no folder")?;
+    let target = parent.join(format!("{clean}.{EXTENSION}"));
+    let recasing = bundle.file_stem().is_some_and(|stem| stem.to_string_lossy().eq_ignore_ascii_case(clean));
+
+    if !recasing && target.exists() {
+        return Err(format!("{clean} is already taken"));
+    }
+
+    fs::rename(bundle, &target).map_err(|error| format!("{} could not be renamed: {error}", bundle.display()))?;
+
+    Ok(target)
+}
+
+pub fn delete(bundle: &Path) -> Result<(), String> {
+    fs::remove_file(bundle).map_err(|error| format!("{} could not be deleted: {error}", bundle.display()))
+}
+
+pub fn pack(dir: &Path, out: &Path, emit: impl Fn(f32), abort: &AtomicBool) -> JobOutcome {
+    let outcome = match pack_into(dir, out, &emit, abort) {
+        Ok(true) => return JobOutcome::Completed,
+        Ok(false) => JobOutcome::Aborted,
+        Err(reason) => {
+            warn!("Replay could not be saved to {}: {reason}", out.display());
+
+            JobOutcome::Failed(reason)
+        }
+    };
+
+    if out.exists()
+        && let Err(error) = fs::remove_file(out)
+    {
+        warn!("Partial replay {} could not be removed: {error}", out.display());
+    }
+
+    outcome
+}
+
+fn pack_into(dir: &Path, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> Result<bool, String> {
     let mut files = Vec::new();
 
     walk(dir, "", &mut files).map_err(|error| format!("the latest battle could not be read: {error}"))?;
@@ -387,11 +436,23 @@ fn pack_into(dir: &Path, out: &Path) -> Result<(), String> {
 
     let mut writer = solid::Writer::create(out, solid::DEFAULT_LEVEL).map_err(|error| format!("the replay file could not be created: {error}"))?;
 
-    for (name, path) in &files {
+    let sizes: Vec<u64> = files.iter().map(|(_, path)| fs::metadata(path).map_or(0, |meta| meta.len())).collect();
+    let total = sizes.iter().sum::<u64>().max(1) as f64;
+    let mut packed = 0u64;
+
+    for ((name, path), size) in files.iter().zip(&sizes) {
+        if abort.load(Ordering::Relaxed) {
+            return Ok(false);
+        }
+
         writer.add(name, path).map_err(|error| format!("{name} could not be added: {error}"))?;
+        packed += size;
+        emit((packed as f64 / total) as f32);
     }
 
-    writer.finish().map_err(|error| format!("the replay file could not be finished: {error}"))
+    writer.finish().map_err(|error| format!("the replay file could not be finished: {error}"))?;
+
+    Ok(!abort.load(Ordering::Relaxed))
 }
 
 pub fn unpack(bundle: &Path, dir: &Path) -> Result<(), String> {

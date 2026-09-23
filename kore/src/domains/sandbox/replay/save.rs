@@ -85,6 +85,7 @@ pub struct Setup {
 #[serde(default)]
 pub struct Save {
     pub version: String,
+    pub app: String,
     pub seeds: Seeds,
     pub screen: Screen,
     pub options: Options,

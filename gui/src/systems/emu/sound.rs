@@ -16,9 +16,9 @@ use super::assets::{FileIndex, SharedLedger};
 use super::server_audio::ServerLink;
 
 const FULL: i32 = 100;
-const EVERY_TRACK: i32 = -1;
-const EVERY_EFFECT: i32 = -2;
-const EVERYTHING: i32 = -3;
+pub(super) const EVERY_TRACK: i32 = -1;
+pub(super) const EVERY_EFFECT: i32 = -2;
+pub(super) const EVERYTHING: i32 = -3;
 const CAF_HEADER: usize = 8;
 const CHUNK_HEADER: usize = 12;
 const DESCRIPTION: &[u8; 4] = b"desc";
@@ -27,10 +27,10 @@ const LITTLE_ENDIAN: u32 = 2;
 const EDIT_COUNT: usize = 4;
 
 #[derive(Clone)]
-struct Effect {
-    channels: u16,
-    rate: u32,
-    samples: Arc<[f32]>,
+pub(super) struct Effect {
+    pub(super) channels: u16,
+    pub(super) rate: u32,
+    pub(super) samples: Arc<[f32]>,
 }
 
 pub struct Volumes {
@@ -54,6 +54,10 @@ impl SharedOutput {
 
     pub fn share(&self) -> Self {
         Self(Rc::clone(&self.0))
+    }
+
+    pub fn silent() -> Self {
+        Self(Rc::new(Shared { output: None, voices: RefCell::new(BTreeMap::new()) }))
     }
 }
 
@@ -121,7 +125,7 @@ impl Speaker {
     fn track(&self, sound_id: i32) -> Option<String> {
         let files = self.files.borrow();
 
-        [format!("snd{sound_id:03}.ogg"), format!("{sound_id:03}.ogg")].into_iter().find(|name| files.contains_key(name.as_str()))
+        track_names(sound_id).into_iter().find(|name| files.contains_key(name.as_str()))
     }
 
     fn music_level(&self) -> f32 {
@@ -133,7 +137,7 @@ impl Speaker {
             return Some(effect.clone());
         }
 
-        let bytes = self.read(&format!("{sound_id:03}.caf"))?;
+        let bytes = self.read(&effect_name(sound_id))?;
         let effect = parse_caf(&bytes)?;
 
         self.effects.insert(sound_id, effect.clone());
@@ -176,7 +180,15 @@ impl Speaker {
     }
 }
 
-fn parse_caf(bytes: &[u8]) -> Option<Effect> {
+pub(super) fn track_names(sound_id: i32) -> [String; 2] {
+    [format!("snd{sound_id:03}.ogg"), format!("{sound_id:03}.ogg")]
+}
+
+pub(super) fn effect_name(sound_id: i32) -> String {
+    format!("{sound_id:03}.caf")
+}
+
+pub(super) fn parse_caf(bytes: &[u8]) -> Option<Effect> {
     let mut at = CAF_HEADER;
     let mut format: Option<(u32, u32, u32)> = None;
 

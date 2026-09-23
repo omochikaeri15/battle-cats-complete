@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
-use nyanko::cat::unit::NyancomboData;
+use nyanko::cat::unit::{Equipment, NyancomboData};
 use serde::{Deserialize, Serialize};
+
+use crate::common::architecture;
+use crate::Vfs;
+
+use super::orb;
 
 pub const LINEUP_SLOTS: usize = 10;
 pub const BENCH_SLOTS: usize = 5;
@@ -9,6 +14,18 @@ pub const TOP_ROW: usize = 5;
 
 const FIRST_TALENT_FORM: usize = 2;
 const UNNAMED: &str = "New Lineup";
+const MOD_HISTORIES: usize = 3;
+const MOUNT_JOIN: &str = "+";
+
+pub fn mount_of(vfs: &Vfs) -> String {
+    let mods: Vec<Box<str>> = vfs.mounted().into_iter().filter(|mount| !mount.eq_ignore_ascii_case(architecture::GAME)).collect();
+
+    if mods.is_empty() {
+        return architecture::GAME.to_owned();
+    }
+
+    mods.join(MOUNT_JOIN)
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -38,6 +55,10 @@ impl Member {
             .enumerate()
             .filter(|_| self.form >= FIRST_TALENT_FORM)
             .filter_map(|(slot, orb)| orb.map(|orb| (slot, orb)))
+    }
+
+    pub fn worn<'a>(&'a self, slots: usize, orbs: &'a [Equipment]) -> impl Iterator<Item = (usize, u32)> + 'a {
+        self.equipped().filter(move |(slot, held)| *slot < slots && orb::kind(orbs, *held).is_some())
     }
 }
 
@@ -251,17 +272,24 @@ pub struct Loadout {
     pub orbs: Vec<Option<u32>>,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct History {
+    pub mount: String,
+    pub units: HashMap<u32, Loadout>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Roster {
     pub lineups: Vec<Lineup>,
     pub selected: usize,
-    pub remembered: HashMap<u32, Loadout>,
+    pub histories: Vec<History>,
 }
 
 impl Default for Roster {
     fn default() -> Self {
-        Self { lineups: vec![Lineup::default()], selected: 0, remembered: HashMap::new() }
+        Self { lineups: vec![Lineup::default()], selected: 0, histories: Vec::new() }
     }
 }
 
@@ -270,7 +298,11 @@ impl Roster {
         self.lineups.get(self.selected)
     }
 
-    pub fn remember(&mut self) {
+    fn history(&self, mount: &str) -> Option<&History> {
+        self.histories.iter().find(|history| history.mount == mount)
+    }
+
+    pub fn remember(&mut self, mount: &str) {
         let Some(lineup) = self.lineups.get(self.selected) else {
             return;
         };
@@ -290,15 +322,33 @@ impl Roster {
             })
             .collect();
 
-        self.remembered.extend(seen);
+        let mut history = self
+            .histories
+            .iter()
+            .position(|history| history.mount == mount)
+            .map_or_else(|| History { mount: mount.to_owned(), units: HashMap::new() }, |at| self.histories.remove(at));
+
+        history.units.extend(seen);
+        self.histories.insert(0, history);
+
+        let mut mods = 0;
+
+        self.histories.retain(|history| {
+            if history.mount == architecture::GAME {
+                return true;
+            }
+
+            mods += 1;
+            mods <= MOD_HISTORIES
+        });
     }
 
-    pub fn recall(&self, id: u32) -> Option<&Loadout> {
-        self.remembered.get(&id)
+    pub fn recall(&self, id: u32, mount: &str) -> Option<&Loadout> {
+        self.history(mount)?.units.get(&id)
     }
 
-    pub fn dress(&self, mut member: Member, least: Option<usize>) -> Member {
-        let Some(past) = self.remembered.get(&member.id) else {
+    pub fn dress(&self, mut member: Member, least: Option<usize>, mount: &str) -> Member {
+        let Some(past) = self.recall(member.id, mount) else {
             return member;
         };
 
@@ -341,6 +391,8 @@ impl Roster {
 mod tests {
     use super::*;
 
+    const GAME: &str = architecture::GAME;
+
     fn unit(id: u32) -> Member {
         Member { id, level: "30".to_owned(), ..Member::default() }
     }
@@ -356,19 +408,19 @@ mod tests {
         dressed.orbs = vec![Some(11), None];
 
         roster.current_mut().add(dressed);
-        roster.remember();
+        roster.remember(GAME);
 
         // Dropping the unit must not forget it - that is the whole point.
         roster.current_mut().slots.clear();
-        roster.remember();
+        roster.remember(GAME);
 
-        let past = roster.recall(7).expect("unit 7 remembered");
+        let past = roster.recall(7, GAME).expect("unit 7 remembered");
 
         assert_eq!(past.form, 2);
         assert_eq!(past.level, "50+10");
         assert_eq!(past.talents.get(&3), Some(&6));
         assert_eq!(past.orbs, vec![Some(11), None]);
-        assert!(roster.recall(8).is_none());
+        assert!(roster.recall(8, GAME).is_none());
     }
 
     #[test]
@@ -379,23 +431,48 @@ mod tests {
         dressed.form = 2;
         dressed.talents.insert(1, 4);
         roster.current_mut().add(dressed);
-        roster.remember();
+        roster.remember(GAME);
 
         // The combo wants a lower form than the one remembered, so the
         // remembered one wins and the kit still comes back.
-        let kept = roster.dress(unit(7), Some(1));
+        let kept = roster.dress(unit(7), Some(1), GAME);
 
         assert_eq!(kept.form, 2);
         assert_eq!(kept.talents.get(&1), Some(&4));
 
         // Below what the combo needs, the form is bumped up to meet it.
-        let bumped = roster.dress(unit(7), Some(3));
+        let bumped = roster.dress(unit(7), Some(3), GAME);
 
         assert_eq!(bumped.form, 3);
         assert_eq!(bumped.talents.get(&1), Some(&4));
 
         // With nothing remembered the member is left exactly as built.
-        assert_eq!(roster.dress(unit(9), Some(1)).form, 0);
+        assert_eq!(roster.dress(unit(9), Some(1), GAME).form, 0);
+    }
+
+    #[test]
+    fn a_mod_keeps_its_own_history_and_only_three_mods_are_kept() {
+        let mut roster = Roster::default();
+        let mut dressed = unit(7);
+
+        dressed.level = "50+10".to_owned();
+        roster.current_mut().add(dressed);
+        roster.remember("modded");
+
+        // A kit built under a mod never leaks into the game's history.
+        assert!(roster.recall(7, GAME).is_none());
+        assert_eq!(roster.recall(7, "modded").map(|past| past.level.as_str()), Some("50+10"));
+
+        roster.remember(GAME);
+
+        for mount in ["second", "third", "fourth"] {
+            roster.remember(mount);
+        }
+
+        // The oldest mod falls off, the game never does.
+        assert!(roster.recall(7, "modded").is_none());
+        assert!(roster.recall(7, GAME).is_some());
+        assert!(roster.recall(7, "second").is_some());
     }
 
     fn combo(members: &[(i32, i32)]) -> NyancomboData {

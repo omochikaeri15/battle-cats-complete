@@ -1,3 +1,5 @@
+mod manage;
+
 use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -6,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
-use iced::widget::{button, column, container, image as iced_image, mouse_area, row, scrollable, sensor, stack, text, Column, Row, Space};
+use iced::widget::{button, column, container, image as iced_image, mouse_area, row, rule, scrollable, stack, text, text_input, Column, Row, Space};
 use iced::{mouse, Border, Color, Element, Length, Padding, Size, Task, Theme};
 use tracing::warn;
 
@@ -25,26 +27,34 @@ use crate::common::{fonts, header_icon};
 use crate::domains::cat;
 use crate::domains::stage::CROWN_GLYPH;
 use crate::systems::emu::Reel;
-use crate::widget::{list_row, popup, section, smooth_scroll, subsection, text_with_superscript};
+use crate::widget::{list_row, popup, section, smooth_scroll, text_with_superscript};
 
 use super::lineup::{Metrics, SMALLEST};
 use super::orbs;
 
 const SCOPE: &str = "sandbox-replay-units";
 const UNIT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayUnit, Size::new(760.0, 540.0));
-const LIST_WIDTH: f32 = 220.0;
-const LIST_PADDING: f32 = 8.0;
-const ROW_HEIGHT: f32 = 48.0;
-const ROW_PADDING: f32 = 6.0;
-const SCROLLBAR_GAP: f32 = 6.0;
-const PANEL_PADDING: f32 = 20.0;
 const ROW_SPACING: f32 = 8.0;
 const LIST_SPACING: f32 = 4.0;
 const LABEL_SIZE: f32 = 14.0;
-const LABEL_WIDTH: f32 = 110.0;
-const SAVE_WIDTH: f32 = 160.0;
 const LATEST_LABEL: &str = "Latest Battle";
-const HOVER_ALPHA: f32 = 0.8;
+const LIST_WIDTH: f32 = 200.0;
+const LIST_PADDING: f32 = 8.0;
+const ROW_HEIGHT: f32 = 40.0;
+const ROW_TEXT_SIZE: f32 = 12.0;
+const EDGE_GAP: f32 = 4.0;
+const SCROLLBAR_GAP: f32 = 2.0;
+const SEARCH_GAP: f32 = 4.0;
+const LIST_GAP: f32 = 8.0;
+const TITLE_SIZE: f32 = 22.0;
+const TITLE_PADDING: f32 = 8.0;
+const RULE_THICKNESS: f32 = 1.0;
+const RULE_PADDING: f32 = 8.0;
+const SECTION_GAP: f32 = 16.0;
+const DETAILS_PADDING: f32 = 16.0;
+const FIELD_LABEL_WIDTH: f32 = 90.0;
+const CONTENT_WIDTH: f32 = 515.0;
+const CARD_PADDING: f32 = 12.0;
 const MEGABYTE: f64 = 1024.0 * 1024.0;
 const COLUMNS: usize = 5;
 const LINES: usize = 2;
@@ -62,7 +72,7 @@ const DOUBLE_CLICK: Duration = Duration::from_millis(400);
 const NP_ICON: &str = "gatyaitemD_07_f.png";
 const FORM_LETTERS: [char; 4] = ['f', 'c', 's', 'u'];
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Pick {
     Latest,
     Bundle(PathBuf),
@@ -71,28 +81,28 @@ pub enum Pick {
 #[derive(Clone)]
 pub enum Message {
     Select(Pick),
-    Measured(Size),
-    Fitted(Size),
+    Search(String),
+    RenameInput(String),
+    CommitRename,
     Press(usize),
     Cat(cat::Message),
     Orbs(orbs::Message),
     UnitPopup(popup::Message),
-    Save,
-    Saved(Result<PathBuf, String>),
+    Manage(manage::Message),
 }
 
 impl fmt::Debug for Message {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Select(pick) => write!(f, "Select({pick:?})"),
-            Self::Measured(size) => write!(f, "Measured({size:?})"),
-            Self::Fitted(size) => write!(f, "Fitted({size:?})"),
+            Self::Search(query) => write!(f, "Search({query})"),
+            Self::RenameInput(name) => write!(f, "RenameInput({name})"),
+            Self::CommitRename => write!(f, "CommitRename"),
             Self::Press(slot) => write!(f, "Press({slot})"),
             Self::Cat(msg) => write!(f, "Cat({msg:?})"),
             Self::Orbs(msg) => write!(f, "Orbs({msg:?})"),
             Self::UnitPopup(_) => write!(f, "UnitPopup"),
-            Self::Save => write!(f, "Save"),
-            Self::Saved(outcome) => write!(f, "Saved({outcome:?})"),
+            Self::Manage(msg) => write!(f, "Manage({msg:?})"),
         }
     }
 }
@@ -135,10 +145,10 @@ pub struct State {
     unit_popup: popup::State,
     open: Option<usize>,
     clicked: Option<(usize, Instant)>,
-    height: f32,
-    scrolls: bool,
-    saving: bool,
-    note: String,
+    search: String,
+    shown: Vec<usize>,
+    rename: String,
+    manage: manage::State,
 }
 
 pub fn is_bundle(path: &Path) -> bool {
@@ -190,6 +200,7 @@ fn describe(title: String, summary: &Summary) -> Details {
             let map = if entry.map_name.is_empty() { format!("Map {}", entry.map_id) } else { entry.map_name.clone() };
             let named = if entry.stage_name.is_empty() { format!("Stage {}", entry.stage + 1) } else { entry.stage_name.clone() };
 
+            game.push(("App", if save.app.is_empty() { "Unknown".to_owned() } else { save.app.clone() }));
             game.push(("Version", if save.version.is_empty() { "Unknown".to_owned() } else { save.version.clone() }));
             game.push(("Map", map));
             stage = Some((named, entry.crown + 1));
@@ -225,23 +236,24 @@ fn badge_fill(_: &Theme) -> container::Style {
     }
 }
 
-fn row_label<'a>(label: String) -> Element<'a, Message> {
-    container(text(label).size(LABEL_SIZE).align_x(Horizontal::Center).wrapping(text::Wrapping::WordOrGlyph))
-        .padding(ROW_PADDING)
-        .width(Length::Fill)
-        .height(Length::Fixed(ROW_HEIGHT))
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .clip(true)
-        .into()
-}
-
 fn corner(content: Element<'_, Message>, across: Horizontal, down: Vertical) -> Element<'_, Message> {
     container(content).width(Length::Fill).height(Length::Fill).align_x(across).align_y(down).into()
 }
 
+fn content_rule<'a>() -> Element<'a, Message> {
+    container(rule::horizontal(RULE_THICKNESS)).width(Length::Fixed(CONTENT_WIDTH)).into()
+}
+
+fn content_card<'a>(title: &'a str, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+    container(section(title, Length::Fill, content))
+        .width(Length::Fixed(CONTENT_WIDTH))
+        .padding(CARD_PADDING)
+        .style(theme::card_container_outlined)
+        .into()
+}
+
 fn labeled<'a>(label: &'static str, value: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
-    row![text(label).size(LABEL_SIZE).width(Length::Fixed(LABEL_WIDTH)), value.into()].align_y(Vertical::Center).into()
+    row![text(label).size(LABEL_SIZE).width(Length::Fixed(FIELD_LABEL_WIDTH)), value.into()].align_y(Vertical::Center).into()
 }
 
 fn rows<'a>(entries: &'a [(&'static str, String)]) -> Column<'a, Message> {
@@ -258,7 +270,9 @@ fn rows<'a>(entries: &'a [(&'static str, String)]) -> Column<'a, Message> {
 
 impl State {
     pub fn new() -> Self {
-        Self { inspector: cat::State::inspector(SCOPE, 0), ..Self::default() }
+        let scale = ((CONTENT_WIDTH - CARD_PADDING * 2.0) / Metrics::FULL.grid_width()).clamp(SMALLEST, 1.0);
+
+        Self { inspector: cat::State::inspector(SCOPE, 0), metrics: Some(Metrics::at(scale)), ..Self::default() }
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
@@ -269,21 +283,22 @@ impl State {
         self.inspector.subscription().map(Message::Cat)
     }
 
-    pub fn refresh(&mut self, config: ScannerConfig) -> Task<Message> {
+    pub fn refresh(&mut self, settings: &Settings) -> Task<Message> {
         self.bundles = tape::list(&tape::library());
-        self.scrolls = self.overflows();
+        self.manage.refresh(settings, &self.bundles);
+        self.filter();
 
         let picked = match self.picked.take() {
             Some(Pick::Bundle(path)) if !self.bundles.contains(&path) => None,
             other => other,
         };
 
-        self.select(picked.unwrap_or(Pick::Latest), config)
+        self.select(picked.unwrap_or(Pick::Latest), settings.scanner_config(None))
     }
 
     pub fn relist(&mut self, config: ScannerConfig) -> Task<Message> {
         self.bundles = tape::list(&tape::library());
-        self.scrolls = self.overflows();
+        self.filter();
 
         match &self.picked {
             Some(Pick::Bundle(path)) if !self.bundles.contains(path) => self.select(Pick::Latest, config),
@@ -311,6 +326,10 @@ impl State {
             (None, None) => Err("there is no state folder".to_owned()),
         };
 
+        self.rename = match &pick {
+            Pick::Bundle(path) => bundle_name(path),
+            Pick::Latest => String::new(),
+        };
         self.picked = Some(pick.clone());
         self.open = None;
 
@@ -404,10 +423,9 @@ impl State {
             form: usize::try_from(unit.form).unwrap_or(0),
             level: level_label(clamped(unit.level, unit.plus, altar_cap)),
             cost: cost.filter(|cost| *cost >= 0).map(|cost| format!("{cost}\u{00a2}")),
-            inspected: {
-                let (level, plus) = clamped(unit.level, unit.plus, altar_cap);
-
-                format!("{level}+{plus}")
+            inspected: match clamped(unit.level, unit.plus, altar_cap) {
+                (level, 0) => level.to_string(),
+                (level, plus) => format!("{level}+{plus}"),
             },
             talents,
             talented: !unit.talents.is_empty(),
@@ -447,24 +465,22 @@ impl State {
     pub fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         match message {
             Message::Select(pick) => {
-                self.note.clear();
+                self.manage.forget_confirm();
 
                 self.select(pick, settings.scanner_config(None))
             }
-            Message::Measured(size) => {
-                self.height = size.height;
-                self.scrolls = self.overflows();
+            Message::Search(query) => {
+                self.search = query;
+                self.filter();
 
                 Task::none()
             }
-            Message::Fitted(size) => {
-                let room = size.width - PANEL_PADDING * 2.0 - LABEL_WIDTH;
-                let scale = (room / Metrics::FULL.grid_width()).clamp(SMALLEST, 1.0);
-
-                self.metrics = Some(Metrics::at(scale));
+            Message::RenameInput(name) => {
+                self.rename = name;
 
                 Task::none()
             }
+            Message::CommitRename => self.commit_rename(settings),
             Message::Press(slot) => {
                 let now = Instant::now();
                 let doubled = self.clicked.take().is_some_and(|(held, at)| held == slot && now.duration_since(at) <= DOUBLE_CLICK);
@@ -508,47 +524,74 @@ impl State {
 
                 Task::none()
             }
-            Message::Save => {
-                if self.saving {
-                    return Task::none();
-                }
+            Message::Manage(msg) => {
+                let title = self.title();
+                let (task, effect) = self.manage.update(msg, self.picked.as_ref(), &title, settings, &ctx.vault.vfs);
+                let task = task.map(Message::Manage);
 
-                let Some(dir) = tape::scratch() else {
-                    self.note = "There is no state folder holding the latest battle".to_owned();
+                match effect {
+                    manage::Effect::None => task,
+                    manage::Effect::Saved => Task::batch([task, self.refresh(settings)]),
+                    manage::Effect::Deleted(bundle) => {
+                        self.cache.retain(|(pick, _, _)| *pick != Pick::Bundle(bundle.clone()));
 
-                    return Task::none();
-                };
-                let out = tape::next_bundle(&tape::library());
-
-                self.saving = true;
-                self.note = "Saving…".to_owned();
-
-                Task::perform(smol::unblock(move || tape::pack(&dir, &out).map(|()| out)), Message::Saved)
-            }
-            Message::Saved(outcome) => {
-                self.saving = false;
-
-                match outcome {
-                    Ok(path) => {
-                        self.note = format!("Saved as {}", bundle_name(&path));
-
-                        self.refresh(settings.scanner_config(None))
-                    }
-                    Err(reason) => {
-                        self.note = format!("Could not save: {reason}");
-
-                        Task::none()
+                        Task::batch([task, self.refresh(settings)])
                     }
                 }
             }
         }
     }
 
-    fn overflows(&self) -> bool {
-        let rows = (self.bundles.len() + 1) as f32;
-        let needed = rows * ROW_HEIGHT + (rows - 1.0).max(0.0) * LIST_SPACING;
+    fn filter(&mut self) {
+        let query = self.search.to_lowercase();
 
-        self.height > 0.0 && needed > self.height
+        self.shown = self
+            .bundles
+            .iter()
+            .enumerate()
+            .filter(|(_, path)| query.is_empty() || bundle_name(path).to_lowercase().contains(&query))
+            .map(|(index, _)| index)
+            .collect();
+    }
+
+    fn commit_rename(&mut self, settings: &Settings) -> Task<Message> {
+        let Some(Pick::Bundle(old)) = self.picked.clone() else {
+            return Task::none();
+        };
+        let current = bundle_name(&old);
+        let wanted = self.rename.trim().to_owned();
+
+        if wanted.is_empty() || wanted == current || self.manage.busy(&Pick::Bundle(old.clone())) {
+            self.rename = current;
+
+            return Task::none();
+        }
+
+        let renamed = match tape::rename(&old, &wanted) {
+            Ok(renamed) => renamed,
+            Err(reason) => {
+                warn!("Replay could not be renamed: {reason}");
+                self.rename = current;
+
+                return Task::none();
+            }
+        };
+        let stamp = tape::stamp(&renamed);
+        let fresh = Pick::Bundle(renamed.clone());
+
+        for (pick, seen, _) in &mut self.cache {
+            if *pick == Pick::Bundle(old.clone())
+                && let Some(stamp) = &stamp
+            {
+                *pick = fresh.clone();
+                seen.clone_from(stamp);
+            }
+        }
+
+        self.manage.rekey(&Pick::Bundle(old), fresh.clone());
+        self.picked = Some(fresh);
+
+        self.refresh(settings)
     }
 
     pub fn unit_popup_view<'a>(
@@ -588,35 +631,54 @@ impl State {
     }
 
     fn view_list(&self) -> Element<'_, Message> {
-        let latest_picked = self.picked == Some(Pick::Latest);
-        let latest = button(row_label(LATEST_LABEL.to_owned()))
-            .padding(0)
+        let search = text_input("Search Replays...", &self.search)
+            .on_input(Message::Search)
+            .padding(4)
+            .size(13)
             .width(Length::Fill)
+            .style(theme::rounded_input);
+
+        let latest_picked = self.picked == Some(Pick::Latest);
+        let latest = button(theme::button_label(LATEST_LABEL).size(13))
             .on_press(Message::Select(Pick::Latest))
-            .style(move |theme: &Theme, status| {
-                let palette = theme.palette();
-                let base = if latest_picked { palette.primary } else { palette.success };
-                let hovered = status == button::Status::Hovered && !latest_picked;
+            .padding([4, 8])
+            .width(Length::Fill)
+            .style(move |theme: &Theme, status| theme::toggle_button(theme, status, latest_picked));
 
-                button::Style {
-                    background: Some(if hovered { Color { a: HOVER_ALPHA, ..base } } else { base }.into()),
-                    text_color: palette.text,
-                    border: Border::default().rounded(4.0),
-                    ..button::Style::default()
-                }
-            });
-        let mut list = column![latest].spacing(LIST_SPACING);
+        let list: Element<'_, Message> = if self.shown.is_empty() {
+            container(theme::centered_text("No Replays Found").size(13).style(text::danger))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        } else {
+            let mut rows = Column::with_capacity(self.shown.len()).spacing(LIST_SPACING).width(Length::Fill);
 
-        for path in &self.bundles {
-            let picked = matches!(&self.picked, Some(Pick::Bundle(held)) if held == path);
+            for path in self.shown.iter().filter_map(|index| self.bundles.get(*index)) {
+                let picked = matches!(&self.picked, Some(Pick::Bundle(held)) if held == path);
+                let face = row![
+                    Space::new().width(Length::Fixed(EDGE_GAP)),
+                    theme::centered_text(bundle_name(path)).size(ROW_TEXT_SIZE).width(Length::Fill),
+                    Space::new().width(Length::Fixed(EDGE_GAP)),
+                ]
+                    .align_y(Vertical::Center)
+                    .height(Length::Fill);
 
-            list = list.push(list_row(row_label(bundle_name(path)), picked, true, Length::Fill, Message::Select(Pick::Bundle(path.clone()))));
-        }
+                rows = rows.push(list_row(
+                    container(face).width(Length::Fill).height(Length::Fixed(ROW_HEIGHT)),
+                    picked,
+                    true,
+                    Length::Fill,
+                    Message::Select(Pick::Bundle(path.clone())),
+                ));
+            }
 
-        let scroller = if self.scrolls { scrollable(list).spacing(SCROLLBAR_GAP) } else { scrollable(list) };
+            smooth_scroll(scrollable(rows).spacing(SCROLLBAR_GAP).height(Length::Fill).width(Length::Fill)).into()
+        };
 
-        container(sensor(smooth_scroll(scroller.height(Length::Fill))).on_show(Message::Measured).on_resize(Message::Measured))
-            .width(Length::Fixed(LIST_WIDTH))
+        container(column![search, Space::new().height(SEARCH_GAP), latest, Space::new().height(LIST_GAP), list].height(Length::Fill))
+            .width(Length::Fixed(LIST_WIDTH + LIST_PADDING * 2.0))
             .height(Length::Fill)
             .padding(LIST_PADDING)
             .style(theme::list_panel_container)
@@ -712,37 +774,48 @@ impl State {
             game = game.push(labeled("Stage", stage));
         }
 
-        game = game.push(labeled("Lineup", self.view_lineup()));
 
-        let mut content = column![section(
-            details.title.as_str(),
-            Length::Fill,
-            column![subsection("Meta", rows(&details.meta)), subsection("Game", game)].spacing(ROW_SPACING * 2.0),
-        )]
-            .spacing(ROW_SPACING * 2.0);
+        let title: Element<'_, Message> = match &self.picked {
+            Some(Pick::Bundle(_)) => text_input("Replay Title", &self.rename)
+                .on_input(Message::RenameInput)
+                .on_submit(Message::CommitRename)
+                .size(TITLE_SIZE)
+                .padding(TITLE_PADDING)
+                .width(Length::Fixed(CONTENT_WIDTH))
+                .style(theme::rounded_input)
+                .into(),
+            _ => text_input("", details.title.as_str())
+                .size(TITLE_SIZE)
+                .padding(TITLE_PADDING)
+                .width(Length::Fixed(CONTENT_WIDTH))
+                .style(|theme: &Theme, _| theme::rounded_input(theme, text_input::Status::Active))
+                .into(),
+        };
+
+        let mut content = column![
+            title,
+            Space::new().height(RULE_PADDING),
+            content_rule(),
+            Space::new().height(RULE_PADDING),
+            content_card("Meta", rows(&details.meta)),
+            Space::new().height(SECTION_GAP),
+            content_card("Game", game),
+            Space::new().height(SECTION_GAP),
+            content_card("Lineup", self.view_lineup()),
+            Space::new().height(SECTION_GAP),
+            content_card("Manage", self.manage.view(self.picked.as_ref(), details.ready).map(Message::Manage)),
+        ];
 
         if let Some(reason) = &self.failure {
+            content = content.push(Space::new().height(SECTION_GAP));
             content = content.push(text(format!("The replay's files could not be read: {reason}")).size(LABEL_SIZE));
-        }
-
-        if self.picked == Some(Pick::Latest) {
-            content = content.push(
-                theme::sized_button("Save Replay", SAVE_WIDTH, theme::primary_button)
-                    .on_press_maybe((details.ready && !self.saving).then_some(Message::Save)),
-            );
-        }
-
-        if !self.note.is_empty() {
-            content = content.push(text(self.note.as_str()).size(LABEL_SIZE));
         }
 
         content.into()
     }
 
     pub fn view(&self, bottom: f32) -> Element<'_, Message> {
-        let page = sensor(container(self.view_details()).padding(Padding { bottom, ..Padding::new(PANEL_PADDING) }).width(Length::Fill))
-            .on_show(Message::Fitted)
-            .on_resize(Message::Fitted);
+        let page = container(self.view_details()).padding(Padding { bottom, ..Padding::new(DETAILS_PADDING) }).width(Length::Fill);
 
         row![self.view_list(), smooth_scroll(scrollable(page).width(Length::Fill).height(Length::Fill))]
             .width(Length::Fill)

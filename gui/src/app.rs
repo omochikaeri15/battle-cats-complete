@@ -1754,6 +1754,7 @@ impl BattleCatsApp {
             .collect();
 
         emu::Label {
+            app: self.mods_state.active_mod().unwrap_or_else(|| kore::domains::sandbox::replay::VANILLA_APP.to_owned()),
             map: map.and_then(|map| data.registry.maps.get(&map)).map(|map| map.name.clone()).unwrap_or_default(),
             stage: picked.and_then(|picked| data.registry.stages.get(picked)).map(|stage| stage.name.clone()).unwrap_or_default(),
             keepsakes: kore::domains::sandbox::replay::keepsakes(&self.vault, &units),

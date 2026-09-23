@@ -273,7 +273,7 @@ impl State {
                             Some((i32::from(group.ability_id), i32::from(*level)))
                         })
                         .collect(),
-                    orbs: member.equipped().map(|(slot, orb)| (slot as i32, orb as i32)).collect(),
+                    orbs: self.lineup.worn(member).map(|(slot, orb)| (slot as i32, orb as i32)).collect(),
                 }
             })
             .collect();
@@ -367,7 +367,7 @@ impl State {
     }
 
     fn refresh_replays(&mut self, settings: &Settings) -> Task<Message> {
-        self.replay.refresh(settings.scanner_config(None)).map(Message::Replay)
+        self.replay.refresh(settings).map(Message::Replay)
     }
 
     pub(crate) fn replay_unit_open(&self) -> bool {

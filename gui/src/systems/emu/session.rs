@@ -16,7 +16,7 @@ use super::keys::Action;
 use super::sink::Frame;
 
 const BLACK_FROM: i32 = 0xb;
-const CLOSED_FRAME: i32 = 0xc;
+pub(super) const CLOSED_FRAME: i32 = 0xc;
 const LAST_FRAME: i32 = 0x18;
 const FRAME_TIME: Duration = Duration::from_millis(33);
 const STEP_TIME: Duration = Duration::from_millis(30);

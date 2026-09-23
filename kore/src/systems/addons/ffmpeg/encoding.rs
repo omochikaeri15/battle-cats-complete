@@ -13,7 +13,7 @@ use crate::systems::animation::export::{
 use crate::systems::animation::export::encoding::prepare_image;
 use crate::common::process;
 
-use super::get_ffmpeg_path;
+use super::{get_ffmpeg_path, vp9_crf, x264_crf, x264_preset};
 
 pub(crate) fn encode(
     config: ExportConfig,
@@ -102,26 +102,21 @@ pub(crate) fn encode(
                 match config.format {
                     ExportFormat::Webm => {
                         debug!("Using VP9 codec for Webm");
-                        let crf_value = 63.0 - (config.quality_percent as f32 / 100.0 * 63.0);
                         arguments.extend_from_slice(&[
                             "-c:v".to_string(), "libvpx-vp9".to_string(),
                             "-pix_fmt".to_string(), "yuva420p".to_string(),
-                            "-crf".to_string(), format!("{:.0}", crf_value),
+                            "-crf".to_string(), vp9_crf(config.quality_percent),
                             "-b:v".to_string(), "0".to_string(),
                         ]);
                     },
                     _ => {
                         debug!("Using x264 codec");
-                        let crf_value = 51.0 - (config.quality_percent as f32 / 100.0 * 33.0);
-                        let presets = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"];
-                        let preset_index = (config.compression_percent as f32 / 100.0 * 8.0).round() as usize;
-
                         arguments.extend_from_slice(&[
                             "-c:v".to_string(), "libx264".to_string(),
                             "-pix_fmt".to_string(), "yuv420p".to_string(),
                             "-profile:v".to_string(), "main".to_string(),
-                            "-crf".to_string(), format!("{:.0}", crf_value),
-                            "-preset".to_string(), presets[preset_index].to_string(),
+                            "-crf".to_string(), x264_crf(config.quality_percent),
+                            "-preset".to_string(), x264_preset(config.compression_percent).to_string(),
                         ]);
                     }
                 }

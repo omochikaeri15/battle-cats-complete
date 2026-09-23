@@ -15,6 +15,7 @@ use tracing::{info, warn};
 
 use crate::common::io::json;
 use crate::common::keys::sanitize;
+use crate::systems::addons::ffmpeg::video::VideoFormat;
 use crate::systems::animation::Loop;
 
 const EXPECTED_HASHES: [(&str, &str); 4] = [
@@ -107,6 +108,9 @@ pub struct SandboxSettings {
     pub keys: crate::domains::sandbox::keybind::Keybinds,
     pub replay_source: ReplaySource,
     pub disable_replays: bool,
+    pub video_format: VideoFormat,
+    pub video_quality: Option<u32>,
+    pub video_compression: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]

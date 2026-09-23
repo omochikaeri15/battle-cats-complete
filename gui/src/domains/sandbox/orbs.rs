@@ -229,6 +229,10 @@ impl State {
         Some(handle)
     }
 
+    pub fn catalog(&self) -> &[Equipment] {
+        &self.orbs
+    }
+
     pub fn picture<'a, M: 'a>(&self, orb: u32, size: f32) -> Element<'a, M> {
         let edge = ((size * OVERSAMPLE).round() as u32).max(1);
 

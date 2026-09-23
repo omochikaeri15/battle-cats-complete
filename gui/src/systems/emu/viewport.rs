@@ -54,9 +54,9 @@ pub struct Held {
 }
 
 pub struct Scene {
-    vertices: Vec<Vertex>,
-    runs: Vec<(Option<Box<str>>, u8, u32, u32)>,
-    uploads: Vec<(Box<str>, Sheet)>,
+    pub(super) vertices: Vec<Vertex>,
+    pub(super) runs: Vec<(Option<Box<str>>, u8, u32, u32)>,
+    pub(super) uploads: Vec<(Box<str>, Sheet)>,
 }
 
 impl std::fmt::Debug for Scene {
@@ -65,6 +65,130 @@ impl std::fmt::Debug for Scene {
             .field("vertices", &self.vertices.len())
             .field("runs", &self.runs.len())
             .finish()
+    }
+}
+
+pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, design_width: f32, aspect: Option<f32>, bounds: Rectangle) -> Scene {
+    let fit = fit(bounds, design_width, aspect);
+    let scale = fit.scale;
+    let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
+    let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
+    let mut uploads: Vec<(Box<str>, Sheet)> = Vec::new();
+
+    let mut absent: Vec<&str> = Vec::new();
+
+    for quad in &frame.quads {
+        let label = quad.label.map(super::text::label_key);
+        let named = quad.sheet.as_ref().or(label.as_ref());
+        let sheet = named.and_then(|name| {
+            sheets.get(name.as_ref()).map(|sheet| (name.clone(), sheet))
+        });
+
+        if label.is_some() && sheet.is_none() {
+            continue;
+        }
+
+        if let Some(name) = quad.sheet.as_deref()
+            && sheet.is_none()
+            && !absent.contains(&name)
+        {
+            absent.push(name);
+        }
+
+        if let Some((name, sheet)) = &sheet
+            && !uploads.iter().any(|(seen, _)| seen == name)
+        {
+            uploads.push((name.clone(), (*sheet).clone()));
+        }
+
+        let key = sheet.as_ref().map(|(name, _)| name.clone());
+        let uv = sheet.as_ref().map_or([[0.0f32; 2]; 4], |(_, sheet)| {
+            let width = sheet.width.max(1) as f32;
+            let height = sheet.height.max(1) as f32;
+            let left = quad.source[0] / width;
+            let top = quad.source[1] / height;
+            let right = (quad.source[0] + quad.source[2]) / width;
+            let bottom = (quad.source[1] + quad.source[3]) / height;
+
+            [[left, top], [left, bottom], [right, bottom], [right, top]]
+        });
+
+        let clip = |point: [f32; 2]| {
+            [
+                (point[0] * scale + fit.x + bounds.x) / bounds.width * 2.0 - 1.0,
+                1.0 - (point[1] * scale + fit.y + bounds.y) / bounds.height * 2.0,
+            ]
+        };
+        let corner = |slot: usize| Vertex {
+            position: clip(quad.corners[slot]),
+            uv: uv[slot],
+            color: quad.colors[slot],
+        };
+        let start = vertices.len() as u32;
+
+        vertices.extend([
+            corner(0),
+            corner(1),
+            corner(2),
+            corner(0),
+            corner(2),
+            corner(3),
+        ]);
+
+        let end = vertices.len() as u32;
+
+        match runs.last_mut() {
+            Some((last, blend, _, last_end)) if *last == key && *blend == quad.blend => {
+                *last_end = end;
+            }
+            _ => runs.push((key, quad.blend, start, end)),
+        }
+    }
+
+    if aspect.is_some() {
+        let bars = [
+            [0.0, 0.0, bounds.width, fit.y],
+            [0.0, fit.y + fit.height, bounds.width, bounds.height - fit.y - fit.height],
+            [0.0, fit.y, fit.x, fit.height],
+            [fit.x + fit.width, fit.y, bounds.width - fit.x - fit.width, fit.height],
+        ];
+        let start = vertices.len() as u32;
+
+        for [x, y, width, height] in bars.into_iter().filter(|bar| bar[2] > 0.0 && bar[3] > 0.0) {
+            let corner = |cx: f32, cy: f32| Vertex {
+                position: [
+                    (cx + bounds.x) / bounds.width * 2.0 - 1.0,
+                    1.0 - (cy + bounds.y) / bounds.height * 2.0,
+                ],
+                uv: [0.0, 0.0],
+                color: BAR_COLOR,
+            };
+
+            vertices.extend([
+                corner(x, y),
+                corner(x, y + height),
+                corner(x + width, y + height),
+                corner(x, y),
+                corner(x + width, y + height),
+                corner(x + width, y),
+            ]);
+        }
+
+        let end = vertices.len() as u32;
+
+        if end > start {
+            runs.push((None, 0, start, end));
+        }
+    }
+
+    if !absent.is_empty() {
+        debug!("emu: {} sheets drawn but never decoded: {absent:?}", absent.len());
+    }
+
+    Scene {
+        vertices,
+        runs,
+        uploads,
     }
 }
 
@@ -83,128 +207,7 @@ impl<Message> shader::Program<Message> for Viewport {
             };
         }
 
-        let fit = fit(bounds, self.design_width, self.aspect);
-        let scale = fit.scale;
-        let sheets = self.sheets.borrow();
-        let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
-        let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
-        let mut uploads: Vec<(Box<str>, Sheet)> = Vec::new();
-
-        let mut absent: Vec<&str> = Vec::new();
-
-        for quad in &frame.quads {
-            let label = quad.label.map(super::text::label_key);
-            let named = quad.sheet.as_ref().or(label.as_ref());
-            let sheet = named.and_then(|name| {
-                sheets.get(name.as_ref()).map(|sheet| (name.clone(), sheet))
-            });
-
-            if label.is_some() && sheet.is_none() {
-                continue;
-            }
-
-            if let Some(name) = quad.sheet.as_deref()
-                && sheet.is_none()
-                && !absent.contains(&name)
-            {
-                absent.push(name);
-            }
-
-            if let Some((name, sheet)) = &sheet
-                && !uploads.iter().any(|(seen, _)| seen == name)
-            {
-                uploads.push((name.clone(), (*sheet).clone()));
-            }
-
-            let key = sheet.as_ref().map(|(name, _)| name.clone());
-            let uv = sheet.as_ref().map_or([[0.0f32; 2]; 4], |(_, sheet)| {
-                let width = sheet.width.max(1) as f32;
-                let height = sheet.height.max(1) as f32;
-                let left = quad.source[0] / width;
-                let top = quad.source[1] / height;
-                let right = (quad.source[0] + quad.source[2]) / width;
-                let bottom = (quad.source[1] + quad.source[3]) / height;
-
-                [[left, top], [left, bottom], [right, bottom], [right, top]]
-            });
-
-            let clip = |point: [f32; 2]| {
-                [
-                    (point[0] * scale + fit.x + bounds.x) / bounds.width * 2.0 - 1.0,
-                    1.0 - (point[1] * scale + fit.y + bounds.y) / bounds.height * 2.0,
-                ]
-            };
-            let corner = |slot: usize| Vertex {
-                position: clip(quad.corners[slot]),
-                uv: uv[slot],
-                color: quad.colors[slot],
-            };
-            let start = vertices.len() as u32;
-
-            vertices.extend([
-                corner(0),
-                corner(1),
-                corner(2),
-                corner(0),
-                corner(2),
-                corner(3),
-            ]);
-
-            let end = vertices.len() as u32;
-
-            match runs.last_mut() {
-                Some((last, blend, _, last_end)) if *last == key && *blend == quad.blend => {
-                    *last_end = end;
-                }
-                _ => runs.push((key, quad.blend, start, end)),
-            }
-        }
-
-        if self.aspect.is_some() {
-            let bars = [
-                [0.0, 0.0, bounds.width, fit.y],
-                [0.0, fit.y + fit.height, bounds.width, bounds.height - fit.y - fit.height],
-                [0.0, fit.y, fit.x, fit.height],
-                [fit.x + fit.width, fit.y, bounds.width - fit.x - fit.width, fit.height],
-            ];
-            let start = vertices.len() as u32;
-
-            for [x, y, width, height] in bars.into_iter().filter(|bar| bar[2] > 0.0 && bar[3] > 0.0) {
-                let corner = |cx: f32, cy: f32| Vertex {
-                    position: [
-                        (cx + bounds.x) / bounds.width * 2.0 - 1.0,
-                        1.0 - (cy + bounds.y) / bounds.height * 2.0,
-                    ],
-                    uv: [0.0, 0.0],
-                    color: BAR_COLOR,
-                };
-
-                vertices.extend([
-                    corner(x, y),
-                    corner(x, y + height),
-                    corner(x + width, y + height),
-                    corner(x, y),
-                    corner(x + width, y + height),
-                    corner(x + width, y),
-                ]);
-            }
-
-            let end = vertices.len() as u32;
-
-            if end > start {
-                runs.push((None, 0, start, end));
-            }
-        }
-
-        if !absent.is_empty() {
-            debug!("emu: {} sheets drawn but never decoded: {absent:?}", absent.len());
-        }
-
-        Scene {
-            vertices,
-            runs,
-            uploads,
-        }
+        paint(&frame, &self.sheets.borrow(), self.design_width, self.aspect, bounds)
     }
 
     fn update(

@@ -21,6 +21,7 @@ use super::keys::{Action, Keys};
 use super::replay;
 use super::sink::{Frame, Recorder};
 use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
+use super::soundtrack::{Listener, SharedLog};
 use super::text::{Formatter, LABEL_PREFIX};
 
 const CURTAIN_CLOSING: i32 = 1;
@@ -74,10 +75,12 @@ pub struct Driver {
     finished: bool,
     label: Label,
     recorded: Option<tape::Save>,
+    listener: Option<SharedLog>,
 }
 
 #[derive(Default)]
 pub struct Label {
+    pub app: String,
     pub map: String,
     pub stage: String,
     pub keepsakes: Vec<(Box<str>, PathBuf)>,
@@ -85,6 +88,14 @@ pub struct Label {
 
 impl Driver {
     pub fn new() -> Self {
+        Self::build(SharedOutput::open(), None)
+    }
+
+    pub fn headless(log: SharedLog) -> Self {
+        Self::build(SharedOutput::silent(), Some(log))
+    }
+
+    fn build(output: SharedOutput, listener: Option<SharedLog>) -> Self {
         let frame = Rc::new(RefCell::new(Frame::default()));
         let sheets: Rc<RefCell<SheetCache>> = Rc::new(RefCell::new(SheetCache::new()));
         let files: Rc<RefCell<FileIndex>> = Rc::new(RefCell::new(FileIndex::new()));
@@ -92,7 +103,6 @@ impl Driver {
             music: FULL_VOLUME,
             effects: FULL_VOLUME,
         }));
-        let output = SharedOutput::open();
         let profile = Rc::new(DeviceProfile::default());
         let returning = Rc::new(Cell::new(false));
 
@@ -135,6 +145,7 @@ impl Driver {
             finished: false,
             label: Label::default(),
             recorded: None,
+            listener,
         };
 
         driver.host();
@@ -152,12 +163,15 @@ impl Driver {
         ctx.set_platform(Box::new(InertPlatform {
             profile: Rc::clone(&self.profile),
         }));
-        ctx.set_sound(Box::new(Speaker::new(
-            Rc::clone(&self.files),
-            Rc::clone(&self.ledger),
-            Rc::clone(&self.volumes),
-            self.output.share(),
-        )));
+        match &self.listener {
+            Some(log) => ctx.set_sound(Box::new(Listener::new(Rc::clone(log), Rc::clone(&self.files)))),
+            None => ctx.set_sound(Box::new(Speaker::new(
+                Rc::clone(&self.files),
+                Rc::clone(&self.ledger),
+                Rc::clone(&self.volumes),
+                self.output.share(),
+            ))),
+        }
         ctx.set_meta(Box::new(InertMeta));
         ctx.set_scene_host(Box::new(InertScene {
             returning: Rc::clone(&self.returning),
@@ -232,6 +246,7 @@ impl Driver {
         };
         let save = tape::Save {
             version: VERSION.to_owned(),
+            app: self.label.app.clone(),
             seeds: replay::seeds_to(self.seeds),
             screen: tape::Screen {
                 width: self.applied.0,
@@ -985,6 +1000,26 @@ impl Driver {
 
         if let Err(fault) = cleared {
             warn!("emu: curtain could not be released: {fault}");
+        }
+    }
+
+    pub fn draw_curtain_aside(&mut self, sweep: i32) {
+        let held = self.ctx.u8_at(AppContext::CURTAIN_ACTIVE).and_then(|active| self.ctx.i32_at(AppContext::FADE_FRAME).map(|fade| (active, fade)));
+        let Ok((active, fade)) = held else {
+            warn!("emu: curtain state could not be read");
+
+            return;
+        };
+
+        self.draw_curtain(sweep);
+
+        let restored = self
+            .ctx
+            .set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [active])
+            .and_then(|()| self.ctx.set_i32_at(AppContext::FADE_FRAME, fade));
+
+        if let Err(fault) = restored {
+            warn!("emu: curtain state could not be restored: {fault}");
         }
     }
 
