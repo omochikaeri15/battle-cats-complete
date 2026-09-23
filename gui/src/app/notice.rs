@@ -11,14 +11,8 @@ const HASH_BYTES: usize = 8;
 const SCROLLBAR_GAP: f32 = 8.0;
 
 // If "NOTICE_CONTENT" is empty, no notice appears
-pub(super) const NOTICE_TITLE: &str = "PLEASE RE-IMPORT";
+pub(super) const NOTICE_TITLE: &str = "NOTICE";
 pub(super) const NOTICE_CONTENT: &str = r#"
-With the 4.0.0 update, the Sandbox has dropped, which means many assets that the app did not load before became needed. Many of these assets downloaded through Android needed regional handling, but were not given any.
-
-If you obtain your files through Android import, and want a seamless Sandbox experience, you will need to do the following:
-1. Go to `Settings > Import > Manage Exceptions > Set to Default` to load the new exceptions (may be loaded automatically for some of you, might still want to do it to be safe).
-2. Go to `Settings > Files` and click `Delete "game"` and `Clear Cache`.
-3. Do a fresh import from your emulator or device.
 "#;
 
 pub(super) fn parse_content() -> Vec<markdown::Item> {
