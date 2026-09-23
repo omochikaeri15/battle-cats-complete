@@ -2,7 +2,11 @@ use std::env;
 use std::fs;
 use std::iter;
 #[cfg(unix)]
+use std::os::unix::process::CommandExt;
+#[cfg(unix)]
 use std::path::Path;
+#[cfg(unix)]
+use std::process::Stdio;
 use std::thread;
 use std::time::Duration;
 
@@ -314,7 +318,17 @@ pub(crate) fn restart_app() {
 
     let script = format!("sleep {}; exec \"$0\"", RESTART_DELAY_SECS);
 
-    if let Err(err) = process::command("sh").arg("-c").arg(script).arg(clean_path).spawn() {
+    let relaunched = process::command("sh")
+        .arg("-c")
+        .arg(script)
+        .arg(clean_path)
+        .process_group(0)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+
+    if let Err(err) = relaunched {
         error!("Restart aborted: could not spawn the relaunch helper: {}", err);
         return;
     }
