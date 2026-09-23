@@ -77,6 +77,51 @@ impl Drop for Scratch {
     }
 }
 
+static NEXT_WORKSPACE: AtomicUsize = AtomicUsize::new(0);
+
+pub struct Workspace {
+    dir: PathBuf,
+    _claim: Scratch,
+}
+
+impl Workspace {
+    pub fn claim(name: &str) -> std::io::Result<Self> {
+        let claim = Scratch::claim();
+        let number = NEXT_WORKSPACE.fetch_add(1, Ordering::Relaxed);
+        let dir = Path::new(WORK).join(format!("{name}-{number}"));
+
+        if dir.exists() {
+            fs::remove_dir_all(&dir)?;
+        }
+
+        fs::create_dir_all(&dir)?;
+
+        Ok(Self { dir, _claim: claim })
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.dir
+    }
+}
+
+impl Drop for Workspace {
+    fn drop(&mut self) {
+        match fs::remove_dir_all(&self.dir) {
+            Ok(()) => debug!("Cleared {}", self.dir.display()),
+            Err(err) if err.kind() == ErrorKind::NotFound => {}
+            Err(err) => warn!("Failed to clear {}: {}", self.dir.display(), err),
+        }
+    }
+}
+
+pub fn work_purge() {
+    match fs::remove_dir_all(WORK) {
+        Ok(()) => debug!("Cleared {}", WORK),
+        Err(err) if err.kind() == ErrorKind::NotFound => {}
+        Err(err) => warn!("Failed to clear {}: {}", WORK, err),
+    }
+}
+
 pub fn work_cleanup() {
     let outstanding = ACTIVE_JOBS.load(Ordering::Acquire);
 

@@ -48,3 +48,6 @@ When on this tab, the "Play" button instead becomes "Watch" which allows you to 
 Every file that the game loads is saved in the `.bcv` file. This means any Replay from any mod can be shared to other users that don't have that mod installed. If a later game update breaks the Replay, you can make Replays use your on-disk files instead by changing `Settings > Sandbox > Replay > Replay Source` to `VFS`.
 
 Exporting to video formats requires the FFMPEG Addon, which you can install under `Settings > Addons > FFMPEG`.
+
+## Keybinds
+Battle can be controlled using Keybinds defined under `Settings > Sandbox > Keybinds`. There are even some Keybind exclusive behaviors, such as quickly restarting or ending a battle.

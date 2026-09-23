@@ -10,7 +10,8 @@ use iced::{Alignment, Element, Length, Size, Task, Theme};
 use tracing::warn;
 
 use std::cell::RefCell;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::rc::Rc;
 
 use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
@@ -21,7 +22,8 @@ use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::altar::Altars;
 use kore::domains::sandbox::TECHS;
 use kore::domains::sandbox::replay as replay_tape;
-use kore::domains::settings::{ReplaySource, Settings};
+use kore::domains::settings::{ReplaySource, ScannerConfig, Settings};
+use kore::Vault;
 
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
@@ -89,9 +91,11 @@ pub enum Message {
     CloseVersion,
     IgnoreVersion,
     Restamped(Result<(), String>),
+    Keepsakes(u64, Vec<(Box<str>, PathBuf)>),
 }
 
 pub struct State {
+    ticket: u64,
     prompt_open: bool,
     prompt: popup::State,
     fault: popup::State,
@@ -113,6 +117,7 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
+            ticket: 0,
             prompt_open: false,
             prompt: popup::State::default(),
             fault: popup::State::default(),
@@ -412,6 +417,14 @@ impl State {
         }
     }
 
+    pub(crate) fn gather_keepsakes(&mut self, vault: Arc<Vault>, save: replay_tape::Save, config: ScannerConfig) -> Task<Message> {
+        self.ticket += 1;
+
+        let ticket = self.ticket;
+
+        Task::perform(smol::unblock(move || replay::gather_keepsakes(&vault, save, &config)), move |files| Message::Keepsakes(ticket, files))
+    }
+
     pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, label: Option<Label>) {
         let session = self.session.get_or_insert_with(Session::new);
 
@@ -481,6 +494,15 @@ impl State {
                 self.status = "Updating the replay's version…".to_owned();
 
                 Task::perform(smol::unblock(move || replay_tape::restamp(&target, VERSION)), Message::Restamped)
+            }
+            Message::Keepsakes(ticket, files) => {
+                if ticket == self.ticket
+                    && let Some(session) = self.session.as_mut()
+                {
+                    session.keepsakes(files);
+                }
+
+                Task::none()
             }
             Message::Restamped(outcome) => {
                 self.status.clear();

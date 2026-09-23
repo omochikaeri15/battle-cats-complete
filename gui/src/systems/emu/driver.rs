@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::mem;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -36,6 +36,9 @@ const FULL_VOLUME: i32 = 100;
 const DIM_ALPHA: i32 = 0x80;
 const NOTCH_SHARE: f32 = 0.04;
 const ALTAR_ROW_SHIFT: i32 = -2;
+const BUTTON_SLOTS: i32 = 21;
+const UNIT_FILE_PREFIX: &str = "unit";
+const UNIT_FILE_SUFFIX: &str = ".csv";
 
 enum Tape {
     Off,
@@ -77,6 +80,7 @@ pub struct Driver {
     recorded: Option<tape::Save>,
     listener: Option<SharedLog>,
     leaving: Option<u16>,
+    fielded: Option<BTreeSet<u32>>,
 }
 
 #[derive(Default)]
@@ -85,6 +89,16 @@ pub struct Label {
     pub map: String,
     pub stage: String,
     pub keepsakes: Vec<(Box<str>, PathBuf)>,
+}
+
+fn unit_file(name: &str) -> Option<u32> {
+    let number = name.strip_prefix(UNIT_FILE_PREFIX)?.strip_suffix(UNIT_FILE_SUFFIX)?;
+
+    if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+
+    number.parse::<u32>().ok()?.checked_sub(1)
 }
 
 impl Driver {
@@ -148,6 +162,7 @@ impl Driver {
             recorded: None,
             listener,
             leaving: None,
+            fielded: None,
         };
 
         driver.host();
@@ -227,13 +242,14 @@ impl Driver {
         self.pending.clear();
         self.finished = false;
         self.leaving = None;
+        self.fielded = None;
         self.ledger.borrow_mut().disarm();
     }
 
     pub fn arm_recording(&mut self) {
         self.close_tape();
 
-        let Some(dir) = tape::scratch() else {
+        let Some(dir) = tape::latest() else {
             warn!("emu: there is no state folder, so this battle is not recorded");
 
             return;
@@ -284,6 +300,19 @@ impl Driver {
     }
 
     pub fn stamp_deck(&mut self) {
+        if !matches!(self.tape, Tape::Recording(_)) {
+            return;
+        }
+
+        self.fielded = Some(
+            [0, 1]
+                .into_iter()
+                .flat_map(|faction| (0..BUTTON_SLOTS).map(move |slot| (faction, slot)))
+                .filter_map(|(faction, slot)| emu::engine::get_button_unit_id(&self.ctx, faction, slot).ok())
+                .filter_map(|unit| u32::try_from(unit).ok())
+                .collect(),
+        );
+
         let Tape::Recording(recording) = &self.tape else {
             return;
         };
@@ -310,6 +339,18 @@ impl Driver {
         if let Err(error) = recording.write_save(save) {
             warn!("emu: the latest battle's deck icons could not be written: {error}");
         }
+    }
+
+    pub fn add_keepsakes(&mut self, files: Vec<(Box<str>, PathBuf)>) {
+        if matches!(self.tape, Tape::Recording(_)) {
+            let mut ledger = self.ledger.borrow_mut();
+
+            for (name, path) in &files {
+                ledger.note(name, path);
+            }
+        }
+
+        self.label.keepsakes.extend(files);
     }
 
     pub fn label(&mut self, label: Label) {
@@ -367,7 +408,11 @@ impl Driver {
             return;
         };
 
-        let requested = self.ledger.borrow_mut().drain();
+        let mut requested = self.ledger.borrow_mut().drain();
+
+        if let Some(fielded) = &self.fielded {
+            requested.retain(|(name, _)| unit_file(name).is_none_or(|unit| fielded.contains(&unit)));
+        }
 
         if requested.is_empty() {
             return;

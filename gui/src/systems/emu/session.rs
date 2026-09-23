@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 
 use emu::runtime::BattleOptions;
 use kore::Vfs;
+use kore::common::architecture::Workspace;
 use kore::domains::sandbox::replay as tape;
 use kore::domains::settings::ReplaySource;
 use tracing::warn;
@@ -53,6 +54,7 @@ pub struct Session {
     again: bool,
     reel: Option<(Reel, ReplaySource)>,
     recording: bool,
+    theater: Option<Workspace>,
 }
 
 impl Session {
@@ -67,6 +69,7 @@ impl Session {
             sweep: 0,
             stale: false,
             again: false,
+            theater: None,
             started: Instant::now(),
             entered: false,
             frozen: 0,
@@ -167,6 +170,10 @@ impl Session {
         self.driver.label(label);
     }
 
+    pub fn keepsakes(&mut self, files: Vec<(Box<str>, PathBuf)>) {
+        self.driver.add_keepsakes(files);
+    }
+
     pub fn configure(&mut self, options: BattleOptions) {
         self.driver.set_options(options);
     }
@@ -237,7 +244,7 @@ impl Session {
                     self.phase = if self.again { Phase::Loading } else { Phase::Leaving };
 
                     if self.driver.watching() {
-                        self.driver.end_playback();
+                        self.end_playback();
                         self.driver.draw_curtain(self.sweep);
                     }
                     self.started = Instant::now();
@@ -292,7 +299,7 @@ impl Session {
                 } else {
                     self.phase = Phase::Leaving;
                     self.started = Instant::now();
-                    self.driver.end_playback();
+                    self.end_playback();
                     self.driver.draw_curtain(self.sweep);
                 }
             }
@@ -376,19 +383,26 @@ impl Session {
             self.driver.silence();
             self.phase = Phase::Leaving;
             self.sweep = CLOSED_FRAME;
-            self.driver.end_playback();
+            self.end_playback();
             self.started = Instant::now();
             self.driver.draw_curtain(self.sweep);
         }
     }
 
+    fn end_playback(&mut self) {
+        self.driver.end_playback();
+        self.theater = None;
+    }
+
     fn cue(&mut self, reel: &Reel, source: ReplaySource, vfs: &Vfs) -> Result<(), String> {
         let dir = match reel {
-            Reel::Latest => tape::scratch().ok_or("there is no state folder to hold the latest battle")?,
+            Reel::Latest => tape::latest().ok_or("there is no state folder to hold the latest battle")?,
             Reel::Bundle(bundle) => {
-                let dir = tape::theater().ok_or("there is no state folder to unpack the replay into")?;
+                let work = Workspace::claim(tape::THEATER).map_err(|error| format!("the work folder could not be created: {error}"))?;
+                let dir = work.path().to_path_buf();
 
                 tape::unpack(bundle, &dir)?;
+                self.theater = Some(work);
 
                 dir
             }

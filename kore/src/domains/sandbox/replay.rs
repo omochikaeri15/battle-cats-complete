@@ -12,8 +12,8 @@ use rayon::prelude::*;
 use tracing::warn;
 
 use crate::common::job::JobOutcome;
-use crate::common::{architecture, dirs, solid};
-use crate::domains::cat::files;
+use crate::common::architecture::{self, Workspace};
+use crate::common::{dirs, solid};
 use crate::domains::cat::scanner::{self, CatEntry};
 use crate::domains::settings::ScannerConfig;
 use crate::Vault;
@@ -28,65 +28,17 @@ const SAVE: &str = "save";
 const INPUT: &str = "input";
 const MANIFEST: &str = "manifest";
 const ASSETS: &str = architecture::REPLAY;
-const SCRATCH: &str = "replay";
-const THEATER: &str = "theater";
+const LATEST: &str = "sandbox";
+pub const THEATER: &str = "theater";
 const GALLERY: &str = "gallery";
 const BASE_FORMS: usize = 2;
-const STAMP: &str = "stamp";
-const KEEPSAKE_TABLES: [&str; 13] = [
-    "unitbuy",
-    "unitlevel",
-    "SkillAcquisition",
-    "SkillLevel",
-    "SkillDescriptions",
-    "unitevolve",
-    "Nyancombo",
-    "equipment",
-    "gatyaitemD_07_f",
-    "uni.png",
-    "Skill_name_",
-    "img015",
-    "img022",
-];
 const BUNDLE_STEM: &str = "Replay";
 const EXPORTS: &str = "exports";
 const STAGING: &str = "replay";
 const FORBIDDEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
-pub fn scratch() -> Option<PathBuf> {
-    dirs::state().map(|state| state.join(SCRATCH))
-}
-
-pub fn theater() -> Option<PathBuf> {
-    dirs::state().map(|state| state.join(THEATER))
-}
-
-pub fn gallery() -> Option<PathBuf> {
-    dirs::state().map(|state| state.join(GALLERY))
-}
-
-pub fn keepsakes(vault: &Vault, units: &[(u32, usize)]) -> Vec<(Box<str>, PathBuf)> {
-    let vfs = &vault.vfs;
-    let buys = vault.vds.cats.unitbuy(vfs);
-    let mut prefixes: Vec<String> = KEEPSAKE_TABLES.iter().map(|table| (*table).to_owned()).collect();
-
-    for &(id, form) in units {
-        let number = id + 1;
-        let eggs = buys.get(&id).map_or((-1, -1), |row| (row.egg_id_normal, row.egg_id_evolved));
-
-        prefixes.extend([
-            format!("unit{number:03}"),
-            files::icon_file(id, form, eggs),
-            files::anim_base_filename(id, form, eggs),
-            format!("Unit_Explanation{number}_"),
-        ]);
-    }
-
-    prefixes
-        .iter()
-        .flat_map(|prefix| vfs.glob(prefix))
-        .filter_map(|name| vfs.locate(&name).map(|path| (name, path)))
-        .collect()
+pub fn latest() -> Option<PathBuf> {
+    dirs::state().map(|state| state.join(LATEST))
 }
 
 fn signature(path: &Path) -> Option<String> {
@@ -110,29 +62,21 @@ pub struct Staged {
     pub summary: Summary,
     pub vault: Vault,
     pub cats: Vec<CatEntry>,
+    _workspace: Option<Workspace>,
 }
 
 pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
-    let bundle = !target.is_dir();
-    let dir = if bundle {
-        let dir = gallery().ok_or("there is no state folder to unpack the replay into")?;
-        let wanted = stamp(target);
-        let held = fs::read_to_string(dir.join(STAMP)).ok();
-
-        if wanted.is_none() || held != wanted {
-            unpack(target, &dir)?;
-
-            if let Some(wanted) = &wanted
-                && let Err(error) = fs::write(dir.join(STAMP), wanted)
-            {
-                warn!("Replay stamp could not be written: {error}");
-            }
-        }
-
-        dir
+    let workspace = if target.is_dir() {
+        None
     } else {
-        target.to_path_buf()
+        let work = Workspace::claim(GALLERY).map_err(|error| format!("the work folder could not be created: {error}"))?;
+
+        unpack(target, work.path())?;
+
+        Some(work)
     };
+    let bundle = workspace.is_some();
+    let dir = workspace.as_ref().map_or_else(|| target.to_path_buf(), |work| work.path().to_path_buf());
     let mut summary = inspect_dir(&dir);
 
     if bundle {
@@ -146,6 +90,10 @@ pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
         .create(dir.join(ASSETS).as_path())
         .map_err(|error| format!("the replay's files could not be read: {error}"))?;
 
+    Ok(Staged { _workspace: workspace, ..staged(summary, vault, config) })
+}
+
+pub fn staged(summary: Summary, vault: Vault, config: &ScannerConfig) -> Staged {
     let mut units: Vec<u32> = summary
         .save
         .iter()
@@ -182,7 +130,7 @@ pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
         }
     }
 
-    Ok(Staged { summary, vault, cats })
+    Staged { summary, vault, cats, _workspace: None }
 }
 
 pub fn library() -> PathBuf {
@@ -403,25 +351,25 @@ pub fn delete(bundle: &Path) -> Result<(), String> {
 }
 
 pub fn pack(dir: &Path, out: &Path, emit: impl Fn(f32), abort: &AtomicBool) -> JobOutcome {
-    let _work = architecture::Scratch::claim();
-    let staging = Path::new(architecture::WORK).join(STAGING).join(out.file_name().unwrap_or_default());
-    let outcome = match pack_into(dir, &staging, &emit, abort).and_then(|packed| if packed { settle(&staging, out).map(|()| true) } else { Ok(false) }) {
-        Ok(true) => return JobOutcome::Completed,
+    let work = match Workspace::claim(STAGING) {
+        Ok(work) => work,
+        Err(error) => {
+            warn!("Replay could not be saved: the work folder could not be created: {error}");
+
+            return JobOutcome::Failed(format!("the work folder could not be created: {error}"));
+        }
+    };
+    let staging = work.path().join(out.file_name().unwrap_or_default());
+
+    match pack_into(dir, &staging, &emit, abort).and_then(|packed| if packed { settle(&staging, out).map(|()| true) } else { Ok(false) }) {
+        Ok(true) => JobOutcome::Completed,
         Ok(false) => JobOutcome::Aborted,
         Err(reason) => {
             warn!("Replay could not be saved to {}: {reason}", out.display());
 
             JobOutcome::Failed(reason)
         }
-    };
-
-    if staging.exists()
-        && let Err(error) = fs::remove_file(&staging)
-    {
-        warn!("Partial replay {} could not be removed: {error}", staging.display());
     }
-
-    outcome
 }
 
 fn settle(staging: &Path, out: &Path) -> Result<(), String> {

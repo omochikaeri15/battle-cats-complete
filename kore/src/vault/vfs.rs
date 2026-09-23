@@ -10,7 +10,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use std::collections::BTreeSet;
+use std::sync::{Arc, Mutex, RwLock, RwLockWriteGuard};
 
 use rustc_hash::{FxHashMap, FxHasher};
 use serde::{Deserialize, Serialize};
@@ -32,7 +33,7 @@ struct Entry {
     len: u64,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 struct MountedDir {
     root: PathBuf,
     files: FxHashMap<MountKey, Entry>,
@@ -212,6 +213,7 @@ pub struct Vfs {
     generation: AtomicU64,
     sorted: RwLock<Sorted>,
     printed: RwLock<Printed>,
+    trace: Option<Mutex<BTreeSet<PathBuf>>>,
 }
 
 struct Mutation<'a> {
@@ -255,6 +257,34 @@ impl Vfs {
             generation: AtomicU64::new(0),
             sorted: RwLock::new(None),
             printed: RwLock::new(None),
+            trace: None,
+        }
+    }
+
+    pub fn fork(&self) -> Self {
+        let mounts = self.mounts.read().map(|mounts| mounts.clone()).unwrap_or_default();
+        let priority = self.priority.read().map(|order| order.clone()).unwrap_or_default();
+
+        Self {
+            mounts: RwLock::new(mounts),
+            cache: RwLock::new(FxHashMap::default()),
+            priority: RwLock::new(priority),
+            generation: AtomicU64::new(0),
+            sorted: RwLock::new(None),
+            printed: RwLock::new(None),
+            trace: Some(Mutex::new(BTreeSet::new())),
+        }
+    }
+
+    pub fn traced(&self) -> BTreeSet<PathBuf> {
+        self.trace.as_ref().and_then(|trace| trace.lock().ok().map(|mut seen| std::mem::take(&mut *seen))).unwrap_or_default()
+    }
+
+    fn note<'a>(&self, paths: impl IntoIterator<Item = &'a PathBuf>) {
+        if let Some(trace) = &self.trace
+            && let Ok(mut seen) = trace.lock()
+        {
+            seen.extend(paths.into_iter().cloned());
         }
     }
 
@@ -291,25 +321,38 @@ impl Vfs {
     }
 
     pub fn find<T: Target>(&self, target: T) -> Option<PathBuf> {
-        target.resolve(|names| self.first(names))
+        let found = target.resolve(|names| self.first(names));
+
+        self.note(&found);
+        found
     }
 
     pub fn list<T: Target>(&self, target: T) -> Vec<PathBuf> {
-        target.resolve(|names| self.collect(names))
+        let found = target.resolve(|names| self.collect(names));
+
+        self.note(&found);
+        found
     }
 
     pub fn locate(&self, filename: &str) -> Option<PathBuf> {
-        let mounts = self.mounts.read().ok()?;
+        let found = self.mounts.read().ok().and_then(|mounts| resolve(&mounts, filename));
 
-        resolve(&mounts, filename)
+        self.note(&found);
+        found
     }
 
     pub fn pristine<T: Target>(&self, target: T) -> Option<PathBuf> {
-        target.resolve(|names| self.untouched(names))
+        let found = target.resolve(|names| self.untouched(names));
+
+        self.note(&found);
+        found
     }
 
     pub fn originals<T: Target>(&self, target: T) -> Vec<PathBuf> {
-        target.resolve(|names| self.gathered(names))
+        let found = target.resolve(|names| self.gathered(names));
+
+        self.note(&found);
+        found
     }
 
     fn gathered(&self, filenames: &[&str]) -> Vec<PathBuf> {
@@ -1104,6 +1147,60 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn a_fork_records_what_it_resolves_and_the_original_never_does() {
+        // Replays keep exactly what a traced fork resolved. Anything the live vfs reads
+        // must stay out of that record, and the live vfs must never start keeping one.
+        let scratch = Scratch::new("fork");
+        let patch = scratch.0.join("patch");
+
+        for name in ["seen.csv", "unseen.csv", "sheet_en.png", "sheet_ja.png"] {
+            fs::write(patch.join(name), "0\n").expect("seed file");
+        }
+
+        let vfs = Vfs::with_priority(&[String::new(), "en".to_owned(), "ja".to_owned()]);
+        vfs.create(scratch.0.as_path()).expect("mount the scratch dir");
+
+        let fork = vfs.fork();
+
+        assert!(fork.find("seen.csv").is_some());
+        assert_eq!(fork.list("sheet.png").len(), 2);
+        assert!(vfs.find("unseen.csv").is_some());
+
+        let names: Vec<String> = fork
+            .traced()
+            .iter()
+            .filter_map(|path| path.file_name()?.to_str().map(str::to_owned))
+            .collect();
+
+        assert_eq!(names.len(), 3);
+        assert!(names.contains(&"seen.csv".to_owned()));
+        assert!(!names.contains(&"unseen.csv".to_owned()));
+        assert!(vfs.traced().is_empty(), "the live vfs never traces");
+        assert!(fork.traced().is_empty(), "reading the record drains it");
+    }
+
+    #[test]
+    fn a_fork_resolves_like_the_original_but_owns_its_own_mounts() {
+        // The tracer must see every mount the app sees, but unmounting on the
+        // live side afterwards must not pull files out from under it.
+        let scratch = Scratch::new("fork-mounts");
+
+        fs::write(scratch.0.join("patch").join("held.csv"), "0\n").expect("seed file");
+
+        let vfs = Vfs::with_priority(&[]);
+        vfs.create(scratch.0.as_path()).expect("mount the scratch dir");
+
+        let fork = vfs.fork();
+
+        assert_eq!(fork.find("held.csv"), vfs.find("held.csv"));
+
+        vfs.destroy(scratch.0.as_path());
+
+        assert!(vfs.find("held.csv").is_none());
+        assert!(fork.find("held.csv").is_some());
     }
 
     #[test]

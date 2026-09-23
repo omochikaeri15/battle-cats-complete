@@ -1,3 +1,4 @@
+mod keepsakes;
 mod manage;
 
 use std::collections::HashMap;
@@ -31,6 +32,8 @@ use crate::widget::{list_row, popup, section, smooth_scroll, text_with_superscri
 
 use super::lineup::{Metrics, SMALLEST};
 use super::orbs;
+
+pub(super) use keepsakes::gather as gather_keepsakes;
 
 const SCOPE: &str = "sandbox-replay-units";
 const UNIT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayUnit, Size::new(760.0, 540.0));
@@ -175,7 +178,7 @@ fn level_label((level, plus): (u32, u32)) -> String {
 
 fn target_of(pick: &Pick) -> Option<PathBuf> {
     match pick {
-        Pick::Latest => tape::scratch(),
+        Pick::Latest => tape::latest(),
         Pick::Bundle(path) => Some(path.clone()),
     }
 }
@@ -435,6 +438,15 @@ impl State {
         }
     }
 
+    fn open_unit(&mut self, slot: usize) {
+        let Some(tile) = self.tiles.get(slot) else {
+            return;
+        };
+
+        self.inspector.inspect(tile.id, tile.form, &tile.inspected, &tile.talents);
+        self.open = Some(slot);
+    }
+
     fn vault(&self) -> Option<&Vault> {
         self.staged.as_deref().map(|staged| &staged.vault)
     }
@@ -498,12 +510,7 @@ impl State {
                     return Task::none();
                 }
 
-                let Some(tile) = self.tiles.get(slot) else {
-                    return Task::none();
-                };
-
-                self.inspector.inspect(tile.id, tile.form, &tile.inspected, &tile.talents);
-                self.open = Some(slot);
+                self.open_unit(slot);
 
                 Task::none()
             }

@@ -16,7 +16,7 @@ use iced::{wgpu, Rectangle};
 use tracing::{error, info, warn};
 
 use kore::Vfs;
-use kore::common::architecture;
+use kore::common::architecture::Workspace;
 use kore::common::job::JobOutcome;
 use kore::domains::sandbox::replay as tape;
 use kore::domains::settings::ReplaySource;
@@ -36,8 +36,6 @@ const MIX_SHARE: f32 = 0.5;
 const TEMP_VIDEO: &str = "video";
 const TEMP_AUDIO: &str = "audio.wav";
 const WORK_FOLDER: &str = "video";
-const LATEST_WORK: &str = "latest";
-const BUNDLE_WORK: &str = "bcv-";
 
 pub struct VideoJob {
     reel: Source,
@@ -101,35 +99,16 @@ fn destination(title: &str, format: VideoFormat) -> PathBuf {
     Path::new(EXPORTS).join(format!("{title}.{}", format.extension()))
 }
 
-fn workspace(reel: &Source) -> PathBuf {
-    let name = match reel {
-        Source::Latest => LATEST_WORK.to_owned(),
-        Source::Bundle(bundle) => format!("{BUNDLE_WORK}{}", bundle.file_stem().map_or_else(String::new, |stem| stem.to_string_lossy().into_owned())),
-    };
-
-    Path::new(architecture::WORK).join(WORK_FOLDER).join(name)
-}
-
 fn run(job: &VideoJob, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
-    let _work = architecture::Scratch::claim();
-    let work = workspace(&job.reel);
-    let outcome = film(job, &work, emit);
+    let work = Workspace::claim(WORK_FOLDER).map_err(|failure| format!("the work folder could not be created: {failure}"))?;
 
-    if work.exists()
-        && let Err(failure) = fs::remove_dir_all(&work)
-    {
-        warn!("{} could not be removed: {failure}", work.display());
-    }
-
-    outcome
+    film(job, work.path(), emit)
 }
 
 fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
     let dir = match &job.reel {
         Source::Latest => {
-            fs::create_dir_all(work).map_err(|failure| format!("{} could not be created: {failure}", work.display()))?;
-
-            tape::scratch().ok_or("there is no state folder holding the latest battle")?
+            tape::latest().ok_or("there is no state folder holding the latest battle")?
         }
         Source::Bundle(bundle) => {
             tape::unpack(bundle, work)?;

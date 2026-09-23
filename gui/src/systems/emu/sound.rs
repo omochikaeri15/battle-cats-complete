@@ -137,7 +137,7 @@ impl Speaker {
             return Some(effect.clone());
         }
 
-        let bytes = self.read(&effect_name(sound_id))?;
+        let bytes = effect_names(sound_id).iter().find_map(|name| self.read(name))?;
         let effect = parse_caf(&bytes)?;
 
         self.effects.insert(sound_id, effect.clone());
@@ -184,8 +184,8 @@ pub(super) fn track_names(sound_id: i32) -> [String; 2] {
     [format!("snd{sound_id:03}.ogg"), format!("{sound_id:03}.ogg")]
 }
 
-pub(super) fn effect_name(sound_id: i32) -> String {
-    format!("{sound_id:03}.caf")
+pub(super) fn effect_names(sound_id: i32) -> [String; 2] {
+    [format!("{sound_id:03}.caf"), format!("snd{sound_id:03}.caf")]
 }
 
 pub(super) fn parse_caf(bytes: &[u8]) -> Option<Effect> {

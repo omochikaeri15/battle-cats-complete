@@ -12,7 +12,7 @@ use rodio::{Decoder, Source};
 use tracing::warn;
 
 use super::assets::FileIndex;
-use super::sound::{effect_name, parse_caf, track_names, EVERYTHING, EVERY_EFFECT, EVERY_TRACK};
+use super::sound::{effect_names, parse_caf, track_names, EVERYTHING, EVERY_EFFECT, EVERY_TRACK};
 
 pub(super) const RATE: u32 = 48_000;
 const FULL: i32 = 100;
@@ -178,8 +178,9 @@ impl Library<'_> {
             return held.clone();
         }
 
-        let decoded = self
-            .read(&effect_name(sound_id))
+        let decoded = effect_names(sound_id)
+            .iter()
+            .find_map(|name| self.read(name))
             .and_then(|bytes| parse_caf(&bytes))
             .map(|effect| Arc::from(to_stereo(&effect.samples, usize::from(effect.channels), effect.rate)));
 

@@ -26,6 +26,10 @@ impl Vault {
         Self::with_priority(&settings.general.language_priority)
     }
 
+    pub fn fork(&self) -> Self {
+        Self { vfs: self.vfs.fork(), vds: Vds::default() }
+    }
+
     pub fn with_priority(order: &[String]) -> Self {
         Self {
             vfs: Vfs::with_priority(order),

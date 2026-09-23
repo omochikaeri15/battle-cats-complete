@@ -157,21 +157,7 @@ fn unknown_icon(custom_assets: &HashMap<CustomIcon, RgbaImage>, export_size: u32
     custom_assets.get(&CustomIcon::Unknown).cloned().unwrap_or_else(|| RgbaImage::new(export_size, export_size))
 }
 fn cropped_from(layers: &[SpriteSheet], icon_id: usize) -> Option<RgbaImage> {
-    for layer in layers {
-        let Some(cut) = layer.cuts_map.get(&icon_id) else { continue };
-        let Some(image_data) = &layer.image_data else { continue };
-
-        let (px, py) = (cut.x.max(0) as u32, cut.y.max(0) as u32);
-        let (pw, ph) = (cut.width.max(0) as u32, cut.height.max(0) as u32);
-
-        if pw == 0 || ph == 0 || px + pw > image_data.width() || py + ph > image_data.height() {
-            continue;
-        }
-
-        return Some(image::imageops::crop_imm(image_data.as_ref(), px, py, pw, ph).to_image());
-    }
-
-    None
+    layers.iter().find_map(|layer| layer.crop(icon_id))
 }
 
 pub(super) fn get_icon_image(

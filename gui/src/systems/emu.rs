@@ -20,5 +20,6 @@ pub(crate) use assets::SheetCache;
 pub(crate) use sink::Frame;
 pub(crate) use input::TouchQueue;
 pub(crate) use keys::Action;
+pub(crate) use replay::setup_to as tape_setup;
 pub(crate) use video::{VideoEvent, VideoJob, spawn as export_video};
 pub(crate) use viewport::{Feed, overlay};

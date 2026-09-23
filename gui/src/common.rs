@@ -13,7 +13,7 @@ pub(crate) mod skill_name;
 pub mod udi_loader;
 pub mod watcher;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::thread;
 
 use iced::futures::channel::mpsc::unbounded;
@@ -188,40 +188,55 @@ impl SpriteSheet {
         ));
     }
 }
+pub(crate) struct SheetLayer {
+    pub(crate) png: PathBuf,
+    pub(crate) imgcut: Option<PathBuf>,
+    pub(crate) stem: String,
+}
+
+pub(crate) fn sheet_layers(vfs: &Vfs, name: &str, pristine: bool) -> Vec<SheetLayer> {
+    let sheet = format!("{}.png", name);
+    let png_paths = if pristine { vfs.originals(&sheet) } else { vfs.list(&sheet) };
+
+    png_paths
+        .into_iter()
+        .map(|png| {
+            let stem = png.file_stem().map_or_else(|| name.to_string(), |stem| stem.to_string_lossy().into_owned());
+            let imgcut = vfs.locate(&format!("{}.imgcut", stem)).or_else(|| vfs.locate(&format!("{}.imgcut", name)));
+
+            SheetLayer { png, imgcut, stem }
+        })
+        .collect()
+}
+
 pub fn ensure_sheet_loaded(
     sheets: &mut Vec<SpriteSheet>,
     vfs: &Vfs,
     name: &str,
     pristine: bool,
 ) -> Task<(usize, Option<CoreSpriteSheet>)> {
-    let sheet = format!("{}.png", name);
-    let png_paths = if pristine { vfs.originals(&sheet) } else { vfs.list(&sheet) };
+    let layers = sheet_layers(vfs, name, pristine);
 
-    if sheets.len() != png_paths.len() {
-        debug!("Resizing the {} sheet matrix to match resolved paths ({})", name, png_paths.len());
-        sheets.resize_with(png_paths.len(), SpriteSheet::default);
+    if sheets.len() != layers.len() {
+        debug!("Resizing the {} sheet matrix to match resolved paths ({})", name, layers.len());
+        sheets.resize_with(layers.len(), SpriteSheet::default);
     }
 
     let mut tasks = Vec::new();
 
-    for (index, png_path) in png_paths.into_iter().enumerate() {
+    for (index, layer) in layers.into_iter().enumerate() {
         if !sheets[index].needs_load() {
             continue;
         }
 
-        let stem = png_path.file_stem().map_or_else(|| name.to_string(), |stem| stem.to_string_lossy().into_owned());
-
-        let Some(imgcut_path) = vfs
-            .locate(&format!("{}.imgcut", stem))
-            .or_else(|| vfs.locate(&format!("{}.imgcut", name)))
-        else {
-            warn!(sheet = %stem, "No matching imgcut for the resolved sprite sheet");
+        let Some(imgcut_path) = layer.imgcut else {
+            warn!(sheet = %layer.stem, "No matching imgcut for the resolved sprite sheet");
             sheets[index].mark_unavailable();
             continue;
         };
 
-        trace!("Loading sprite sheet {}", stem);
-        tasks.push(sheets[index].load(&png_path, &imgcut_path, stem).map(move |result| (index, result)));
+        trace!("Loading sprite sheet {}", layer.stem);
+        tasks.push(sheets[index].load(&layer.png, &imgcut_path, layer.stem).map(move |result| (index, result)));
     }
 
     Task::batch(tasks)

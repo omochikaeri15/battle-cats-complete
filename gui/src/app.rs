@@ -1126,7 +1126,7 @@ impl BattleCatsApp {
                 self.studio_state.flush_now();
                 self.mods_state.flush_metadata();
                 self.files_state.leave(&self.vault.vfs);
-                architecture::work_cleanup();
+                architecture::work_purge();
                 updater::cleanup_replace_artifacts();
 
                 window::mode(id).map(move |mode| Message::CloseWithMode(id, mode))
@@ -1535,14 +1535,24 @@ impl BattleCatsApp {
                     self.sandbox_state.watch(self.window_size.width, self.window_size.height, &self.app_state.sandbox, source, checked);
                 }
 
+                let mut gathering: Option<Task<Message>> = None;
+
                 if matches!(msg, sandbox::Message::Play)
                     && let Some(entry) = self.staged_entry()
                 {
                     let setup = self.sandbox_state.setup(&self.app_state, entry);
 
-                    let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label(&setup));
+                    let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label());
+                    let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };
+                    let recording = label.is_some();
 
                     self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
+
+                    if recording {
+                        let config = self.settings.scanner_config(self.mods_state.active_mod());
+
+                        gathering = Some(self.sandbox_state.gather_keepsakes(Arc::clone(&self.vault), lineup, config).map(Message::Sandbox));
+                    }
                 }
 
                 let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
@@ -1550,6 +1560,8 @@ impl BattleCatsApp {
 
                 self.sync_sandbox_rules();
                 self.sync_sandbox_popups();
+
+                let task = Task::batch([task, gathering.unwrap_or_else(Task::none)]);
 
                 if disagreed {
                     return Task::batch([task, self.navigate(Page::Home)]);
@@ -1743,21 +1755,16 @@ impl BattleCatsApp {
         self.sandbox_state.set_castle(castle, &self.app_state);
     }
 
-    fn replay_label(&self, setup: &::emu::runtime::Setup) -> emu::Label {
+    fn replay_label(&self) -> emu::Label {
         let data = &self.stage_state.data;
         let picked = data.selected_stage.as_ref();
         let map = picked.map(|picked| kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map });
-        let units: Vec<(u32, usize)> = setup
-            .lineup
-            .iter()
-            .filter_map(|unit| Some((u32::try_from(unit.unit).ok()?, usize::try_from(unit.form).ok()?)))
-            .collect();
 
         emu::Label {
             app: self.mods_state.active_mod().unwrap_or_else(|| kore::domains::sandbox::replay::VANILLA_APP.to_owned()),
             map: map.and_then(|map| data.registry.maps.get(&map)).map(|map| map.name.clone()).unwrap_or_default(),
             stage: picked.and_then(|picked| data.registry.stages.get(picked)).map(|stage| stage.name.clone()).unwrap_or_default(),
-            keepsakes: kore::domains::sandbox::replay::keepsakes(&self.vault, &units),
+            keepsakes: Vec::new(),
         }
     }
 

@@ -194,15 +194,7 @@ impl State {
     fn cut(&self, layer: Layer, index: i32) -> Option<RgbaImage> {
         let index = usize::try_from(index).ok()?;
 
-        self.sheets[layer as usize].iter().find_map(|sheet| {
-            let cut = sheet.core.cuts_map.get(&index)?;
-            let pixels = sheet.core.image_data.as_ref()?;
-            let (left, top) = (u32::try_from(cut.x).ok()?, u32::try_from(cut.y).ok()?);
-            let (width, height) = (u32::try_from(cut.width).ok()?, u32::try_from(cut.height).ok()?);
-
-            (width > 1 && height > 1 && left + width <= pixels.width() && top + height <= pixels.height())
-                .then(|| imageops::crop_imm(pixels.as_ref(), left, top, width, height).to_image())
-        })
+        self.sheets[layer as usize].iter().find_map(|sheet| sheet.core.crop(index))
     }
 
     fn drawn(&self, orb: u32, edge: u32) -> Option<Handle> {

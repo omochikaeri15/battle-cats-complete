@@ -240,7 +240,7 @@ impl State {
                     return (Task::none(), Effect::None);
                 }
 
-                let Some(dir) = tape::scratch() else {
+                let Some(dir) = tape::latest() else {
                     warn!("Replay could not be saved: there is no state folder holding the latest battle");
 
                     return self.finish(Pick::Latest, JobOutcome::Failed("there is no state folder holding the latest battle".to_owned()));

@@ -108,6 +108,24 @@ pub enum Message {
     Animation(animation::Message),
 }
 
+pub(crate) const TABS: [(DetailTab, &str); 4] = [
+    (DetailTab::Abilities, "Abilities"),
+    (DetailTab::Talents, "Talents"),
+    (DetailTab::Details, "Details"),
+    (DetailTab::Animation, "Animation"),
+];
+
+pub(crate) fn popup_walk(cat: &CatEntry) -> Vec<Message> {
+    let groups = cat.talent_data.as_ref().map_or(0, |talent| talent.groups.len());
+
+    (0..groups)
+        .filter_map(|group| u8::try_from(group).ok())
+        .map(|group| Message::Talents(talents::Message::ToggleGroup(cat.id, group)))
+        .chain([Message::ToggleTalents(false), Message::ToggleTalents(true)])
+        .chain(TABS.iter().map(|(tab, _)| Message::SelectTab(*tab)))
+        .collect()
+}
+
 impl Message {
     pub(crate) fn views_only(&self) -> bool {
         matches!(
@@ -1074,12 +1092,7 @@ impl State {
         let form_row = editor::target(form_row, editor::Target::CatForms);
 
         let mut tab_row = row![].spacing(4);
-        let tabs = [
-            (DetailTab::Abilities, "Abilities"),
-            (DetailTab::Talents, "Talents"),
-            (DetailTab::Details, "Details"),
-            (DetailTab::Animation, "Animation"),
-        ];
+        let tabs = TABS;
 
         for (tab_enum, label) in tabs {
             let is_talents = tab_enum == DetailTab::Talents;
