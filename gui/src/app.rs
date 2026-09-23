@@ -148,6 +148,7 @@ const ALL_PAGES: &[Page] = &[
 pub enum CheckFailure {
     RateLimited,
     InvalidUrl,
+    Install,
     Unknown,
 }
 

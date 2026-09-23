@@ -9,8 +9,7 @@ use std::time::Duration;
 use iced::futures::channel::mpsc;
 use iced::widget::{column, container, progress_bar, row, text, Space};
 use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
-use self_update::backends::github::Update as GithubUpdate;
-use self_update::{cargo_crate_version, version};
+use self_update::{cargo_crate_version, version, Download, Extract, TempDir};
 use tracing::{error, info, warn};
 
 use kore::common::github;
@@ -104,27 +103,10 @@ impl BattleCatsApp {
 
             info!("Installing asset {} from {}", target_asset_name, target_tag);
 
-            let Ok(update_box) = GithubUpdate::configure()
-                .repo_owner(REPO_OWNER)
-                .repo_name(REPO_NAME)
-                .bin_name(BIN_NAME)
-                .show_download_progress(false)
-                .show_output(false)
-                .no_confirm(true)
-                .current_version(cargo_crate_version!())
-                .target_version_tag(&target_tag)
-                .target(&target_asset_name)
-                .build() else {
+            if let Err(err) = install(&target_tag, &target_asset_name) {
                 cleanup_temp_files();
-                error!("Failed to build download configurator");
-                let _ = tx.unbounded_send(UpdaterMsg::CheckFailed(CheckFailure::Unknown));
-                return;
-            };
-
-            if update_box.update().is_err() {
-                cleanup_temp_files();
-                error!("Failed during update installation sequence");
-                let _ = tx.unbounded_send(UpdaterMsg::CheckFailed(CheckFailure::Unknown));
+                error!("Failed during update installation sequence: {}", err);
+                let _ = tx.unbounded_send(UpdaterMsg::CheckFailed(CheckFailure::Install));
                 return;
             }
 
@@ -137,6 +119,21 @@ impl BattleCatsApp {
         self.updater_handle = Some(handle);
         task.map(Message::Updater)
     }
+}
+
+fn install(tag: &str, asset: &str) -> Result<(), self_update::errors::Error> {
+    let url = format!("https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag}/{asset}");
+    let staging = TempDir::new()?;
+    let archive = staging.path().join(asset);
+
+    Download::from_url(&url).download_to(fs::File::create(&archive)?)?;
+
+    let binary = format!("{BIN_NAME}{}", env::consts::EXE_SUFFIX);
+
+    Extract::from_source(&archive).extract_file(staging.path(), &binary)?;
+    self_update::self_replace::self_replace(staging.path().join(&binary))?;
+
+    Ok(())
 }
 
 pub(super) fn update_popup(state: &mut popup::State, message: popup::Message) -> bool {
