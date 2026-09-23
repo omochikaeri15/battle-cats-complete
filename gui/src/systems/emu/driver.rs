@@ -919,6 +919,21 @@ impl Driver {
     }
 
     pub fn draw_curtain(&mut self, sweep: i32) {
+        let pad = match self.ctx.i32_at(AppContext::LETTERBOX_PAD) {
+            Ok(pad) => pad,
+            Err(fault) => {
+                warn!("emu: letterbox could not be read: {fault}");
+
+                return;
+            }
+        };
+
+        if let Err(fault) = self.ctx.set_i32_at(AppContext::LETTERBOX_PAD, 0) {
+            warn!("emu: letterbox could not be lifted: {fault}");
+
+            return;
+        }
+
         self.frame.borrow_mut().clear();
         self.begin_draw();
 
@@ -927,16 +942,17 @@ impl Driver {
             .set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])
             .and_then(|()| self.ctx.set_i32_at(AppContext::FADE_FRAME, sweep));
 
-        if let Err(fault) = armed {
-            warn!("emu: curtain frame could not be set: {fault}");
-
-            return;
+        match armed {
+            Ok(()) => {
+                if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
+                    warn!("emu: curtain draw faulted: {fault}");
+                }
+            }
+            Err(fault) => warn!("emu: curtain frame could not be set: {fault}"),
         }
 
-        if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
-            warn!("emu: curtain draw faulted: {fault}");
+        if let Err(fault) = self.ctx.set_i32_at(AppContext::LETTERBOX_PAD, pad) {
+            warn!("emu: letterbox could not be restored: {fault}");
         }
-
-        self.draw_letterbox_bars();
     }
 }
