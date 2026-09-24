@@ -86,7 +86,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
     let money = get_money(ctx, wallet)?;
     let affordable = money >= get_worker_upgrade_cost(ctx, wallet)?;
 
-    let (base, label, level_cut) = if !affordable {
+    let (base, label, level_cut, cent) = if !affordable {
         let x = ctx.i32_at(AppContext::WORKER_RECT)?;
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
@@ -102,7 +102,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             5,
         );
 
-        (0x2e, 0x18, 0x1a)
+        (0x2e, 0x18, 0x1a, 0x38)
     } else {
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
@@ -124,7 +124,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
             cut,
         );
 
-        (0x23, 0xd, 0xf)
+        (0x23, 0xd, 0xf, 0x2d)
     };
 
     let cost = ops::div_100(get_worker_upgrade_cost(ctx, wallet)?);
@@ -159,7 +159,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         y,
         0x16,
         0x1a,
-        0x38,
+        cent,
     );
 
     let x = get_left_inset_logical(ctx).wrapping_add(4);
