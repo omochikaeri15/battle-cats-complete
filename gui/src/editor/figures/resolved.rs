@@ -66,7 +66,7 @@ impl Toggle {
         }
     }
 
-    pub(super) fn raw(self) -> i32 {
+    pub(in crate::editor) fn raw(self) -> i32 {
         match self {
             Toggle::No => 0,
             Toggle::Yes => 1,

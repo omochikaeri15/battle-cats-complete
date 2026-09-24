@@ -434,11 +434,8 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
     if let Some(target) = context.ground.as_ref() {
         let mount = mount(target.active_mod.as_deref(), target.unlocked);
-        let scopes = vec![Scope {
-            name: target.file.as_str(),
-            source: Some(target.game.as_path()),
-            present: Some(target.game.as_path()),
-        }];
+        let present = present(&mount, target.mod_copy.as_deref(), Some(&target.game));
+        let scopes = vec![Scope { name: target.file.as_str(), source: Some(target.game.as_path()), present }];
 
         payloads.push(Payload {
             key: target.file.as_str(),

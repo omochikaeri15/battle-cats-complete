@@ -117,6 +117,7 @@ pub(crate) struct MakeTarget {
 struct GroundTarget {
     file: String,
     game: PathBuf,
+    mod_copy: Option<PathBuf>,
     label: String,
     unlocked: bool,
     active_mod: Option<String>,
@@ -1737,12 +1738,16 @@ fn ground_source(app: &BattleCatsApp) -> Option<GroundTarget> {
         .collect::<Vec<&str>>()
         .join(theme::HEADER_SEPARATOR);
 
+    let active_mod = app.mods_state.active_mod();
+    let mod_copy = active_mod.as_deref().and_then(|active| mods::find(&app.vault.vfs, active, &game));
+
     Some(GroundTarget {
         label,
         file,
         game,
+        mod_copy,
         unlocked: app.settings.files.unlock_game_mount,
-        active_mod: app.mods_state.active_mod(),
+        active_mod,
     })
 }
 

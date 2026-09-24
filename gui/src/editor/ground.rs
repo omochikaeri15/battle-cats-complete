@@ -14,7 +14,7 @@ use kore::domains::settings::EditorMode;
 use kore::Vfs;
 use kore::Source;
 
-use super::figures::resolved::Rule;
+use super::figures::resolved::{Face, Rule, Toggle};
 
 const COMMENT: &str = "//";
 const TERMINATOR: u32 = 0;
@@ -173,7 +173,8 @@ pub(super) fn rule(kind: Kind, index: usize) -> Rule {
 
     match index {
         ENEMY_ID => Rule::Offset(ENEMY_OFFSET),
-        AMOUNT | 5 | 6 | 7 | 8 | 12 => Rule::Plain,
+        AMOUNT | 5 | 6 | 7 | 8 => Rule::Plain,
+        TIME_COLUMN => Rule::Flag,
         2 | 3 | 4 | MAGNIFICATION | 10 | ATK_MAGNIFICATION | 13 => Rule::Floor(0),
         _ => Rule::Opaque,
     }
@@ -409,7 +410,7 @@ impl Draft {
             self.buffer = None;
         }
 
-        if column == MAGNIFICATION {
+        if column == MAGNIFICATION && self.kind(row) == Kind::Spawn && values == EditorMode::Resolved {
             self.spread(row, typed);
 
             return;
@@ -780,9 +781,23 @@ fn magnifications(typed: &str) -> (Option<&str>, Option<&str>) {
 }
 
 fn shown_row(kind: Kind, row: &Row, values: EditorMode) -> Vec<String> {
-    (0..kind.width().max(row.cells.len()))
-        .map(|column| shown_cell(kind, row.cells.get(column).copied().unwrap_or_default(), column, values))
-        .collect()
+    let held = |column: usize| row.cells.get(column).copied().unwrap_or_default();
+
+    let mut shown: Vec<String> = (0..kind.width().max(row.cells.len()))
+        .map(|column| shown_cell(kind, held(column), column, values))
+        .collect();
+
+    let (health, attack) = (held(MAGNIFICATION), held(ATK_MAGNIFICATION));
+
+    if kind == Kind::Spawn && values == EditorMode::Resolved && attack != 0 && attack != health
+        && let Some(cell) = shown.get_mut(MAGNIFICATION)
+    {
+        let read = |column: usize, raw: i32| rule(kind, column).to_display(to_display(kind, column, raw, values), values);
+
+        *cell = format!("{}/{}", read(MAGNIFICATION, health), read(ATK_MAGNIFICATION, attack));
+    }
+
+    shown
 }
 
 fn shown_cell(kind: Kind, raw: i32, column: usize, values: EditorMode) -> String {
@@ -831,16 +846,20 @@ const SYNC_WIDTH: f32 = 172.0;
 const BODY_PADDING: f32 = 10.0;
 const RANGE_GAP: f32 = 2.0;
 
-const ENEMY_SPAN: u16 = 4;
-const COUNT_SPAN: u16 = 5;
-const MAG_SPAN: u16 = 9;
-const BASE_SPAN: u16 = 6;
-const SPAWN_SPAN: u16 = 6;
-const RESPAWN_SPAN: u16 = 9;
-const LAYER_SPAN: u16 = 6;
-const BOSS_SPAN: u16 = 8;
-const SCORE_SPAN: u16 = 5;
-const KILLS_SPAN: u16 = 5;
+const ENEMY_SPAN: u16 = 16;
+const COUNT_SPAN: u16 = 16;
+const MAG_SPAN: u16 = 43;
+const BASE_SPAN: u16 = 24;
+const SPAWN_SPAN: u16 = 24;
+const RESPAWN_SPAN: u16 = 44;
+const LAYER_SPAN: u16 = 24;
+const BOSS_SPAN: u16 = 25;
+const SCORE_SPAN: u16 = 20;
+const TIME_SPAN: u16 = 24;
+const TIME_HEADER: &str = "Timer";
+const TIME_START: &str = "Start";
+const TIME_BASE: &str = "Base%";
+const KILLS_SPAN: u16 = 16;
 
 const RANGE_MARK: &str = "~";
 const BUFFER_MARK: char = '!';
@@ -901,12 +920,14 @@ const LAYER_MIN: usize = 6;
 const LAYER_MAX: usize = 7;
 const BOSS_COLUMN: usize = 8;
 const SCORE_COLUMN: usize = 10;
+const TIME_COLUMN: usize = 12;
 const KILLS_COLUMN: usize = 13;
 
 enum Cell {
     Enemy,
     One(usize),
     Boss(usize),
+    Clock(usize),
     Range(usize, usize),
 }
 
@@ -958,7 +979,7 @@ const FLAGS: [Treatment; 2] =
 const TREATMENTS: [Treatment; 3] = [
     Treatment { raw: 0, label: "No" },
     Treatment { raw: 1, label: "Yes" },
-    Treatment { raw: 2, label: "Yes (Shake)" },
+    Treatment { raw: 2, label: "Shake" },
 ];
 
 struct Shape {
@@ -1008,6 +1029,7 @@ impl Shape {
             held.push(("Score".to_owned(), SCORE_SPAN, Cell::One(SCORE_COLUMN)));
         }
 
+        held.push((TIME_HEADER.to_owned(), TIME_SPAN, Cell::Clock(TIME_COLUMN)));
         held.push(("Kills".to_owned(), KILLS_SPAN, Cell::One(KILLS_COLUMN)));
 
         held
@@ -1465,6 +1487,7 @@ impl State {
                 Cell::Enemy => self.enemy_cell(draft, enemies, row),
                 Cell::One(column) => field(draft, row, *column),
                 Cell::Boss(column) => treatment(draft, row, *column),
+                Cell::Clock(column) => clocked(draft, row, *column),
                 Cell::Range(least, most) => ranged(draft, row, *least, *most),
             };
 
@@ -1750,6 +1773,32 @@ fn flagged<'a>(draft: &'a Draft, row: usize, column: usize) -> iced::Element<'a,
     chosen(draft, row, column, &FLAGS)
 }
 
+fn clocked<'a>(draft: &'a Draft, row: usize, column: usize) -> iced::Element<'a, Message> {
+    use iced::widget::{button, text};
+    use iced::Length;
+
+    let Face::Toggle(current) = Rule::Flag.face(draft.reads(row, column), draft.values()) else {
+        return field(draft, row, column);
+    };
+
+    let (style, shown): (crate::app::theme::ButtonStyleFn, &str) = match current {
+        Toggle::Yes => (crate::app::theme::success_button, TIME_START),
+        Toggle::No => (crate::app::theme::neutral_button, TIME_BASE),
+    };
+
+    let label = crate::app::theme::centered_text(shown)
+        .size(CELL_SIZE)
+        .width(Length::Fill)
+        .wrapping(text::Wrapping::None);
+
+    button(label)
+        .width(Length::Fill)
+        .padding(CELL_INSET)
+        .style(style)
+        .on_press(Message::Picked(row, column, current.flip().raw()))
+        .into()
+}
+
 fn chosen<'a>(
     draft: &'a Draft,
     row: usize,
@@ -1995,6 +2044,22 @@ mod tests {
         }
 
         assert_eq!(super::magnifications("100"), (Some("100"), Some("100")), "one number sets both");
+    }
+
+    // A split is two columns on disk but one cell on screen, so it has to be put back
+    // together when the file is read, not only while it is being typed.
+    #[test]
+    fn a_split_magnification_reads_back_as_both_halves() {
+        let row = super::split("5,1,2,2,2,100,9,9,0,100,0,10,0,0", ',');
+
+        let shown = super::shown_row(Kind::Spawn, &row, EditorMode::Resolved);
+        assert_eq!(shown[super::MAGNIFICATION], "100/10");
+
+        let raw = super::shown_row(Kind::Spawn, &row, EditorMode::Raw);
+        assert_eq!(raw[super::MAGNIFICATION], "", "raw keeps the two columns apart");
+
+        let even = super::split("5,1,2,2,2,100,9,9,0,150,0,150,0,0", ',');
+        assert_eq!(super::shown_row(Kind::Spawn, &even, EditorMode::Resolved)[super::MAGNIFICATION], "150");
     }
 
     fn scratch_dir(label: &str) -> PathBuf {
