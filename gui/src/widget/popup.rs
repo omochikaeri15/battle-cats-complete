@@ -124,9 +124,11 @@ pub enum Kind {
     ReplayVersion,
     ReplayUnit,
     Diagnostics,
+    SandboxAnimationExport,
+    ReplayAnimationExport,
 }
 
-pub(crate) const KIND_COUNT: usize = 49;
+pub(crate) const KIND_COUNT: usize = 51;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -178,6 +180,8 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::ReplayVersion,
     Kind::ReplayUnit,
     Kind::Diagnostics,
+    Kind::SandboxAnimationExport,
+    Kind::ReplayAnimationExport,
 ];
 
 impl Kind {
@@ -232,6 +236,8 @@ impl Kind {
             Self::ReplayVersion => "replay_version",
             Self::ReplayUnit => "replay_unit",
             Self::Diagnostics => "diagnostics",
+            Self::SandboxAnimationExport => "sandbox_animation_export",
+            Self::ReplayAnimationExport => "replay_animation_export",
         }
     }
 

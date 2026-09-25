@@ -303,8 +303,8 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.reward_queue.push(vec![0x11, point_id, id]);
 
             match kind {
-                1 if event_unit_slot(&ctx.event_unit_rows, target)? != -1 => {
-                    let slot = event_unit_slot(&ctx.event_unit_rows, target)?;
+                1 if event_unit_slot(&ctx.drop_chara_rows, target)? != -1 => {
+                    let slot = event_unit_slot(&ctx.drop_chara_rows, target)?;
 
                     ctx.set_i32_at(
                         AppContext::EVENT_UNIT_OWNED.wrapping_add((slot as i64 * 4) as usize),

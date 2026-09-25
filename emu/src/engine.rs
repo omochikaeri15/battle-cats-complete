@@ -3012,7 +3012,7 @@ pub use powerup_granted::powerup_granted;
 pub use powerups_cleared::powerups_cleared;
 pub use proc_badge_fields::PROC_BADGE_FIELDS;
 pub use prepare_battle_entry::prepare_battle_entry;
-pub use proc_update::{BattleEffects, proc_update};
+pub use proc_update::proc_update;
 pub use query_localizable::query_localizable;
 pub use ranking_entry_id::ranking_entry_id;
 pub use ranking_entry_name::ranking_entry_name;

@@ -55,8 +55,8 @@ pub(crate) struct NoticeState {
 pub enum SandboxVolume {
     Off,
     Low,
-    Medium,
     #[default]
+    Medium,
     High,
 }
 
@@ -158,8 +158,8 @@ impl Default for SandboxState {
             config: kore::domains::sandbox::Config::default(),
             list_scroll_offset: 0.0,
             search_query: String::new(),
-            music_volume: 100,
-            effects_volume: 100,
+            music_volume: SandboxVolume::Medium.percent(),
+            effects_volume: SandboxVolume::Medium.percent(),
             two_rows: false,
             vibrate: false,
             device: SandboxDevice::default(),

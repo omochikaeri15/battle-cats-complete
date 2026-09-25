@@ -930,8 +930,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         "\u{30d5}\u{30a3}\u{30ea}\u{30d0}\u{30b9}\u{30bf}\u{30fc}".as_bytes(),
                     )?;
 
-                    if event_unit_slot(&ctx.event_unit_rows, 0x1ce)? != -1 {
-                        let slot = event_unit_slot(&ctx.event_unit_rows, 0x1ce)?;
+                    if event_unit_slot(&ctx.drop_chara_rows, 0x1ce)? != -1 {
+                        let slot = event_unit_slot(&ctx.drop_chara_rows, 0x1ce)?;
 
                         ctx.set_i32_at(
                             ((slot as i64) * 4 + AppContext::EVENT_UNIT_OWNED as i64) as usize,
@@ -1899,8 +1899,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             ctx.reward_queue.push(vec![0x11, point_id, id]);
 
             match kind {
-                1 if event_unit_slot(&ctx.event_unit_rows, target)? != -1 => {
-                    let slot = event_unit_slot(&ctx.event_unit_rows, target)?;
+                1 if event_unit_slot(&ctx.drop_chara_rows, target)? != -1 => {
+                    let slot = event_unit_slot(&ctx.drop_chara_rows, target)?;
 
                     ctx.set_i32_at(
                         ((slot as i64) * 4 + AppContext::EVENT_UNIT_OWNED as i64) as usize,

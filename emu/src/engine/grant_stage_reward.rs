@@ -70,7 +70,7 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
 
                 if item as u32 >= 0x44c {
                     if item <= ctx.drop_chara_max_1100 {
-                        let slot = event_unit_slot_by_item(&ctx.event_unit_rows, item)?;
+                        let slot = event_unit_slot_by_item(&ctx.drop_chara_rows, item)?;
                         let value = xor_row46_get(ctx.bytes_from(row)?, index).ok_or(
                             Fault::index_out_of_range(index as i64, 0x2e),
                         )? as i32;
@@ -134,7 +134,7 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
                 break 'owned;
             }
 
-            let slot = event_unit_slot_by_item(&ctx.event_unit_rows, item)?;
+            let slot = event_unit_slot_by_item(&ctx.drop_chara_rows, item)?;
             let value =
                 xor_row46_get(ctx.bytes_from(row)?, index).ok_or(Fault::index_out_of_range(index as i64, 0x2e))? as i32;
             let unit = reward_unit_id(ctx, value)?;

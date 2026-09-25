@@ -278,7 +278,7 @@ impl State {
     pub fn new() -> Self {
         let scale = ((CONTENT_WIDTH - CARD_PADDING * 2.0) / Metrics::FULL.grid_width()).clamp(SMALLEST, 1.0);
 
-        Self { inspector: cat::State::inspector(SCOPE, 0), metrics: Some(Metrics::at(scale)), ..Self::default() }
+        Self { inspector: cat::State::inspector(SCOPE, 0, popup::Kind::ReplayAnimationExport), metrics: Some(Metrics::at(scale)), ..Self::default() }
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
@@ -444,6 +444,12 @@ impl State {
             return;
         };
 
+        let scope = self.staged.as_deref().and_then(|staged| staged.summary.save.as_ref()).map_or_else(
+            || "replay".to_owned(),
+            |save| format!("replay-{:08x}-{:016x}", save.seeds.rng, save.seeds.entropy),
+        );
+
+        self.inspector.set_export_scope(scope);
         self.inspector.inspect(tile.id, tile.form, &tile.inspected, &tile.talents);
         self.open = Some(slot);
     }
@@ -475,6 +481,17 @@ impl State {
 
     pub fn unit_open(&self) -> bool {
         self.open.is_some()
+    }
+
+    pub fn export_open(&self) -> bool {
+        self.open.is_some() && self.inspector.export_popup_open()
+    }
+
+    pub fn export_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        (self.open.is_some() && self.inspector.export_popup_visible())
+            .then(|| self.inspector.export_popup_view(window))
+            .flatten()
+            .map(|view| view.map(Message::Cat))
     }
 
     pub fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {

@@ -280,8 +280,8 @@ impl Message {
 }
 
 impl State {
-    pub(crate) fn inspector(scope: &'static str, banner_form: usize) -> Self {
-        Self { list: list::State::scoped(scope, banner_form), ..Self::default() }
+    pub(crate) fn inspector(scope: &'static str, banner_form: usize, export: popup::Kind) -> Self {
+        Self { list: list::State::scoped(scope, banner_form), animation: animation::State::with_popup(export), ..Self::default() }
     }
 
     pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
@@ -915,6 +915,10 @@ impl State {
 
     pub fn export_popup_visible(&self) -> bool {
         self.selected_tab == DetailTab::Animation
+    }
+
+    pub(crate) fn set_export_scope(&mut self, scope: String) {
+        self.animation.set_export_scope(scope);
     }
 
     pub fn filter_popup_open(&self) -> bool {

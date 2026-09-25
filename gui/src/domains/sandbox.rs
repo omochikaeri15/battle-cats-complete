@@ -431,6 +431,22 @@ impl State {
         self.replay.unit_open()
     }
 
+    pub(crate) fn replay_export_open(&self) -> bool {
+        self.replay.export_open()
+    }
+
+    pub(crate) fn replay_export_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        self.replay.export_popup_view(window).map(|view| view.map(Message::Replay))
+    }
+
+    pub(crate) fn lineup_export_open(&self) -> bool {
+        self.lineup.export_open()
+    }
+
+    pub(crate) fn lineup_export_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        self.lineup.export_popup_view(window).map(|view| view.map(Message::Lineup))
+    }
+
     pub(crate) fn replay_unit_view<'a>(
         &'a self,
         window: Size,

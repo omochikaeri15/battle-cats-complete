@@ -217,11 +217,27 @@ fn value_cell<'a>(label: impl ToString, portion: u16) -> Element<'a, super::Mess
 }
 
 #[derive(Default)]
+struct Summary {
+    restrictions: Vec<String>,
+    rule: Option<String>,
+    score_bonus: Option<String>,
+}
+
+#[derive(Default)]
 pub struct State {
     icon_cache: RefCell<HashMap<u32, Handle>>,
+    summary: Summary,
 }
 
 impl State {
+    pub fn refresh(&mut self, selected: Option<(&Stage, &Map)>, selected_crown: u8, global_ctx: &GlobalContext) {
+        self.summary = selected.map_or_else(Summary::default, |(stage, map)| Summary {
+            restrictions: restrictions::parse_restrictions(stage, selected_crown as i8, *global_ctx),
+            rule: map.special_rules.as_ref().map(|rule| format_special_rule(rule, global_ctx)),
+            score_bonus: map.score_bonuses.as_ref().map(|score_bonus| format_score_bonus(score_bonus, global_ctx)),
+        });
+    }
+
     pub fn forget(&self, id: u32) {
         self.icon_cache.borrow_mut().remove(&id);
     }
@@ -247,30 +263,27 @@ impl State {
         selected_crown: u8,
         enemy_registry: &'a HashMap<u32, EnemyEntry>,
         enemy_name_registry: &'a [String],
-        global_ctx: GlobalContext<'a>,
     ) -> Element<'a, super::Message> {
         let mut content = column![].spacing(BODY_SPACING);
 
-        let restriction_lines = restrictions::parse_restrictions(stage, selected_crown as i8, global_ctx);
-
-        if !restriction_lines.is_empty() {
+        if !self.summary.restrictions.is_empty() {
             let mut restriction_col = column![].spacing(LINE_SPACING);
-            for line in &restriction_lines {
-                restriction_col = restriction_col.push(text(line.clone()));
+            for line in &self.summary.restrictions {
+                restriction_col = restriction_col.push(text(line.as_str()));
             }
             content = content.push(subsection("Restrictions", restriction_col));
         }
 
-        if let Some(rule) = &map.special_rules {
-            let mut rules_col = column![text(format_special_rule(rule, &global_ctx))].spacing(LINE_SPACING);
+        if let Some(rule) = &self.summary.rule {
+            let mut rules_col = column![text(rule.as_str())].spacing(LINE_SPACING);
             if !map.invalid_combos.is_empty() {
                 rules_col = rules_col.push(text(format!("Disabled Combos: {} total", map.invalid_combos.len())));
             }
             content = content.push(subsection("Rules", rules_col));
         }
 
-        if let Some(score_bonus) = &map.score_bonuses {
-            content = content.push(subsection("Score Bonus", text(format_score_bonus(score_bonus, &global_ctx))));
+        if let Some(score_bonus) = &self.summary.score_bonus {
+            content = content.push(subsection("Score Bonus", text(score_bonus.as_str())));
         }
 
         if stage.enemies.is_empty() {

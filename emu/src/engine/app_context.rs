@@ -7,7 +7,7 @@ use std::{
 use crate::{Entropy, Fault};
 
 use super::{
-    AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEffects, BattleEventLatch, BgEffects,
+    AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEventLatch, BgEffects,
     BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRow, CatseyeStep, ChangeCondition, CharaGroup, ComboStore,
     CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DojoScoreBonus, DrawSink, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
     ExGroup, ExplosionEvent, FixedLineupStore, GatyaDataSet, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
@@ -795,7 +795,6 @@ pub struct AppContext {
     pub reward_claimed: BTreeMap<i32, Vec<i32>>,
     pub release_points: BTreeMap<i32, ReleasePoint>,
     pub server_flags: BTreeMap<i32, bool>,
-    pub event_unit_rows: Vec<Vec<i32>>,
     pub drop_chara_max_1000: i32,
     pub drop_chara_max_1100: i32,
     pub img039_sheet: Option<Rc<Imgcut>>,
@@ -803,7 +802,6 @@ pub struct AppContext {
     pub enemy_kill_counts: BTreeMap<i32, i32>,
     pub best_scores: BTreeMap<i32, BTreeMap<i32, i32>>,
     pub ranking_entries: Vec<Option<RankingRecord>>,
-    pub battle_effects: BattleEffects,
     pub boss_shockwave_anim: Maanim,
     pub cannon_part_rows: BTreeMap<i32, Vec<i32>>,
     pub maps_neg26: Vec<[u64; 3]>,
@@ -1901,7 +1899,6 @@ impl AppContext {
             reward_claimed: BTreeMap::new(),
             release_points: BTreeMap::new(),
             server_flags: BTreeMap::new(),
-            event_unit_rows: Vec::new(),
             drop_chara_max_1000: -1,
             drop_chara_max_1100: -1,
             img039_sheet: None,
@@ -1911,7 +1908,6 @@ impl AppContext {
             enemy_kill_counts: BTreeMap::new(),
             best_scores: BTreeMap::new(),
             ranking_entries: Vec::new(),
-            battle_effects: BattleEffects::default(),
             boss_shockwave_anim: Maanim::default(),
             cannon_part_rows: Default::default(),
             maps_neg26: Default::default(),

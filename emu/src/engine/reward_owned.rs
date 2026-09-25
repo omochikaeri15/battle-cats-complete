@@ -31,13 +31,13 @@ pub fn reward_owned(ctx: &AppContext, id: i32) -> Result<bool, Fault> {
             != 0);
     }
 
-    let count = ctx.event_unit_rows.len() as i32;
+    let count = ctx.drop_chara_rows.len() as i32;
 
     if count <= 0 {
         return Ok(false);
     }
 
-    for row in ctx.event_unit_rows.iter().take(count as u32 as usize) {
+    for row in ctx.drop_chara_rows.iter().take(count as u32 as usize) {
         if *row.first().ok_or(Fault::index_out_of_range(0, 0))? == id
         {
             let slot = *row.get(1).ok_or(Fault::index_out_of_range(1, row.len() as i64))?;

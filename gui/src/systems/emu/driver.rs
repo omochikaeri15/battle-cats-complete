@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::mem;
+use std::ops::Range;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -40,6 +41,15 @@ const ALTAR_ROW_SHIFT: i32 = -2;
 const BUTTON_SLOTS: i32 = 21;
 const UNIT_FILE_PREFIX: &str = "unit";
 const UNIT_FILE_SUFFIX: &str = ".csv";
+const EXPLANATION_PREFIX: &str = "Unit_Explanation";
+const LANGUAGE_SEPARATOR: char = '_';
+const REWARD_CELLS: usize = 0x2f;
+const FIRST_CHARA_DROP: i32 = 1000;
+const SECOND_CHARA_DROP: i32 = 1100;
+const FORM_DROPS: Range<i32> = 10000..0x7530;
+const PAIRED_DROP_ITEM: i32 = 0x3ea;
+const PAIRED_DROP_UNIT: i32 = 0x1b;
+const UNIT_REWARD: i32 = 1;
 
 enum Tape {
     Off,
@@ -81,7 +91,7 @@ pub struct Driver {
     recorded: Option<tape::Save>,
     listener: Option<SharedLog>,
     leaving: Option<u16>,
-    fielded: Option<BTreeSet<u32>>,
+    needed: Option<BTreeSet<u32>>,
     cut: bool,
 }
 
@@ -94,13 +104,69 @@ pub struct Label {
 }
 
 fn unit_file(name: &str) -> Option<u32> {
-    let number = name.strip_prefix(UNIT_FILE_PREFIX)?.strip_suffix(UNIT_FILE_SUFFIX)?;
+    let number = name.strip_prefix(UNIT_FILE_PREFIX).and_then(|rest| rest.strip_suffix(UNIT_FILE_SUFFIX)).or_else(|| {
+        name.strip_prefix(EXPLANATION_PREFIX)?
+            .split_once(LANGUAGE_SEPARATOR)
+            .filter(|(_, language)| language.ends_with(UNIT_FILE_SUFFIX))
+            .map(|(number, _)| number)
+    })?;
 
     if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
         return None;
     }
 
     number.parse::<u32>().ok()?.checked_sub(1)
+}
+
+fn reward_unit(ctx: &AppContext, item: i32) -> Option<u32> {
+    if item == PAIRED_DROP_ITEM && item <= ctx.drop_chara_max_1000 {
+        return u32::try_from(PAIRED_DROP_UNIT).ok();
+    }
+
+    let listed = (FIRST_CHARA_DROP..=ctx.drop_chara_max_1000).contains(&item)
+        || (SECOND_CHARA_DROP..=ctx.drop_chara_max_1100).contains(&item)
+        || FORM_DROPS.contains(&item);
+
+    listed
+        .then(|| emu::engine::reward_unit_id(ctx, item).ok())
+        .flatten()
+        .and_then(|unit| u32::try_from(unit).ok())
+}
+
+fn needed_units(ctx: &AppContext) -> BTreeSet<u32> {
+    let deck: Vec<(i32, i32, i32)> = [0, 1]
+        .into_iter()
+        .flat_map(|faction| (0..BUTTON_SLOTS).map(move |slot| (faction, slot)))
+        .filter_map(|(faction, slot)| {
+            let unit = emu::engine::get_button_unit_id(ctx, faction, slot).ok().filter(|unit| *unit >= 0)?;
+            let form = emu::engine::get_button_unit_form(ctx, faction, slot).unwrap_or(0);
+
+            Some((faction, unit, form))
+        })
+        .collect();
+    let spirits = deck
+        .iter()
+        .filter_map(|&(faction, unit, form)| emu::engine::stat_conjure_unit_id(ctx, faction, unit, form).ok());
+    let row = AppContext::MAP_STAGE_ROWS
+        + usize::try_from(ctx.i32_at(AppContext::STAGE_ROW).unwrap_or(0)).unwrap_or(0) * AppContext::MAP_STAGE_ROW_STRIDE;
+    let cells: Vec<i32> = ctx
+        .bytes_from(row)
+        .map(|bytes| (0..REWARD_CELLS).filter_map(|cell| emu::engine::xor_row46_get(bytes, cell)).map(|item| item as i32).collect())
+        .unwrap_or_default();
+    let points: Vec<i32> = ctx
+        .event_items
+        .as_ref()
+        .and_then(|store| emu::engine::get_point_rewards(&ctx.reward_defs, emu::engine::get_point_id(store)))
+        .map(|rewards| rewards.iter().filter(|reward| reward.kind == UNIT_REWARD).map(|reward| reward.target).collect())
+        .unwrap_or_default();
+
+    deck.iter()
+        .map(|&(_, unit, _)| unit)
+        .chain(spirits)
+        .chain(points)
+        .filter_map(|unit| u32::try_from(unit).ok())
+        .chain(cells.into_iter().filter_map(|item| reward_unit(ctx, item)))
+        .collect()
 }
 
 impl Driver {
@@ -164,7 +230,7 @@ impl Driver {
             recorded: None,
             listener,
             leaving: None,
-            fielded: None,
+            needed: None,
             cut: false,
         };
 
@@ -245,7 +311,7 @@ impl Driver {
         self.pending.clear();
         self.finished = false;
         self.leaving = None;
-        self.fielded = None;
+        self.needed = None;
         self.cut = false;
         self.ledger.borrow_mut().disarm();
     }
@@ -309,14 +375,7 @@ impl Driver {
             return;
         }
 
-        self.fielded = Some(
-            [0, 1]
-                .into_iter()
-                .flat_map(|faction| (0..BUTTON_SLOTS).map(move |slot| (faction, slot)))
-                .filter_map(|(faction, slot)| emu::engine::get_button_unit_id(&self.ctx, faction, slot).ok())
-                .filter_map(|unit| u32::try_from(unit).ok())
-                .collect(),
-        );
+        self.needed = Some(needed_units(&self.ctx));
 
         let Tape::Recording(recording) = &self.tape else {
             return;
@@ -450,8 +509,8 @@ impl Driver {
 
         let mut requested = self.ledger.borrow_mut().drain();
 
-        if let Some(fielded) = &self.fielded {
-            requested.retain(|(name, _)| unit_file(name).is_none_or(|unit| fielded.contains(&unit)));
+        if let Some(needed) = &self.needed {
+            requested.retain(|(name, _)| unit_file(name).is_none_or(|unit| needed.contains(&unit)));
         }
 
         if requested.is_empty() {

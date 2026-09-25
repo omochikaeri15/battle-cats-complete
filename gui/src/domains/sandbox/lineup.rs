@@ -217,7 +217,7 @@ pub struct State {
 impl State {
     pub fn new(banner_form: usize) -> Self {
         Self {
-            inspector: cat::State::inspector(LIST_SCOPE, banner_form),
+            inspector: cat::State::inspector(LIST_SCOPE, banner_form, popup::Kind::SandboxAnimationExport),
             combos: combos::State::default(),
             orbs: orbs::State::default(),
             drag: Drag::Idle,
@@ -286,6 +286,17 @@ impl State {
 
     pub fn orb_open(&self) -> bool {
         self.editing.is_some() && self.orb_slot.is_some()
+    }
+
+    pub fn export_open(&self) -> bool {
+        self.editing.is_some() && self.inspector.export_popup_open()
+    }
+
+    pub fn export_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        (self.editing.is_some() && self.inspector.export_popup_visible())
+            .then(|| self.inspector.export_popup_view(window))
+            .flatten()
+            .map(|view| view.map(Message::Cat))
     }
 
     pub fn filter_open(&self) -> bool {
@@ -422,6 +433,7 @@ impl State {
         };
 
         self.inspector.reveal(member.id, member.form, vfs);
+        self.inspector.set_export_scope(format!("lineup-{:016x}", lineup.id));
         self.inspector.inspect(member.id, member.form, &member.level, &member.talents);
         self.editing = Some(member.id);
         self.orb_slot = None;

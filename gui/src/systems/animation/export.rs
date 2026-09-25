@@ -259,6 +259,7 @@ pub struct State {
     bounds_job: Option<(JobKey, SearchJob)>,
     synced_key: Option<JobKey>,
     scanned_showcase: Option<String>,
+    scope: String,
 }
 
 #[derive(Debug, Clone)]
@@ -311,7 +312,12 @@ impl State {
             bounds_job: None,
             synced_key: None,
             scanned_showcase: None,
+            scope: String::new(),
         }
+    }
+
+    pub(super) fn set_scope(&mut self, scope: String) {
+        self.scope = scope;
     }
 
     pub(super) fn restore_scroll<M: 'static>(&self) -> Task<M> {
@@ -321,7 +327,7 @@ impl State {
     pub fn sync(&mut self, data: &data::State, settings: &Settings, anim_state: &AnimState) {
         self.check_settings_defaults(settings);
 
-        let key = (data.export_name().to_string(), data.selected());
+        let key = (scoped(&self.scope, data.export_name()), data.selected());
 
         if self.synced_key.as_ref() != Some(&key) {
             let unit_changed = self.synced_key.as_ref().is_none_or(|(id, _)| *id != key.0);
@@ -401,11 +407,11 @@ impl State {
             return;
         }
 
-        let export_name = data.export_name();
-        if self.scanned_showcase.as_deref() == Some(export_name) {
+        let export_name = scoped(&self.scope, data.export_name());
+        if self.scanned_showcase.as_deref() == Some(export_name.as_str()) {
             return;
         }
-        self.scanned_showcase = Some(export_name.to_string());
+        self.scanned_showcase = Some(export_name);
 
         let parse_anim = |role: Role| -> Option<Animation> {
             let bytes = data.role_path(role)?.read().ok()?;
@@ -1593,6 +1599,10 @@ fn addon_badge(label: &str, installed: bool) -> Element<'_, Message> {
         .padding(6)
         .style(move |theme: &Theme| theme::status_badge(theme, installed))
         .into()
+}
+
+fn scoped(scope: &str, name: &str) -> String {
+    if scope.is_empty() { name.to_owned() } else { format!("{scope}/{name}") }
 }
 
 fn derive_name_prefix(raw_id: &str, type_string: &str) -> String {

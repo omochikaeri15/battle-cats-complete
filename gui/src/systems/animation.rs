@@ -566,6 +566,10 @@ impl State {
         self.export_open
     }
 
+    pub(crate) fn set_export_scope(&mut self, scope: String) {
+        self.export.set_scope(scope);
+    }
+
     pub(crate) fn export_scroll_task<M: 'static>(&self) -> Task<M> {
         self.export.restore_scroll()
     }

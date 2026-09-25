@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::{BuildHasher, RandomState};
 
 use nyanko::cat::unit::{Equipment, NyancomboData};
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,8 @@ pub const BENCH_SLOTS: usize = 5;
 pub const TOP_ROW: usize = 5;
 
 const FIRST_TALENT_FORM: usize = 2;
+const ULTRA_FORM: usize = 3;
+const ULTRA_LEVEL: u32 = 60;
 const UNNAMED: &str = "New Lineup";
 const MOD_HISTORIES: usize = 3;
 const MOUNT_JOIN: &str = "+";
@@ -45,6 +48,16 @@ impl Member {
         (base, terms.sum())
     }
 
+    fn ultra_floor(mut self) -> Self {
+        let (base, plus) = self.levels();
+
+        if self.form == ULTRA_FORM && base < ULTRA_LEVEL {
+            self.level = if plus > 0 { format!("{ULTRA_LEVEL}+{plus}") } else { ULTRA_LEVEL.to_string() };
+        }
+
+        self
+    }
+
     pub fn talented(&self) -> bool {
         self.form >= FIRST_TALENT_FORM && self.talents.values().any(|level| *level > 0)
     }
@@ -71,6 +84,7 @@ pub enum Cell {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Lineup {
+    pub id: u64,
     pub name: String,
     pub slots: Vec<Member>,
     pub bench: [Option<Member>; BENCH_SLOTS],
@@ -78,7 +92,7 @@ pub struct Lineup {
 
 impl Default for Lineup {
     fn default() -> Self {
-        Self { name: UNNAMED.to_owned(), slots: Vec::new(), bench: Default::default() }
+        Self { id: RandomState::new().hash_one(UNNAMED), name: UNNAMED.to_owned(), slots: Vec::new(), bench: Default::default() }
     }
 }
 
@@ -349,7 +363,7 @@ impl Roster {
 
     pub fn dress(&self, mut member: Member, least: Option<usize>, mount: &str) -> Member {
         let Some(past) = self.recall(member.id, mount) else {
-            return member;
+            return member.ultra_floor();
         };
 
         member.form = least.map_or(past.form, |wanted| wanted.max(past.form));
@@ -448,6 +462,29 @@ mod tests {
 
         // With nothing remembered the member is left exactly as built.
         assert_eq!(roster.dress(unit(9), Some(1), GAME).form, 0);
+    }
+
+    #[test]
+    fn a_fresh_ultra_form_starts_at_level_sixty_but_a_remembered_one_does_not() {
+        let mut roster = Roster::default();
+        let mut fresh = unit(7);
+
+        fresh.form = 3;
+        fresh.level = "30+10".to_owned();
+
+        // Never seen before, so the Ultra Form gets lifted to 60 and keeps its plus levels.
+        assert_eq!(roster.dress(fresh.clone(), None, GAME).level, "60+10");
+
+        // Already at or past 60 it is left alone, and lower forms are never touched.
+        let mut high = fresh.clone();
+        high.level = "60".to_owned();
+        assert_eq!(roster.dress(high, None, GAME).level, "60");
+        assert_eq!(roster.dress(unit(8), None, GAME).level, "30");
+
+        // Once the player has a saved kit for the unit, their level wins.
+        roster.current_mut().add(fresh.clone());
+        roster.remember(GAME);
+        assert_eq!(roster.dress(fresh, None, GAME).level, "30+10");
     }
 
     #[test]

@@ -220,11 +220,13 @@ enum ActivePopup {
     SandboxVersion,
     SandboxReplayUnit,
     SandboxDiagnostics,
+    SandboxLineupExport,
+    SandboxReplayExport,
 }
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 28] = [
+    const ALL: [Self; 30] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -253,6 +255,8 @@ impl ActivePopup {
         Self::SandboxVersion,
         Self::SandboxReplayUnit,
         Self::SandboxDiagnostics,
+        Self::SandboxLineupExport,
+        Self::SandboxReplayExport,
     ];
 
     fn kind(self) -> popup::Kind {
@@ -285,6 +289,8 @@ impl ActivePopup {
             Self::SandboxVersion => popup::Kind::ReplayVersion,
             Self::SandboxReplayUnit => popup::Kind::ReplayUnit,
             Self::SandboxDiagnostics => popup::Kind::Diagnostics,
+            Self::SandboxLineupExport => popup::Kind::SandboxAnimationExport,
+            Self::SandboxReplayExport => popup::Kind::ReplayAnimationExport,
         }
     }
 }
@@ -795,6 +801,7 @@ impl BattleCatsApp {
         self.cat_state.reload_selected(&self.vault, &cat_config);
         self.enemy_state.reload_selected(&self.vault, self.settings.show_invalid_enemies());
         self.stage_state.reload_selected(&self.vault);
+        self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault });
 
         self.stage_state.invalidate_assets(&items, &enemies, stage_coarse, &self.vault);
 
@@ -1217,6 +1224,7 @@ impl BattleCatsApp {
                 info!("Core tables loaded");
                 self.param = param;
                 self.localizable = localizable;
+                self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault });
                 Task::none()
             }
             Message::VaultValidated { vault, key, mounted } => self.finish_validation(vault, key, mounted),
@@ -1806,6 +1814,8 @@ impl BattleCatsApp {
         self.sync_popup(ActivePopup::SandboxOrb, self.sandbox_state.orb_popup_open());
         self.sync_popup(ActivePopup::SandboxVersion, self.sandbox_state.version_popup_open());
         self.sync_popup(ActivePopup::SandboxReplayUnit, self.sandbox_state.replay_unit_open());
+        self.sync_popup(ActivePopup::SandboxLineupExport, self.sandbox_state.lineup_export_open());
+        self.sync_popup(ActivePopup::SandboxReplayExport, self.sandbox_state.replay_export_open());
     }
 
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
@@ -1989,6 +1999,24 @@ impl BattleCatsApp {
                                 GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
                             )
                             .map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxLineupExport => {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Lineup
+                        {
+                            return None;
+                        }
+
+                        self.sandbox_state.lineup_export_view(self.window_size).map(|view| view.map(Message::Sandbox))
+                    }
+                    ActivePopup::SandboxReplayExport => {
+                        if !matches!(self.current_page, Page::Sandbox)
+                            || self.app_state.sandbox.tab != crate::app::state::SandboxTab::Replay
+                        {
+                            return None;
+                        }
+
+                        self.sandbox_state.replay_export_view(self.window_size).map(|view| view.map(Message::Sandbox))
                     }
                     ActivePopup::SandboxOrb => {
                         if !matches!(self.current_page, Page::Sandbox)

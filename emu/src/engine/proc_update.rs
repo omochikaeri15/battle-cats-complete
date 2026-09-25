@@ -1,21 +1,13 @@
 use crate::Fault;
 
 use super::{
-    AppContext, Entity, Maanim, add_behemoth_dodge_timer, add_curse_timer, add_dodge_timer,
+    AppContext, Entity, add_behemoth_dodge_timer, add_curse_timer, add_dodge_timer,
     add_dodge_vfx_frame, add_freeze_timer, add_orb_dodge_timer, add_slow_timer, add_weaken_timer,
     get_anim_len, get_behemoth_dodge_timer, get_curse_timer, get_dodge_timer, get_dodge_vfx_frame,
     get_freeze_timer, get_orb_dodge_timer, get_slow_timer, get_status_bits, get_weaken_timer,
     maanim_get_max_keyframe, set_curse_length, set_dodge_vfx_frame, set_freeze_length,
     set_kb_proc_hit, set_slow_length, set_weaken_active, turn_off_proc_badge, turn_on_proc_badge,
 };
-
-#[derive(Default)]
-pub struct BattleEffects {
-    pub wave_immune_anim: Maanim,
-    pub wave_block_anim: Maanim,
-    pub survive_anim: Maanim,
-    pub immune_anim: Maanim,
-}
 
 pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
     for faction in 0..2i32 {
@@ -102,12 +94,12 @@ pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let at = AppContext::entity_field(faction, slot, Entity::SURVIVE_VFX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
+                let length = get_anim_len(&ctx.skill_shield_e_anim)?;
                 let frame = ctx.i32_at(at)?;
                 let limit = if length == -1 {
-                    maanim_get_max_keyframe(&ctx.battle_effects.survive_anim)?
+                    maanim_get_max_keyframe(&ctx.skill_shield_e_anim)?
                 } else {
-                    get_anim_len(&ctx.battle_effects.survive_anim)?
+                    get_anim_len(&ctx.skill_shield_e_anim)?
                 };
 
                 if frame >= limit {
@@ -124,12 +116,12 @@ pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let at = AppContext::entity_field(faction, slot, Entity::WAVE_IMMUNE_VFX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
+                let length = get_anim_len(&ctx.skill_shield_e_anim)?;
                 let frame = ctx.i32_at(at)?;
                 let limit = if length == -1 {
-                    maanim_get_max_keyframe(&ctx.battle_effects.wave_immune_anim)?
+                    maanim_get_max_keyframe(&ctx.skill_wave_invalid_anim)?
                 } else {
-                    get_anim_len(&ctx.battle_effects.wave_immune_anim)?
+                    get_anim_len(&ctx.skill_wave_invalid_anim)?
                 };
 
                 if frame >= limit {
@@ -153,12 +145,12 @@ pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let at = AppContext::entity_field(faction, slot, Entity::WAVE_BLOCK_VFX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&ctx.battle_effects.survive_anim)?;
+                let length = get_anim_len(&ctx.skill_shield_e_anim)?;
                 let frame = ctx.i32_at(at)?;
                 let limit = if length == -1 {
-                    maanim_get_max_keyframe(&ctx.battle_effects.wave_block_anim)?
+                    maanim_get_max_keyframe(&ctx.skill_wave_stop_anim)?
                 } else {
-                    get_anim_len(&ctx.battle_effects.wave_block_anim)?
+                    get_anim_len(&ctx.skill_wave_stop_anim)?
                 };
 
                 if frame >= limit {
@@ -182,12 +174,12 @@ pub fn proc_update(ctx: &mut AppContext) -> Result<(), Fault> {
                 let at = AppContext::entity_field(faction, slot, Entity::IMMUNE_VFX_FRAME);
                 ctx.set_i32_at(at, ctx.i32_at(at)?.wrapping_add(1))?;
 
-                let length = get_anim_len(&ctx.battle_effects.immune_anim)?;
+                let length = get_anim_len(&ctx.skill_effect_invalid_anim)?;
                 let frame = ctx.i32_at(at)?;
                 let limit = if length == -1 {
-                    maanim_get_max_keyframe(&ctx.battle_effects.immune_anim)?
+                    maanim_get_max_keyframe(&ctx.skill_effect_invalid_anim)?
                 } else {
-                    get_anim_len(&ctx.battle_effects.immune_anim)?
+                    get_anim_len(&ctx.skill_effect_invalid_anim)?
                 };
 
                 if frame >= limit {

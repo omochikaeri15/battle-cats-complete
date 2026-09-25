@@ -312,7 +312,18 @@ impl State {
         };
 
         self.list.refresh(&self.filter.filter_state, &self.data, global_ctx.vault);
+        self.refresh_summary(global_ctx);
         task
+    }
+
+    pub(crate) fn refresh_summary(&mut self, global_ctx: GlobalContext<'_>) {
+        let selected = self.data.selected_stage.as_ref().and_then(|id| self.data.registry.stages.get(id)).and_then(|stage| {
+            let map_key = GlobalMapId { category: stage.category.clone(), map: stage.map_id };
+
+            self.data.registry.maps.get(&map_key).map(|map| (stage, map))
+        });
+
+        self.battleground.refresh(selected, self.selected_crown, &global_ctx);
     }
 
     pub fn view<'a>(&'a self, settings: &Settings, global_ctx: GlobalContext<'a>) -> Element<'a, Message> {
@@ -498,7 +509,7 @@ impl State {
             content = content.push(self.fixedlineup.view(&resolved, preset, vfs));
         }
 
-        content = content.push(self.battleground.view(stage, map, self.selected_crown, &self.data.enemy_registry, &self.data.enemy_name_registry, global_ctx));
+        content = content.push(self.battleground.view(stage, map, self.selected_crown, &self.data.enemy_registry, &self.data.enemy_name_registry));
 
         smooth_scroll(
             scrollable(content)
