@@ -55,7 +55,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let mut origin = bar;
 
             if (shifted as u32) >= 0x21 {
-                let reach = max_i32(-0x37i32.wrapping_sub(frame), 0);
+                let reach = max_i32((-0x37i32).wrapping_sub(frame), 0);
 
                 origin = *OUTRO_SLIDE_TABLE
                     .get(reach as i64 as usize)
