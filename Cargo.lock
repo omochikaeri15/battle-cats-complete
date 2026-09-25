@@ -2032,7 +2032,7 @@ dependencies = [
 
 [[package]]
 name = "gui"
-version = "4.1.5"
+version = "4.1.6"
 dependencies = [
  "ab_glyph",
  "arboard",
@@ -2863,7 +2863,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kore"
-version = "4.1.5"
+version = "4.1.6"
 dependencies = [
  "ab_glyph",
  "base64 0.23.1",
