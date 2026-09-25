@@ -1894,7 +1894,10 @@ impl BattleCatsApp {
                         self.enemy_state.filter_popup_view(self.window_size).map(|view| view.map(Message::Enemy))
                     }
                     ActivePopup::StageFilter => {
-                        if !matches!(self.current_page, Page::Stages | Page::Sandbox) {
+                        let sandboxed = matches!(self.current_page, Page::Sandbox)
+                            && self.app_state.sandbox.tab == crate::app::state::SandboxTab::Stage;
+
+                        if !matches!(self.current_page, Page::Stages) && !sandboxed {
                             return None;
                         }
 
