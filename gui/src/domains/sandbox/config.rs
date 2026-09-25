@@ -69,6 +69,7 @@ pub enum Message {
     Tech(usize, String),
     Part(Slot, Part),
     Level(Slot, String),
+    Castle(String),
     Item(usize, bool),
     Altar(String),
     CatGod(CatGod),
@@ -141,6 +142,11 @@ impl State {
             },
             Message::CatGod(picked) => options.config.cat_god = picked,
             Message::StartSpeed(picked) => options.config.start_speed = picked,
+            Message::Castle(entry) => {
+                if typable(&entry) {
+                    options.config.castle_level = entry;
+                }
+            }
             Message::Altar(entry) => {
                 if typable(&entry) {
                     options.config.altar_level = entry;
@@ -354,6 +360,7 @@ impl State {
                     &options.config.foundation_level,
                     |entry| Message::Level(Slot::Foundation, entry),
                 ),
+                entry_row("Base Health Level", &self.parts.castle.to_string(), &options.config.castle_level, Message::Castle),
             ]
                 .spacing(ROW_SPACING),
         )

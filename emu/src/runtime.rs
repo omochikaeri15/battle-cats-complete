@@ -30,7 +30,7 @@ pub use inert_ui::InertUi;
 pub use relayout::relatch_battle_rects;
 pub use scene_sheets::load_scene_sheets;
 pub use seeds::{Seeds, plant_seeds};
-pub use setup::{CatGod, BATTLE_ITEMS, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
+pub use setup::{CatGod, BATTLE_ITEMS, CASTLE_PART, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
     select_stage, is_extra_entry, prepare_extra_entry,
 };
 pub use silent_sound::SilentSound;

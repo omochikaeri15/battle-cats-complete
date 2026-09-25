@@ -7,8 +7,10 @@ use crate::Vfs;
 const CANNON_GROWTH: &str = "CC_AllParts_growth.csv";
 const STYLE_GROWTH: &str = "CC_DecoParts_growth.csv";
 const FOUNDATION_GROWTH: &str = "CC_BaseParts_growth.csv";
+const CASTLE_GROWTH: &str = "CC_Castle_growth.csv";
 const ID_CELL: usize = 0;
 const LEVEL_CELL: usize = 2;
+const CASTLE_LEVEL_CELL: usize = 0;
 const BARE: i32 = 0;
 
 pub const CANNONS: [&str; 8] = [
@@ -27,6 +29,7 @@ pub struct Parts {
     pub cannons: BTreeMap<i32, i32>,
     pub styles: BTreeMap<i32, i32>,
     pub foundations: BTreeMap<i32, i32>,
+    pub castle: i32,
 }
 
 impl Parts {
@@ -39,7 +42,7 @@ impl Parts {
         styles.entry(BARE).or_insert(1);
         foundations.entry(BARE).or_insert(1);
 
-        Self { cannons: growth(vfs, CANNON_GROWTH), styles, foundations }
+        Self { cannons: growth(vfs, CANNON_GROWTH), styles, foundations, castle: castle(vfs) }
     }
 }
 
@@ -50,10 +53,24 @@ pub fn name(part: i32) -> String {
         .map_or_else(|| format!("Part {part}"), |name| (*name).to_owned())
 }
 
+fn rows(vfs: &Vfs, file: &str) -> Option<String> {
+    vfs.find(file).and_then(|path| vfs.read(&path).ok()).and_then(|bytes| String::from_utf8(bytes.to_vec()).ok())
+}
+
+fn castle(vfs: &Vfs) -> i32 {
+    rows(vfs, CASTLE_GROWTH).map_or(1, |content| {
+        content
+            .lines()
+            .skip(1)
+            .filter_map(|line| line.split(',').nth(CASTLE_LEVEL_CELL).and_then(|cell| cell.trim().parse::<i32>().ok()))
+            .fold(1, i32::max)
+    })
+}
+
 fn growth(vfs: &Vfs, file: &str) -> BTreeMap<i32, i32> {
     let mut highest: BTreeMap<i32, i32> = BTreeMap::new();
 
-    let Some(content) = vfs.find(file).and_then(|path| vfs.read(&path).ok()).and_then(|bytes| String::from_utf8(bytes.to_vec()).ok()) else {
+    let Some(content) = rows(vfs, file) else {
         return highest;
     };
 

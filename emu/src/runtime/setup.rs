@@ -13,6 +13,7 @@ pub const TECH_COUNT: usize = 0xb;
 pub const TREASURE_CHAPTERS: usize = 0xa;
 pub const TREASURE_STAGES: usize = 0x31;
 pub const BATTLE_ITEMS: usize = 6;
+pub const CASTLE_PART: i32 = 0;
 
 const FREE_MAP_MODE: i32 = 3;
 const EMPIRE_TYPE: i32 = -2;

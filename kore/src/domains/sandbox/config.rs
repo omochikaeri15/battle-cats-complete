@@ -114,6 +114,7 @@ pub struct Config {
     pub cannon_level: String,
     pub style_level: String,
     pub foundation_level: String,
+    pub castle_level: String,
     pub items_off: [bool; 6],
     pub start_speed: StartSpeed,
     pub altar_level: String,
@@ -131,6 +132,7 @@ impl Default for Config {
             cannon_level: String::new(),
             style_level: String::new(),
             foundation_level: String::new(),
+            castle_level: String::new(),
             items_off: [true; 6],
             start_speed: StartSpeed::Single,
             altar_level: String::new(),
@@ -149,6 +151,10 @@ impl Config {
 
     pub fn altar(&self) -> Option<i32> {
         self.altar_level.trim().parse::<i32>().ok().map(|level| level.max(1))
+    }
+
+    pub fn castle(&self, highest: i32) -> i32 {
+        level(&self.castle_level, highest)
     }
 
     pub fn tech(&self, index: usize) -> (u32, u32) {

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::rc::Rc;
 
-use emu::runtime::{BattleOptions, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
+use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
@@ -379,6 +379,7 @@ impl State {
             config::level(&options.config.style_level, &parts.styles, options.config.style);
         setup.parts.entry(setup.foundation).or_default().foundation =
             config::level(&options.config.foundation_level, &parts.foundations, options.config.foundation);
+        setup.parts.entry(CASTLE_PART).or_default().cannon = options.config.castle(parts.castle);
 
         for levels in setup.parts.values_mut() {
             levels.cannon = levels.cannon.max(1);
