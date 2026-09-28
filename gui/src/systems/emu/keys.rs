@@ -225,7 +225,7 @@ impl Keys {
                 frames <= 1
             }
             Step::Release => {
-                runtime::queue_touch_release(ctx)?;
+                runtime::queue_spot_release(ctx)?;
                 self.touch_down = false;
 
                 true
@@ -295,7 +295,7 @@ impl Keys {
                 self.drag = None;
                 self.touch_down = false;
 
-                return runtime::queue_touch_release(ctx);
+                return runtime::queue_spot_release(ctx);
             }
 
             return Ok(());

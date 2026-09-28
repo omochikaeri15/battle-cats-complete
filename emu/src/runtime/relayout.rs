@@ -1,7 +1,7 @@
 use crate::{
     Fault,
     engine::{
-        AppContext, get_bottom_inset_logical, get_drawable_width, get_left_inset_logical,
+        AppContext, get_bottom_inset_logical, get_design_height2, get_drawable_width, get_left_inset_logical,
         get_right_inset_logical, get_top_inset_offset, option_window_build_alt, powerup_available,
     },
     ops,
@@ -29,6 +29,49 @@ enum Down {
     Raised,
     Corner(i32),
     Footer(i32),
+}
+
+#[derive(Clone, Copy)]
+enum Slide {
+    Edge,
+    Center,
+}
+
+#[derive(Clone, Copy)]
+enum Lift {
+    Kept,
+    Raised,
+    Footer,
+    Centered,
+}
+
+const SHIFTED: [(i32, Slide, Lift); 5] = [
+    (0xc8, Slide::Edge, Lift::Raised),
+    (0xc9, Slide::Edge, Lift::Footer),
+    (0xca, Slide::Center, Lift::Kept),
+    (0xcb, Slide::Center, Lift::Kept),
+    (0xd, Slide::Center, Lift::Centered),
+];
+
+#[derive(Clone, Copy, Debug)]
+pub struct Layout {
+    drawable: i32,
+    right: i32,
+    bottom: i32,
+    shift: i32,
+    pad: i32,
+    design: i32,
+}
+
+pub fn layout_snapshot(ctx: &mut AppContext) -> Result<Layout, Fault> {
+    Ok(Layout {
+        drawable: get_drawable_width(ctx)?,
+        right: get_right_inset_logical(ctx)?,
+        bottom: get_bottom_inset_logical(ctx)?,
+        shift: ctx.i32_at(AppContext::LETTERBOX_SHIFT)?,
+        pad: ctx.i32_at(AppContext::LETTERBOX_PAD)?,
+        design: get_design_height2(ctx),
+    })
 }
 
 const LATCHED: [(usize, Across, Down); 26] = [
@@ -60,7 +103,7 @@ const LATCHED: [(usize, Across, Down); 26] = [
     (AppContext::LOSE_SHOP_RECT, Across::Edge(-0x118), Down::Kept),
 ];
 
-pub fn relatch_battle_rects(ctx: &mut AppContext) -> Result<(), Fault> {
+pub fn relatch_battle_rects(ctx: &mut AppContext, before: Layout) -> Result<(), Fault> {
     let drawable = get_drawable_width(ctx)?;
     let right = get_right_inset_logical(ctx)?;
     let left = get_left_inset_logical(ctx);
@@ -114,6 +157,58 @@ pub fn relatch_battle_rects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if shown {
         option_window_build_alt(ctx)?;
+    }
+
+    let after = layout_snapshot(ctx)?;
+    let centered = ops::div_2(after.drawable).wrapping_sub(ops::div_2(before.drawable));
+    let edged = after
+        .drawable
+        .wrapping_sub(after.right)
+        .wrapping_sub(before.drawable.wrapping_sub(before.right));
+    let lowered = ops::div_2(after.design)
+        .wrapping_sub(ops::div_2(before.design))
+        .wrapping_sub(after.shift.wrapping_sub(before.shift))
+        .wrapping_sub(after.pad.wrapping_sub(before.pad));
+    let raised = before.shift.wrapping_sub(after.shift);
+    let footed = after
+        .shift
+        .wrapping_sub(after.bottom)
+        .wrapping_sub(before.shift.wrapping_sub(before.bottom));
+
+    for dialog in ctx.dialogs.objects.values_mut() {
+        if dialog.flags & 2 != 0 {
+            continue;
+        }
+
+        dialog.x = dialog.x.wrapping_add(centered);
+
+        if dialog.flags & 1 == 0 {
+            dialog.y = dialog.y.wrapping_add(lowered);
+        }
+    }
+
+    for (id, slide, lift) in SHIFTED {
+        let Some(Some(button)) = ctx.buttons.buttons.get_mut(&id) else {
+            continue;
+        };
+        let dx = match slide {
+            Slide::Edge => edged,
+            Slide::Center => centered,
+        };
+        let dy = match lift {
+            Lift::Kept => 0,
+            Lift::Raised => raised,
+            Lift::Footer => footed,
+            Lift::Centered => lowered,
+        };
+
+        button.x = button.x.wrapping_add(dx);
+        button.y = button.y.wrapping_add(dy);
+
+        if let Some(node) = button.node.as_mut() {
+            node.x += dx as f32;
+            node.y += dy as f32;
+        }
     }
 
     Ok(())

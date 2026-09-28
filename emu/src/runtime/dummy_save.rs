@@ -27,21 +27,20 @@ const CHAPTER_ROW_STRIDE: usize = 0xd0;
 const CHAPTER_STAGES: usize = 0x30;
 const STAGE_CLEARED: i32 = 1;
 const TWO_ROWS_UNLOCKED: i32 = 2;
-const TUTORIALS_SEEN: [usize; 4] = [
-    AppContext::TUTORIAL_DECK_SEEN,
-    AppContext::TUTORIAL_TWO_ROWS_SEEN,
-    AppContext::TUTORIAL_CAT_GOD_SEEN,
-    AppContext::SHOP_TUTORIAL_SEEN,
-];
 
 pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
-    ctx.set_i32_at(AppContext::TUTORIAL_CLEARED, TUTORIAL_DONE)?;
+    let tutorial = &setup.tutorial;
 
-    for seen in TUTORIALS_SEEN {
-        ctx.set_i32_at(seen, TUTORIAL_DONE)?;
+    for (seen, done) in [
+        (AppContext::TUTORIAL_CLEARED, tutorial.battle_cleared),
+        (AppContext::TUTORIAL_DECK_SEEN, tutorial.deck_seen),
+        (AppContext::TUTORIAL_CAT_GOD_SEEN, tutorial.cat_god_seen),
+        (AppContext::SHOP_TUTORIAL_SEEN, tutorial.shop_seen),
+    ] {
+        ctx.set_i32_at(seen, if done { TUTORIAL_DONE } else { 0 })?;
     }
 
-    ctx.set_i32_at(AppContext::TUTORIAL_TWO_ROWS_SEEN, TWO_ROWS_UNLOCKED)?;
+    ctx.set_i32_at(AppContext::TUTORIAL_TWO_ROWS_SEEN, if tutorial.two_rows_seen { TWO_ROWS_UNLOCKED } else { 0 })?;
 
     ctx.set_i32_at(AppContext::MEDAL_MONEY_0, MEDAL_PROGRESS_CAP)?;
     ctx.set_i32_at(AppContext::MEDAL_MONEY_1, MEDAL_PROGRESS_CAP)?;

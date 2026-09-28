@@ -15,6 +15,12 @@ impl Default for InertDraw {
 }
 
 impl DrawSink for InertDraw {
+    fn begin_frame(&mut self) {}
+
+    fn set_viewport(&mut self, _surface_w: i32, _surface_h: i32, _screen_w: i32, _screen_h: i32, _depth: f32) {}
+
+    fn end_frame(&mut self) {}
+
     fn set_origin(&mut self, _x: i32, _y: i32) {}
 
     fn glow_set(&mut self, _mode: i32) {}

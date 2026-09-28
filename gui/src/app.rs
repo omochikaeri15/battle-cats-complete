@@ -1552,7 +1552,7 @@ impl BattleCatsApp {
                 if matches!(msg, sandbox::Message::Play)
                     && let Some(entry) = self.staged_entry()
                 {
-                    let setup = self.sandbox_state.setup(&self.app_state, entry);
+                    let setup = self.sandbox_state.setup(&self.app_state, &self.settings, entry);
 
                     let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label());
                     let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };
@@ -1744,8 +1744,8 @@ impl BattleCatsApp {
                 touches: self.sandbox_state.curtain_touches(),
                 covered: self.sandbox_state.curtain_covered(),
                 frozen: self.sandbox_state.frozen(),
-                design_width: self.sandbox_state.design_width(),
                 aspect: self.sandbox_state.aspect(),
+                surfaced: self.sandbox_state.surfaced(),
             },
         )
     }
@@ -1802,6 +1802,7 @@ impl BattleCatsApp {
             stage: slot.unwrap_or(layout),
             layout: slot.map(|_| layout),
             crown: i32::from(self.stage_state.selected_crown),
+            dungeon_stage: None,
         })
     }
 

@@ -7,7 +7,6 @@ impl MetaHost for InertMeta {
     fn analytics_event(&mut self, _event: i32, _first: i32, _second: i32, _third: i32, _fourth: i32) {}
     fn mission_progress(&mut self, _kind: i32, _target: i32, _amount: i32, _first: i32, _second: i32) {}
     fn mission_refresh(&mut self) {}
-    fn check_medals(&mut self, _kind: i32) {}
     fn request_save(&mut self) {}
     fn set_item_count(&mut self, _item: i32, _count: i32, _flag: u8) {}
     fn analytics_send_event(&mut self, _at: i32, _name: &[u8], _amount: i32, _params: &[(&[u8], FormatArg<'_>)]) {}
@@ -24,4 +23,18 @@ impl MetaHost for InertMeta {
     fn apply_event_schedule(&mut self, _mode: i32) {}
 
     fn load_battle_snapshot(&mut self) {}
+
+    fn notice_popup_update(&mut self) -> bool {
+        false
+    }
+
+    fn notice_popup_draw(&mut self) {}
+
+    fn medal_popup_update(&mut self) {}
+
+    fn medal_popup_draw(&mut self) {}
+
+    fn mission_popup_update(&mut self) {}
+
+    fn mission_popup_draw(&mut self) {}
 }

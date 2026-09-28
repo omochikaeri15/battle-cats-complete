@@ -9,8 +9,7 @@ use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
     BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
-    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, queue_touch_position, queue_touch_press, queue_touch_release,
-    pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
+    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use kore::domains::sandbox::replay::{self as tape, Cue, Recording};
@@ -27,7 +26,9 @@ use super::soundtrack::{Listener, SharedLog};
 use super::text::{Formatter, LABEL_PREFIX};
 
 const CURTAIN_CLOSING: i32 = 1;
-const IDENTITY: [f32; 6] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+const TOUCH_PRESSED: i32 = 0;
+const TOUCH_MOVED: i32 = 1;
+const TOUCH_RELEASED: i32 = 2;
 const BATTLE_SCENE: i32 = 0x12c;
 const TRANSITION_SCENE: i32 = 0x3e7;
 const FADE_STEPS: usize = 0x10;
@@ -73,6 +74,7 @@ pub struct Driver {
     phone: bool,
     spread: i32,
     gap: Option<i32>,
+    finger: (i32, i32),
     keys: Keys,
     reach: i32,
     idle: u32,
@@ -212,6 +214,7 @@ impl Driver {
             phone: false,
             spread: 0,
             gap: None,
+            finger: (0, 0),
             keys: Keys::default(),
             reach: FINGER_GAP,
             idle: 0,
@@ -650,9 +653,17 @@ impl Driver {
 
                 Ok(())
             }
-            Cue::Move(x, y) => queue_touch_position(&mut self.ctx, x, y),
-            Cue::Press(x, y) => queue_touch_press(&mut self.ctx, x, y),
-            Cue::Release => queue_touch_release(&mut self.ctx),
+            Cue::Move(x, y) => {
+                self.finger = (x, y);
+
+                emu::engine::app_on_touch(&mut self.ctx, TOUCH_MOVED, x, y, 0)
+            }
+            Cue::Press(x, y) => {
+                self.finger = (x, y);
+
+                emu::engine::app_on_touch(&mut self.ctx, TOUCH_PRESSED, x, y, 0)
+            }
+            Cue::Release => emu::engine::app_on_touch(&mut self.ctx, TOUCH_RELEASED, self.finger.0, self.finger.1, 0),
             Cue::Key(key, pressed) => {
                 let action = replay::action_of(key);
 
@@ -743,6 +754,8 @@ impl Driver {
 
         self.applied = (width, height);
 
+        let before = emu::runtime::layout_snapshot(&mut self.ctx);
+
         self.ctx.device_screen_w = width as i32;
         self.ctx.device_screen_h = height as i32;
         self.profile.tablet.set(!self.phone);
@@ -758,7 +771,9 @@ impl Driver {
             return;
         }
 
-        if let Err(fault) = relatch_battle_rects(&mut self.ctx) {
+        let relatched = before.and_then(|before| relatch_battle_rects(&mut self.ctx, before));
+
+        if let Err(fault) = relatched {
             warn!("emu: battle rects could not be re-latched: {fault}");
         }
     }
@@ -780,10 +795,6 @@ impl Driver {
         let height = self.ctx.device_screen_h as f32;
 
         self.apply_size(width, height);
-    }
-
-    pub fn design_width(&self) -> f32 {
-        self.ctx.screen_metrics.design_w as f32
     }
 
     pub fn in_battle(&self) -> bool {
@@ -862,6 +873,12 @@ impl Driver {
 
                 return false;
             }
+        }
+
+        if let Err(fault) = emu::runtime::select_dungeon_stage(&mut self.ctx, self.setup.stage) {
+            warn!("emu: dungeon stage could not be selected: {fault}");
+
+            return false;
         }
 
         if let Err(fault) = self.fade_into_battle() {
@@ -984,121 +1001,72 @@ impl Driver {
         }
 
         self.keep_assets();
+
+        let notice = emu::engine::notice_popup_update(&mut self.ctx)
+            .map_err(|fault| (fault.site(), format!("notice_popup_update:{fault}")))?;
+
+        if emu::engine::ad_is_showing(&mut self.ctx).map_err(|fault| (fault.site(), format!("ad_is_showing:{fault}")))? {
+            return Ok(());
+        }
+
         emu::engine::dialog_manager_process(&mut self.ctx)
             .map_err(|fault| (fault.site(), format!("dialog_manager_process:{fault}")))?;
-
         emu::engine::button_bank_process(&mut self.ctx)
             .map_err(|fault| (fault.site(), format!("button_bank_process:{fault}")))?;
-        emu::engine::main_battle_loop(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("main_battle_loop:{fault}")))?;
+        emu::engine::medal_popup_update(&mut self.ctx)
+            .map_err(|fault| (fault.site(), format!("medal_popup_update:{fault}")))?;
+        emu::engine::mission_popup_update(&mut self.ctx)
+            .map_err(|fault| (fault.site(), format!("mission_popup_update:{fault}")))?;
+
+        let shop_open = self.ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN).unwrap_or(0) != 0;
+        let tutorial_open = self.ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN).unwrap_or(0) != 0;
+
+        let mut continued = true;
+
+        if !(notice || shop_open || tutorial_open) {
+            continued = emu::engine::main_battle_loop(&mut self.ctx)
+                .map_err(|fault| (fault.site(), format!("main_battle_loop:{fault}")))?;
+        }
+
         pump_stage_return(&mut self.ctx, &self.returning)
             .map_err(|fault| (fault.site(), format!("pump_stage_return:{fault}")))?;
         self.sync_options();
+
+        if !continued {
+            return Ok(());
+        }
+
+        if tutorial_open {
+            emu::engine::tutorial_popup_update(&mut self.ctx)
+                .map_err(|fault| (fault.site(), format!("tutorial_popup_update:{fault}")))?;
+        } else {
+            emu::engine::cat_food_shop_update(&mut self.ctx)
+                .map_err(|fault| (fault.site(), format!("cat_food_shop_update:{fault}")))?;
+
+            if self.ctx.i32_at(AppContext::SHOP_UPDATE_CONSUMED).unwrap_or(0) != 0 {
+                self.ctx
+                    .set_i32_at(AppContext::SHOP_UPDATE_CONSUMED, 0)
+                    .map_err(|fault| (fault.site(), format!("app_on_process:{fault}")))?;
+            }
+        }
 
         if !self.in_battle() {
             return Ok(());
         }
 
         self.frame.borrow_mut().clear();
-        self.begin_draw();
-        emu::engine::main_draw(&mut self.ctx, 0)
-            .map_err(|fault| (fault.site(), format!("main_draw:{fault}")))?;
-        emu::engine::dialog_manager_draw(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("dialog_manager_draw:{fault}")))?;
-        self.draw_letterbox_bars();
+        emu::engine::app_on_draw(&mut self.ctx).map_err(|fault| (fault.site(), format!("app_on_draw:{fault}")))?;
+        self.stamp_frame();
 
         Ok(())
     }
 
-    fn begin_draw(&mut self) {
-        let scale = self.ctx.screen_metrics.scale2;
-        let cleared = emu::engine::draw_context(&mut self.ctx.draw).map(|sink| {
-            emu::engine::set_transform(sink, scale, &IDENTITY);
-            emu::engine::set_color(sink, 0xff, 0xff, 0xff, 0xff);
-            emu::engine::set_alpha(sink, 0xff);
-        });
+    fn stamp_frame(&self) {
+        let mut frame = self.frame.borrow_mut();
 
-        if let Err(fault) = cleared {
-            warn!("emu: draw state could not be reset: {fault}");
-
-            return;
-        }
-
-        let origin = self
-            .ctx
-            .i32_at(AppContext::LETTERBOX_PAD)
-            .and_then(|pad| {
-                self.ctx
-                    .i32_at(AppContext::LETTERBOX_SHIFT)
-                    .map(|shift| pad.wrapping_add(shift))
-            })
-            .and_then(|top| emu::engine::set_draw_origin(&mut self.ctx, 0, top));
-
-        if let Err(fault) = origin {
-            warn!("emu: draw origin could not be set: {fault}");
-        }
-    }
-
-    fn draw_letterbox_bars(&mut self) {
-        let Ok(pad) = self.ctx.i32_at(AppContext::LETTERBOX_PAD) else {
-            return;
-        };
-
-        if pad <= 0 {
-            return;
-        }
-
-        if let Err(fault) = emu::engine::set_draw_origin(&mut self.ctx, 0, 0) {
-            warn!("emu: letterbox origin could not be set: {fault}");
-
-            return;
-        }
-
-        let Ok(width) = emu::engine::get_drawable_width(&self.ctx) else {
-            return;
-        };
-        let height = emu::engine::get_design_height2(&self.ctx);
-
-        let barred = emu::engine::draw_context(&mut self.ctx.draw).map(|sink| {
-            emu::engine::set_tint(sink, 0, 0, 0, 0xff);
-            emu::engine::fill_rect(sink, 0, 0, width, pad);
-            emu::engine::fill_rect(sink, 0, height.wrapping_sub(pad), width, pad);
-            emu::engine::set_tint(sink, 0xff, 0xff, 0xff, 0xff);
-        });
-
-        if let Err(fault) = barred {
-            warn!("emu: letterbox bars could not be drawn: {fault}");
-        }
-    }
-
-    pub fn silence(&mut self) {
-        if let Some(sound) = self.ctx.sound() {
-            sound.pause_all();
-        }
-    }
-
-    pub fn set_volumes(&mut self, music: i32, effects: i32) {
-        *self.volumes.borrow_mut() = Volumes { music, effects };
-
-        let Some(sound) = self.ctx.sound() else {
-            return;
-        };
-
-        sound.set_bgm_duck(FULL_VOLUME);
-    }
-
-    pub fn set_options(&mut self, options: BattleOptions) {
-        self.options = options;
-
-        if let Err(fault) = apply_battle_options(&mut self.ctx, options) {
-            warn!("emu: battle options could not be applied: {fault}");
-        }
-    }
-
-    pub fn take_options(&mut self) -> Option<BattleOptions> {
-        let changed = mem::take(&mut self.changed);
-
-        (changed && !self.watching()).then_some(self.options)
+        frame.design_width = self.ctx.screen_metrics.design_w as f32;
+        frame.design_height = emu::engine::get_design_height2(&self.ctx) as f32;
+        frame.letterbox = self.ctx.i32_at(AppContext::LETTERBOX_PAD).map_or(0.0, |pad| pad.max(0) as f32);
     }
 
     fn sync_options(&mut self) {
@@ -1136,6 +1104,36 @@ impl Driver {
         }
     }
 
+    pub fn silence(&mut self) {
+        if let Some(sound) = self.ctx.sound() {
+            sound.pause_all();
+        }
+    }
+
+    pub fn set_volumes(&mut self, music: i32, effects: i32) {
+        *self.volumes.borrow_mut() = Volumes { music, effects };
+
+        let Some(sound) = self.ctx.sound() else {
+            return;
+        };
+
+        sound.set_bgm_duck(FULL_VOLUME);
+    }
+
+    pub fn set_options(&mut self, options: BattleOptions) {
+        self.options = options;
+
+        if let Err(fault) = apply_battle_options(&mut self.ctx, options) {
+            warn!("emu: battle options could not be applied: {fault}");
+        }
+    }
+
+    pub fn take_options(&mut self) -> Option<BattleOptions> {
+        let changed = mem::take(&mut self.changed);
+
+        (changed && !self.watching()).then_some(self.options)
+    }
+
     pub fn draw_curtain_over(&mut self, sweep: i32) {
         let armed = self
             .ctx
@@ -1148,13 +1146,43 @@ impl Driver {
             return;
         }
 
-        self.begin_draw();
-
-        if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
+        if let Err(fault) = self.paint_curtain() {
             warn!("emu: curtain draw faulted: {fault}");
         }
+    }
 
-        self.draw_letterbox_bars();
+    fn paint_curtain(&mut self) -> Result<(), emu::Fault> {
+        self.stamp_frame();
+
+        let scale = self.ctx.screen_metrics.scale2;
+
+        emu::engine::set_draw_scale(emu::engine::draw_context(&mut self.ctx.draw)?, scale);
+
+        let top = self
+            .ctx
+            .i32_at(AppContext::LETTERBOX_PAD)?
+            .wrapping_add(self.ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
+
+        emu::engine::set_draw_origin(&mut self.ctx, 0, top)?;
+        emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING)?;
+        emu::engine::set_draw_origin(&mut self.ctx, 0, 0)?;
+
+        let pad = self.ctx.i32_at(AppContext::LETTERBOX_PAD)?;
+
+        if pad <= 0 {
+            return Ok(());
+        }
+
+        let width = emu::engine::get_drawable_width(&self.ctx)?;
+        let height = emu::engine::get_design_height2(&self.ctx);
+        let sink = emu::engine::draw_context(&mut self.ctx.draw)?;
+
+        emu::engine::set_tint(sink, 0, 0, 0, 0xff);
+        emu::engine::fill_rect(sink, 0, 0, width, pad);
+        emu::engine::fill_rect(sink, 0, height.wrapping_sub(pad), width, pad);
+        emu::engine::set_tint(sink, 0xff, 0xff, 0xff, 0xff);
+
+        Ok(())
     }
 
     pub fn release_curtain(&mut self) {
@@ -1205,7 +1233,6 @@ impl Driver {
         }
 
         self.frame.borrow_mut().clear();
-        self.begin_draw();
 
         let armed = self
             .ctx
@@ -1214,7 +1241,7 @@ impl Driver {
 
         match armed {
             Ok(()) => {
-                if let Err(fault) = emu::engine::draw_screen_transition(&mut self.ctx, CURTAIN_CLOSING) {
+                if let Err(fault) = self.paint_curtain() {
                     warn!("emu: curtain draw faulted: {fault}");
                 }
             }

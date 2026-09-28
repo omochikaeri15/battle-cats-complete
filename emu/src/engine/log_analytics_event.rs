@@ -6,7 +6,6 @@ pub trait MetaHost {
     fn analytics_event(&mut self, event: i32, first: i32, second: i32, third: i32, fourth: i32);
     fn mission_progress(&mut self, kind: i32, target: i32, amount: i32, first: i32, second: i32);
     fn mission_refresh(&mut self);
-    fn check_medals(&mut self, kind: i32);
     fn request_save(&mut self);
     fn set_item_count(&mut self, item: i32, count: i32, flag: u8);
     fn analytics_send_event(
@@ -29,6 +28,12 @@ pub trait MetaHost {
     fn apply_event_schedule(&mut self, mode: i32);
 
     fn load_battle_snapshot(&mut self);
+    fn notice_popup_update(&mut self) -> bool;
+    fn notice_popup_draw(&mut self);
+    fn medal_popup_update(&mut self);
+    fn medal_popup_draw(&mut self);
+    fn mission_popup_update(&mut self);
+    fn mission_popup_draw(&mut self);
 }
 
 pub fn log_analytics_event(

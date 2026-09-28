@@ -122,8 +122,8 @@ impl Session {
         self.driver.touches()
     }
 
-    pub fn design_width(&self) -> f32 {
-        self.driver.design_width()
+    pub fn surfaced(&self) -> bool {
+        matches!(self.phase, Phase::Loading | Phase::Running | Phase::Faulted | Phase::Closing)
     }
 
     pub fn covered(&self) -> bool {

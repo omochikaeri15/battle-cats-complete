@@ -20,17 +20,15 @@ pub use dummy_save::{fill_dummy_cannon_parts, fill_dummy_save, seed_altar_record
 pub use inert_draw::InertDraw;
 pub use keys::{
     CONFIRM_BUTTON, LEAVE_BUTTON, Spot, deck_row_hidden, deck_row_swapping, dialog_open, option_menu_open, pinch_latched, queue_back,
-    queue_spot_move, queue_spot_press, spot_center, start_deck_row_swap,
+    queue_spot_move, queue_spot_press, queue_spot_release, spot_center, start_deck_row_swap,
 };
 pub use inert_meta::InertMeta;
 pub use inert_platform::{DeviceProfile, InertPlatform};
 pub use inert_scene::{InertScene, pump_stage_return};
 pub use inert_ui::InertUi;
-pub use relayout::relatch_battle_rects;
+pub use relayout::{Layout, layout_snapshot, relatch_battle_rects};
 pub use seeds::{Seeds, plant_seeds};
-pub use setup::{CatGod, BATTLE_ITEMS, CASTLE_PART, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
-    select_stage, is_extra_entry, prepare_extra_entry,
-};
+pub use setup::{BATTLE_ITEMS, CASTLE_PART, CatGod, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel, TutorialFlags, is_extra_entry, prepare_extra_entry, select_dungeon_stage, select_stage};
 pub use silent_sound::SilentSound;
 pub use stamp::VERSION;
-pub use touch_input::{pump_pinch, pump_touch, queue_touch_position, queue_touch_press, queue_touch_release};
+pub use touch_input::{pump_pinch, pump_touch};

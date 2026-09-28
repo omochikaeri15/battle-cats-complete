@@ -27,6 +27,9 @@ const BATTLE_INTRO_START: i32 = 0x726;
 const SCORED_TYPES: [i32; 3] = [3, 4, -24];
 const CAT_SIDE: i32 = 1;
 const ENEMY_SIDE: i32 = 2;
+const DUNGEON_TYPE: i32 = -11;
+const DUNGEON_GROUP: usize = 2;
+const DUNGEON_PACK: i32 = 100;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct StageEntry {
@@ -34,6 +37,22 @@ pub struct StageEntry {
     pub stage: i32,
     pub layout: Option<i32>,
     pub crown: i32,
+    pub dungeon_stage: Option<i32>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TutorialFlags {
+    pub battle_cleared: bool,
+    pub deck_seen: bool,
+    pub two_rows_seen: bool,
+    pub cat_god_seen: bool,
+    pub shop_seen: bool,
+}
+
+impl Default for TutorialFlags {
+    fn default() -> Self {
+        Self { battle_cleared: true, deck_seen: true, two_rows_seen: true, cat_god_seen: true, shop_seen: true }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -81,6 +100,7 @@ pub struct Setup {
     pub speed_engaged: bool,
     pub altar: Option<i32>,
     pub cat_god: CatGod,
+    pub tutorial: TutorialFlags,
 }
 
 impl Default for Setup {
@@ -98,6 +118,7 @@ impl Default for Setup {
             speed_engaged: false,
             altar: None,
             cat_god: CatGod::default(),
+            tutorial: TutorialFlags::default(),
         }
     }
 }
@@ -143,6 +164,20 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
     ctx.set_i32_at(if mode == EXTRA_MODE { AppContext::EX_STAGE_INDEX } else { AppContext::STAGE_INDEX }, entry.stage)?;
     ctx.set_i32_at(AppContext::faction_flags(0), CAT_SIDE)?;
     ctx.set_i32_at(AppContext::faction_flags(1), ENEMY_SIDE)
+}
+
+pub fn select_dungeon_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault> {
+    if map_type_of_map_id(entry.map_id) != DUNGEON_TYPE {
+        return Ok(());
+    }
+
+    let slot = entry.stage as i64 as usize;
+    let fallback = ctx
+        .play_dungeon_rows
+        .get(slot)
+        .map_or(0, |row| row[DUNGEON_GROUP].wrapping_mul(DUNGEON_PACK));
+
+    ctx.set_i32_at(AppContext::DROP_MAP_STAGES.wrapping_add(slot.wrapping_mul(4)), entry.dungeon_stage.unwrap_or(fallback))
 }
 
 pub fn is_extra_entry(ctx: &AppContext) -> Result<bool, Fault> {

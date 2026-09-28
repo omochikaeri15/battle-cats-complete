@@ -19,10 +19,6 @@ pub struct InertPlatform {
 impl Platform for InertPlatform {
     fn set_keep_awake(&mut self, _awake: bool) {}
 
-    fn item_pass_active(&mut self, _item: i32) -> bool {
-        false
-    }
-
     fn is_tablet(&mut self) -> bool {
         self.profile.tablet.get()
     }
@@ -100,6 +96,10 @@ impl Platform for InertPlatform {
     fn labyrinth_submit(&mut self, _cleared: i32, _units: i32) {}
 
     fn ad_prepare(&mut self, _kind: i32) {}
+
+    fn ad_showing(&mut self) -> bool {
+        false
+    }
 
     fn event_schedule_active(&mut self, _now: f64) -> Vec<Vec<i32>> {
         Vec::new()

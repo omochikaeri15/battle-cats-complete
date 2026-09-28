@@ -111,6 +111,10 @@ pub fn queue_spot_press(ctx: &mut AppContext, x: i32, y: i32) -> Result<(), Faul
     ctx.set_block_at::<1>(AppContext::TOUCH_PENDING_BEGAN, [1])
 }
 
+pub fn queue_spot_release(ctx: &mut AppContext) -> Result<(), Fault> {
+    ctx.set_block_at::<1>(AppContext::TOUCH_PENDING_RELEASED, [1])
+}
+
 pub fn queue_back(ctx: &mut AppContext, down: bool) -> Result<(), Fault> {
     ctx.set_block_at::<1>(AppContext::BACK_PRESSED, [u8::from(down)])
 }

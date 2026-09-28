@@ -19,6 +19,7 @@ use super::{
 };
 
 pub const SIZE: usize = 0x475270;
+const DROP_MAP_CELLS: usize = 48;
 
 pub const ENTITY_BASE: usize = 0x838f8;
 pub const ENTITY_STRIDE: usize = 0x3e8;
@@ -170,6 +171,8 @@ impl Pinch {
     pub const SECOND_X: usize = 0x8;
     pub const FIRST_Y: usize = 0xc;
     pub const SECOND_Y: usize = 0x10;
+    pub const FIRST_ID: usize = 0x14;
+    pub const SECOND_ID: usize = 0x18;
     pub const START: usize = 0x1c;
     pub const DISTANCE: usize = 0x2c;
     pub const PREV_DISTANCE: usize = 0x30;
@@ -944,6 +947,14 @@ pub struct AppContext {
     pub dialog_sheet: Option<Rc<Imgcut>>,
     pub scene_img008_sheet: Option<Rc<Imgcut>>,
     pub guide_label: Texture,
+    pub tutorial_lines: [Option<Texture>; 8],
+    pub surface_lost: bool,
+    pub ui_sheet_cache: [Option<Rc<Imgcut>>; 0x16],
+    pub medals_awarded_flags: BTreeMap<i32, i32>,
+    pub medals_pending: Vec<i32>,
+    pub club_user_rank: i32,
+    pub club_pass_state: [u8; 8],
+    pub club_owned: BTreeMap<i32, i32>,
     pub trait_icons: BTreeMap<i32, bool>,
     pub ability_icons: BTreeMap<i32, bool>,
     pub enemy_book_rows: Vec<[Vec<u8>; 5]>,
@@ -1612,7 +1623,28 @@ impl AppContext {
     pub const DECK_SWAP_BLOCK: usize = 0x328650;
     pub const UI_STATE_TAIL: usize = 0x32b7c8;
     pub const HUD_RECTS: usize = 0x3283d0;
-    pub const TUTORIAL_TIMER_TAIL: usize = 0x32b460;
+    pub const TUTORIAL_PAGE: usize = 0x32b460;
+    pub const DRAW_SCENE_ID: usize = 0x3454;
+    pub const INSET_STRIPS_DUE: usize = 0x20d9;
+    pub const TOUCH_ID: usize = 0x327f6c;
+    pub const MAIN_DRAW_HIDDEN: usize = 0x33cc;
+    pub const MAP_STAMINA_HUD_STATE: usize = 0x1cee;
+    pub const TUTORIAL_POPUP_FRAME: usize = 0x32b454;
+    pub const TUTORIAL_BOB_PHASE: usize = 0x32b458;
+    pub const TUTORIAL_PRESS_TICKS: usize = 0x32b45c;
+    pub const TUTORIAL_BUTTON_X: usize = 0x32b464;
+    pub const TUTORIAL_BUTTON_Y: usize = 0x32b468;
+    pub const TUTORIAL_BUTTON_W: usize = 0x32b46c;
+    pub const TUTORIAL_BUTTON_H: usize = 0x32b470;
+    pub const TUTORIAL_BUTTON_HELD: usize = 0x32a437;
+    pub const TUTORIAL_FORMATION_SEEN: usize = 0x4a4a8;
+    pub const TUTORIAL_ROW12_SEEN: usize = 0x4a4c0;
+    pub const TUTORIAL_ROW10_SEEN: usize = 0x4a4c8;
+    pub const TUTORIAL_SCENE_JUMP_SEEN: usize = 0x4a4d8;
+    pub const TUTORIAL_MISSION_SEEN: usize = 0x4a4e8;
+    pub const TUTORIAL_EXIT_STATE: usize = 0x38f5a4;
+    pub const CAT_GOD_INTRO_BUTTON_PRESS: usize = 0x32b68c;
+    pub const SHOP_UPDATE_CONSUMED: usize = 0x32cbc8;
     pub const RESTRICTION_WARNING_TEXTS: usize = 0xb800;
     pub const STAGE_RECORD_CHAPTERS_KEY: usize = 0xca44;
     pub const STAGE_CLEAR_FLAG: usize = 0xc2e0;
@@ -1793,6 +1825,12 @@ impl AppContext {
             (Self::COMBO_BANNER_TEXT_STEP, 6),
         ] {
             raw[field..field + 4].copy_from_slice(&value.to_le_bytes());
+        }
+
+        for cell in 0..DROP_MAP_CELLS {
+            let field = Self::DROP_MAP_STAGES + cell * 4;
+
+            raw[field..field + 4].copy_from_slice(&(-1i32).to_le_bytes());
         }
 
         Self {
@@ -2043,6 +2081,14 @@ impl AppContext {
             dialog_sheet: Default::default(),
             scene_img008_sheet: Default::default(),
             guide_label: Default::default(),
+            tutorial_lines: Default::default(),
+            surface_lost: false,
+            ui_sheet_cache: Default::default(),
+            medals_awarded_flags: BTreeMap::new(),
+            medals_pending: Vec::new(),
+            club_user_rank: 0,
+            club_pass_state: [0; 8],
+            club_owned: BTreeMap::new(),
             trait_icons: Default::default(),
             ability_icons: Default::default(),
             enemy_book_rows: Default::default(),

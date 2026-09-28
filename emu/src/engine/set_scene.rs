@@ -5,7 +5,7 @@ use super::{AppContext, ENTITY_BASE, get_battle_status, prepare_battle_entry, se
 pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
     ctx.set_block_at::<0x28>(AppContext::DRAW_TEMP_0, [0; 0x28])?;
     ctx.set_i32_at(AppContext::SCENE_ID, scene)?;
-    ctx.set_i32_at(AppContext::SCENE_ID + 4, scene)?;
+    ctx.set_i32_at(AppContext::DRAW_SCENE_ID, scene)?;
 
     let awake =
         if (scene.wrapping_sub(0x61) as u32) <= 4 && 0x13u32 >> scene.wrapping_sub(0x61) & 1 != 0 {

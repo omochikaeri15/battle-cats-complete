@@ -32,6 +32,23 @@ pub struct Stage {
     pub crown: i32,
     pub map_name: String,
     pub stage_name: String,
+    pub dungeon_stage: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(default)]
+pub struct Tutorial {
+    pub battle_cleared: bool,
+    pub deck_seen: bool,
+    pub two_rows_seen: bool,
+    pub cat_god_seen: bool,
+    pub shop_seen: bool,
+}
+
+impl Default for Tutorial {
+    fn default() -> Self {
+        Self { battle_cleared: true, deck_seen: true, two_rows_seen: true, cat_god_seen: true, shop_seen: true }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
@@ -79,6 +96,7 @@ pub struct Setup {
     pub speed_engaged: bool,
     pub altar: Option<i32>,
     pub cat_god: God,
+    pub tutorial: Tutorial,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]

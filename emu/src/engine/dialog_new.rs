@@ -72,6 +72,9 @@ pub trait UiHost {
     fn clear_layout_latch(&mut self);
     fn set_layout_latch(&mut self);
     fn viewport_resized(&mut self);
+    fn inquiry_button_draw(&mut self);
+    fn cat_food_shop_draw(&mut self);
+    fn cat_food_shop_update(&mut self);
     fn page_list_layout(
         &mut self,
         list: usize,

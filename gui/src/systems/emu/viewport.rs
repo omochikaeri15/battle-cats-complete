@@ -14,6 +14,7 @@ use super::sink::Frame as EmuFrame;
 const PIXELS_PER_LINE: f32 = 40.0;
 const SPREAD_PER_LINE: f32 = 28.0;
 const BAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+const PLAY_HEIGHT: f32 = 720.0;
 
 struct Fit {
     scale: f32,
@@ -37,15 +38,20 @@ fn fit(bounds: Rectangle, design_width: f32, aspect: Option<f32>) -> Fit {
     Fit { scale, x: (bounds.width - width) / 2.0, y: (bounds.height - height) / 2.0, width, height }
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct Surface {
+    pub aspect: Option<f32>,
+    pub surfaced: bool,
+}
+
 pub struct Viewport {
     frame: Rc<RefCell<EmuFrame>>,
     sheets: Rc<RefCell<SheetCache>>,
-    design_width: f32,
+    canvas: Surface,
     touches: TouchQueue,
     active: bool,
     covered: bool,
     frozen: bool,
-    aspect: Option<f32>,
 }
 
 #[derive(Default)]
@@ -68,12 +74,34 @@ impl std::fmt::Debug for Scene {
     }
 }
 
-pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, design_width: f32, aspect: Option<f32>, bounds: Rectangle) -> Scene {
+pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, bounds: Rectangle) -> Scene {
+    let Surface { aspect, surfaced } = canvas;
+    let design_width = frame.design_width;
+    let design_height = frame.design_height;
+    let letterbox = frame.letterbox;
     let fit = fit(bounds, design_width, aspect);
     let scale = fit.scale;
-    let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6);
+    let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6 + 6);
     let mut runs: Vec<(Option<Box<str>>, u8, u32, u32)> = Vec::new();
     let mut uploads: Vec<(Box<str>, Sheet)> = Vec::new();
+
+    let surface = |cx: f32, cy: f32| Vertex {
+        position: [(cx + bounds.x) / bounds.width * 2.0 - 1.0, 1.0 - (cy + bounds.y) / bounds.height * 2.0],
+        uv: [0.0, 0.0],
+        color: BAR_COLOR,
+    };
+
+    if surfaced {
+        vertices.extend([
+            surface(0.0, 0.0),
+            surface(0.0, bounds.height),
+            surface(bounds.width, bounds.height),
+            surface(0.0, 0.0),
+            surface(bounds.width, bounds.height),
+            surface(bounds.width, 0.0),
+        ]);
+        runs.push((None, 0, 0, 6));
+    }
 
     let mut absent: Vec<&str> = Vec::new();
 
@@ -145,13 +173,23 @@ pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, design_width: f32, as
         }
     }
 
+    let pad = if surfaced { letterbox.max(0.0) * scale } else { 0.0 };
+    let floor = fit.y + (design_height - letterbox.max(0.0)).min(letterbox.max(0.0) + PLAY_HEIGHT) * scale;
+    let mut bars = vec![
+        [0.0, fit.y, bounds.width, pad],
+        [0.0, floor, bounds.width, if pad > 0.0 { bounds.height - floor } else { 0.0 }],
+    ];
+
     if aspect.is_some() {
-        let bars = [
+        bars.extend([
             [0.0, 0.0, bounds.width, fit.y],
             [0.0, fit.y + fit.height, bounds.width, bounds.height - fit.y - fit.height],
             [0.0, fit.y, fit.x, fit.height],
             [fit.x + fit.width, fit.y, bounds.width - fit.x - fit.width, fit.height],
-        ];
+        ]);
+    }
+
+    {
         let start = vertices.len() as u32;
 
         for [x, y, width, height] in bars.into_iter().filter(|bar| bar[2] > 0.0 && bar[3] > 0.0) {
@@ -207,7 +245,7 @@ impl<Message> shader::Program<Message> for Viewport {
             };
         }
 
-        paint(&frame, &self.sheets.borrow(), self.design_width, self.aspect, bounds)
+        paint(&frame, &self.sheets.borrow(), self.canvas, bounds)
     }
 
     fn update(
@@ -221,13 +259,7 @@ impl<Message> shader::Program<Message> for Viewport {
             return None;
         }
 
-        let scale = if self.design_width > 0.0 && bounds.width > 0.0 { bounds.width / self.design_width } else { 1.0 };
-        let at = cursor.position_in(bounds).map(|point| {
-            (
-                (point.x / scale).round() as i32,
-                (point.y / scale).round() as i32,
-            )
-        });
+        let at = cursor.position_in(bounds).map(|point| (point.x.round() as i32, point.y.round() as i32));
 
         if state.pressed {
             let lifted = matches!(
@@ -246,8 +278,8 @@ impl<Message> shader::Program<Message> for Viewport {
             let dragged = cursor.position().filter(|_| matches!(event, iced::Event::Mouse(mouse::Event::CursorMoved { .. })));
 
             if let Some(point) = dragged.filter(|_| at.is_none()) {
-                let x = ((point.x - bounds.x).clamp(0.0, bounds.width) / scale).round() as i32;
-                let y = ((point.y - bounds.y).clamp(0.0, bounds.height) / scale).round() as i32;
+                let x = (point.x - bounds.x).clamp(0.0, bounds.width).round() as i32;
+                let y = (point.y - bounds.y).clamp(0.0, bounds.height).round() as i32;
 
                 self.touches.borrow_mut().push(Touch::Moved { x, y });
 
@@ -350,8 +382,8 @@ pub struct Feed<'a> {
     pub touches: Option<&'a TouchQueue>,
     pub covered: bool,
     pub frozen: bool,
-    pub design_width: f32,
     pub aspect: Option<f32>,
+    pub surfaced: bool,
 }
 
 pub fn overlay<'a, Message: 'a>(
@@ -365,8 +397,8 @@ pub fn overlay<'a, Message: 'a>(
         touches,
         covered,
         frozen,
-        design_width,
         aspect,
+        surfaced,
     } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
@@ -375,12 +407,11 @@ pub fn overlay<'a, Message: 'a>(
     let painted = shader::Shader::new(Viewport {
         frame,
         sheets,
-        design_width,
+        canvas: Surface { aspect, surfaced },
         touches,
         active,
         covered,
         frozen,
-        aspect,
     })
     .width(Length::Fill)
     .height(Length::Fill);

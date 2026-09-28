@@ -324,10 +324,6 @@ impl TextRenderer for Formatter {
         Self::expand(pattern, args)
     }
 
-    fn stage_name(&mut self, _map_type: i32, _map_index: i32, _stage: i32) -> Vec<u8> {
-        Vec::new()
-    }
-
     fn text_width(&mut self, text: &[u8], size: i32) -> i32 {
         Self::lines(
             &Self::faces(),

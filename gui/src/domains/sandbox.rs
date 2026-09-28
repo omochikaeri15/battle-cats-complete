@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::rc::Rc;
 
-use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, VERSION};
+use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, TutorialFlags, VERSION};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
@@ -302,10 +302,21 @@ impl State {
         self.lineup.filter_popup_view(window).map(|view| view.map(Message::Lineup))
     }
 
-    pub(crate) fn setup(&self, app_state: &AppState, stage: StageEntry) -> Setup {
+    pub(crate) fn setup(&self, app_state: &AppState, settings: &Settings, stage: StageEntry) -> Setup {
         let options = &app_state.sandbox;
         let parts = self.config.parts();
-        let mut setup = Setup { stage, ..Setup::default() };
+        let tutorial = &settings.sandbox.tutorial;
+        let mut setup = Setup {
+            stage,
+            tutorial: TutorialFlags {
+                battle_cleared: tutorial.battle_cleared,
+                deck_seen: tutorial.deck_seen,
+                two_rows_seen: tutorial.two_rows_seen,
+                cat_god_seen: tutorial.cat_god_seen,
+                shop_seen: tutorial.shop_seen,
+            },
+            ..Setup::default()
+        };
 
         setup.lineup = options
             .roster
@@ -400,12 +411,12 @@ impl State {
         self.session.as_ref().is_some_and(Session::covered)
     }
 
-    pub fn curtain_sheets(&self) -> Option<&Rc<RefCell<SheetCache>>> {
-        self.session.as_ref().map(Session::sheets)
+    pub fn surfaced(&self) -> bool {
+        self.session.as_ref().is_some_and(Session::surfaced)
     }
 
-    pub fn design_width(&self) -> f32 {
-        self.session.as_ref().map_or(0.0, Session::design_width)
+    pub fn curtain_sheets(&self) -> Option<&Rc<RefCell<SheetCache>>> {
+        self.session.as_ref().map(Session::sheets)
     }
 
     pub fn curtain_touches(&self) -> Option<&crate::systems::emu::TouchQueue> {

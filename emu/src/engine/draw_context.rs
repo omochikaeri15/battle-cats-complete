@@ -9,6 +9,9 @@ pub enum Surface<'a> {
 }
 
 pub trait DrawSink {
+    fn begin_frame(&mut self);
+    fn set_viewport(&mut self, surface_w: i32, surface_h: i32, screen_w: i32, screen_h: i32, depth: f32);
+    fn end_frame(&mut self);
     fn set_origin(&mut self, x: i32, y: i32);
     fn glow_set(&mut self, mode: i32);
     fn glow(&self) -> i32;

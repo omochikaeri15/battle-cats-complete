@@ -48,10 +48,21 @@ impl SceneHost for InertScene {
     fn loader_busy(&mut self) -> bool {
         false
     }
+    fn loader_resuming_sound(&mut self) -> bool {
+        false
+    }
     fn fade_menu_dispatch(&mut self, _style: i32, _scene: i32) -> bool {
         false
     }
     fn fade_menu_prompt(&mut self) -> bool {
         false
     }
+
+    fn draw_menu_scene(&mut self, _scene: i32) {}
+
+    fn draw_loading_scene(&mut self, _scene: i32) {}
+
+    fn draw_map_stamina_hud(&mut self) {}
+
+    fn draw_map_tutorial(&mut self) {}
 }

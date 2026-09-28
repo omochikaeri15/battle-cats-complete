@@ -19,7 +19,7 @@ use crate::domains::cat::scanner::{self, CatEntry};
 use crate::domains::settings::ScannerConfig;
 use crate::{Memory, Source, Vault};
 
-pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Unit};
+pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Tutorial, Unit};
 pub use tape::{Cue, Key, format_frame, parse};
 
 pub const EXTENSION: &str = "bcv";

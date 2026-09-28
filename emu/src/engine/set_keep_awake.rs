@@ -3,9 +3,9 @@ use crate::Fault;
 use super::AppContext;
 
 pub trait Platform {
-    fn item_pass_active(&mut self, item: i32) -> bool;
     fn set_keep_awake(&mut self, awake: bool);
     fn is_tablet(&mut self) -> bool;
+    fn ad_showing(&mut self) -> bool;
     fn screen_window_ratio(&mut self) -> f32;
     fn safe_inset_left(&mut self) -> i32;
     fn safe_inset_top(&mut self) -> i32;

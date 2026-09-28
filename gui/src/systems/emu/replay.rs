@@ -1,4 +1,4 @@
-use emu::runtime::{BattleOptions, CatGod, PartLevels, Seeds, Setup, SetupUnit, StageEntry, TechLevel};
+use emu::runtime::{BattleOptions, CatGod, PartLevels, Seeds, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags};
 use kore::domains::sandbox::replay::{self as tape, Key};
 
 use super::keys::Action;
@@ -66,6 +66,7 @@ pub fn setup_to(setup: &Setup, map_name: &str, stage_name: &str) -> tape::Setup 
             crown: setup.stage.crown,
             map_name: map_name.to_owned(),
             stage_name: stage_name.to_owned(),
+            dungeon_stage: setup.stage.dungeon_stage,
         },
         lineup: setup
             .lineup
@@ -99,6 +100,13 @@ pub fn setup_to(setup: &Setup, map_name: &str, stage_name: &str) -> tape::Setup 
             CatGod::Present => tape::God::Present,
             CatGod::Discounted => tape::God::Discounted,
         },
+        tutorial: tape::Tutorial {
+            battle_cleared: setup.tutorial.battle_cleared,
+            deck_seen: setup.tutorial.deck_seen,
+            two_rows_seen: setup.tutorial.two_rows_seen,
+            cat_god_seen: setup.tutorial.cat_god_seen,
+            shop_seen: setup.tutorial.shop_seen,
+        },
     }
 }
 
@@ -109,6 +117,7 @@ pub fn setup_from(saved: &tape::Setup) -> Setup {
             stage: saved.stage.stage,
             layout: saved.stage.layout,
             crown: saved.stage.crown,
+            dungeon_stage: saved.stage.dungeon_stage,
         },
         lineup: saved
             .lineup
@@ -138,6 +147,13 @@ pub fn setup_from(saved: &tape::Setup) -> Setup {
             tape::God::Absent => CatGod::Absent,
             tape::God::Present => CatGod::Present,
             tape::God::Discounted => CatGod::Discounted,
+        },
+        tutorial: TutorialFlags {
+            battle_cleared: saved.tutorial.battle_cleared,
+            deck_seen: saved.tutorial.deck_seen,
+            two_rows_seen: saved.tutorial.two_rows_seen,
+            cat_god_seen: saved.tutorial.cat_god_seen,
+            shop_seen: saved.tutorial.shop_seen,
         },
         ..Setup::default()
     };

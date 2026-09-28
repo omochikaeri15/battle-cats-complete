@@ -19,8 +19,13 @@ pub trait SceneHost {
     fn collab_reward_dialog(&mut self, map: i32, stage: i32);
     fn unlock_popup_pending(&mut self) -> bool;
     fn loader_busy(&mut self) -> bool;
+    fn loader_resuming_sound(&mut self) -> bool;
     fn fade_menu_dispatch(&mut self, style: i32, scene: i32) -> bool;
     fn fade_menu_prompt(&mut self) -> bool;
+    fn draw_menu_scene(&mut self, scene: i32);
+    fn draw_loading_scene(&mut self, scene: i32);
+    fn draw_map_stamina_hud(&mut self);
+    fn draw_map_tutorial(&mut self);
 }
 
 pub fn battle_check_login_bonus(ctx: &mut AppContext) -> Result<(), Fault> {

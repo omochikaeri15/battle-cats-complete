@@ -46,6 +46,9 @@ impl Default for State {
 #[derive(Default)]
 pub struct Frame {
     pub quads: Vec<Quad>,
+    pub design_width: f32,
+    pub design_height: f32,
+    pub letterbox: f32,
 }
 
 impl Frame {
@@ -253,6 +256,14 @@ impl Recorder {
 }
 
 impl DrawSink for Recorder {
+    fn begin_frame(&mut self) {
+        self.state.color = [0xff; 4];
+    }
+
+    fn set_viewport(&mut self, _surface_w: i32, _surface_h: i32, _screen_w: i32, _screen_h: i32, _depth: f32) {}
+
+    fn end_frame(&mut self) {}
+
     fn set_origin(&mut self, x: i32, y: i32) {
         self.state.origin = [x, y];
     }

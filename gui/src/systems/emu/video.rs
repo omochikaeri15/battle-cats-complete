@@ -26,7 +26,7 @@ use super::driver::Driver;
 use super::pipeline::{Pipeline, Run};
 use super::session::{self, Reel as Source, CLOSED_FRAME};
 use super::soundtrack::{self, SharedLog, SoundLog, GAME_FPS};
-use super::viewport::{paint, Scene};
+use super::viewport::{Surface, paint, Scene};
 
 const EXPORTS: &str = "exports";
 const PROGRESS_EVERY: Duration = Duration::from_millis(50);
@@ -189,7 +189,8 @@ struct Reel<'a> {
 impl Reel<'_> {
     fn shoot(&mut self) -> Result<(), String> {
         let bounds = Rectangle { x: 0.0, y: 0.0, width: self.canvas.width as f32, height: self.canvas.height as f32 };
-        let scene = paint(&self.driver.frame().borrow(), &self.driver.sheets().borrow(), self.driver.design_width(), Some(self.driver.frame_aspect()), bounds);
+        let canvas = Surface { aspect: Some(self.driver.frame_aspect()), surfaced: true };
+        let scene = paint(&self.driver.frame().borrow(), &self.driver.sheets().borrow(), canvas, bounds);
         let mut pixels = self.encoder.spare();
 
         self.canvas.draw(scene, &mut pixels)?;

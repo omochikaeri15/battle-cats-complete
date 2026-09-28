@@ -1634,7 +1634,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::CPU_PENDING_ACTION, 0)?;
         ctx.set_i32_at(AppContext::LOSE_TIP, 0)?;
         ctx.set_block_at::<0x10>(AppContext::TUTORIAL_TIMER, [0; 0x10])?;
-        ctx.set_i32_at(AppContext::TUTORIAL_TIMER_TAIL, 0)?;
+        ctx.set_i32_at(AppContext::TUTORIAL_PAGE, 0)?;
     }
 
     sound_manager(ctx)?.stop_audio(-1);
