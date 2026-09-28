@@ -79,8 +79,6 @@ pub fn load_cat_cannon_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                     .or_default()
                     .push(CannonGrowthStep::default());
 
-                let value = read_csv_cell(stm, 1) as i32;
-
                 if let Some(step) = ctx
                     .cannon_parts
                     .entry(part)
@@ -90,7 +88,7 @@ pub fn load_cat_cannon_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                     .or_default()
                     .last_mut()
                 {
-                    step.kind = value;
+                    step.kind = effect;
                 }
 
                 let value = read_csv_cell(stm, 2) as i32;
@@ -153,8 +151,6 @@ pub fn load_cat_cannon_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
         file += 1;
     }
-
-    ctx.castle_hp_growth.clear();
 
     let Some(bytes) = open_asset_stream(ctx, b"CC_Castle_growth.csv", 0, 0)? else {
         return Ok(());

@@ -119,7 +119,13 @@ pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> R
     let version = read_csv_cell(stm, 0) as i32;
 
     read_csv_row(stm);
-    let part_count = read_csv_cell(stm, 0) as i32 as i64 as usize;
+    let part_count = read_csv_cell(stm, 0) as i32;
+
+    if part_count < 0 {
+        return Err(Fault::out_of_range());
+    }
+
+    let part_count = part_count as usize;
 
     model.parts.resize(part_count, MamodelPart::default());
     model.draw_order.resize(part_count, 0);
@@ -175,9 +181,14 @@ pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> R
     read_csv_row(stm);
     let anchor_count = read_csv_cell(stm, 0) as i32;
     model.anchor_count = anchor_count;
+
+    if anchor_count < 0 {
+        return Err(Fault::out_of_range());
+    }
+
     model
         .anchors
-        .resize(anchor_count as i64 as usize, MamodelAnchor::default());
+        .resize(anchor_count as usize, MamodelAnchor::default());
 
     for row in 0..model.anchors.len() {
         read_csv_row(stm);

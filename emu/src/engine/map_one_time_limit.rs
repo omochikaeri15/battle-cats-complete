@@ -1,7 +1,7 @@
 use super::AppContext;
 
 pub fn map_one_time_limit(ctx: &AppContext, map: i32) -> i32 {
-    ctx.map_one_time
+    ctx.map_options.show_once
         .range(map..)
         .next()
         .filter(|(key, _)| **key <= map)

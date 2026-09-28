@@ -44,7 +44,7 @@ pub fn enigma_pick_by_medals(
     let tier = owned.wrapping_sub(1) as i64 as usize;
 
     if ctx.enigma.pools.len() <= tier {
-        return Ok(-1);
+        return Err(Fault::out_of_range());
     }
 
     let mut candidates: BTreeMap<i32, bool> = BTreeMap::new();

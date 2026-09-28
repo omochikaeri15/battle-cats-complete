@@ -12,7 +12,7 @@ pub struct MissionLimitOption {
     pub form_lv_limit: i32,
     pub rarity_limit: Vec<i32>,
     pub slot_limit: Vec<i32>,
-    pub slot_option_rule: Vec<Vec<u8>>,
+    pub slot_option_rule: Vec<i32>,
     pub cost_limit_min: Vec<i32>,
     pub cost_limit_max: Vec<i32>,
     pub chara_limit: Vec<i32>,
@@ -109,6 +109,10 @@ pub fn parse_mission_limit_option(
         }
     }
 
+    if out.rarity_limit.is_empty() {
+        out.rarity_limit.push(-1);
+    }
+
     if let Some(JsonNode::Array(values)) = fields.get(b"SlotLimit".as_slice()) {
         let mut slot = 0usize;
 
@@ -130,11 +134,22 @@ pub fn parse_mission_limit_option(
         while slot < values.len() {
             let element = values.get(slot).ok_or(Fault::index_out_of_range(slot as i64, values.len() as i64))?;
 
-            out.slot_option_rule.push(match element {
+            let rule = match element {
                 JsonNode::String(text) => json_string_as_string(text),
                 JsonNode::Array(_) | JsonNode::Object(_) => json_container_as_string(),
                 _ => json_value_as_string(element),
-            });
+            };
+
+            if rule.len() == 4 {
+                if rule == b"More" {
+                    out.slot_option_rule.push(0);
+                } else if rule == b"Less" {
+                    out.slot_option_rule.push(1);
+                } else if rule == b"Only" {
+                    out.slot_option_rule.push(2);
+                }
+            }
+
             slot += 1;
         }
     }

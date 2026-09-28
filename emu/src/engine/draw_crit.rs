@@ -28,7 +28,7 @@ pub fn draw_crit(ctx: &mut AppContext) -> Result<(), Fault> {
         let y =
             ops::div_10(ctx.i32_at(slot.wrapping_add(VfxSlot::POS_Y))?).wrapping_add(0x4d);
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.crit_vfx_model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.crit_vfx_model, x, y)?;
     }
 
     Ok(())

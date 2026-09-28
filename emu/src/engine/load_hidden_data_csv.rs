@@ -22,6 +22,12 @@ pub struct HiddenLottery {
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
+pub struct HiddenRarity {
+    pub name: Vec<u8>,
+    pub value: i32,
+}
+
+#[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct HiddenData {
     pub rates: Vec<HiddenPairs>,
     pub drops: Vec<HiddenPairs>,
@@ -29,9 +35,12 @@ pub struct HiddenData {
     pub lotteries: Vec<HiddenLottery>,
     pub discover_growth: Vec<i32>,
     pub times: Vec<i32>,
+    pub rarities: BTreeMap<i32, HiddenRarity>,
 }
 
 pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
+    ctx.hidden_data.lotteries.clear();
+
     if let Some(bytes) = open_asset_stream(ctx, b"Hidden_rate.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
@@ -72,6 +81,8 @@ pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
+    ctx.hidden_data.drops.clear();
+
     if let Some(bytes) = open_asset_stream(ctx, b"Hidden_drop.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
@@ -111,6 +122,8 @@ pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
     }
+
+    ctx.hidden_data.groups.clear();
 
     if let Some(bytes) = open_asset_stream(ctx, b"Hidden_group.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
@@ -169,6 +182,8 @@ pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
+    ctx.hidden_data.lotteries.clear();
+
     if let Some(bytes) = open_asset_stream(ctx, b"Hidden_lottery.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
@@ -219,6 +234,8 @@ pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
+    ctx.hidden_data.discover_growth.clear();
+
     if let Some(bytes) = open_asset_stream(ctx, b"Discoverlv_growth.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
@@ -233,19 +250,42 @@ pub fn load_hidden_data_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
-    let Some(bytes) = open_asset_stream(ctx, b"Hidden_time.csv", 0, 0)? else {
+    ctx.hidden_data.times.clear();
+
+    if let Some(bytes) = open_asset_stream(ctx, b"Hidden_time.csv", 0, 0)? {
+        let stm = &mut AssetStream::new(&bytes, b'\n');
+
+        while read_csv_row(stm) && get_column_count(stm) as i64 > 0 {
+            if read_cell_stream(stm, 0) != std_to_string(read_csv_cell(stm, 0) as i32).as_slice() {
+                break;
+            }
+
+            let value = read_csv_cell(stm, 0) as i32;
+
+            ctx.hidden_data.times.push(value);
+        }
+    }
+
+    ctx.hidden_data.rarities.clear();
+
+    let Some(bytes) = open_asset_stream(ctx, b"Hidden_rarity.csv", 0, 0)? else {
         return Ok(());
     };
     let stm = &mut AssetStream::new(&bytes, b'\n');
 
-    while read_csv_row(stm) && get_column_count(stm) as i64 > 0 {
-        if read_cell_stream(stm, 0) != std_to_string(read_csv_cell(stm, 0) as i32).as_slice() {
+    while read_csv_row(stm) {
+        if !cell_is_int(stm, 0) {
             break;
         }
 
-        let value = read_csv_cell(stm, 0) as i32;
+        let key = read_csv_cell(stm, 0) as i32;
+        let text = read_cell_stream(stm, 1).to_vec();
 
-        ctx.hidden_data.times.push(value);
+        ctx.hidden_data.rarities.entry(key).or_default().name = text;
+
+        let value = read_csv_cell(stm, 2) as i32;
+
+        ctx.hidden_data.rarities.entry(key).or_default().value = value;
     }
 
     Ok(())

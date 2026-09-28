@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, Entity, attack_dmg_dispatch, call_rng, get_base_max_hp_div_20, get_dodge_chance,
-    get_dodge_duration, get_dodge_timer, is_metal, is_touchable, is_touchable_thunk,
+    get_dodge_duration, get_dodge_timer, get_unit_name, is_metal, is_touchable, is_touchable_thunk,
     set_dodge_timer, set_dodge_vfx_frame,
 };
 
@@ -54,6 +54,8 @@ pub fn pending_strike_hit(
 
                     break 'strike;
                 }
+
+                get_unit_name(ctx, faction, slot)?;
 
                 if is_metal(ctx, faction, slot)? {
                     attack_dmg_dispatch(ctx, faction, slot, 1)?;

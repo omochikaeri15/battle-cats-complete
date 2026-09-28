@@ -3,12 +3,12 @@ use std::rc::Rc;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Entity, ads_available, app_on_draw, back_pressed, battle_check_login_bonus,
+    AppContext, Entity, is_network_available, app_on_draw, back_pressed, battle_check_login_bonus,
     battle_continue, bc_log_defeated, button_bank_busy, button_bank_find, dialog_show_alt,
     dialog_top, feature_enabled, game_lose_update_lambda_0, game_lose_update_lambda_1,
     get_auto_camera_mode, get_design_height2, get_drawable_width, get_global_map_id, get_hp,
     get_stage_record, get_text_texture, hit_test_rect, imgcut_get_sprite_cut, is_boss,
-    lose_exit_map_check, new_button_register, new_button_set_touchable, now_seconds,
+    is_aku_realm_map, new_button_register, new_button_set_touchable, now_seconds,
     obf_value_read, pick_lose_tip, play_sound, query_localizable, record_stage_played,
     request_save_data, reward_ad_ready, server_config_int, set_bgm_duck, sound_manager,
     std_string_append, string_format_boss_hp, string_format_boss_hp_line, text_texture_cache,
@@ -238,7 +238,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 }
             }
 
-            if !ads_available(ctx)? {
+            if !is_network_available(ctx)? {
                 return Ok(true);
             }
 
@@ -662,7 +662,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 app_on_draw(ctx)?;
                 ctx.set_i32_at(AppContext::REVIVE_REQUESTED, 0)?;
 
-                if lose_exit_map_check(ctx)? {
+                if is_aku_realm_map(ctx)? {
                     battle_check_login_bonus(ctx)?;
                 } else {
                     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;

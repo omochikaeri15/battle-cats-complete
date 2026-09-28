@@ -36,10 +36,10 @@ pub fn set_stages_cleared(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &mut ctx.stages_cleared_neg26,
-                0x02 => &mut ctx.stages_cleared_neg24,
-                0x03 => &mut ctx.stages_cleared_neg23,
-                _ => &mut ctx.stages_cleared_neg22,
+                0x00 => &mut ctx.stage_table_neg26.stages_cleared,
+                0x02 => &mut ctx.stage_table_neg24.stages_cleared,
+                0x03 => &mut ctx.stage_table_neg23.stages_cleared,
+                _ => &mut ctx.stage_table_neg22.stages_cleared,
             };
             let limit = maps.len() as i64;
             let cell = maps
@@ -106,7 +106,7 @@ pub fn set_stages_cleared(
                 0x17 => map_idx.wrapping_add(4),
                 _ => map_idx,
             };
-            let key = ctx.i32_at(AppContext::CHAPTER_PROGRESS_KEY)?;
+            let key = ctx.i32_at(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?;
             let cell = (chapter as i64) * 4 + AppContext::STAGES_CLEARED_CHAPTERS as i64;
 
             ctx.set_i32_at(cell as usize, value ^ key)

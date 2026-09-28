@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, add_drain_pct, add_score_hit_mask, battle_not_finishing, call_rng,
+    AppContext, add_drain_pct, add_score_hit_mask, score_bonus_active, call_rng,
     count_target_traits, get_cannon_effect, get_cat_combo_bonus, get_curse_duration,
     get_curse_immune, get_curse_resist_pct, get_drain_immune, get_drain_percent,
     get_freeze_duration, get_freeze_immune, get_freeze_resist_pct, get_knockback_immune,
@@ -49,7 +49,7 @@ pub fn attack_proc_dispatch(
         if get_knockback_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x8, 1)?;
@@ -77,7 +77,7 @@ pub fn attack_proc_dispatch(
                     set_sage_kb_resist_pct(ctx, other, target, 0)?;
                 }
 
-                if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
+                if slot_occupied(ctx, faction, attacker)? == 2 && score_bonus_active(ctx)? {
                     let traits = count_target_traits(ctx, faction, attacker)?;
                     let bonus = get_score_bonus(ctx, 0x3, traits)?;
 
@@ -93,7 +93,7 @@ pub fn attack_proc_dispatch(
         if get_freeze_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x6, 1)?;
@@ -145,7 +145,7 @@ pub fn attack_proc_dispatch(
                         ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
-                if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
+                if slot_occupied(ctx, faction, attacker)? == 2 && score_bonus_active(ctx)? {
                     let traits = count_target_traits(ctx, faction, attacker)?;
                     let bonus = get_score_bonus(ctx, 0x1, traits)?;
 
@@ -163,7 +163,7 @@ pub fn attack_proc_dispatch(
         if get_slow_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x7, 1)?;
@@ -215,7 +215,7 @@ pub fn attack_proc_dispatch(
                         ops::div_100(100i32.wrapping_sub(resist).wrapping_mul(duration));
                 }
 
-                if slot_occupied(ctx, faction, attacker)? == 2 && battle_not_finishing(ctx)? {
+                if slot_occupied(ctx, faction, attacker)? == 2 && score_bonus_active(ctx)? {
                     let traits = count_target_traits(ctx, faction, attacker)?;
                     let bonus = get_score_bonus(ctx, 0x2, traits)?;
 
@@ -233,7 +233,7 @@ pub fn attack_proc_dispatch(
         if get_weaken_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x5, 1)?;
@@ -346,7 +346,7 @@ pub fn attack_proc_dispatch(
         if get_curse_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x9, 1)?;
@@ -410,7 +410,7 @@ pub fn attack_proc_dispatch(
         if get_drain_immune(ctx, other, target)? {
             start_immune_vfx(ctx, other, target)?;
 
-            let scoring = battle_not_finishing(ctx)?;
+            let scoring = score_bonus_active(ctx)?;
 
             if faction != 0 && scoring {
                 let bonus = get_score_bonus(ctx, 0x13, 1)?;

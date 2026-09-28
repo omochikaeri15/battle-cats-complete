@@ -7,6 +7,7 @@ use super::{
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct GamatotoCollabo {
+    pub stage: i32,
     pub fukidashi_png: Vec<u8>,
     pub fukidashi_imgcut: Vec<u8>,
     pub member: Vec<u8>,
@@ -17,6 +18,7 @@ pub struct GamatotoCollabo {
 impl Default for GamatotoCollabo {
     fn default() -> Self {
         Self {
+            stage: 0,
             fukidashi_png: Vec::new(),
             fukidashi_imgcut: Vec::new(),
             member: Vec::new(),
@@ -57,6 +59,7 @@ pub fn load_gamatoto_collabo_tsv(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.gamatoto_collabo.insert(
             stage,
             GamatotoCollabo {
+                stage,
                 fukidashi_png,
                 fukidashi_imgcut,
                 member,

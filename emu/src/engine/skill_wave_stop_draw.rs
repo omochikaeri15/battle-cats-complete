@@ -19,7 +19,7 @@ pub fn skill_wave_stop_draw(
     };
 
     maanim_execute(model, Some(anim), frame, 0)?;
-    draw_model(draw_context(&mut ctx.draw)?, model, x, y);
+    draw_model(draw_context(&mut ctx.draw)?, model, x, y)?;
 
     Ok(())
 }

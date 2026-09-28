@@ -12,18 +12,18 @@ pub fn get_nyancombo_text(
             .combo_names
             .get(record.name_index as i64 as usize)
             .cloned()
-            .unwrap_or_default()),
+            .ok_or(Fault::index_out_of_range(record.name_index as i64, ctx.combo_names.len() as i64))?),
         1 => {
             let effect = ctx
                 .combo_effect_texts
                 .get(record.kind[0] as i64 as usize)
                 .cloned()
-                .unwrap_or_default();
+                .ok_or(Fault::index_out_of_range(record.kind[0] as i64, ctx.combo_effect_texts.len() as i64))?;
             let power = ctx
                 .combo_power_texts
                 .get(record.power[0] as i64 as usize)
                 .cloned()
-                .unwrap_or_default();
+                .ok_or(Fault::index_out_of_range(record.power[0] as i64, ctx.combo_power_texts.len() as i64))?;
 
             format_string2(ctx, b"%@%@", &effect, &power)
         }

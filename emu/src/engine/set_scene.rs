@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, ENTITY_BASE, get_battle_status, set_keep_awake, stage_initialize};
+use super::{AppContext, ENTITY_BASE, get_battle_status, prepare_battle_entry, set_keep_awake, stage_initialize};
 
 pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
     ctx.set_block_at::<0x28>(AppContext::DRAW_TEMP_0, [0; 0x28])?;
@@ -27,6 +27,12 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
     match current {
         0x12c => stage_initialize(ctx),
         0x3e7 => {
+            prepare_battle_entry(ctx)?;
+
+            Ok(())
+        }
+        0x5a => {
+            ctx.set_block_at::<0x30>(AppContext::SETUP_FRAMES, [0; 0x30])?;
             ctx.scene_host()
                 .ok_or(Fault::host_missing())?
                 .scene_setup(current);
@@ -35,7 +41,7 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
         }
         0x5e => ctx.set_block_at::<0x30>(AppContext::SETUP_FRAMES, [0; 0x30]),
         0x64 => {
-            ctx.set_block_at::<0x13>(AppContext::MAP_ENTRY_FLAGS, [0; 0x13])?;
+            ctx.set_block_at::<0x13>(AppContext::CANNON_HELD, [0; 0x13])?;
 
             for offset in (0..0x18e70usize).step_by(0x10) {
                 ctx.set_block_at::<0x10>(ENTITY_BASE + offset, [0; 0x10])?;
@@ -47,7 +53,22 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
 
             ctx.set_i32_at(AppContext::CAMERA_ZOOM, 0x2710)
         }
-        4 | 5 | 0x5a | 0x61 | 0x62 | 0x63 | 0x65 | 0x66 | 0x68 => {
+        0x66 => {
+            ctx.scene_host()
+                .ok_or(Fault::host_missing())?
+                .scene_setup(current);
+            ctx.set_block_at::<0x30>(AppContext::SETUP_FRAMES, [0; 0x30])
+        }
+        0x68 => {
+            ctx.set_i32_at(AppContext::PENDING_SCENE, 0x31)?;
+            ctx.set_i32_at(AppContext::PENDING_SCENE_ARMED, 1)?;
+            ctx.scene_host()
+                .ok_or(Fault::host_missing())?
+                .scene_setup(current);
+
+            Ok(())
+        }
+        4 | 5 | 0x61 | 0x62 | 0x63 | 0x65 => {
             ctx.scene_host()
                 .ok_or(Fault::host_missing())?
                 .scene_setup(current);

@@ -55,7 +55,7 @@ pub fn scale9_image_sprite_draw(
             sprite.border_scale,
             sprite.border[0],
             sprite.border[1],
-        );
+        )?;
 
         if labelled {
             set_tint(

@@ -80,7 +80,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         set_alpha(draw_context(&mut ctx.draw)?, 0x32);
 
         for glint in 0..0x1eusize {
-            let record = AppContext::BG_GLINTS.wrapping_add(glint * 0x10);
+            let record = AppContext::BG_DRIFTERS.wrapping_add(glint * 0x10);
             let sheet = ctx.effect_a_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ctx.i32_at(record)?;
@@ -94,8 +94,8 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_background_id(ctx)? == 0x29 || get_background_id(ctx)? == 0x4b || get_background_id(ctx)? == 0x3f0 {
         for sprite in 0..100usize {
-            let base = AppContext::BG_SPRITES.wrapping_add(0x18).wrapping_add(sprite * 0x40);
-            let fade = ctx.i32_at(base)?;
+            let base = AppContext::BG_SPRITES.wrapping_add(sprite * 0x40);
+            let fade = ctx.i32_at(base + 8)?;
 
             if fade <= 0x1d {
                 set_alpha(draw_context(&mut ctx.draw)?, ops::div_30((fade << 8).wrapping_sub(fade)));
@@ -103,15 +103,15 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let left = ops::div_4(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)).wrapping_add(ops::div_100(ctx.i32_at(base + 8)?));
+            let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(ops::div_100(ctx.i32_at(base)?));
             let x = left.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c4);
-            let y = ops::div_100(ctx.i32_at(base + 0xc)?);
-            let cut = ctx.i32_at(base + 0x14)?;
-            let span = ops::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
-            let cut = ctx.i32_at(base + 0x14)?;
-            let height = ops::div_100(ctx.i32_at(base + 0x18)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
-            let cut = ctx.i32_at(base + 0x14)?;
-            let angle = ctx.i32_at(base + 0x20)? as f32;
+            let y = ops::div_100(ctx.i32_at(base + 4)?);
+            let cut = ctx.i32_at(base + 0xc)?;
+            let span = ops::div_100(ctx.i32_at(base + 0x10)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
+            let cut = ctx.i32_at(base + 0xc)?;
+            let height = ops::div_100(ctx.i32_at(base + 0x10)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
+            let cut = ctx.i32_at(base + 0xc)?;
+            let angle = ctx.i32_at(base + 0x18)? as f32;
 
             draw_cut_rotated(draw_context(&mut ctx.draw)?, sheet, x, y, span, height, angle, 5, 0, 0, 5, cut);
             set_alpha(draw_context(&mut ctx.draw)?, 0xff);
@@ -305,7 +305,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                     );
                     let y = ops::cvttss2si(instance.y);
 
-                    draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
+                    draw_model(draw_context(&mut ctx.draw)?, &model, x, y)?;
                     step = step.wrapping_add(1);
 
                     if step == end {

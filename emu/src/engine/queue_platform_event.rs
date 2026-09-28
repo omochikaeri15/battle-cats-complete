@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::AppContext;
 
-pub fn jni_share_image(
+pub fn queue_platform_event(
     ctx: &mut AppContext,
     x: i32,
     y: i32,

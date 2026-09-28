@@ -9,7 +9,7 @@ use super::{
     add_stage_record, advance_animation_frame, advance_point_decay, app_on_draw,
     attack_dmg_dispatch, back_pressed, background_particles, barrier_vfx_tick,
     base_guard_notice_tick, base_resists_one_shot, base_shake_start, base_shake_tick,
-    battle_create_button, battle_init_win, battle_not_finishing, bgm_player_switch,
+    battle_create_button, battle_init_win, score_bonus_active, bgm_player_switch,
     bgm_player_tick, call_rng, camera_vertical_correction, cannon_attack, cannon_fire,
     cannon_unlocked, cat_cpu_tick, cat_god_menu_input, cat_hit_executor, cat_update,
     check_collision, clear_barrier_vfx_slot, clear_shield_vfx_slot, clear_zkill_vfx_slot,
@@ -390,7 +390,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         Some(game_update_lambda_3),
                                     )?;
 
-                                    dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_4));
+                                    dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_4))?;
                                     ctx.set_i32_at(
                                         AppContext::TUTORIAL_STEP,
                                         ctx.i32_at(AppContext::TUTORIAL_STEP)?.wrapping_add(1),
@@ -422,7 +422,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                             Some(game_update_lambda_5),
                                         )?;
 
-                                        dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_6));
+                                        dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_6))?;
                                         ctx.set_i32_at(
                                             AppContext::TUTORIAL_STEP,
                                             ctx.i32_at(AppContext::TUTORIAL_STEP)?.wrapping_add(1),
@@ -539,7 +539,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     Some(game_update_lambda_1),
                                 )?;
 
-                                dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_2));
+                                dialog_set_on_draw(ctx, dialog, Some(game_update_lambda_2))?;
                                 ctx.set_i32_at(
                                     AppContext::TUTORIAL_STEP,
                                     ctx.i32_at(AppContext::TUTORIAL_STEP)?.wrapping_add(1),
@@ -2817,7 +2817,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     }
                                 }
 
-                                if battle_not_finishing(ctx)? {
+                                if score_bonus_active(ctx)? {
                                     let mask = get_score_hit_mask(ctx, faction, slot)?;
 
                                     ctx.set_i32_at(
@@ -3231,11 +3231,11 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     if get_deck_cooldown(ctx, wallet, button)? > 0 {
                                         let drained = get_drain_pct(ctx, 0, slot)?;
 
-                                        if let Some(gauge) =
-                                            red_gauge.get_mut(button as i64 as usize)
-                                        {
-                                            *gauge = gauge.wrapping_add(drained);
-                                        }
+                                        let gauge = red_gauge
+                                            .get_mut(button as i64 as usize)
+                                            .ok_or(Fault::index_out_of_range(button as i64, 10))?;
+
+                                        *gauge = gauge.wrapping_add(drained);
 
                                         let (x, y) = if slot != 0 {
                                             let x = ctx.i32_at(AppContext::entity_field(

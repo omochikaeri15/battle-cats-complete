@@ -32,11 +32,9 @@ impl SceneHost for InertScene {
     fn leadership_refund(&mut self) {}
     fn map_return_reset(&mut self) {}
     fn map_return_flags(&mut self) {}
-    fn map_screen_init(&mut self, _page: i32) {}
     fn map_menu_build(&mut self, _flag: i32) {}
     fn map_background_pick(&mut self) {}
     fn scene_background_setup(&mut self) {}
-    fn scene_base_init(&mut self) {}
     fn map_ui_reset(&mut self) {}
     fn map_bgm_start(&mut self, _kind: i32) {}
     fn leadership_return_begin(&mut self) {}

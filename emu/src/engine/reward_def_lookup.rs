@@ -1,32 +1,24 @@
 use std::collections::BTreeMap;
 
-#[derive(Clone, Default)]
-pub struct RewardDef {
-    pub id: i32,
-    pub threshold: i32,
-    pub kind: i32,
-    pub target: i32,
-    pub amount: i32,
-    pub message: Vec<u8>,
-}
+use super::{PointEventReward, PointReward};
 
 pub fn reward_def_lookup(
-    defs: &BTreeMap<i32, Vec<RewardDef>>,
+    defs: &BTreeMap<i32, PointEventReward>,
     group: i32,
     id: i32,
-) -> Option<&RewardDef> {
+) -> Option<&PointReward> {
     defs.get(&group)?;
 
     let mut index = 0usize;
 
     loop {
-        let list = defs.get(&group)?;
+        let list = &defs.get(&group)?.rewards;
 
         if list.len() <= index {
             return None;
         }
 
-        if list.get(index)?.id == id {
+        if list.get(index)?.reward_id == id {
             return list.get(index);
         }
 

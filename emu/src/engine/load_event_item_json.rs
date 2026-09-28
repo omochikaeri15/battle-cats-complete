@@ -33,56 +33,50 @@ pub fn load_event_item_json(ctx: &mut AppContext) -> Result<(), Fault> {
         return Err(Fault::null_pointer());
     };
     let Some(JsonNode::Object(groups)) = root.get(b"GatyaID".as_slice()) else {
-        return Ok(());
+        return Err(Fault::null_pointer());
     };
 
     for (gatya_key, entry) in groups {
         let gatya_id = string_to_int(gatya_key)?;
-        let min_count = match entry {
-            JsonNode::Object(fields) => fields
-                .get(b"minCount".as_slice())
-                .map_or(Ok(0), |found| match found {
-                    JsonNode::String(text) => json_string_as_int(text),
-                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                    _ => Ok(json_value_as_int(found)),
-                })?,
-            _ => 0,
-        } as i32;
+        let JsonNode::Object(fields) = entry else {
+            return Err(Fault::null_pointer());
+        };
+        let min_count = fields
+            .get(b"minCount".as_slice())
+            .map_or(Ok(0), |found| match found {
+                JsonNode::String(text) => json_string_as_int(text),
+                JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                _ => Ok(json_value_as_int(found)),
+            })? as i32;
 
         ctx.event_gatya_items
             .entry(gatya_id)
             .or_default()
             .min_count = min_count;
 
-        let listed = match entry {
-            JsonNode::Object(fields) => match fields.get(b"data".as_slice()) {
-                Some(JsonNode::Array(values)) => Some(values),
-                _ => None,
-            },
-            _ => None,
-        };
-        let Some(values) = listed else {
+        let Some(JsonNode::Array(values)) = fields.get(b"data".as_slice()) else {
             continue;
         };
         let mut index = 0usize;
 
         while index < values.len() {
+            let Some(JsonNode::Object(item_fields)) = values.get(index) else {
+                return Err(Fault::null_pointer());
+            };
+
             ctx.event_gatya_items
                 .entry(gatya_id)
                 .or_default()
                 .items
                 .push(EventGatyaItem::default());
 
-            let kind = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"type".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let kind = item_fields
+                .get(b"type".as_slice())
+                .map_or(Ok(2), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .event_gatya_items
@@ -94,16 +88,13 @@ pub fn load_event_item_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.kind = kind;
             }
 
-            let id = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"id".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let id = item_fields
+                .get(b"id".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .event_gatya_items
@@ -115,16 +106,13 @@ pub fn load_event_item_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.id = id;
             }
 
-            let value = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"value".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let value = item_fields
+                .get(b"value".as_slice())
+                .map_or(Ok(1), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .event_gatya_items
@@ -136,16 +124,13 @@ pub fn load_event_item_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.value = value;
             }
 
-            let weight = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"weight".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let weight = item_fields
+                .get(b"weight".as_slice())
+                .map_or(Ok(1), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .event_gatya_items

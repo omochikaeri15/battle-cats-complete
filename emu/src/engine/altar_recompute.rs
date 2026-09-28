@@ -5,7 +5,7 @@ use super::{AppContext, get_stage_record, map_index_of_map_id, map_type_of_map_i
 #[derive(Clone, Copy, Default)]
 pub struct AltarReward {
     pub amount: i32,
-    pub unseal: i32,
+    pub unseal: u8,
     pub enemy: i32,
 }
 

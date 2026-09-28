@@ -5,8 +5,8 @@ use crate::{Fault, ops};
 use super::{
     AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, UNIT_BUY,
     UNIT_BUY_STRIDE, ad_prepare, add_resource, add_stage_record, add_stage_unlock,
-    add_stages_cleared, ads_available, aku_timer_set, altar_stage_value, analytics_named,
-    analytics_params, battle_init_win_lambda_0, breadcrumb, breadcrumb_with,
+    add_stages_cleared, is_network_available, aku_timer_set, altar_stage_value, analytics_named,
+    analytics_nekokan_get, battle_init_win_lambda_0, breadcrumb, breadcrumb_with,
     calculate_treasure_percentages, call_rng, check_medals, clear_count_rewards_get,
     clear_ex_replacement_stage, clear_lineup_count, clear_lineup_record, commit_stage_score,
     compute_stage_xp, config_json_int, dialog_top, enigma_active_at,
@@ -55,12 +55,12 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         ],
     )?;
     ctx.set_block_at::<2>(AppContext::OUTRO_VIDEO_BUTTON, [0; 2])?;
-    ctx.item_snapshot.clear();
+    ctx.item_possession.clear();
 
     for item in 0..0x113 {
         let count = get_item_count(ctx, item)?;
 
-        *ctx.item_snapshot.entry(item).or_insert(0) = count;
+        *ctx.item_possession.entry(item).or_insert(0) = count;
     }
 
     let mut orb = 0i32;
@@ -68,7 +68,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     while (orb as i64) < orb_def_count(&ctx.orb_store) {
         let count = orb_inventory_count(ctx, orb);
 
-        *ctx.item_snapshot
+        *ctx.item_possession
             .entry(orb.wrapping_add(0x7530))
             .or_insert(0) = count;
         orb += 1;
@@ -470,10 +470,11 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 let stage = get_stage_index(ctx)?;
                 let crown = get_crown_level(ctx)?;
 
-                analytics_params(
+                analytics_nekokan_get(
                     ctx,
                     0x98c17f,
                     0x1e,
+                    0,
                     &[
                         (b"sec1_type", FormatArg::Text(b"MapID")),
                         (b"sec1_id", FormatArg::Int(map_id)),
@@ -612,8 +613,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::OUTRO_MAP_LOCKED, 0)?;
 
         let mut chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-        let progress_cell = (AppContext::CHAPTER_PROGRESS as i64 + (chapter as i64) * 4) as usize;
-        let key = ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?;
+        let progress_cell = (AppContext::STAGES_CLEARED_CHAPTERS as i64 + (chapter as i64) * 4) as usize;
+        let key = ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?;
         let raw = ctx.block_at::<4>(progress_cell)?;
         let progress = u32::from_le_bytes([
             raw[0] ^ key[0],
@@ -638,7 +639,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             )?;
 
             let chapter_now = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-            let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
+            let progress_row = ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?;
             let progress = ops::xor_row_decode(progress_row, 10, chapter_now as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter_now as i64, 10))?;
 
@@ -654,7 +655,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
-            let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
+            let progress_row = ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?;
             let progress = ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
 
@@ -754,7 +755,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                         continue;
                     }
 
-                    let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
+                    let progress_row = ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?;
                     let progress =
                         ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                             .ok_or(Fault::index_out_of_range(chapter as i64, 10))?;
@@ -1251,7 +1252,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 if taken || kind != 0xfffffffd {
                     if kind != 0xfffffffc {
                         if !get_powerup(ctx, 1)? {
-                            ctx.set_i32_at(AppContext::DROP_RATE, 0)?;
+                            ctx.set_block_at::<8>(AppContext::DROP_RATE, [0; 8])?;
                         } else {
                             ctx.set_block_at::<1>(AppContext::RANK_POPUP_SHOWN, [1])?;
                             ctx.set_i32_at(AppContext::DROP_FLAG, 1)?;
@@ -1447,7 +1448,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::WIN_TREASURE, 0)?;
         ctx.set_i32_at(AppContext::NEXT_STAGE_UNLOCKED, -1)?;
         ctx.set_i32_at(AppContext::DROP_FLAG, 0)?;
-        ctx.set_i32_at(AppContext::DROP_RATE, 0)?;
+        ctx.set_block_at::<8>(AppContext::DROP_RATE, [0; 8])?;
 
         let area = config_json_int(ctx, b"CnfJsonGetTreasureRewrite", b"area", 1, 9)?;
         let matched = treasure_area_match(ctx.i32_at(AppContext::CHAPTER_MODE)?, area);
@@ -1476,7 +1477,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
         if ctx.u8_at(AppContext::TREASURE_FESTIVAL_ENABLED)? != 0 {
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-            let progress_row = ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?;
+            let progress_row = ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?;
             let progress = ops::xor_row_decode(progress_row, 10, chapter as i64 as usize)
                 .ok_or(Fault::index_out_of_range(chapter as i64, 10))? as i32;
 
@@ -1873,16 +1874,18 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             .ok_or(Fault::null_pointer())?;
         let point_id = get_point_id(store);
         let total = get_point_total(store);
-        let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.reward_defs, point_id)
-            .map(|list| {
-                list.iter()
+        let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.point_event_rewards, point_id)
+            .map(|record| {
+                record
+                    .rewards
+                    .iter()
                     .map(|reward| {
                         (
-                            reward.id,
-                            reward.threshold,
+                            reward.reward_id,
+                            reward.point,
                             reward.kind,
-                            reward.target,
-                            reward.amount,
+                            reward.id,
+                            reward.quantity,
                         )
                     })
                     .collect()
@@ -1945,7 +1948,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
     let map_id = get_global_map_id(ctx, 0)?;
 
-    if ads_available(ctx)? && map_xp_ad(ctx, map_id) {
+    if is_network_available(ctx)? && map_xp_ad(ctx, map_id) {
         ad_prepare(ctx, 0)?;
 
         if feature_enabled(ctx, 0x6c)?
@@ -1956,7 +1959,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             let (id, x, y, width, height, panel) = if cleared == 0 {
                 let sheet = Rc::clone(
-                    ctx.img039_sheet
+                    ctx.dialog_sheet
                         .as_ref()
                         .ok_or(Fault::null_pointer())?,
                 );
@@ -1990,7 +1993,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 (0xcb, x, 0x181, 0xfa, 0x36, panel)
             } else {
                 let sheet = Rc::clone(
-                    ctx.map_ui_sheet
+                    ctx.dialog_sheet
                         .as_ref()
                         .ok_or(Fault::null_pointer())?,
                 );

@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Entity, FormatArg, analytics_record, app_on_draw, back_pressed, bgm_player_switch,
+    AppContext, Entity, FormatArg, analytics_nekokan_use, app_on_draw, back_pressed, bgm_player_switch,
     call_rng, can_push_back, get_anim_len, get_battle_status, get_design_height2,
     get_drawable_width, get_entity_state, get_global_map_id, get_max_money, get_max_zoom,
     get_miracle_price, get_stage_index, get_crown_level, get_text_texture, get_worker_level,
@@ -318,10 +318,10 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 ))
                             };
 
-                        for label in 0..3usize {
+                        for label in 0..4usize {
                             ctx.label_texts[1 + label] = {
                                 let font = ctx.default_font.clone();
-                                let text = ctx.option_rows[1][label].clone();
+                                let text = ctx.challenge_mode_texts[0][label].clone();
 
                                 Some(get_text_texture(
                                     text_texture_cache(ctx)?,
@@ -337,9 +337,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         for label in 0..3usize {
                             ctx.label_texts[10 + label] = {
                                 let font = ctx.default_font.clone();
-                                let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                                    Fault::index_out_of_range((3 + label) as i64, 9),
-                                )?;
+                                let text = ctx.option_rows[1][label].clone();
 
                                 Some(get_text_texture(
                                     text_texture_cache(ctx)?,
@@ -411,7 +409,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let price =
                                 get_miracle_price(ctx, ctx.i32_at(AppContext::CAT_GOD_SELECTED)?)?;
 
-                            analytics_record(
+                            analytics_nekokan_use(
                                 ctx,
                                 0x13157fd,
                                 price,
@@ -428,7 +426,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                             let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
                             let chapter =
-                                xor_row_get(ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?, 7)
+                                xor_row_get(ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?, 7)
                                     .ok_or(Fault::index_out_of_range(7, 10))? as i32;
 
                             log_analytics_event(
@@ -1457,10 +1455,10 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     *slot = None;
                 }
 
-                for label in 0..3usize {
+                for label in 0..4usize {
                     ctx.label_texts[1 + label] = {
                         let font = ctx.default_font.clone();
-                        let text = ctx.option_rows[1][label].clone();
+                        let text = ctx.challenge_mode_texts[0][label].clone();
 
                         Some(get_text_texture(
                             text_texture_cache(ctx)?,
@@ -1476,9 +1474,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                 for label in 0..3usize {
                     ctx.label_texts[10 + label] = {
                         let font = ctx.default_font.clone();
-                        let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                            Fault::index_out_of_range((3 + label) as i64, 9),
-                        )?;
+                        let text = ctx.option_rows[1][label].clone();
 
                         Some(get_text_texture(
                             text_texture_cache(ctx)?,

@@ -13,7 +13,7 @@ pub fn draw_demon_battle_banner(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let x = ops::div_2(get_drawable_width(ctx)?);
 
-    draw_model(draw_context(&mut ctx.draw)?, &ctx.demonbattle_model, x, 0x96);
+    draw_model(draw_context(&mut ctx.draw)?, &ctx.demonbattle_model, x, 0x96)?;
 
     Ok(())
 }

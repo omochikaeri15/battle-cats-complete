@@ -8,7 +8,6 @@ mod inert_platform;
 mod inert_scene;
 mod inert_ui;
 mod relayout;
-mod scene_sheets;
 mod seeds;
 mod setup;
 mod silent_sound;
@@ -17,7 +16,7 @@ mod touch_input;
 
 pub use battle_options::{BattleOptions, apply_battle_options, read_battle_options};
 pub use dummy_lineup::{fill_dummy_lineup, fill_dummy_talents, stock_battle_items, usable_items};
-pub use dummy_save::{fill_dummy_save, seed_altar_records, seed_cat_god, unlock_dummy_combos};
+pub use dummy_save::{fill_dummy_cannon_parts, fill_dummy_save, seed_altar_records, seed_cat_god, unlock_dummy_combos};
 pub use inert_draw::InertDraw;
 pub use keys::{
     CONFIRM_BUTTON, LEAVE_BUTTON, Spot, deck_row_hidden, deck_row_swapping, dialog_open, option_menu_open, pinch_latched, queue_back,
@@ -28,7 +27,6 @@ pub use inert_platform::{DeviceProfile, InertPlatform};
 pub use inert_scene::{InertScene, pump_stage_return};
 pub use inert_ui::InertUi;
 pub use relayout::relatch_battle_rects;
-pub use scene_sheets::load_scene_sheets;
 pub use seeds::{Seeds, plant_seeds};
 pub use setup::{CatGod, BATTLE_ITEMS, CASTLE_PART, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel,
     select_stage, is_extra_entry, prepare_extra_entry,

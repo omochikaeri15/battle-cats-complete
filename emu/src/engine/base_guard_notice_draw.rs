@@ -25,7 +25,7 @@ pub fn base_guard_notice_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         width.wrapping_add(-0x3c0) as f64 * 0.5 + ops::div_10(pos) as f64,
     );
 
-    draw_model(draw_context(&mut ctx.draw)?, &ctx.guard_e_model, x, 0x190);
+    draw_model(draw_context(&mut ctx.draw)?, &ctx.guard_e_model, x, 0x190)?;
 
     Ok(())
 }

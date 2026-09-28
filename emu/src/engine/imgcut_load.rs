@@ -45,7 +45,12 @@ pub fn imgcut_load(
 
             read_csv_row(stm);
             let cut_count = read_csv_cell(stm, 0) as i32;
-            sheet.cuts.resize(cut_count as i64 as usize, [0; CUT_CELLS]);
+
+            if cut_count < 0 {
+                return Err(Fault::out_of_range());
+            }
+
+            sheet.cuts.resize(cut_count as usize, [0; CUT_CELLS]);
 
             if cut_count > 0 {
                 for index in 0..cut_count as usize {

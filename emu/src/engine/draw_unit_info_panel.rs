@@ -136,7 +136,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             let abil = ctx.picture_book_abilities[row][2];
             let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
 
-            if level == 0 {
+            if level <= 0 {
                 continue;
             }
 
@@ -163,7 +163,6 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         let base = if narrow < 6 { 0 } else { ops::div_2(span.wrapping_add(-0xd2)) };
         let icon_y = panel_y.wrapping_add(0x36);
-        let mark_y = panel_y.wrapping_add(0x34);
         let row_x = base.wrapping_sub(half).wrapping_add(left).wrapping_add(0xb6);
 
         let mut column = 0i32;
@@ -197,7 +196,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             let abil = ctx.picture_book_abilities[row][2];
             let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
 
-            if level == 0 {
+            if level <= 0 {
                 continue;
             }
 
@@ -205,7 +204,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             let sheet = ctx.img015_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
-            draw_cut(draw_context(&mut ctx.draw)?, sheet, x, mark_y, 0x110 | i32::from(capped));
+            draw_cut(draw_context(&mut ctx.draw)?, sheet, x, icon_y, 0x110 | i32::from(capped));
         }
 
         if !plain {
@@ -347,7 +346,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
         let abil = ctx.picture_book_abilities[row][2];
         let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
 
-        if level == 0 {
+        if level <= 0 {
             continue;
         }
 

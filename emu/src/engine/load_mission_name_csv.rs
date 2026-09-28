@@ -27,6 +27,10 @@ pub fn load_mission_name_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             let key = read_csv_cell(stm, 0) as i32;
 
             ctx.mission_descriptions.insert(key, text);
+        } else {
+            let key = read_csv_cell(stm, 0) as i32;
+
+            ctx.mission_descriptions.insert(key, Vec::new());
         }
 
         if !read_csv_row(stm) {

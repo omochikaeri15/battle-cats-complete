@@ -14,7 +14,7 @@ pub fn prepare_battle_entry(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_block_at::<1>(AppContext::CURTAIN_STYLE, [1])?;
     altar_recompute(ctx)?;
-    load_battle_snapshot(ctx, 0)?;
+    load_battle_snapshot(ctx)?;
     load_legend_quest_csvs(ctx)?;
 
     let background = get_background_id(ctx)?;
@@ -41,7 +41,7 @@ pub fn prepare_battle_entry(ctx: &mut AppContext) -> Result<bool, Fault> {
     let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
     if mode > 2 {
-        ctx.set_i32_at(AppContext::EVENT_POINT_BOOST, 1)?;
+        ctx.set_i32_at(AppContext::CHAPTER_COST_TIER, 1)?;
 
         if mode == 3 {
             let map = ctx.i32_at(AppContext::MAP_INDEX)?;
@@ -57,7 +57,7 @@ pub fn prepare_battle_entry(ctx: &mut AppContext) -> Result<bool, Fault> {
             return Ok(true);
         }
     } else {
-        ctx.set_i32_at(AppContext::EVENT_POINT_BOOST, mode)?;
+        ctx.set_i32_at(AppContext::CHAPTER_COST_TIER, mode)?;
     }
 
     let map_type = get_map_type(ctx, 0)?;

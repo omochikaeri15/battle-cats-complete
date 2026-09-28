@@ -2,7 +2,7 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, add_score_hit_mask, attack_dmg_dispatch, attack_proc_dispatch,
-    battle_not_finishing, build_trait_mask, call_rng, compute_attack, count_target_traits,
+    score_bonus_active, build_trait_mask, call_rng, compute_attack, count_target_traits,
     does_target, get_attack_damage, get_barrier_hp, get_base_destroyer, get_best_treasure,
     get_button_unit_form, get_cat_combo_bonus, get_colossus_orb_atk_pct, get_dodge_chance,
     get_dodge_duration, get_dodge_timer, get_entity_base_idx, get_entity_button,
@@ -161,7 +161,7 @@ pub fn cat_attack_dispatch(
                 damage = (combo.wrapping_add(100) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0xe, unit_id)?;
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_100(damage);
 
@@ -189,7 +189,7 @@ pub fn cat_attack_dispatch(
                 damage = (combo.wrapping_add(100) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0xf, unit_id)?;
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_100(damage);
 
@@ -206,7 +206,7 @@ pub fn cat_attack_dispatch(
 
                 damage = damage.wrapping_mul(treasure.wrapping_add(0x5dc) as i64);
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_300(damage);
 
@@ -383,7 +383,7 @@ pub fn cat_attack_dispatch(
         set_zkill_hit(ctx, 1, target, 1)?;
     }
 
-    if battle_not_finishing(ctx)? && dealt != 0 && source.wrapping_sub(1) as u32 <= 2 {
+    if score_bonus_active(ctx)? && dealt != 0 && source.wrapping_sub(1) as u32 <= 2 {
         let bonus = get_score_bonus(ctx, source.wrapping_add(9), 1)?;
 
         add_score_hit_mask(ctx, 1, target, bonus)?;

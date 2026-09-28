@@ -32,7 +32,7 @@ pub fn drain_vfx_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             &ctx.recast_decrease_e_model,
             x,
             y,
-        );
+        )?;
         index += 1;
 
         if index >= ctx.drain_vfx.len() {

@@ -33,7 +33,7 @@ pub fn draw_zombie_killed(ctx: &mut AppContext) -> Result<(), Fault> {
             &ctx.skill_zombie_strong_model,
             x,
             y,
-        );
+        )?;
     }
 
     Ok(())

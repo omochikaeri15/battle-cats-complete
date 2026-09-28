@@ -52,7 +52,7 @@ pub fn surge_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(), F
         };
 
         maanim_execute(model, Some(&anims[phase]), frame, 0)?;
-        draw_model(draw_context(&mut ctx.draw)?, model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, model, x, y)?;
         index += 1;
     }
 

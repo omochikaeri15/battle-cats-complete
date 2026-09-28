@@ -168,18 +168,18 @@ pub fn bg_effect_roll_params(
         .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale) != 0 {
-            def.start_scale.clone()
+            (def.start_scale.clone(), 0.0)
         } else {
-            def.scale.clone()
+            (def.scale.clone(), 1.0)
         })
     } else if bg_param_enabled(&def.scale) != 0 {
-        Some(def.scale.clone())
+        Some((def.scale.clone(), 1.0))
     } else {
         None
     };
 
-    if let Some(spec) = spec {
-        rolls.scale = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, 1.0)?;
+    if let Some((spec, fallback)) = spec {
+        rolls.scale = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, fallback)?;
     }
 
     let def = ctx
@@ -189,18 +189,18 @@ pub fn bg_effect_roll_params(
         .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale_x) != 0 {
-            def.start_scale_x.clone()
+            (def.start_scale_x.clone(), 0.0)
         } else {
-            def.scale_x.clone()
+            (def.scale_x.clone(), 1.0)
         })
     } else if bg_param_enabled(&def.scale_x) != 0 {
-        Some(def.scale_x.clone())
+        Some((def.scale_x.clone(), 1.0))
     } else {
         None
     };
 
-    if let Some(spec) = spec {
-        rolls.scale_x = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, 1.0)?;
+    if let Some((spec, fallback)) = spec {
+        rolls.scale_x = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, fallback)?;
     }
 
     let def = ctx
@@ -210,18 +210,18 @@ pub fn bg_effect_roll_params(
         .ok_or(Fault::index_out_of_range(rolls.def_index as i64, ctx.bg_effects.defs.len() as i64))?;
     let spec = if first_spawn != 0 {
         Some(if bg_param_enabled(&def.start_scale_y) != 0 {
-            def.start_scale_y.clone()
+            (def.start_scale_y.clone(), 0.0)
         } else {
-            def.scale_y.clone()
+            (def.scale_y.clone(), 1.0)
         })
     } else if bg_param_enabled(&def.scale_y) != 0 {
-        Some(def.scale_y.clone())
+        Some((def.scale_y.clone(), 1.0))
     } else {
         None
     };
 
-    if let Some(spec) = spec {
-        rolls.scale_y = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, 1.0)?;
+    if let Some((spec, fallback)) = spec {
+        rolls.scale_y = bg_param_roll_float(ctx, &spec, &mut rolls.groups, rolls.model, fallback)?;
     }
 
     let def = ctx

@@ -195,110 +195,112 @@ pub fn get_ability_icon_set(
         icons.insert(0xe, stat_is_metal(ctx, 0, unit_id, form)?);
     }
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x12)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0x15)?
-    } else {
-        talent != 0
-    };
+    if faction == 0 {
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x12)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0x15)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x20, shown);
+        icons.insert(0x20, shown);
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x13)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0x14)?
-    } else {
-        talent != 0
-    };
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x13)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0x14)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x21, shown);
+        icons.insert(0x21, shown);
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x14)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0xe)?
-    } else {
-        talent != 0
-    };
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x14)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0xe)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x22, shown);
+        icons.insert(0x22, shown);
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x15)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0x8)?
-    } else {
-        talent != 0
-    };
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x15)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0x8)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x23, shown);
+        icons.insert(0x23, shown);
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x16)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0x6)?
-    } else {
-        talent != 0
-    };
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x16)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0x6)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x24, shown);
+        icons.insert(0x24, shown);
 
-    icons.insert(
-        0x25,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x18)? != 0,
-    );
-    icons.insert(
-        0x26,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x19)? != 0,
-    );
-    icons.insert(
-        0x27,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x1a)? != 0,
-    );
-    icons.insert(
-        0x28,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x1b)? != 0,
-    );
-    icons.insert(
-        0x29,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x1c)? != 0,
-    );
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x1e)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0xf)?
-    } else {
-        talent != 0
-    };
+        icons.insert(
+            0x25,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x18)? != 0,
+        );
+        icons.insert(
+            0x26,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x19)? != 0,
+        );
+        icons.insert(
+            0x27,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x1a)? != 0,
+        );
+        icons.insert(
+            0x28,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x1b)? != 0,
+        );
+        icons.insert(
+            0x29,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x1c)? != 0,
+        );
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x1e)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0xf)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x2a, shown);
+        icons.insert(0x2a, shown);
 
-    icons.insert(
-        0x2b,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x1f)? != 0,
-    );
-    icons.insert(
-        0x2c,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x20)? != 0,
-    );
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x34)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0xc)?
-    } else {
-        talent != 0
-    };
+        icons.insert(
+            0x2b,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x1f)? != 0,
+        );
+        icons.insert(
+            0x2c,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x20)? != 0,
+        );
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x34)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0xc)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x3f, shown);
+        icons.insert(0x3f, shown);
 
-    let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x36)?;
-    let shown = if form >= 2 && talent == 0 {
-        has_orb(ctx, &ctx.orb_store, unit_id, 0x17)?
-    } else {
-        talent != 0
-    };
+        let talent = get_talent_icon_state(ctx, 0, unit_id, form, 0x36)?;
+        let shown = if form >= 2 && talent == 0 {
+            has_orb(ctx, &ctx.orb_store, unit_id, 0x17)?
+        } else {
+            talent != 0
+        };
 
-    icons.insert(0x40, shown);
+        icons.insert(0x40, shown);
 
-    icons.insert(
-        0x46,
-        get_talent_icon_state(ctx, 0, unit_id, form, 0x3d)? != 0,
-    );
+        icons.insert(
+            0x46,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x3d)? != 0,
+        );
+    }
 
     if with_talents != 0 {
         for slot in 0..8usize {

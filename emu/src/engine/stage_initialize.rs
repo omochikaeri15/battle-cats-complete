@@ -4,11 +4,11 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER, aku_realm_final_redirect,
-    altar_recompute, analytics_params_send, background_particles_init, base_shake_reset,
+    altar_recompute, analytics_stamina_use, background_particles_init, base_shake_reset,
     bg_effect_spawn_all, bgm_player_bind, bgm_player_switch, breadcrumb_with,
-    calculate_treasure_percentages, call_rng, cannon_start_countdown, clear_barrier_vfx,
-    clear_base_guard_notice, clear_cannon_shot, clear_crit_vfx, clear_debris, clear_effect_slot,
-    clear_shield_vfx, clear_wave_sprite, clear_zkill_vfx, collect_rule_id_list,
+    calculate_treasure_percentages, call_rng, cannon_start_countdown, clear_barrier_vfx_slot,
+    clear_base_guard_notice, clear_cannon_shot, clear_crit_vfx_slot, clear_debris, clear_effect_slot,
+    clear_shield_vfx_slot, clear_wave_sprite, clear_zkill_vfx_slot, collect_rule_id_list,
     combo_banner_pending, compute_base_health, compute_base_level, deploy_limit_reset,
     evaluate_active_combos, ex_redirect_check_a, ex_redirect_check_b, ex_redirect_check_c,
     ex_replacement_pending, fever_clear_gauge, fever_clear_state, find_fixed_lineup,
@@ -26,7 +26,7 @@ use super::{
     has_built_deck, has_castle_enemy, has_fixed_lineup, invasion_available, invasion_z_available,
     is_aku_final_map, is_ex_map_68, is_ex_option_target, is_score_stage, item_pass_active,
     labyrinth_active, labyrinth_roll_floor, load_base_models, load_battle_assets,
-    load_battle_snapshot, load_lineup_preset, load_map_stage_csv, load_stage_csv,
+    apply_event_schedule, load_lineup_preset, load_map_stage_csv, load_stage_csv,
     log_analytics_event, maanim_load, mamodel_load, mamodel_set_single_sheet, map_index_of_map_id,
     map_records_entry, min_i32, obf_value_add, open_asset_stream, option_window_init, play_sound,
     powerup_available, powerup_disabled, powerup_granted, query_localizable, read_csv_cell,
@@ -125,7 +125,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::LOST_MAP_TYPE + 4, -1)?;
     ctx.set_i32_at(AppContext::LOST_MAP_TYPE + 8, -1)?;
     ctx.item_drop_queue.clear();
-    ctx.item_snapshot.clear();
+    ctx.item_possession.clear();
     ctx.attackers_by_serial[0].clear();
 
     if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0 {
@@ -174,7 +174,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     deploy_limit_reset(ctx)?;
 
     if ctx.i32_at(AppContext::BATTLE_RESUMED)? != 0 {
-        load_battle_snapshot(ctx, 0)?;
+        apply_event_schedule(ctx, 0)?;
 
         if ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0 {
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
@@ -1305,19 +1305,19 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         for slot in (0..0xc80usize).step_by(0x10) {
-            clear_crit_vfx(ctx, AppContext::CRIT_VFX + slot)?;
+            clear_crit_vfx_slot(ctx, AppContext::CRIT_VFX + slot)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_zkill_vfx(ctx, AppContext::ZKILL_VFX + slot * 0x10)?;
+            clear_zkill_vfx_slot(ctx, AppContext::ZKILL_VFX + slot * 0x10)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_barrier_vfx(ctx, AppContext::BARRIER_VFX + slot * 0x1c)?;
+            clear_barrier_vfx_slot(ctx, AppContext::BARRIER_VFX + slot * 0x1c)?;
         }
 
         for slot in 0..0x1eusize {
-            clear_shield_vfx(ctx, AppContext::SHIELD_VFX + slot * 0x1c)?;
+            clear_shield_vfx_slot(ctx, AppContext::SHIELD_VFX + slot * 0x1c)?;
         }
 
         ctx.savage_vfx.clear();
@@ -1434,8 +1434,6 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         index += 1;
     }
 
-    ctx.bg_anim_names.clear();
-
     let mut index = 0;
 
     loop {
@@ -1521,11 +1519,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ))
     };
 
-    for label in 0..3usize {
+    for label in 0..4usize {
         ctx.label_texts[1 + label] =
             {
                 let font = ctx.default_font.clone();
-                let text = ctx.option_rows[1][label].clone();
+                let text = ctx.challenge_mode_texts[0][label].clone();
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -1542,9 +1540,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.label_texts[10 + label] =
             {
                 let font = ctx.default_font.clone();
-                let text = ctx.battle_option_texts.get(3 + label).cloned().ok_or(
-                    Fault::index_out_of_range((3 + label) as i64, 9),
-                )?;
+                let text = ctx.option_rows[1][label].clone();
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -2010,7 +2006,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             let crown = get_crown_level(ctx)?;
             let leadership = ctx.i32_at(AppContext::LEADERSHIP_TOTAL)?;
 
-            analytics_params_send(
+            analytics_stamina_use(
                 ctx,
                 0x1317f09,
                 leadership,

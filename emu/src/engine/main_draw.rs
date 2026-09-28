@@ -558,11 +558,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                                     let x = origin.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT)?);
 
-                                    draw_model_scaled(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y, pivot_x, pivot_y, scale, alpha, 0, 0);
+                                    draw_model_scaled(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y, pivot_x, pivot_y, scale, alpha, 0, 0)?;
                                 } else {
                                     let x = origin.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT)?);
 
-                                    draw_model_scaled(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y, pivot_x, pivot_y, scale, alpha, 0, 0);
+                                    draw_model_scaled(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y, pivot_x, pivot_y, scale, alpha, 0, 0)?;
                                 }
                             }
 
@@ -583,7 +583,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let x = if cat { shift } else { 0 }.wrapping_add(origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x15e);
 
-                                draw_model(draw_context(&mut ctx.draw)?, &ctx.warp_model, x, y);
+                                draw_model(draw_context(&mut ctx.draw)?, &ctx.warp_model, x, y)?;
                             }
                         } else if get_entity_state(ctx, faction, slot)? != 0xf && get_entity_state(ctx, faction, slot)? != 0x13 {
                             if get_revive_timer(ctx, faction, slot)? <= 0 {
@@ -592,7 +592,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin - anchor);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
 
-                                draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y);
+                                draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y)?;
                             } else {
                                 let rising = get_entity_state(ctx, faction, slot)? == 3 || get_entity_state(ctx, faction, slot)? == 6;
                                 let frame = get_entity_frame(ctx, faction, slot)?;
@@ -607,7 +607,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
-                                draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y);
+                                draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y)?;
                             }
                         }
 
@@ -627,7 +627,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
-                            draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &spawn), x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &spawn), x, y)?;
                         } else if get_entity_state(ctx, faction, slot)? == 0xf || get_entity_state(ctx, faction, slot)? == 0x10 {
                             let frame = get_entity_frame(ctx, faction, slot)?;
 
@@ -637,7 +637,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
-                            draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, &ctx.zombie_model, x, y)?;
                         }
 
                         if get_entity_state(ctx, faction, slot)? != 0xe
@@ -663,7 +663,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                                         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
-                                        draw_model(draw_context(&mut ctx.draw)?, &ctx.attack_invalid_model, x, y);
+                                        draw_model(draw_context(&mut ctx.draw)?, &ctx.attack_invalid_model, x, y)?;
                                     }
                                 } else if get_proc_badge(ctx, faction, slot, badge)? == 1 {
                                     if get_freeze_timer(ctx, faction, slot)? > 0 && get_freeze_length(ctx, faction, slot)? > 0 {
@@ -734,7 +734,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
-                            draw_model(draw_context(&mut ctx.draw)?, &ctx.skill_effect_invalid_model, x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, &ctx.skill_effect_invalid_model, x, y)?;
                         }
 
                         if get_barrier_vfx_active(ctx, faction, slot)? {
@@ -746,7 +746,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
-                            draw_model(draw_context(&mut ctx.draw)?, &ctx.barrier_model, x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, &ctx.barrier_model, x, y)?;
                         }
 
                         if get_shield_vfx(ctx, faction, slot)? != 0 {
@@ -760,7 +760,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(-0x2a);
 
-                            draw_model(draw_context(&mut ctx.draw)?, &ctx.demonshield_model, x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, &ctx.demonshield_model, x, y)?;
                         }
 
                         if enemy && has_castle_enemy(ctx)? && get_entity_base_idx(ctx)? == slot {
@@ -798,7 +798,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
                             let model = if faction == 0 { &ctx.demonsoul_01_model } else { &ctx.demonsoul_00_model };
 
-                            draw_model(draw_context(&mut ctx.draw)?, model, x, y);
+                            draw_model(draw_context(&mut ctx.draw)?, model, x, y)?;
                         } else {
                             if get_gudetama_soul(ctx, faction, slot)? {
                                 let (side, index) = get_unit_model(ctx, faction, button)?.ok_or(Fault::null_pointer())?;
@@ -830,7 +830,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
 
-                                draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y);
+                                draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y)?;
                             }
 
                             if get_soul_anim_type(ctx, faction, slot)? >= 0 {
@@ -856,7 +856,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
                                 let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
 
-                                draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &soul), x, y);
+                                draw_model(draw_context(&mut ctx.draw)?, std_map_int_mamodel_subscript(&mut ctx.effect_models, &soul), x, y)?;
                             }
                         }
 
@@ -927,7 +927,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin + 64.0);
         let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_add(0xe0);
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.boss_welcome_model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.boss_welcome_model, x, y)?;
     }
 
     draw_foreground_effects(ctx)?;
@@ -951,7 +951,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let x = ops::div_2(get_drawable_width(ctx)?);
         let y = ops::div_2(get_design_height2(ctx));
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.fever_model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.fever_model, x, y)?;
 
         let scale = ctx.screen_metrics.scale2;
 
@@ -1183,7 +1183,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let inner_w = imgcut_get_sprite_cut(digits, 0x6b)?[2];
         let inner_h = imgcut_get_sprite_cut(digits, 0x6b)?[3];
 
-        draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h);
+        draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h)?;
 
         let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x7a);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
@@ -1222,7 +1222,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let inner_w = imgcut_get_sprite_cut(digits, 0x6b)?[2];
         let inner_h = imgcut_get_sprite_cut(digits, 0x6b)?[3];
 
-        draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h);
+        draw_nine_slice(draw_context(&mut ctx.draw)?, digits, x, y, 0x10d, 0x2a, 1.0, 0x6a, border_x, border_y, inner_w, inner_h)?;
 
         let x = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0x77);
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
@@ -1469,11 +1469,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
     let press = ctx.i32_at(AppContext::PAUSE_PRESS)?;
-    let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+    let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
     let sink = ops::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
     let inset = get_left_inset_logical(ctx);
     let press = ctx.i32_at(AppContext::PAUSE_PRESS)?;
-    let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+    let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
     let drop = ops::div_2(bounce).wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let size = bounce.wrapping_add(0x3a);
 
@@ -1561,7 +1561,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                 let sheet = ctx.img002_sheet.clone();
                 let panel = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
-                draw_panel(draw_context(&mut ctx.draw)?, panel, x, y, width, height, 1.0, 0x30, 0x31);
+                draw_panel(draw_context(&mut ctx.draw)?, panel, x, y, width, height, 1.0, 0x30, 0x31)?;
 
                 if unit >= 0 && ctx.i32_at(AppContext::DECK_HOLD_SLOT)? != -1 {
                     let held = ctx.i32_at(AppContext::DECK_HOLD_FRAMES)?;
@@ -1618,13 +1618,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     if ctx.u8_at(AppContext::CAT_GOD_MENU_IS_OPEN)? == 0 && ctx.i32_at(AppContext::OUTRO_PHASE)? == 7 && flag == 0 {
         let centre = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0xbe);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
         let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x280);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
 
         draw_cut_scaled(
             draw_context(&mut ctx.draw)?,
@@ -1638,13 +1638,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let centre = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x7f);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
         let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x289);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, 6))?;
+        let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
 
         draw_cut_scaled(
             draw_context(&mut ctx.draw)?,
@@ -1792,7 +1792,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let sheet = ctx.img002_sheet.clone();
         let panel = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
-        draw_panel(draw_context(&mut ctx.draw)?, panel, x, 0x5d, 0x3b2, height, 1.0, 0x30, 0x31);
+        draw_panel(draw_context(&mut ctx.draw)?, panel, x, 0x5d, 0x3b2, height, 1.0, 0x30, 0x31)?;
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
         let x = ops::div_2(get_drawable_width(ctx)?);

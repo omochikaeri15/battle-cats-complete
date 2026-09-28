@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, FormatArg, UNIT_BUY, UNIT_BUY_STRIDE, add_resource, analytics_params,
+    AppContext, FormatArg, UNIT_BUY, UNIT_BUY_STRIDE, add_resource, analytics_nekokan_get,
     event_unit_slot_by_item, find_item_index, get_global_map_id, get_powerup, get_stage_index,
     get_crown_level, level_cell_add, level_cell_plus, mission_progress, orb_inventory_add,
     reward_unit_id, unit_buy_field, xor_row46_get,
@@ -32,10 +32,11 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
             let amount =
                 xor_row46_get(ctx.bytes_from(row)?, index + 1).ok_or(Fault::index_out_of_range(index as i64 + 1, 0x2e))? as i32;
 
-            analytics_params(
+            analytics_nekokan_get(
                 ctx,
                 0x98c17f + first as i32,
                 amount,
+                0,
                 &[
                     (b"sec1_type", FormatArg::Text(b"MapID")),
                     (b"sec1_id", FormatArg::Int(map_id)),

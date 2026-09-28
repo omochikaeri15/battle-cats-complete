@@ -43,7 +43,7 @@ pub fn option_window_return_to_menu(
 
             'show: {
                 if get_map_type(ctx, 0)? == -11 {
-                    text = query_localizable(ctx, b"legendquest_Cancle");
+                    text = query_localizable(ctx, b"legendquest_Cancel");
                     break 'show;
                 }
 

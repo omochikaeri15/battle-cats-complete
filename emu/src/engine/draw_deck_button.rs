@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, DECK_BASE_Y, DECK_PRESS_SIZE_TABLE, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
+    AppContext, BUTTON_PRESS_BOUNCE, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
     draw_context, draw_cooldown_bar, draw_cut, draw_cut_scaled, draw_deck_preset_mark,
     draw_deploy_cost, draw_model, draw_panel, fill_rect, get_button_unit_form, get_button_unit_id,
     get_button_unit_row, get_current_stage_id, get_deck_cooldown, get_drawable_width,
@@ -20,7 +20,8 @@ pub fn draw_deck_button(
     layer: i32,
     overlay: u8,
 ) -> Result<(), Fault> {
-    let mut bottom = DECK_BASE_Y
+    let mut bottom = ctx
+        .deck_bar_base_y
         .wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?)
         .wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
     let column = slot.wrapping_sub(ops::div_5(slot) * 5);
@@ -50,9 +51,9 @@ pub fn draw_deck_button(
         let size = {
             let step =
                 ctx.i32_at(AppContext::DECK_PRESS.wrapping_add(((slot as i64) * 4) as usize))?;
-            *DECK_PRESS_SIZE_TABLE
+            *BUTTON_PRESS_BOUNCE
                 .get(step as i64 as usize)
-                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
+                .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?
         };
         let half = ops::div_2(size);
 
@@ -104,9 +105,9 @@ pub fn draw_deck_button(
             let size = {
                 let step = ctx
                     .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
-                *DECK_PRESS_SIZE_TABLE
+                *BUTTON_PRESS_BOUNCE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
+                    .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?
             };
             let half = ops::div_2(size);
 
@@ -250,9 +251,9 @@ pub fn draw_deck_button(
             let size = {
                 let step = ctx
                     .i32_at(AppContext::DECK_PRESS.wrapping_add(((column as i64) * 4) as usize))?;
-                *DECK_PRESS_SIZE_TABLE
+                *BUTTON_PRESS_BOUNCE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?
+                    .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?
             };
 
             draw_cut_scaled(
@@ -303,7 +304,7 @@ pub fn draw_deck_button(
             1.0,
             0x159i32.wrapping_add(phase * 2),
             0x15ai32.wrapping_add(phase * 2),
-        );
+        )?;
     }
 
     if get_deck_cooldown(ctx, wallet, slot)? != 0 {
@@ -385,7 +386,7 @@ pub fn draw_deck_button(
         let y = down.wrapping_add(ops::div_2(height));
         let model = std::mem::take(&mut ctx.invoke_equipment_model);
 
-        draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &model, x, y)?;
 
         ctx.invoke_equipment_model = model;
     }

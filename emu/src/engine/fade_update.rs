@@ -1,14 +1,14 @@
 use crate::Fault;
 
 use super::{
-    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, analytics_params,
+    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, analytics_stamina_get,
     app_on_draw, bgm_player_switch, button_bank_remove, calculate_treasure_percentages,
     clear_cannon_shot, clear_crit_vfx_slot, clear_debris, clear_effect_slot, clear_items_selected,
-    clear_wave_sprite, fever_clear_state, get_battle_status, get_entity_base_idx, get_entity_state,
+    clear_wave_sprite, deploy_limit_reset, fever_clear_state, get_battle_status, get_entity_base_idx, get_entity_state,
     get_global_map_id, get_item_selected, get_max_hp, get_max_money, get_powerup_available,
-    get_scene_id, get_stage_index, get_crown_level, load_map_stage_csv, lose_exit_map_check,
+    get_scene_id, get_stage_index, get_crown_level, apply_event_schedule, load_map_stage_csv, is_aku_realm_map,
     map_type_base_id, notification_schedule, record_stage_played, request_save_data,
-    reset_hud_corner_rects, scene_transition_tick, set_battle_status, set_cannon_countdown,
+    reset_hud_corner_rects, scene_background_setup, scene_transition_tick, set_battle_status, set_cannon_countdown,
     set_deck_cooldown, set_entity_state, set_hp, set_item_selected, set_money,
     set_powerup_available, set_scene, set_worker_level, sound_manager, validate_map_type,
     vibration_clear,
@@ -524,7 +524,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         set_money(ctx, WALLET, money)?;
                         set_cannon_countdown(ctx, 0, 0)?;
                         ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_WATCHED, [0])?;
-                        ctx.set_i32_at(AppContext::DEPLOY_LIMIT_TOTAL, 0)?;
+                        deploy_limit_reset(ctx)?;
                         fever_clear_state(&mut ctx.special_rules);
                         vibration_clear(ctx);
                         step = Step::Tail;
@@ -570,7 +570,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         let crown = get_crown_level(ctx)?;
                         let total = ctx.i32_at(AppContext::LEADERSHIP_TOTAL)?;
 
-                        analytics_params(
+                        analytics_stamina_get(
                             ctx,
                             0x98e88d,
                             total,
@@ -622,7 +622,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     if ctx.u8_at(AppContext::OUTRO_EXIT_DIRECT)? != 0 {
                         let entry = ctx.i32_at(AppContext::LOSE_ENTRY_CHAPTER)?;
 
-                        if (entry == 0x62 || entry == 3) && !lose_exit_map_check(ctx)? {
+                        if (entry == 0x62 || entry == 3) && !is_aku_realm_map(ctx)? {
                             ctx.set_i32_at(AppContext::MAP_RETURN_FLAG, 1)?;
                         }
                     }
@@ -646,9 +646,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         AppContext::MENU_TEXTURE_PAGE + 0x30,
                         0x1ca00000000u64.to_le_bytes(),
                     )?;
-                    ctx.scene_host()
-                        .ok_or(Fault::host_missing())?
-                        .map_screen_init(0);
+                    apply_event_schedule(ctx, 0)?;
                     ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
                     ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
                     ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
@@ -659,9 +657,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
                         .map_background_pick();
-                    ctx.scene_host()
-                        .ok_or(Fault::host_missing())?
-                        .scene_background_setup();
+                    scene_background_setup(ctx)?;
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
                         .map_ui_reset();
@@ -784,7 +780,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 if direct != 0 {
                     let entry = ctx.i32_at(AppContext::LOSE_ENTRY_CHAPTER)?;
 
-                    if (entry == 0x62 || entry == 3) && (status != 1 || !lose_exit_map_check(ctx)?)
+                    if (entry == 0x62 || entry == 3) && (status != 1 || !is_aku_realm_map(ctx)?)
                     {
                         ctx.set_i32_at(AppContext::MAP_RETURN_FLAG, 1)?;
                     }
@@ -804,9 +800,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     0x1ca00000000u64.to_le_bytes(),
                 )?;
                 ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
-                ctx.scene_host()
-                    .ok_or(Fault::host_missing())?
-                    .map_screen_init(0);
+                apply_event_schedule(ctx, 0)?;
                 ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
                 ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
                 ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
@@ -817,9 +811,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.scene_host()
                     .ok_or(Fault::host_missing())?
                     .map_background_pick();
-                ctx.scene_host()
-                    .ok_or(Fault::host_missing())?
-                    .scene_background_setup();
+                scene_background_setup(ctx)?;
                 ctx.scene_host()
                     .ok_or(Fault::host_missing())?
                     .map_ui_reset();

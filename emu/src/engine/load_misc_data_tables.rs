@@ -1,17 +1,16 @@
-use crate::{Fault, ops};
+use crate::Fault;
 
 use super::{
     AppContext, AssetStream, ItemShopRow, JsonNode, MatatabiRow, format_localized,
     get_column_count, item_shop_entry, json_container_as_int, json_container_as_string,
-    json_parse_object_document, json_source_from_string, json_string_as_int,
-    json_string_as_string, json_value_as_int, json_value_as_string, load_cat_drops_csv,
-    load_clear_count_reward_json, load_drop_item_csv, load_gamatoto_files,
-    load_gift_and_limit_tables, load_god_texts, load_localizable_tsv, load_map_stage_shortcut_csv,
-    load_mission_files, load_nyancombo_files, load_opening_ending_texts, load_picture_book_files,
-    load_stage_name_files, load_unlock_popup_tsv, load_zombie_lottery_csv, matatabi_row_init,
-    normalize_search_text, obfuscate_value, open_asset_stream, query_localizable,
-    read_cell_stream, read_csv_cell, read_csv_row, read_stream_row, read_tsv_row,
-    string_format_rank_comment,
+    json_parse_object_document, json_source_from_string, json_string_as_int, json_string_as_string,
+    json_value_as_int, json_value_as_string, load_cat_drops_csv, load_clear_count_reward_json,
+    load_drop_item_csv, load_gamatoto_files, load_gift_and_limit_tables, load_god_texts,
+    load_localizable_tsv, load_map_stage_shortcut_csv, load_mission_files, load_nyancombo_files,
+    load_opening_ending_texts, load_picture_book_files, load_stage_name_files,
+    load_unlock_popup_tsv, load_zombie_lottery_csv, matatabi_row_init, normalize_search_text,
+    obfuscate_value, open_asset_stream, query_localizable, read_cell_stream, read_csv_cell,
+    read_csv_row, read_stream_row, read_tsv_row, string_format_rank_comment, string_to_int,
 };
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
@@ -100,6 +99,15 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
         }
     }
 
+    ctx.listed_item_counts.clear();
+
+    let mut row = 0i32;
+
+    while row < ((ctx.matatabi_rows.len() * 3) as u32).wrapping_mul(0xaaaa_aaab) as i32 {
+        ctx.listed_item_counts.push([0, 0]);
+        row += 1;
+    }
+
     if let Some(bytes) = open_asset_stream(ctx, b"GatyaitemName.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
@@ -146,7 +154,7 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
         };
 
         for (key, entry) in entries {
-            let map_id = ops::atoi(key);
+            let map_id = string_to_int(key)?;
             let JsonNode::Object(fields) = entry else {
                 return Err(Fault::null_pointer());
             };
@@ -622,13 +630,18 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
     if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
 
-        read_stream_row(stm, b',');
-        ctx.challenge_mode_texts = [
-            read_cell_stream(stm, 0).to_vec(),
-            read_cell_stream(stm, 1).to_vec(),
-            read_cell_stream(stm, 2).to_vec(),
-            read_cell_stream(stm, 3).to_vec(),
-        ];
+        let mut slot = 0usize;
+
+        while slot != 3 {
+            read_stream_row(stm, b',');
+            ctx.challenge_mode_texts[slot] = [
+                read_cell_stream(stm, 0).to_vec(),
+                read_cell_stream(stm, 1).to_vec(),
+                read_cell_stream(stm, 2).to_vec(),
+                read_cell_stream(stm, 3).to_vec(),
+            ];
+            slot += 1;
+        }
     }
 
     let lang = query_localizable(ctx, b"lang");

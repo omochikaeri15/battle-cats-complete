@@ -1,9 +1,6 @@
 use crate::Fault;
 
-use super::{
-    AppContext, AssetStream, ShakeRecord, cell_is_int, open_asset_stream, read_csv_cell,
-    read_csv_row,
-};
+use super::{AppContext, AssetStream, cell_is_int, open_asset_stream, read_csv_cell, read_csv_row};
 
 pub fn load_base_shake_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.base_shake.records.clear();
@@ -19,14 +16,7 @@ pub fn load_base_shake_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         let key = read_csv_cell(stm, 0) as i32;
-        let record = ctx
-            .base_shake
-            .records
-            .entry(key)
-            .or_insert_with(|| ShakeRecord {
-                duration: 1,
-                ..ShakeRecord::default()
-            });
+        let record = ctx.base_shake.records.entry(key).or_default();
 
         record.since = 0;
         record.count = 0;
@@ -54,7 +44,10 @@ pub fn load_base_shake_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let value = read_csv_cell(stm, 6) as i32;
 
         ctx.base_shake.records.entry(key).or_default().priority = value;
-        ctx.base_shake.records.entry(key).or_default().duration = 1;
+
+        if ctx.base_shake.records.entry(key).or_default().duration <= 0 {
+            ctx.base_shake.records.entry(key).or_default().duration = 1;
+        }
     }
 
     Ok(())

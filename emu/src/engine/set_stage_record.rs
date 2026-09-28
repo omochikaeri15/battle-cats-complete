@@ -43,10 +43,10 @@ pub fn set_stage_record(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &mut ctx.stage_record_neg26,
-                0x02 => &mut ctx.stage_record_neg24,
-                0x03 => &mut ctx.stage_record_neg23,
-                _ => &mut ctx.stage_record_neg22,
+                0x00 => &mut ctx.stage_table_neg26.stage_record,
+                0x02 => &mut ctx.stage_table_neg24.stage_record,
+                0x03 => &mut ctx.stage_table_neg23.stage_record,
+                _ => &mut ctx.stage_table_neg22.stage_record,
             };
             let limit = maps.len() as i64;
             let record = maps

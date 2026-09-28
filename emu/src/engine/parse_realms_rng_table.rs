@@ -19,7 +19,7 @@ pub fn parse_realms_rng_table(stm: &mut AssetStream<'_>) -> RealmsRngTable {
         }
 
         let first = read_csv_cell(stm, 0) as i32;
-        let second = read_csv_cell(stm, 1) as i32;
+        let second = (read_csv_cell(stm, 1) as i32).wrapping_mul(0x3c);
         let third = read_csv_cell(stm, 2) as i32;
         let fourth = read_csv_cell(stm, 3) as i32;
         let fifth = read_csv_cell(stm, 4) as i32;

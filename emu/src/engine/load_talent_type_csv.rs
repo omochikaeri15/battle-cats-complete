@@ -8,6 +8,8 @@ use super::{
 };
 
 pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
+    ctx.talent_definitions.clear();
+
     let Some(bytes) = open_asset_stream(ctx, b"SkillAcquisition.csv", 0, 0)? else {
         return Ok(());
     };
@@ -116,13 +118,12 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             kept.insert(abil, 0);
 
             if !ctx.talent_levels.is_empty()
+                && ctx.talent_levels.contains_key(&unit_id)
                 && ctx
                     .talent_levels
                     .entry(unit_id)
                     .or_default()
-                    .range(abil..)
-                    .next()
-                    .is_some()
+                    .contains_key(&abil)
             {
                 let level = *ctx
                     .talent_levels

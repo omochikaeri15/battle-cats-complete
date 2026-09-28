@@ -5,7 +5,7 @@ use super::{
     load_altar_limit_csv, load_autoset_lineup_files, load_base_shake_csv, load_cat_cannon_csv,
     load_cat_combat_csv, load_cat_data_files, load_cat_drops_csv, load_cat_group_csv,
     load_catseye_behavior_json, load_change_conditions_csv, load_continue_stages_csv,
-    load_daily_login_grade_json, load_dojo_chest_tsv, load_dojo_score_json, load_enemy_combat_csv,
+    load_daily_login_grade_json, load_dojo_chest_tsv, load_score_bonus_json, load_enemy_combat_csv,
     load_event_item_json, load_ex_option_csv, load_gacha_setting_csv, load_gatya_ability_csv,
     load_gold_cpu_csv, load_hidden_data_csv, load_item_pack_tsv, load_leadership_return_csv,
     load_lineup_csvs, load_map_layout, load_map_option_csv, load_map_option_json,
@@ -18,8 +18,8 @@ use super::{
     open_asset_stream, read_csv_cell, read_csv_row, sound_manager, string_format_int,
 };
 
-const MAP_TYPES: [i32; 15] = [
-    -4, -6, -9, -10, -11, -16, -17, -18, -8, -19, -20, -21, -22, -23, -26,
+const MAP_TYPES: [i32; 16] = [
+    -4, -6, -9, -10, -11, -16, -17, -18, -19, -20, -8, -21, -22, -23, -24, -26,
 ];
 
 pub fn initialize_game_data(ctx: &mut AppContext) -> Result<bool, Fault> {
@@ -155,7 +155,7 @@ pub fn initialize_game_data(ctx: &mut AppContext) -> Result<bool, Fault> {
     load_gacha_setting_csv(ctx)?;
     load_ex_option_csv(ctx)?;
     load_lineup_csvs(ctx)?;
-    load_dojo_score_json(ctx)?;
+    load_score_bonus_json(ctx)?;
     load_leadership_return_csv(ctx)?;
     load_autoset_lineup_files(ctx)?;
     load_reccomended_levelup_csv(ctx)?;

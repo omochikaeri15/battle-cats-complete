@@ -8,11 +8,11 @@ pub fn get_stat_range(
     unit_id: i32,
     form: i32,
 ) -> Result<i32, Fault> {
-    let row = if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0 {
-        AppContext::cat_stat(unit_id, form, CatStats::HITPOINTS)
+    let cell = if read_flag(ctx, AppContext::faction_flags(faction))? & 1 != 0 {
+        AppContext::cat_stat(unit_id, form, CatStats::STANDING_RANGE)
     } else {
-        AppContext::enemy_stat(unit_id, EnemyStats::HITPOINTS)
+        AppContext::enemy_stat(unit_id, EnemyStats::STANDING_RANGE)
     };
 
-    ctx.i32_at(row.wrapping_add(0x14))
+    ctx.i32_at(cell)
 }

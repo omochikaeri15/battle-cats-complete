@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, lose_exit_map_check};
+use super::{AppContext, is_aku_realm_map};
 
 pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
     let mut cells: Vec<i32> = Vec::new();
@@ -44,7 +44,7 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                 4 => mode == 1 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0,
                 5 => mode == 2 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? == 0,
                 6 => mode == 2 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0,
-                7 => lose_exit_map_check(ctx)?,
+                7 => is_aku_realm_map(ctx)?,
                 8 => mode == 4 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? == 0,
                 9 => mode == 4 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? != 0,
                 10 => mode == 5 && ctx.u8_at(AppContext::BATTLE_IS_OUTBREAK)? == 0,
@@ -61,29 +61,29 @@ pub fn lose_tip_allowed(ctx: &mut AppContext, id: i32) -> Result<bool, Fault> {
                 21 => {
                     mode == 3
                         && ctx.i32_at(AppContext::CROWN_LEVEL)? == 0
-                        && !lose_exit_map_check(ctx)?
+                        && !is_aku_realm_map(ctx)?
                 }
                 22 => {
                     mode == 3
                         && ctx.i32_at(AppContext::CROWN_LEVEL)? == 1
-                        && !lose_exit_map_check(ctx)?
+                        && !is_aku_realm_map(ctx)?
                 }
                 23 => {
                     mode == 3
                         && ctx.i32_at(AppContext::CROWN_LEVEL)? == 2
-                        && !lose_exit_map_check(ctx)?
+                        && !is_aku_realm_map(ctx)?
                 }
                 24 => {
                     mode == 3
                         && ctx.i32_at(AppContext::CROWN_LEVEL)? == 3
-                        && !lose_exit_map_check(ctx)?
+                        && !is_aku_realm_map(ctx)?
                 }
                 25 => {
                     mode == 3
                         && ctx.i32_at(AppContext::CROWN_LEVEL)? == 4
-                        && !lose_exit_map_check(ctx)?
+                        && !is_aku_realm_map(ctx)?
                 }
-                _ => mode == 0x63 && !lose_exit_map_check(ctx)?,
+                _ => mode == 0x63 && !is_aku_realm_map(ctx)?,
             };
 
             if rejected {

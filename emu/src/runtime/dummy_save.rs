@@ -2,17 +2,13 @@ use crate::{
     Fault,
     engine::{
         AltarReward, AppContext, map_index_of_map_id, map_type_of_map_id, obfuscate_value,
-        set_stage_record,
+        reset_stage_name_tables, set_stage_record,
     },
 };
 
 use super::{CatGod, Setup, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
-const STORY_CHAPTERS: usize = 5;
-const MAPS_PER_TYPE: usize = 0x1f4;
-const STAGES_PER_MAP: usize = 0x30;
-const CROWNS: usize = 4;
 const LEGEND_TYPE: i32 = -8;
 const LEGEND_MAP_STRIDE: i64 = 0x30;
 const ALTAR_KEY_STAGES: i32 = 100;
@@ -52,6 +48,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
     ctx.set_i32_at(AppContext::MEDAL_MONEY_4, MEDAL_PROGRESS_CAP)?;
 
     ctx.set_i32_at(AppContext::BATTLE_ZOOM_Y, ZOOM_ANCHOR)?;
+    reset_stage_name_tables(ctx)?;
 
     for chapter in 0..CHAPTER_ROWS {
         for stage in 0..CHAPTER_STAGES {
@@ -87,13 +84,6 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
         [setup.cannon as u8, setup.style as u8, setup.foundation as u8],
     )?;
 
-    for (part, levels) in &setup.parts {
-        ctx.cannon_part_rows.insert(
-            *part,
-            vec![0, levels.cannon.wrapping_sub(1), levels.foundation, levels.style],
-        );
-    }
-
     let mut food = [0u8; 8];
 
     food[..4].copy_from_slice(&CAT_FOOD.to_le_bytes());
@@ -104,116 +94,17 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
 
     fill_dummy_lineup(ctx, setup)?;
 
-    for chapter in 0..STORY_CHAPTERS {
-        ctx.set_i32_at(
-            AppContext::STORY_MAP_COUNTS + chapter * 4,
-            MAPS_PER_TYPE as i32,
-        )?;
-    }
-
-    for maps in [
-        &mut ctx.maps_neg26,
-        &mut ctx.maps_neg24,
-        &mut ctx.maps_neg23,
-        &mut ctx.maps_neg22,
-        &mut ctx.maps_neg21,
-        &mut ctx.maps_neg20,
-        &mut ctx.maps_neg19,
-        &mut ctx.maps_neg18,
-        &mut ctx.maps_neg17,
-        &mut ctx.maps_neg16,
-        &mut ctx.maps_neg11,
-        &mut ctx.maps_neg10,
-        &mut ctx.maps_neg9,
-        &mut ctx.maps_neg4,
-    ] {
-        maps.resize(MAPS_PER_TYPE, [0; 3]);
-    }
-
-    for nested in [
-        &mut ctx.stage_record_neg26,
-        &mut ctx.stage_record_neg24,
-        &mut ctx.stage_record_neg23,
-        &mut ctx.stage_record_neg22,
-    ] {
-        nested.resize(MAPS_PER_TYPE, vec![vec![0i16; STAGES_PER_MAP]; CROWNS]);
-    }
-
-    for flat in [
-        &mut ctx.stage_record_neg20,
-        &mut ctx.stage_record_neg19,
-        &mut ctx.stage_record_neg18,
-        &mut ctx.stage_record_neg17,
-        &mut ctx.stage_record_neg16,
-        &mut ctx.stage_record_neg11,
-    ] {
-        flat.resize(MAPS_PER_TYPE * STAGES_PER_MAP, 0);
-    }
-
-    for wide in [
-        &mut ctx.stage_record_neg10,
-        &mut ctx.stage_record_neg9,
-        &mut ctx.stage_record_neg4,
-    ] {
-        wide.resize(MAPS_PER_TYPE * STAGES_PER_MAP, 0);
-    }
-
-    for nested in [
-        &mut ctx.stage_unlock_neg26,
-        &mut ctx.stage_unlock_neg24,
-        &mut ctx.stage_unlock_neg23,
-        &mut ctx.stage_unlock_neg22,
-    ] {
-        nested.resize(MAPS_PER_TYPE, vec![0i8; CROWNS]);
-    }
-
-    for flat in [
-        &mut ctx.stage_unlock_neg20,
-        &mut ctx.stage_unlock_neg19,
-        &mut ctx.stage_unlock_neg18,
-        &mut ctx.stage_unlock_neg17,
-        &mut ctx.stage_unlock_neg16,
-        &mut ctx.stage_unlock_neg11,
-    ] {
-        flat.resize(MAPS_PER_TYPE * CROWNS, 0);
-    }
-
-    for nested in [
-        &mut ctx.stages_cleared_neg26,
-        &mut ctx.stages_cleared_neg24,
-        &mut ctx.stages_cleared_neg23,
-        &mut ctx.stages_cleared_neg22,
-    ] {
-        nested.resize(MAPS_PER_TYPE, vec![0i8; CROWNS]);
-    }
-
-    for flat in [
-        &mut ctx.stages_cleared_neg20,
-        &mut ctx.stages_cleared_neg18,
-        &mut ctx.stages_cleared_neg17,
-        &mut ctx.stages_cleared_neg16,
-        &mut ctx.stages_cleared_neg11,
-    ] {
-        flat.resize(MAPS_PER_TYPE * CROWNS, 0);
-    }
-
-    for wide in [
-        &mut ctx.stages_cleared_neg10,
-        &mut ctx.stages_cleared_neg9,
-        &mut ctx.stages_cleared_neg4,
-    ] {
-        wide.resize(MAPS_PER_TYPE * CROWNS, 0);
-    }
-
-    for wide in [
-        &mut ctx.stage_unlock_neg10,
-        &mut ctx.stage_unlock_neg9,
-        &mut ctx.stage_unlock_neg4,
-    ] {
-        wide.resize(MAPS_PER_TYPE * CROWNS, 0);
-    }
 
     Ok(())
+}
+
+pub fn fill_dummy_cannon_parts(ctx: &mut AppContext, setup: &Setup) {
+    for (part, levels) in &setup.parts {
+        ctx.cannon_part_rows.insert(
+            *part,
+            vec![0, levels.cannon.wrapping_sub(1), levels.foundation, levels.style],
+        );
+    }
 }
 
 pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
@@ -229,9 +120,9 @@ pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     }
 
     if setup.cat_god == CatGod::Discounted {
-        let key = u32::from_le_bytes(ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
+        let key = u32::from_le_bytes(ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
 
-        ctx.set_block_at(AppContext::CHAPTER_PROGRESS + DISCOUNT_CHAPTER * 4, (CHAPTER_CLEARED ^ key).to_le_bytes())?;
+        ctx.set_block_at(AppContext::STAGES_CLEARED_CHAPTERS + DISCOUNT_CHAPTER * 4, (CHAPTER_CLEARED ^ key).to_le_bytes())?;
     }
 
     Ok(())

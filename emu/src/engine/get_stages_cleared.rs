@@ -45,9 +45,9 @@ pub fn get_stages_cleared(
     match case {
         0x00..=0x02 => {
             let maps = match case {
-                0x00 => &ctx.stages_cleared_neg24,
-                0x01 => &ctx.stages_cleared_neg23,
-                _ => &ctx.stages_cleared_neg22,
+                0x00 => &ctx.stage_table_neg24.stages_cleared,
+                0x01 => &ctx.stage_table_neg23.stages_cleared,
+                _ => &ctx.stage_table_neg22.stages_cleared,
             };
 
             maps.get(map_idx as usize)

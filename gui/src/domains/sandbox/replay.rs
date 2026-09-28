@@ -809,9 +809,9 @@ impl State {
 
         if let Some((named, crowns)) = &details.stage {
             let stage = row![
-                text(format!("{named} ({crowns}")).size(LABEL_SIZE),
+                text(format!("{named} [{crowns}")).size(LABEL_SIZE),
                 text(CROWN_GLYPH).font(fonts::MISC_SYMBOLS).size(LABEL_SIZE),
-                text(")").size(LABEL_SIZE),
+                text("]").size(LABEL_SIZE),
             ]
                 .align_y(Vertical::Center);
 

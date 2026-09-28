@@ -175,7 +175,7 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             let aim = ctx.f32_at(AppContext::SNIPER_AIM_ANGLE)?;
             let goal = ctx.f32_at(AppContext::SNIPER_AIM_GOAL)?;
 
-            ctx.set_i32_at(AppContext::SNIPER_ALIGNED, (aim == goal) as i32)?;
+            ctx.set_i32_at(AppContext::DRAW_TEMP_3, (aim == goal) as i32)?;
 
             let target = ctx.i32_at(AppContext::SNIPER_TARGET)?;
 

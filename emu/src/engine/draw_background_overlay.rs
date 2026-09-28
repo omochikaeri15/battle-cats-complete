@@ -260,7 +260,7 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
                         let x = ops::cvttss2si(origin + spacing.wrapping_mul(step) as f32);
                         let y = ops::cvttss2si(instance.y);
 
-                        draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
+                        draw_model(draw_context(&mut ctx.draw)?, &model, x, y)?;
                         step = step.wrapping_add(1);
 
                         if step == end {

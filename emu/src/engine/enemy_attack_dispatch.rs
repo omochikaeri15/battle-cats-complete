@@ -2,7 +2,7 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, Entity, add_score_hit_mask, attack_dmg_dispatch, attack_proc_dispatch,
-    battle_not_finishing, build_trait_mask, call_rng, count_target_traits, does_target,
+    score_bonus_active, build_trait_mask, call_rng, count_target_traits, does_target,
     get_attack_damage, get_barrier_hp, get_base_destroyer, get_behemoth_dodge_chance,
     get_behemoth_dodge_duration, get_behemoth_dodge_timer, get_best_treasure, get_button_unit_form,
     get_cannon_effect, get_cat_combo_bonus, get_colossus_orb_def_pct, get_dodge_chance,
@@ -194,7 +194,7 @@ pub fn enemy_attack_dispatch(
                 damage = (100i32.wrapping_sub(orb) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0xe, unit_id)?;
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_100(damage);
 
@@ -224,7 +224,7 @@ pub fn enemy_attack_dispatch(
                 damage = (100i32.wrapping_sub(orb) as i64).wrapping_mul(damage);
                 get_cat_combo_bonus(ctx, &ctx.combo_store, 0x10, unit_id)?;
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_100(damage);
 
@@ -241,7 +241,7 @@ pub fn enemy_attack_dispatch(
 
                 damage = damage.wrapping_mul(0x834i32.wrapping_sub(treasure) as i64);
 
-                let scoring = battle_not_finishing(ctx)?;
+                let scoring = score_bonus_active(ctx)?;
 
                 damage = ops::div_12600(damage);
 
@@ -534,6 +534,16 @@ pub fn enemy_attack_dispatch(
                     damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64),
                 );
             }
+        }
+
+        let reduction = match source {
+            1 => get_cannon_effect(get_resist_part_rec(ctx)?, 0xc9, style_level)?,
+            2 => get_cannon_effect(get_resist_part_rec(ctx)?, 0xcb, style_level)?,
+            _ => 0,
+        };
+
+        if reduction != 0 {
+            damage = ops::div_10000(damage.wrapping_mul(10000i32.wrapping_sub(reduction) as i64));
         }
     }
 

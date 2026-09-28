@@ -79,9 +79,9 @@ pub fn unlock_condition_met(ctx: &mut AppContext, id: i32) -> Result<bool, Fault
     let mut pair = [0u8; 8];
 
     pair[..4].copy_from_slice(
-        &ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS.wrapping_add(slot.wrapping_mul(4)))?,
+        &ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS.wrapping_add(slot.wrapping_mul(4)))?,
     );
-    pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
+    pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
 
     Ok(
         ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32

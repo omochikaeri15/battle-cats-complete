@@ -3,7 +3,7 @@ use crate::{Fault, ops};
 use super::{
     draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_model, draw_number_plain, draw_number_scaled, draw_surface_aligned,
     fill_rect, get_anim_len, get_design_height2, get_drawable_width, get_miracle_price, hit_test_rect, imgcut_get_sprite_cut, maanim_execute, obf_value_read,
-    set_alpha, set_color, set_tint, sin_deg, touch_is_down, xor_row_get, AppContext, Surface, DECK_PRESS_SIZE_TABLE,
+    set_alpha, set_color, set_tint, sin_deg, touch_is_down, xor_row_get, AppContext, Surface, BUTTON_PRESS_BOUNCE,
 };
 
 pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -32,7 +32,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, 0x300, 0x100, 0);
 
-        let progress = xor_row_get(ctx.bytes_from(AppContext::CHAPTER_PROGRESS)?, 7).ok_or(Fault::index_out_of_range(7, 10))? as i32;
+        let progress = xor_row_get(ctx.bytes_from(AppContext::STAGES_CLEARED_CHAPTERS)?, 7).ok_or(Fault::index_out_of_range(7, 10))? as i32;
 
         if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 4 && progress >= 0x30 {
             let sheet = ctx.img041_sheet.clone();
@@ -52,9 +52,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let sheet = ctx.img042_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES.wrapping_add(slot * 4))?;
-                let size = *DECK_PRESS_SIZE_TABLE
+                let size = *BUTTON_PRESS_BOUNCE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+                    .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
                 let half = ops::div_2(size);
                 let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(dx).wrapping_sub(half);
                 let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_sub(half).wrapping_add(0x159);
@@ -88,9 +88,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             let sheet = ctx.img042_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0xc)?;
-            let size = *DECK_PRESS_SIZE_TABLE
+            let size = *BUTTON_PRESS_BOUNCE
                 .get(step as i64 as usize)
-                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+                .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
             let half = ops::div_2(size);
             let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312).wrapping_sub(half);
             let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_sub(half).wrapping_add(0x159);
@@ -101,9 +101,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
             let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES.wrapping_add(((selected as i64) * 4) as usize))?;
-            let size = *DECK_PRESS_SIZE_TABLE
+            let size = *BUTTON_PRESS_BOUNCE
                 .get(step as i64 as usize)
-                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+                .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
             let half = ops::div_2(size);
             let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0))
                 .wrapping_add(selected.wrapping_mul(0xb4))
@@ -144,10 +144,37 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
                 step = step.wrapping_add(0xb4);
-            }
-        }
+                            }
+                        } else {
+                            let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
+                            let mut step = 0x156i32;
 
-        if ctx.i32_at(AppContext::CAT_GOD_STATE)? >= 3 {
+                            for slot in 0..4usize {
+                                if slot == selected as u32 as usize {
+                                    let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(step);
+                                    let y = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?.wrapping_add(0x1cf);
+                                    let value = if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 4 {
+                                        get_miracle_price(ctx, slot as i32)?
+                                    } else if slot == 3 {
+                                        0
+                                    } else {
+                                        obf_value_read(&ctx.miracle_levels[slot]) as i32
+                                    };
+                                    let digits = ctx.img001_sheet.clone();
+                                    let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
+                                    let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0x37, x as f32, y as f32, 0.0, 1, 2, 0)?;
+                                    let icon = ctx.img006_sheet.clone();
+                                    let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
+                                    let across = ops::cvttss2si(bounds.left + -55.0);
+
+                                    draw_cut_scaled(draw_context(&mut ctx.draw)?, icon, across, y, 0x37, 0x2a, 0x15);
+                                }
+
+                                step = step.wrapping_add(0xb4);
+                            }
+                        }
+
+                        if ctx.i32_at(AppContext::CAT_GOD_STATE)? >= 3 {
             set_alpha(draw_context(&mut ctx.draw)?, 0xa5);
 
             let sheet = ctx.img041_sheet.clone();
@@ -178,13 +205,13 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let sheet = ctx.img006_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                 let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?;
-                let size = *DECK_PRESS_SIZE_TABLE
+                let size = *BUTTON_PRESS_BOUNCE
                     .get(step as i64 as usize)
-                    .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+                    .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
                 let half = ops::div_2(size);
 
-                draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, 4, 0x21di32.wrapping_sub(half), size.wrapping_add(0x5f), size.wrapping_add(0x5f), 9);
-                draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, 8, 0x22ei32.wrapping_sub(half), size.wrapping_add(0x54), size.wrapping_add(0x3c), 3);
+                draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, 4i32.wrapping_sub(half), 0x21di32.wrapping_sub(half), size.wrapping_add(0x5f), size.wrapping_add(0x5f), 9);
+                draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, 8i32.wrapping_sub(half), 0x22ei32.wrapping_sub(half), size.wrapping_add(0x54), size.wrapping_add(0x3c), 3);
 
                 let rect = [
                     ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT)?,
@@ -193,7 +220,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + 0xc)?,
                 ];
 
-                if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+                if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 && touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
                     let sheet = ctx.img006_sheet.clone();
                     let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
                     let ticks = ctx.i32_at(AppContext::CAT_GOD_TICKS)?;
@@ -231,9 +258,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
         let sheet = ctx.img006_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
         let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)?;
-        let size = *DECK_PRESS_SIZE_TABLE
+        let size = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
-            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+            .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = ops::div_2(size);
         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323).wrapping_sub(half);
 
@@ -250,7 +277,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + 0xc)?,
         ];
 
-        if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+        if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 && touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
             let sheet = ctx.img006_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x322);
@@ -269,9 +296,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x11c, 0x60, 0x60, selected);
 
         let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x14)?;
-        let size = *DECK_PRESS_SIZE_TABLE
+        let size = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
-            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+            .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = ops::div_2(size);
         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6).wrapping_sub(half);
 
@@ -286,11 +313,12 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, caption, x, 0x149i32.wrapping_sub(half), size.wrapping_add(0xfe), size.wrapping_add(0x37), 0);
 
-        let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
-        let price = get_miracle_price(ctx, selected)?;
-        let purse = obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32;
+        if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 {
+                    let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
+                    let price = get_miracle_price(ctx, selected)?;
+                    let purse = obf_value_read(&ctx.block_at::<8>(AppContext::ITEM_16_COUNT)?) as i32;
 
-        if purse < price {
+                    if purse < price {
             set_color(draw_context(&mut ctx.draw)?, 0, 0, 0, 0xff);
             set_alpha(draw_context(&mut ctx.draw)?, 0x7f);
 
@@ -300,10 +328,11 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x141i32.wrapping_sub(half), size.wrapping_add(0x17d), size.wrapping_add(0x48), 3);
             set_color(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
-            set_alpha(draw_context(&mut ctx.draw)?, 0xff);
-        }
+                            set_alpha(draw_context(&mut ctx.draw)?, 0xff);
+                        }
+                    }
 
-        set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
+                    set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
 
         let rect = [
             ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT)?,
@@ -312,7 +341,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 0xc)?,
         ];
 
-        if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
+        if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
             let sheet = ctx.img101_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6);
@@ -325,20 +354,23 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let unlocked = ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? == 4;
         let selected = ctx.i32_at(AppContext::CAT_GOD_SELECTED)?;
-        let value = if unlocked {
-            get_miracle_price(ctx, selected)?
-        } else {
-            obf_value_read(&ctx.miracle_levels[selected as i64 as usize]) as i32
-        };
+        let offset = ctx.i32_at(AppContext::CAT_GOD_OFFSET)?;
+                let value = if unlocked {
+                    get_miracle_price(ctx, selected)?
+                } else if selected == 3 {
+                    0
+                } else {
+                    obf_value_read(&ctx.miracle_levels[selected as i64 as usize]) as i32
+                };
         let digits = ctx.img001_sheet.clone();
         let digits = digits.as_deref().ok_or(Fault::null_pointer())?;
         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x10c) as f32;
-        let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0x37, x, 388.0, -1.0, 0, 1, 0)?;
+        let bounds = draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0, value, 0x37, x, 0x184i32.wrapping_add(offset) as f32, -1.0, 0, 1, 0)?;
         let icon = ctx.img006_sheet.clone();
         let icon = icon.as_deref().ok_or(Fault::null_pointer())?;
         let across = ops::cvttss2si(bounds.left + -55.0);
 
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, icon, across, 0x185, 0x37, 0x2a, 0x15);
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, icon, across, 0x185i32.wrapping_add(offset), 0x37, 0x2a, 0x15);
 
         for (slot, dx, y) in [(3usize, 0x1f4, 0xe6), (4, 0x1f3, 0x1d4), (5, 0x1f3, 0x1f8)] {
             let text = ctx.label_texts.get(slot).copied().flatten().ok_or(Fault::null_pointer())?;
@@ -378,7 +410,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let track = std::mem::take(&mut ctx.castle_anims[2]);
 
                 maanim_execute(&mut model, Some(&track), frame, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0);
+                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0)?;
 
                 ctx.castle_models[2] = model;
                 ctx.castle_anims[2] = track;
@@ -395,7 +427,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let track = std::mem::take(&mut ctx.castle_anims[3]);
 
                 maanim_execute(&mut model, Some(&track), step, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half.wrapping_add(dx), 0);
+                draw_model(draw_context(&mut ctx.draw)?, &model, half.wrapping_add(dx), 0)?;
 
                 ctx.castle_models[3] = model;
                 ctx.castle_anims[3] = track;
@@ -407,7 +439,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let track = std::mem::take(&mut ctx.castle_anims[4]);
 
                 maanim_execute(&mut model, Some(&track), frame, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0);
+                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0)?;
 
                 ctx.castle_models[4] = model;
                 ctx.castle_anims[4] = track;
@@ -420,7 +452,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let track = std::mem::take(&mut ctx.castle_anims[5]);
 
                 maanim_execute(&mut model, Some(&track), step, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0);
+                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0)?;
 
                 ctx.castle_models[5] = model;
                 ctx.castle_anims[5] = track;
@@ -444,7 +476,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                 let track = std::mem::take(&mut ctx.castle_anims[0]);
 
                 maanim_execute(&mut model, Some(&track), frame, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0);
+                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0)?;
 
                 ctx.castle_models[0] = model;
                 ctx.castle_anims[0] = track;
@@ -457,29 +489,26 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
                     continue;
                 }
 
-                let column = ctx.i32_at(AppContext::CAT_GOD_STATUE_COLUMN.wrapping_add(index * 4))?;
-                let row = ctx.i32_at(AppContext::CAT_GOD_STATUE_ROW.wrapping_add(index * 4))?;
+                let column = ctx.i32_at(AppContext::CAT_GOD_SHAKE_X.wrapping_add(index * 4))?;
+                let row = ctx.i32_at(AppContext::CAT_GOD_SHAKE_Y.wrapping_add(index * 4))?;
                 let mut model = std::mem::take(&mut ctx.castle_models[1]);
                 let track = std::mem::take(&mut ctx.castle_anims[1]);
 
                 maanim_execute(&mut model, Some(&track), step, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half.wrapping_add(column.wrapping_mul(40)), row.wrapping_mul(30));
+                draw_model(draw_context(&mut ctx.draw)?, &model, half.wrapping_add(column.wrapping_mul(40)), row.wrapping_mul(30))?;
 
                 ctx.castle_models[1] = model;
                 ctx.castle_anims[1] = track;
             }
         }
         _ => {
-            if frame < get_anim_len(&ctx.castle_anims[6])? {
-                let mut model = std::mem::take(&mut ctx.castle_models[6]);
-                let track = std::mem::take(&mut ctx.castle_anims[6]);
+            let mut model = std::mem::take(&mut ctx.castle_models[6]);
+                        let track = std::mem::take(&mut ctx.castle_anims[6]);
 
-                maanim_execute(&mut model, Some(&track), frame, 0)?;
-                draw_model(draw_context(&mut ctx.draw)?, &model, half, 0);
-
-                ctx.castle_models[6] = model;
-                ctx.castle_anims[6] = track;
-            }
+                        maanim_execute(&mut model, Some(&track), frame, 0)?;
+                        draw_model(draw_context(&mut ctx.draw)?, &model, half, 0)?;
+                        ctx.castle_models[6] = model;
+                        ctx.castle_anims[6] = track;
 
             let flash = ctx.i32_at(AppContext::CAT_GOD_FLASH_X)?.wrapping_add(8);
             let bob = ctx.i32_at(AppContext::CAT_GOD_BOB)?.wrapping_add(0x40);

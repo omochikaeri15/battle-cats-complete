@@ -44,8 +44,13 @@ pub fn maanim_load(ctx: &mut AppContext, anim: &mut Maanim, path: &[u8]) -> Resu
     read_csv_row(stm);
     let track_count = read_csv_cell(stm, 0) as i32;
     anim.track_count = track_count;
+
+    if track_count < 0 {
+        return Err(Fault::out_of_range());
+    }
+
     anim.tracks
-        .resize(track_count as i64 as usize, MaanimTrack::default());
+        .resize(track_count as usize, MaanimTrack::default());
 
     let mut track = 0;
 
@@ -60,9 +65,14 @@ pub fn maanim_load(ctx: &mut AppContext, anim: &mut Maanim, path: &[u8]) -> Resu
 
         let keyframe_count = read_csv_cell(stm, 0) as i32;
         anim.tracks[track as usize].keyframe_count = keyframe_count;
+
+        if keyframe_count < 0 {
+            return Err(Fault::out_of_range());
+        }
+
         anim.tracks[track as usize]
             .keyframes
-            .resize(keyframe_count as i64 as usize, [0; KEYFRAME_CELLS]);
+            .resize(keyframe_count as usize, [0; KEYFRAME_CELLS]);
 
         let mut keyframe = 0;
 

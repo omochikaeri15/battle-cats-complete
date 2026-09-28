@@ -9,7 +9,7 @@ use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
     BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
-    VERSION, fill_dummy_save, fill_dummy_talents, load_scene_sheets, plant_seeds, queue_touch_position, queue_touch_press, queue_touch_release,
+    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, queue_touch_position, queue_touch_press, queue_touch_release,
     pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
@@ -156,8 +156,8 @@ fn needed_units(ctx: &AppContext) -> BTreeSet<u32> {
     let points: Vec<i32> = ctx
         .event_items
         .as_ref()
-        .and_then(|store| emu::engine::get_point_rewards(&ctx.reward_defs, emu::engine::get_point_id(store)))
-        .map(|rewards| rewards.iter().filter(|reward| reward.kind == UNIT_REWARD).map(|reward| reward.target).collect())
+        .and_then(|store| emu::engine::get_point_rewards(&ctx.point_event_rewards, emu::engine::get_point_id(store)))
+        .map(|record| record.rewards.iter().filter(|reward| reward.kind == UNIT_REWARD).map(|reward| reward.id).collect())
         .unwrap_or_default();
 
     deck.iter()
@@ -265,6 +265,7 @@ impl Driver {
         ctx.set_text_renderer(Box::new(Formatter::new(Rc::clone(&self.sheets))));
         ctx.set_ui(Box::new(InertUi));
         ctx.draw = Some(Box::new(Recorder::new(Rc::clone(&self.frame))));
+        ctx.default_font = b"FONT_SYSTEM_BOLD".to_vec();
 
         if let Err(fault) = fill_dummy_save(ctx, &self.setup) {
             warn!("emu: dummy save could not be filled: {fault}");
@@ -813,8 +814,9 @@ impl Driver {
                 unlock_dummy_combos(&mut self.ctx);
 
                 fill_dummy_talents(&mut self.ctx, &self.setup);
+                fill_dummy_cannon_parts(&mut self.ctx, &self.setup);
 
-                if let Err(fault) = load_scene_sheets(&mut self.ctx) {
+                if let Err(fault) = emu::engine::img_dialog_context_init(&mut self.ctx) {
                     warn!("emu: scene sheets failed to load: {fault}");
                 }
 

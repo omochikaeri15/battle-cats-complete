@@ -42,10 +42,10 @@ pub fn get_stage_record(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &ctx.stage_record_neg26,
-                0x02 => &ctx.stage_record_neg24,
-                0x03 => &ctx.stage_record_neg23,
-                _ => &ctx.stage_record_neg22,
+                0x00 => &ctx.stage_table_neg26.stage_record,
+                0x02 => &ctx.stage_table_neg24.stage_record,
+                0x03 => &ctx.stage_table_neg23.stage_record,
+                _ => &ctx.stage_table_neg22.stage_record,
             };
 
             maps.get(map_idx as usize)

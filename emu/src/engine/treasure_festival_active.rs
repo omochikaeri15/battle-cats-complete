@@ -20,8 +20,8 @@ pub fn treasure_festival_active(ctx: &AppContext) -> Result<bool, Fault> {
 
     let mut pair = [0u8; 8];
 
-    pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS)?);
-    pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
+    pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS)?);
+    pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
 
     Ok(
         (ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)

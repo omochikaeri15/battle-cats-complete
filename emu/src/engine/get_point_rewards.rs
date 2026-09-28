@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
-use super::RewardDef;
+use super::PointEventReward;
 
 pub fn get_point_rewards(
-    defs: &BTreeMap<i32, Vec<RewardDef>>,
+    defs: &BTreeMap<i32, PointEventReward>,
     point_id: i32,
-) -> Option<&Vec<RewardDef>> {
+) -> Option<&PointEventReward> {
     defs.get(&point_id)
 }

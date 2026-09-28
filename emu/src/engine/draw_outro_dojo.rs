@@ -3,7 +3,7 @@ use crate::{Fault, ops};
 use super::{
     button_bank_find, dialog_draw, dialog_top, draw_context, draw_cut, draw_cut_scaled, draw_number_plain, draw_panel, draw_percent_number, entry_find_by_id,
     fill_rect, get_bottom_inset_logical, get_design_height2, get_drawable_width, get_map_type, glow_set, hit_test_rect, imgcut_get_sprite_cut, min_i32,
-    new_button_draw, ranking_rank_by_id, set_tint, touch_is_down, AppContext, DECK_PRESS_SIZE_TABLE, OUTRO_SLIDE_TABLE,
+    new_button_draw, ranking_rank_by_id, set_tint, touch_is_down, AppContext, BUTTON_PRESS_BOUNCE, OUTRO_SLIDE_TABLE,
 };
 
 pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
@@ -106,14 +106,14 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let inset = left.wrapping_add(0x2b);
 
         draw_cut(draw_context(&mut ctx.draw)?, panel, inset, 0x95, 0xb);
-        draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0xb5, 0xe5, 0x2c, 1.0, 0x11, 0x12);
+        draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0xb5, 0xe5, 0x2c, 1.0, 0x11, 0x12)?;
         draw_cut(draw_context(&mut ctx.draw)?, panel, left.wrapping_add(0xf4), 0xc9, 0xc);
 
         let score = ctx.i32_at(AppContext::SCORE_TOTAL)?;
 
         draw_number_plain(draw_context(&mut ctx.draw)?, panel, 0x18, score, 0, left.wrapping_add(0xf0) as f32, 186.0, -4.0, 0, 2, 0)?;
         draw_cut(draw_context(&mut ctx.draw)?, panel, inset, 0xef, 5);
-        draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0x10f, 0xb7, 0x23, 1.0, 0x14, 0x15);
+        draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0x10f, 0xb7, 0x23, 1.0, 0x14, 0x15)?;
 
         let row = left.wrapping_add(0xbd);
 
@@ -144,9 +144,9 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             let plate = ctx.img101_sheet.clone();
             let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
             let step = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-            let bounce = *DECK_PRESS_SIZE_TABLE
+            let bounce = *BUTTON_PRESS_BOUNCE
                 .get(step as i64 as usize)
-                .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+                .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
             let half = ops::div_2(bounce);
             let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
             let y = ctx

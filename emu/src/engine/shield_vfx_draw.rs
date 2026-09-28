@@ -28,7 +28,7 @@ pub fn shield_vfx_draw(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(pos_x);
         let y = ops::div_10(ctx.i32_at(slot.wrapping_add(VfxSlot::POS_Y))?);
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.demonshield_model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.demonshield_model, x, y)?;
     }
 
     Ok(())

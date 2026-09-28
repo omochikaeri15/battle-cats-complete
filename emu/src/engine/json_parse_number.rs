@@ -41,36 +41,16 @@ pub fn json_parse_number(parser: &mut JsonParser) -> Result<Option<JsonNode>, Fa
     }
 
     if fraction {
-        let (value, range) =
-            ops::strtof(&text).ok_or(Fault::invalid_argument())?;
-
-        if range {
-            return Err(Fault::out_of_range());
-        }
+        let value = ops::strtof(&text).map_or(0.0, |(value, _)| value);
 
         return Ok(Some(JsonNode::Double(value as f64)));
     }
 
     if text.iter().position(|&byte| byte == b'-') == Some(0) {
-        let parsed = ops::strtol(&text, 10);
-
-        if parsed.end == 0 {
-            return Err(Fault::invalid_argument());
-        }
-
-        if parsed.overflow {
-            return Err(Fault::out_of_range());
-        }
-
-        return Ok(Some(JsonNode::Int(parsed.value)));
+        return Ok(Some(JsonNode::Int(ops::strtol(&text, 10).value)));
     }
 
-    let (value, overflow) =
-        ops::strtoull(&text, 10).ok_or(Fault::invalid_argument())?;
-
-    if overflow {
-        return Err(Fault::out_of_range());
-    }
+    let value = ops::strtoull(&text, 10).map_or(0, |(value, _)| value);
 
     Ok(Some(JsonNode::Uint(value)))
 }

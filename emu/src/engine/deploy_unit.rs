@@ -308,7 +308,7 @@ pub fn deploy_unit(
                             as usize,
                     )?;
                     let boosted = ctx
-                        .i32_at(AppContext::EVENT_POINT_BOOST)?
+                        .i32_at(AppContext::CHAPTER_COST_TIER)?
                         .wrapping_add(2)
                         .wrapping_mul(ops::div_100(listed_cost as i64) as i32);
                     let args = [ops::div_2(boosted)];

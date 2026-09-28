@@ -19,7 +19,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
         return Err(Fault::null_pointer());
     };
     let Some(JsonNode::Object(data)) = root.get(b"data".as_slice()) else {
-        return Ok(());
+        return Err(Fault::null_pointer());
     };
 
     for (map_key, entry) in data {
@@ -29,7 +29,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 Some(JsonNode::Array(values)) => Some(values),
                 _ => None,
             },
-            _ => None,
+            _ => return Err(Fault::null_pointer()),
         };
 
         if let Some(values) = conditions {
@@ -41,7 +41,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                         Some(JsonNode::Array(listed)) => listed.get(index),
                         _ => None,
                     },
-                    _ => None,
+                    _ => return Err(Fault::null_pointer()),
                 };
                 let value = value.map_or(Ok(0), |found| match found {
                     JsonNode::String(text) => json_string_as_int(text),
@@ -67,7 +67,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                     JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
                     _ => Ok(json_value_as_int(found)),
                 })?,
-            _ => 0,
+            _ => return Err(Fault::null_pointer()),
         } as i32;
 
         ctx.unlock_groups.entry(map_id).or_default().required = required;
@@ -80,7 +80,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                     JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
                     _ => Ok(json_value_as_int(found)),
                 })?,
-            _ => -1,
+            _ => return Err(Fault::null_pointer()),
         } as i32;
 
         ctx.unlock_groups.entry(map_id).or_default().stage = stage;
@@ -94,7 +94,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                     _ => Ok(json_value_as_int(found)),
                 },
             )?,
-            _ => -1,
+            _ => return Err(Fault::null_pointer()),
         } as i32;
 
         ctx.unlock_groups.entry(map_id).or_default().flag_id = flag_id;
@@ -106,7 +106,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 Some(found) => json_value_as_string(found),
                 None => Vec::new(),
             },
-            _ => Vec::new(),
+            _ => return Err(Fault::null_pointer()),
         };
 
         ctx.unlock_groups.entry(map_id).or_default().limit_message = limit_message;
@@ -119,7 +119,7 @@ pub fn load_map_option_json(ctx: &mut AppContext) -> Result<(), Fault> {
                     JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
                     _ => Ok(json_value_as_int(found)),
                 })?,
-            _ => 0,
+            _ => return Err(Fault::null_pointer()),
         } as i32;
 
         ctx.unlock_groups.entry(map_id).or_default().hidden = u8::from(hidden != 0);

@@ -15,7 +15,7 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.map_options.show_once.clear();
     ctx.map_options.display_order.clear();
     ctx.map_options.interval.clear();
-    ctx.map_options.challenge_maps.clear();
+    ctx.map_options.entry_record_maps.clear();
     ctx.map_options.difficulty.clear();
     ctx.map_options.hide_after_clear_maps.clear();
     ctx.map_options.double_xp_ad_maps.clear();
@@ -88,7 +88,7 @@ pub fn load_map_option_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             .insert(map_id, read_csv_cell(stm, 0xb) as i32);
 
         if read_csv_cell(stm, 0xc) != 0 {
-            ctx.map_options.challenge_maps.push(map_id);
+            ctx.map_options.entry_record_maps.push(map_id);
         }
 
         ctx.map_options

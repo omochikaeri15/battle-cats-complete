@@ -89,31 +89,33 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                 let mode = ctx.map_records.entry(map_id).or_default().defeat_voice_mode;
                 let map_id = get_global_map_id(ctx, 0)?;
 
-                if mode != 0 && ctx.map_records.entry(map_id).or_default().defeat_voice_mode == 1 {
-                    let map_id = get_global_map_id(ctx, 0)?;
-                    let mut index = 0usize;
+                if mode != 0 {
+                    if ctx.map_records.entry(map_id).or_default().defeat_voice_mode == 1 {
+                        let map_id = get_global_map_id(ctx, 0)?;
+                        let mut index = 0usize;
 
-                    while index
-                        < ctx
-                            .map_records
-                            .entry(map_id)
-                            .or_default()
-                            .defeat_voices
-                            .len()
-                    {
-                        let voice = *ctx
-                            .map_records
-                            .entry(map_id)
-                            .or_default()
-                            .defeat_voices
-                            .get(index)
-                            .ok_or(Fault::index_out_of_range(index as i64, 0))?;
+                        while index
+                            < ctx
+                                .map_records
+                                .entry(map_id)
+                                .or_default()
+                                .defeat_voices
+                                .len()
+                        {
+                            let voice = *ctx
+                                .map_records
+                                .entry(map_id)
+                                .or_default()
+                                .defeat_voices
+                                .get(index)
+                                .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
-                        if voice != -1 {
-                            play_sound(sound_manager(ctx)?, voice, None);
+                            if voice != -1 {
+                                play_sound(sound_manager(ctx)?, voice, None);
+                            }
+
+                            index += 1;
                         }
-
-                        index += 1;
                     }
 
                     silent = true;
@@ -128,10 +130,8 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                     let pick = call_rng(ctx, count as i32) as i64;
                     let voices = &ctx.map_records.entry(map_id).or_default().defeat_voices;
 
-                    if (voices.len() as u64) > pick as u64 {
-                        sound = *voices.get(pick as usize).ok_or(Fault::index_out_of_range(pick, voices.len() as i64))?;
-                        silent = sound == -1;
-                    }
+                    sound = *voices.get(pick as usize).ok_or(Fault::out_of_range())?;
+                    silent = sound == -1;
                 }
             }
         }
@@ -277,16 +277,18 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
             .ok_or(Fault::null_pointer())?;
         let point_id = get_point_id(store);
         let total = get_point_total(store);
-        let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.reward_defs, point_id)
-            .map(|list| {
-                list.iter()
+        let rewards: Vec<(i32, i32, i32, i32, i32)> = get_point_rewards(&ctx.point_event_rewards, point_id)
+            .map(|record| {
+                record
+                    .rewards
+                    .iter()
                     .map(|reward| {
                         (
-                            reward.id,
-                            reward.threshold,
+                            reward.reward_id,
+                            reward.point,
                             reward.kind,
-                            reward.target,
-                            reward.amount,
+                            reward.id,
+                            reward.quantity,
                         )
                     })
                     .collect()

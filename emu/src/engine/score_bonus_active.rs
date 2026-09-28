@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{AppContext, scored_map_pays_money};
 
-pub fn battle_not_finishing(ctx: &mut AppContext) -> Result<bool, Fault> {
+pub fn score_bonus_active(ctx: &mut AppContext) -> Result<bool, Fault> {
     if !scored_map_pays_money(ctx)? {
         return Ok(false);
     }

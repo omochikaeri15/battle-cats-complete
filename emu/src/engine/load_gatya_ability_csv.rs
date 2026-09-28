@@ -1,54 +1,52 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, load_gatya_data_set_csv, open_asset_stream, parse_gatya_item_row,
-    read_csv_cell, read_csv_row,
+    AppContext, AssetStream, load_gatya_chance_animation_tsv, load_gatya_data_set_csv,
+    open_asset_stream, parse_gatya_item_row, read_csv_cell, read_csv_row,
 };
 
 pub fn load_gatya_ability_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.ability_data_rows = [[0; 5]; 10];
 
-    if let Some(bytes) = open_asset_stream(ctx, b"AbilityData.csv", 0, 0)? {
-        let stm = &mut AssetStream::new(&bytes, b'\n');
-        let mut row = 0usize;
+    let bytes = open_asset_stream(ctx, b"AbilityData.csv", 0, 0)?.unwrap_or_default();
+    let stm = &mut AssetStream::new(&bytes, b'\n');
+    let mut row = 0usize;
 
-        while row != 10 {
-            read_csv_row(stm);
-
-            let mut column = 0usize;
-
-            while column != 5 {
-                if let Some(slot) = ctx
-                    .ability_data_rows
-                    .get_mut(row)
-                    .and_then(|cells| cells.get_mut(column))
-                {
-                    *slot = read_csv_cell(stm, column as i32) as i32;
-                }
-
-                column += 1;
-            }
-
-            row += 1;
-        }
-    }
-
-    if let Some(bytes) = open_asset_stream(ctx, b"Gatyaitembuy.csv", 0, 0)? {
-        let stm = &mut AssetStream::new(&bytes, b'\n');
-
+    while row != 10 {
         read_csv_row(stm);
 
-        let mut index = 0usize;
+        let mut column = 0usize;
 
-        while index != 275 {
-            parse_gatya_item_row(
-                ctx,
-                AppContext::GATYA_ITEM_ROWS + index * AppContext::ITEM_DEFINITION_STRIDE,
-                stm,
-            )?;
+        while column != 5 {
+            if let Some(slot) = ctx
+                .ability_data_rows
+                .get_mut(row)
+                .and_then(|cells| cells.get_mut(column))
+            {
+                *slot = read_csv_cell(stm, column as i32) as i32;
+            }
 
-            index += 1;
+            column += 1;
         }
+
+        row += 1;
+    }
+
+    let bytes = open_asset_stream(ctx, b"Gatyaitembuy.csv", 0, 0)?.unwrap_or_default();
+    let stm = &mut AssetStream::new(&bytes, b'\n');
+
+    read_csv_row(stm);
+
+    let mut index = 0usize;
+
+    while index != 275 {
+        parse_gatya_item_row(
+            ctx,
+            AppContext::GATYA_ITEM_ROWS + index * AppContext::ITEM_DEFINITION_STRIDE,
+            stm,
+        )?;
+
+        index += 1;
     }
 
     let mut store = Vec::new();
@@ -65,6 +63,7 @@ pub fn load_gatya_ability_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
     load_gatya_data_set_csv(ctx, &mut store, b"E")?;
     ctx.gatya_data_sets.insert(2, store);
+    load_gatya_chance_animation_tsv(ctx)?;
 
     Ok(())
 }

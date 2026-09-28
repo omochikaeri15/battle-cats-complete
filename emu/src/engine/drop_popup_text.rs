@@ -262,13 +262,13 @@ pub fn drop_popup_text(
                 ),
             ],
         )?;
+
+        let gained = xor_row46_get(ctx.bytes_from(row)?, next)
+            .ok_or(Fault::index_out_of_range(next as i64, 0x2f))? as i32;
+        let count = ctx.item_possession.entry(index).or_insert(0);
+
+        *count = count.wrapping_add(gained);
     }
-
-    let gained = xor_row46_get(ctx.bytes_from(row)?, next)
-        .ok_or(Fault::index_out_of_range(next as i64, 0x2f))? as i32;
-    let count = ctx.item_possession.entry(index).or_insert(0);
-
-    *count = count.wrapping_add(gained);
 
     let shown = xor_row46_get(ctx.bytes_from(row)?, cell as i64 as usize)
         .ok_or(Fault::index_out_of_range(cell as i64, 0x2f))? as i32;

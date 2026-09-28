@@ -39,10 +39,10 @@ pub fn get_stage_unlock(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &ctx.stage_unlock_neg26,
-                0x02 => &ctx.stage_unlock_neg24,
-                0x03 => &ctx.stage_unlock_neg23,
-                _ => &ctx.stage_unlock_neg22,
+                0x00 => &ctx.stage_table_neg26.stage_unlock,
+                0x02 => &ctx.stage_table_neg24.stage_unlock,
+                0x03 => &ctx.stage_table_neg23.stage_unlock,
+                _ => &ctx.stage_table_neg22.stage_unlock,
             };
 
             maps.get(map_idx as i64 as usize)

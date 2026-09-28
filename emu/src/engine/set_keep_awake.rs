@@ -21,7 +21,7 @@ pub trait Platform {
     fn connecting_show(&mut self, text: &[u8]);
     fn connecting_hide(&mut self);
     fn ranking_submit(&mut self, entry: i32, score: i32);
-    fn ads_available(&mut self) -> bool;
+    fn is_network_available(&mut self) -> bool;
     fn feature_enabled(&mut self, feature: i32) -> bool;
     fn config_int(&mut self, key: &[u8], min: i32, max: i32) -> i32;
     fn reward_ad_ready(&mut self, kind: i32, flag: i32) -> bool;

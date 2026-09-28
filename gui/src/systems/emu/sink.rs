@@ -1,20 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use emu::engine::{DrawSink, Imgcut, Mamodel, Surface};
+use emu::engine::{DrawSink, Imgcut, Surface};
 
 const IDENTITY: [f32; 6] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-const PART_SHEET: [usize; 2] = [0x24, 0x28];
-const PART_CUT: [usize; 2] = [0x2c, 0x30];
-const PART_OPACITY: usize = 0x80;
-const PART_GLOW: usize = 0x8c;
-const PART_CORNERS: [usize; 4] = [0x90, 0x98, 0xa0, 0xa8];
 const ALIGN_CENTER: i32 = 1;
 const ALIGN_RIGHT: i32 = 2;
 const ALIGN_MIDDLE: i32 = 4;
 const ALIGN_BOTTOM: i32 = 8;
 const PIVOT_ABSOLUTE: i32 = 0x10;
-const LAST_GLOW: i32 = 3;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Quad {
@@ -221,57 +215,6 @@ impl Recorder {
         }
     }
 
-    fn slices(
-        &mut self,
-        sheet: &Imgcut,
-        outer: [i32; 4],
-        inner: [i32; 4],
-        dest: [f32; 4],
-        scale: f32,
-    ) {
-        let [x, y, width, height] = dest;
-        let left = inner[0] - outer[0];
-        let right = outer[2] - inner[2] - left;
-        let top = inner[1] - outer[1];
-        let bottom = outer[3] - inner[3] - top;
-        let columns = [
-            (outer[0], left, x, left as f32 * scale),
-            (
-                inner[0],
-                inner[2],
-                x + left as f32 * scale,
-                width - (left + right) as f32 * scale,
-            ),
-            (
-                outer[0] + outer[2] - right,
-                right,
-                x + width - right as f32 * scale,
-                right as f32 * scale,
-            ),
-        ];
-        let rows = [
-            (outer[1], top, y, top as f32 * scale),
-            (
-                inner[1],
-                inner[3],
-                y + top as f32 * scale,
-                height - (top + bottom) as f32 * scale,
-            ),
-            (
-                inner[1] + inner[3],
-                bottom,
-                y + height - bottom as f32 * scale,
-                bottom as f32 * scale,
-            ),
-        ];
-
-        for (src_y, src_h, dest_y, dest_h) in rows {
-            for (src_x, src_w, dest_x, dest_w) in columns {
-                self.blit(sheet, [src_x, src_y, src_w, src_h], dest_x, dest_y, dest_w, dest_h);
-            }
-        }
-    }
-
     fn spun(
         &self,
         dest: [f32; 4],
@@ -307,71 +250,6 @@ impl Recorder {
         ]
     }
 
-    fn draw_part(&mut self, model: &Mamodel, index: i32, place: impl Fn(i32, i32) -> [i32; 2], alpha: i32) {
-        let Some(part) = model.parts.get(index as i64 as usize) else {
-            return;
-        };
-        let sprite = part.i32_at(PART_SHEET[0]).wrapping_add(part.i32_at(PART_SHEET[1]));
-
-        if sprite == -1 {
-            return;
-        }
-
-        let glow = part.i32_at(PART_GLOW);
-
-        if (0..=LAST_GLOW).contains(&glow) {
-            self.state.glow = glow;
-        }
-
-        if alpha == 0 {
-            return;
-        }
-
-        self.state.color[3] = alpha;
-
-        let table = if model.single_sheet != 0 { 0 } else { sprite as i64 as usize };
-        let shared = model.sheet.as_ref().map_or_else(
-            || {
-                model.sheet_table.get(table).and_then(|slot| {
-                    let held = slot.take();
-
-                    slot.set(held.as_ref().map(Rc::clone));
-                    held
-                })
-            },
-            |sheet| Some(Rc::clone(sheet)),
-        );
-        let Some(sheet) = shared.as_deref() else {
-            return;
-        };
-        let corners = PART_CORNERS.map(|offset| {
-            let [x, y] = place(part.i32_at(offset), part.i32_at(offset + 4));
-
-            self.place(x as f32, y as f32)
-        });
-
-        if sheet.whole != 0 {
-            let quad = Quad {
-                sheet: None,
-                label: Some(sheet.label),
-                corners,
-                source: [0.0, 0.0, sheet.width as f32, sheet.height as f32],
-                colors: [premultiplied(self.state.color); 4],
-                blend: self.state.glow as u8,
-            };
-
-            self.push(quad);
-
-            return;
-        }
-
-        let cut = part.i32_at(PART_CUT[0]).wrapping_add(part.i32_at(PART_CUT[1]));
-        let Some(source) = Self::cut_of(sheet, cut) else {
-            return;
-        };
-
-        self.push_region(sheet, source, corners);
-    }
 }
 
 impl DrawSink for Recorder {
@@ -381,6 +259,10 @@ impl DrawSink for Recorder {
 
     fn glow_set(&mut self, mode: i32) {
         self.state.glow = mode;
+    }
+
+    fn glow(&self) -> i32 {
+        self.state.glow
     }
 
     fn set_draw_scale(&mut self, _scale: f32) {
@@ -524,63 +406,23 @@ impl DrawSink for Recorder {
         self.blit(sheet, [src_x, src_y, src_w, src_h], x, y, width, height);
     }
 
-    fn draw_surface_scaled(&mut self, surface: Surface<'_>, x: i32, y: i32, width: i32, height: i32) {
-        self.blit_surface(surface, x as f32, y as f32, width as f32, height as f32);
-    }
-
-    fn draw_model(&mut self, model: &Mamodel, x: i32, y: i32) {
-        let held = self.state;
-
-        for index in &model.draw_order {
-            let alpha = model
-                .parts
-                .get(*index as i64 as usize)
-                .and_then(|part| part.i32_at(PART_OPACITY).wrapping_mul(0xff).checked_div(model.opacity_unit))
-                .unwrap_or(0);
-
-            self.draw_part(model, *index, |part_x, part_y| [part_x.wrapping_add(x), part_y.wrapping_add(y)], alpha);
-        }
-
-        self.state = held;
-    }
-
-    fn draw_model_scaled(
+    fn draw_region_scaled(
         &mut self,
-        model: &Mamodel,
+        sheet: &Imgcut,
         x: i32,
         y: i32,
-        pivot_x: i32,
-        pivot_y: i32,
-        scale: f32,
-        alpha: i32,
-        first: i32,
-        second: i32,
+        width: i32,
+        height: i32,
+        src_x: i32,
+        src_y: i32,
+        src_w: i32,
+        src_h: i32,
     ) {
-        let held = self.state;
-        let shift_x = first.wrapping_sub(pivot_x);
-        let shift_y = second.wrapping_sub(pivot_y);
+        self.blit(sheet, [src_x, src_y, src_w, src_h], x as f32, y as f32, width as f32, height as f32);
+    }
 
-        for index in &model.draw_order {
-            let faded = model
-                .parts
-                .get(*index as i64 as usize)
-                .and_then(|part| part.i32_at(PART_OPACITY).wrapping_mul(0xff).checked_div(model.opacity_unit))
-                .map_or(0, |opacity| opacity.wrapping_mul(alpha) / 0xff);
-
-            self.draw_part(
-                model,
-                *index,
-                |part_x, part_y| {
-                    [
-                        (part_x.wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32) as i32,
-                        (part_y.wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32) as i32,
-                    ]
-                },
-                faded,
-            );
-        }
-
-        self.state = held;
+    fn draw_surface_scaled(&mut self, surface: Surface<'_>, x: i32, y: i32, width: i32, height: i32) {
+        self.blit_surface(surface, x as f32, y as f32, width as f32, height as f32);
     }
 
     fn draw_cut_rotated(
@@ -668,72 +510,6 @@ impl DrawSink for Recorder {
         self.push_region(sheet, [0, 0, sheet.width, sheet.height], corners);
     }
 
-    fn draw_panel(
-        &mut self,
-        sheet: &Imgcut,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        scale: f32,
-        cut_a: i32,
-        cut_b: i32,
-    ) {
-        let (Some(outer), Some(inner)) = (Self::cut_of(sheet, cut_a), Self::cut_of(sheet, cut_b)) else {
-            return;
-        };
-
-        self.slices(sheet, outer, inner, [x as f32, y as f32, width as f32, height as f32], scale);
-    }
-
-    fn draw_nine_slice(
-        &mut self,
-        sheet: &Imgcut,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        scale: f32,
-        cut: i32,
-        border_x: i32,
-        border_y: i32,
-        _inner_w: i32,
-        _inner_h: i32,
-    ) {
-        let Some(outer) = Self::cut_of(sheet, cut) else {
-            return;
-        };
-        let edge_x = border_x as f32 * scale;
-        let edge_y = border_y as f32 * scale;
-        let corner = [edge_x as i32 as f32, edge_y as i32 as f32];
-        let near = [x as f32, y as f32];
-        let inner = [(x as f32 + edge_x) as i32 as f32, (y as f32 + edge_y) as i32 as f32];
-        let far = [
-            ((width + x) as f32 - edge_x) as i32 as f32,
-            ((height + y) as f32 - edge_y) as i32 as f32,
-        ];
-        let span = [
-            (width as f32 - (border_x * 2) as f32 * scale) as i32 as f32,
-            (height as f32 - (border_y * 2) as f32 * scale) as i32 as f32,
-        ];
-        let columns = [
-            (outer[0], border_x, near[0], corner[0]),
-            (outer[0] + border_x, outer[2] - border_x * 2, inner[0], span[0]),
-            (outer[0] - border_x + outer[2], border_x, far[0], corner[0]),
-        ];
-        let rows = [
-            (outer[1], border_y, near[1], corner[1]),
-            (outer[1] + border_y, outer[3] - border_y * 2, inner[1], span[1]),
-            (outer[1] - border_y + outer[3], border_y, far[1], corner[1]),
-        ];
-
-        for (src_y, src_h, dest_y, dest_h) in rows {
-            for (src_x, src_w, dest_x, dest_w) in columns {
-                self.blit(sheet, [src_x, src_y, src_w, src_h], dest_x, dest_y, dest_w, dest_h);
-            }
-        }
-    }
-
     fn draw_quad_cut(
         &mut self,
         sheet: &Imgcut,
@@ -791,6 +567,36 @@ impl DrawSink for Recorder {
         y3: i32,
         cut: i32,
     ) {
-        self.draw_quad_cut(sheet, x0, y0, x1, y1, x2, y2, x3, y3, cut);
+        let corners = [
+            self.place(x0 as f32, y0 as f32),
+            self.place(x1 as f32, y1 as f32),
+            self.place(x2 as f32, y2 as f32),
+            self.place(x3 as f32, y3 as f32),
+        ];
+
+        if sheet.whole != 0 {
+            let quad = Quad {
+                sheet: None,
+                label: Some(sheet.label),
+                corners,
+                source: [0.0, 0.0, sheet.width as f32, sheet.height as f32],
+                colors: [premultiplied(self.state.color); 4],
+                blend: self.state.glow as u8,
+            };
+
+            self.push(quad);
+
+            return;
+        }
+
+        if cut < 0 || cut as i64 >= sheet.cuts.len() as i64 {
+            return;
+        }
+
+        let Some(source) = Self::cut_of(sheet, cut) else {
+            return;
+        };
+
+        self.push_region(sheet, source, corners);
     }
 }

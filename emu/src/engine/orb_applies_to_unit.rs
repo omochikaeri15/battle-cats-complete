@@ -59,15 +59,20 @@ pub fn orb_applies_to_unit(
             (0x400, trait_eva(ctx, 0, unit_id, form, 1)?),
             (0x800, trait_aku(ctx, 0, unit_id, form, 1)?),
         ]);
-        let mask = *ctx
-            .orb_store
-            .trait_masks
-            .get(trait_index as i64 as usize)
-            .ok_or(Fault::index_out_of_range(trait_index as i64, ctx.orb_store.trait_masks.len() as i64))?;
         let mut hit = false;
 
         for (bit, present) in traits.iter() {
-            if *present && bit & mask != 0 {
+            if !*present {
+                continue;
+            }
+
+            let mask = *ctx
+                .orb_store
+                .trait_masks
+                .get(trait_index as i64 as usize)
+                .ok_or(Fault::index_out_of_range(trait_index as i64, ctx.orb_store.trait_masks.len() as i64))?;
+
+            if bit & mask != 0 {
                 hit = true;
 
                 break;

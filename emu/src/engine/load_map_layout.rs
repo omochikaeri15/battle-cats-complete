@@ -20,7 +20,7 @@ pub fn load_map_layout(ctx: &mut AppContext, map_index: i32) -> Result<bool, Fau
 
         let record = ctx.map_layouts.entry(0x16).or_default();
 
-        map_layout_set_points(record, 0, &points);
+        map_layout_set_points(record, 0, &points)?;
     }
 
     Ok(true)

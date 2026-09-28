@@ -42,7 +42,7 @@ pub fn load_ad_reward_table_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         });
     }
 
-    ctx.ad_reward_rows.sort_by_key(|row| row.item_id);
+    ctx.ad_reward_rows.sort_by_key(|row| row.user_rank);
 
     Ok(())
 }

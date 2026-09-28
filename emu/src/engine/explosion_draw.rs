@@ -66,7 +66,7 @@ pub fn explosion_draw(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<(
             &ctx.explosion_e_model
         };
 
-        draw_model(draw_context(&mut ctx.draw)?, model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, model, x, y)?;
         index += 1;
     }
 

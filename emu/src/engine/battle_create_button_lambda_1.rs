@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, button_bank_find, jni_share_image, new_button_get_height, new_button_get_width,
+    AppContext, button_bank_find, queue_platform_event, new_button_get_height, new_button_get_width,
     new_button_get_x, new_button_get_y, play_sound, sound_manager,
 };
 
@@ -29,7 +29,7 @@ pub fn battle_create_button_lambda_1(
                 button_bank_find(&ctx.buttons, 0xc9).ok_or(Fault::null_pointer())?,
             )?;
 
-            jni_share_image(ctx, x, y, width, height)?;
+            queue_platform_event(ctx, x, y, width, height)?;
         }
         3 => play_sound(sound_manager(ctx)?, 0xb, None),
         0 => play_sound(sound_manager(ctx)?, 0xa, None),

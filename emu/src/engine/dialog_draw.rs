@@ -69,9 +69,14 @@ pub fn dialog_draw(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<(), 
         border_y,
         imgcut_get_sprite_cut(&sheet, 8)?[2],
         imgcut_get_sprite_cut(&sheet, 8)?[3],
-    );
+    )?;
 
     if this.state.wrapping_sub(1) as u32 > 1 {
+        if let Some(paint) = this.on_draw {
+            draw_context(&mut ctx.draw)?;
+            paint(ctx)?;
+        }
+
         return Ok(());
     }
 
@@ -161,7 +166,7 @@ pub fn dialog_draw(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<(), 
             border_y,
             imgcut_get_sprite_cut(&sheet, 7)?[2],
             imgcut_get_sprite_cut(&sheet, 7)?[3],
-        );
+        )?;
 
         if this.flags & 0x10 == 0 {
             let cut = cuts[slot];
@@ -212,7 +217,7 @@ pub fn dialog_draw(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<(), 
                 border_y,
                 imgcut_get_sprite_cut(&sheet, 9)?[2],
                 imgcut_get_sprite_cut(&sheet, 9)?[3],
-            );
+            )?;
         }
 
         let restore = if this.lit[slot] == 0 {

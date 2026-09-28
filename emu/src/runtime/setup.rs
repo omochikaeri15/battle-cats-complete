@@ -156,7 +156,7 @@ pub fn prepare_extra_entry(ctx: &mut AppContext) -> Result<bool, Fault> {
     altar_recompute(ctx)?;
     texture_cache_load(ctx, b"img015.png", b"img015.imgcut", 0x2601)?;
     ctx.set_i32_at(AppContext::BATTLE_INTRO_FRAME, BATTLE_INTRO_START)?;
-    ctx.set_i32_at(AppContext::EVENT_POINT_BOOST, 1)?;
+    ctx.set_i32_at(AppContext::CHAPTER_COST_TIER, 1)?;
     ctx.set_i32_at(AppContext::BATTLE_RESUMED, 0)?;
     ctx.set_i32_at(AppContext::BATTLE_CONTINUED, 0)?;
 

@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{Imgcut, Mamodel, Texture};
+use super::{Imgcut, Texture};
 
 #[derive(Clone, Copy)]
 pub enum Surface<'a> {
@@ -11,6 +11,7 @@ pub enum Surface<'a> {
 pub trait DrawSink {
     fn set_origin(&mut self, x: i32, y: i32);
     fn glow_set(&mut self, mode: i32);
+    fn glow(&self) -> i32;
     fn set_draw_scale(&mut self, scale: f32);
     fn set_tint(&mut self, red: i32, green: i32, blue: i32, alpha: i32);
     fn set_color(&mut self, red: i32, green: i32, blue: i32, alpha: i32);
@@ -59,6 +60,18 @@ pub trait DrawSink {
         width: f32,
         height: f32,
     );
+    fn draw_region_scaled(
+        &mut self,
+        sheet: &Imgcut,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        src_x: i32,
+        src_y: i32,
+        src_w: i32,
+        src_h: i32,
+    );
     fn draw_surface_scaled(
         &mut self,
         surface: Surface<'_>,
@@ -66,19 +79,6 @@ pub trait DrawSink {
         y: i32,
         width: i32,
         height: i32,
-    );
-    fn draw_model(&mut self, model: &Mamodel, x: i32, y: i32);
-    fn draw_model_scaled(
-        &mut self,
-        model: &Mamodel,
-        x: i32,
-        y: i32,
-        pivot_x: i32,
-        pivot_y: i32,
-        scale: f32,
-        alpha: i32,
-        first: i32,
-        second: i32,
     );
     fn draw_cut_rotated(
         &mut self,
@@ -132,31 +132,6 @@ pub trait DrawSink {
         pivot_x: i32,
         pivot_y: i32,
         pivot_align: i32,
-    );
-    fn draw_panel(
-        &mut self,
-        sheet: &Imgcut,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        scale: f32,
-        cut_a: i32,
-        cut_b: i32,
-    );
-    fn draw_nine_slice(
-        &mut self,
-        sheet: &Imgcut,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        scale: f32,
-        cut: i32,
-        border_x: i32,
-        border_y: i32,
-        inner_w: i32,
-        inner_h: i32,
     );
     fn draw_quad_cut(
         &mut self,

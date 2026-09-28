@@ -551,7 +551,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
                 &ctx.base_models[0],
                 end_x.wrapping_add(0x96),
                 0x1e0,
-            );
+            )?;
             glow_set(draw_context(&mut ctx.draw)?, 1);
 
             let width = imgcut_get_sprite_cut(beam, 1)?[2];
@@ -708,7 +708,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             &ctx.base_models[0],
             start_x,
             start_y,
-        );
+        )?;
         set_alpha(draw_context(&mut ctx.draw)?, 0xff);
     } else if get_castle_anim_state(ctx, faction)? == 4 {
         let frame = get_castle_anim_frame(ctx, faction)?;
@@ -723,7 +723,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, 0x82);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, 0x82)?;
     } else if get_castle_anim_state(ctx, faction)? == 5 {
         let frame = get_castle_anim_frame(ctx, faction)?;
 
@@ -736,7 +736,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1d6);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1d6)?;
     } else if get_castle_anim_state(ctx, faction)? == 0xb {
         if get_castle_anim_frame(ctx, faction)? >= 5 {
             let frame = get_castle_anim_frame(ctx, faction)?.wrapping_add(-5);
@@ -756,7 +756,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             ))?)
             .wrapping_add(-0xa0);
 
-            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, y);
+            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, y)?;
         }
 
         if get_castle_anim_frame(ctx, faction)? >= 0xa {
@@ -771,7 +771,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
                 get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
             );
 
-            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1f4);
+            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1f4)?;
 
             let frame = get_castle_anim_frame(ctx, faction)?.wrapping_add(-0xa);
 
@@ -784,7 +784,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
                 get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
             );
 
-            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[2], x, 0x1f4);
+            draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[2], x, 0x1f4)?;
 
             let part = mamodel_get_part(&ctx.base_models[2], 0)
                 .ok_or(Fault::null_pointer())?;
@@ -807,7 +807,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, 0x82);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[1], x, 0x82)?;
     } else if get_castle_anim_state(ctx, faction)? == 8 {
         let frame = get_castle_anim_frame(ctx, faction)?;
 
@@ -820,7 +820,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin,
         );
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1d6);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, 0x1d6)?;
     } else if get_castle_anim_state(ctx, faction)? == 6 {
         let reach = cannon_reach_x(ctx, faction)?;
 
@@ -840,7 +840,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         let frame = get_castle_anim_frame(ctx, faction)?;
 
         maanim_execute(&mut ctx.base_models[0], Some(&ctx.base_anims[0]), frame, 0)?;
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.base_models[0], x, y)?;
     }
 
     let shots = AppContext::CANNON_SHOTS.wrapping_add(
@@ -870,7 +870,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
         };
 
         if model < 0 {
-            return Err(Fault::unrepresentable("a live cannon shot on a cannon type that never fires shots"));
+            return Err(Fault::index_out_of_range(model, ctx.base_models.len() as i64));
         }
 
         let frame = length.wrapping_sub(ctx.i32_at(record.wrapping_add(CannonShot::TIMER))?);
@@ -904,7 +904,7 @@ pub fn draw_cannon_anim(ctx: &mut AppContext, faction: i32) -> Result<(), Fault>
             &ctx.base_models[model],
             x,
             0x1f4,
-        );
+        )?;
     }
 
     Ok(())

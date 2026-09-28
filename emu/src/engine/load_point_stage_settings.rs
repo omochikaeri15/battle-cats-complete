@@ -29,7 +29,7 @@ pub fn load_point_stage_settings(
             break;
         };
         let Some(JsonNode::Array(values)) = fields.get(b"MapID".as_slice()) else {
-            continue;
+            return Err(Fault::null_pointer());
         };
         let mut index = 0usize;
 

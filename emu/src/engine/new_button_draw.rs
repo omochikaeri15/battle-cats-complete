@@ -26,14 +26,17 @@ pub fn new_button_draw(ctx: &mut AppContext, button: i32, x: i32, y: i32) -> Res
         let across = x.wrapping_add(held.offset_x) as f32;
         let down = y.wrapping_add(held.offset_y) as f32;
 
-        if let Some(node) = held.node.as_mut() {
-            ui_node_set_offset(node, across, down);
+        drawn = match held.node.as_mut() {
+            Some(node) => {
+                ui_node_set_offset(node, across, down);
 
-            drawn = match node.kind {
-                SpriteKind::Image => image_sprite_draw(ctx, node, None),
-                SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, node, None),
-            };
-        }
+                match node.kind {
+                    SpriteKind::Image => image_sprite_draw(ctx, node, None),
+                    SpriteKind::Scale9 => scale9_image_sprite_draw(ctx, node, None),
+                }
+            }
+            None => Err(Fault::null_pointer()),
+        };
     }
 
     if let Some(slot) = ctx.buttons.buttons.get_mut(&button) {

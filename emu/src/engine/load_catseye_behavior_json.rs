@@ -26,19 +26,15 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
         return Err(Fault::null_pointer());
     };
     let Some(JsonNode::Object(data)) = root.get(b"data".as_slice()) else {
-        return Ok(());
+        return Err(Fault::null_pointer());
     };
 
     for (unit_key, entry) in data {
         let unit_key = string_to_int(unit_key)?;
-        let listed = match entry {
-            JsonNode::Object(fields) => match fields.get(b"a".as_slice()) {
-                Some(JsonNode::Array(values)) => Some(values),
-                _ => None,
-            },
-            _ => None,
+        let JsonNode::Object(fields) = entry else {
+            return Err(Fault::null_pointer());
         };
-        let Some(values) = listed else {
+        let Some(JsonNode::Array(values)) = fields.get(b"a".as_slice()) else {
             continue;
         };
         let unit_id = ops::div_10(unit_key);
@@ -60,26 +56,19 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut index = 0usize;
 
         while index < values.len() {
-            let cats = match values.get(index) {
-                Some(JsonNode::Object(fields)) => match fields.get(b"catseye".as_slice()) {
-                    Some(JsonNode::Array(listed)) => Some(listed),
-                    _ => None,
-                },
-                _ => None,
+            let Some(JsonNode::Object(step_fields)) = values.get(index) else {
+                return Err(Fault::null_pointer());
+            };
+            let Some(JsonNode::Array(listed)) = step_fields.get(b"catseye".as_slice()) else {
+                return Err(Fault::null_pointer());
             };
 
-            if let Some(listed) = cats {
-                let mut catseyes: Vec<i32> = Vec::new();
-
-                for found in listed {
-                    let value = match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    }? as i32;
-
-                    catseyes.push(value);
-                }
+            for found in listed {
+                let value = match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                }? as i32;
 
                 if let Some(step) = ctx
                     .catseye_behavior
@@ -89,20 +78,17 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
                     .or_default()
                     .get_mut(index)
                 {
-                    step.catseyes = catseyes;
+                    step.catseyes.push(value);
                 }
             }
 
-            let max = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"max".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let max = step_fields
+                .get(b"max".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(step) = ctx
                 .catseye_behavior
@@ -115,16 +101,13 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 step.max = max;
             }
 
-            let value = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"value".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let value = step_fields
+                .get(b"value".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(step) = ctx
                 .catseye_behavior

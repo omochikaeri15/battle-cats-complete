@@ -55,7 +55,7 @@ pub fn wave_draw(ctx: &mut AppContext, depth: i32, slot: i32, side: i32) -> Resu
             let frame = get_anim_len(anim)?.wrapping_add(!counter);
 
             maanim_execute(model, Some(anim), frame, 0)?;
-            draw_model(draw_context(&mut ctx.draw)?, model, x, y);
+            draw_model(draw_context(&mut ctx.draw)?, model, x, y)?;
         }
     }
 

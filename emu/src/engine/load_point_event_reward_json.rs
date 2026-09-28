@@ -41,31 +41,24 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
     for (point_key, entry) in points {
         let point_id = string_to_int(point_key)?;
-        let reset_map_id = match entry {
-            JsonNode::Object(fields) => fields
-                .get(b"ResetMapID".as_slice())
-                .map_or(Ok(0), |found| match found {
-                    JsonNode::String(text) => json_string_as_int(text),
-                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                    _ => Ok(json_value_as_int(found)),
-                })?,
-            _ => 0,
-        } as i32;
+        let JsonNode::Object(fields) = entry else {
+            return Err(Fault::null_pointer());
+        };
+        let reset_map_id = fields
+            .get(b"ResetMapID".as_slice())
+            .map_or(Ok(0), |found| match found {
+                JsonNode::String(text) => json_string_as_int(text),
+                JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                _ => Ok(json_value_as_int(found)),
+            })? as i32;
 
         ctx.point_event_rewards
             .entry(point_id)
             .or_default()
             .reset_map_id = reset_map_id;
 
-        let listed = match entry {
-            JsonNode::Object(fields) => match fields.get(b"Rewards".as_slice()) {
-                Some(JsonNode::Array(values)) => Some(values),
-                _ => None,
-            },
-            _ => None,
-        };
-        let Some(values) = listed else {
-            continue;
+        let Some(JsonNode::Array(values)) = fields.get(b"Rewards".as_slice()) else {
+            return Err(Fault::null_pointer());
         };
         let mut index = 0usize;
 
@@ -76,16 +69,16 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 .rewards
                 .push(PointReward::default());
 
-            let reward_id = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"RewardID".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let Some(JsonNode::Object(fields)) = values.get(index) else {
+                return Err(Fault::null_pointer());
+            };
+            let reward_id = fields
+                .get(b"RewardID".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .point_event_rewards
@@ -97,16 +90,13 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.reward_id = reward_id;
             }
 
-            let point = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"Point".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let point = fields
+                .get(b"Point".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .point_event_rewards
@@ -118,16 +108,13 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.point = point;
             }
 
-            let kind = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"Type".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let kind = fields
+                .get(b"Type".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .point_event_rewards
@@ -139,16 +126,13 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.kind = kind;
             }
 
-            let id = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"ID".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let id = fields
+                .get(b"ID".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .point_event_rewards
@@ -160,16 +144,13 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.id = id;
             }
 
-            let quantity = match values.get(index) {
-                Some(JsonNode::Object(fields)) => fields
-                    .get(b"Quantity".as_slice())
-                    .map_or(Ok(0), |found| match found {
-                        JsonNode::String(text) => json_string_as_int(text),
-                        JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                        _ => Ok(json_value_as_int(found)),
-                    })?,
-                _ => 0,
-            } as i32;
+            let quantity = fields
+                .get(b"Quantity".as_slice())
+                .map_or(Ok(0), |found| match found {
+                    JsonNode::String(text) => json_string_as_int(text),
+                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                    _ => Ok(json_value_as_int(found)),
+                })? as i32;
 
             if let Some(last) = ctx
                 .point_event_rewards
@@ -181,16 +162,11 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.quantity = quantity;
             }
 
-            let label0 = match values.get(index) {
-                Some(JsonNode::Object(fields)) => match fields.get(b"Label0".as_slice()) {
-                    Some(JsonNode::String(text)) => json_string_as_string(text),
-                    Some(JsonNode::Array(_)) | Some(JsonNode::Object(_)) => {
-                        json_container_as_string()
-                    }
-                    Some(found) => json_value_as_string(found),
-                    None => Vec::new(),
-                },
-                _ => Vec::new(),
+            let label0 = match fields.get(b"Label0".as_slice()) {
+                Some(JsonNode::String(text)) => json_string_as_string(text),
+                Some(JsonNode::Array(_)) | Some(JsonNode::Object(_)) => json_container_as_string(),
+                Some(found) => json_value_as_string(found),
+                None => Vec::new(),
             };
 
             if let Some(last) = ctx
@@ -203,16 +179,11 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
                 last.label0 = label0;
             }
 
-            let label1 = match values.get(index) {
-                Some(JsonNode::Object(fields)) => match fields.get(b"Label1".as_slice()) {
-                    Some(JsonNode::String(text)) => json_string_as_string(text),
-                    Some(JsonNode::Array(_)) | Some(JsonNode::Object(_)) => {
-                        json_container_as_string()
-                    }
-                    Some(found) => json_value_as_string(found),
-                    None => Vec::new(),
-                },
-                _ => Vec::new(),
+            let label1 = match fields.get(b"Label1".as_slice()) {
+                Some(JsonNode::String(text)) => json_string_as_string(text),
+                Some(JsonNode::Array(_)) | Some(JsonNode::Object(_)) => json_container_as_string(),
+                Some(found) => json_value_as_string(found),
+                None => Vec::new(),
             };
 
             if let Some(last) = ctx
@@ -227,6 +198,12 @@ pub fn load_point_event_reward_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
             index += 1;
         }
+
+        ctx.point_event_rewards
+            .entry(point_id)
+            .or_default()
+            .rewards
+            .sort_by_key(|reward| reward.point);
     }
 
     Ok(())

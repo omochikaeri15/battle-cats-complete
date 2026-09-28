@@ -8,8 +8,8 @@ pub fn eoc_progress_total(ctx: &AppContext) -> Result<i32, Fault> {
     for chapter in 0..3usize {
         let mut pair = [0u8; 8];
 
-        pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS + chapter * 4)?);
-        pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::CHAPTER_PROGRESS_KEY)?);
+        pair[..4].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS + chapter * 4)?);
+        pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
 
         let cleared = ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32;
 

@@ -16,8 +16,15 @@ pub fn load_autoset_ability_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         let first = read_csv_cell(stm, 0) as i32;
-        let second = read_csv_cell(stm, 1) as i32;
-        let third = read_csv_cell(stm, 1) as i32;
+        let mut second = -1;
+        let mut third = -1;
+
+        match first {
+            1 => third = read_csv_cell(stm, 1) as i32,
+            0 => second = read_csv_cell(stm, 1) as i32,
+            _ => {}
+        }
+
         let fourth = read_csv_cell(stm, 2) as i32;
 
         ctx.autoset_abilities

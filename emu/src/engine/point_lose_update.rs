@@ -135,21 +135,21 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
             let group = *entry.get(1).ok_or(Fault::index_out_of_range(1, entry.len() as i64))?;
             let id = *entry.get(2).ok_or(Fault::index_out_of_range(2, entry.len() as i64))?;
-            let reward = reward_def_lookup(&ctx.reward_defs, group, id)
+            let reward = reward_def_lookup(&ctx.point_event_rewards, group, id)
                 .ok_or(Fault::null_pointer())?
                 .clone();
 
             match reward.kind {
                 1 => {
-                    let text = query_localizable(ctx, &reward.message);
-                    let name = get_cat_name(ctx, reward.target, 0);
+                    let text = query_localizable(ctx, &reward.label0);
+                    let name = get_cat_name(ctx, reward.id, 0);
 
                     message = substitute_tokens(ctx, &text, &[(b"charaName", &name)])?;
                 }
                 0 => {
-                    let text = query_localizable(ctx, &reward.message);
-                    let name = get_item_name(ctx, reward.target);
-                    let amount = reward.amount.to_string().into_bytes();
+                    let text = query_localizable(ctx, &reward.label0);
+                    let name = get_item_name(ctx, reward.id);
+                    let amount = reward.quantity.to_string().into_bytes();
 
                     message = substitute_tokens(
                         ctx,

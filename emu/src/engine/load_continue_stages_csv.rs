@@ -7,6 +7,7 @@ use super::{
 
 pub fn load_continue_stages_csv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.ex_groups.clear();
+    ctx.ex_lottery.clear();
 
     if let Some(bytes) = open_asset_stream(ctx, b"EX_group.csv", 0, 0)? {
         let stm = &mut AssetStream::new(&bytes, b'\n');
@@ -51,8 +52,6 @@ pub fn load_continue_stages_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
     }
-
-    ctx.ex_lottery.clear();
 
     let Some(bytes) = open_asset_stream(ctx, b"EX_lottery.csv", 0, 0)? else {
         return Ok(());

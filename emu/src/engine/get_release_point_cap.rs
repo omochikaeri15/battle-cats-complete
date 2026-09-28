@@ -11,7 +11,7 @@ pub struct ReleasePoint {
     pub explanation_label: Vec<u8>,
 }
 
-pub fn get_release_point_cap(ctx: &AppContext, point_id: i32) -> Result<i32, Fault> {
+pub fn get_release_point_cap(ctx: &mut AppContext, point_id: i32) -> Result<i32, Fault> {
     let Some(release) = ctx.release_points.get(&point_id) else {
         return Ok(0);
     };
@@ -24,7 +24,7 @@ pub fn get_release_point_cap(ctx: &AppContext, point_id: i32) -> Result<i32, Fau
             .get(index)
             .ok_or(Fault::index_out_of_range(index as i64, release.conditions.len() as i64))?;
 
-        if get_condition_flag(&ctx.server_flags, condition).is_some_and(|flag| flag) {
+        if get_condition_flag(&mut ctx.server_flags, condition).is_some_and(|flag| flag) {
             cap = max_i32(
                 cap,
                 *release.caps.get(index).ok_or(Fault::index_out_of_range(index as i64, release.caps.len() as i64))?,

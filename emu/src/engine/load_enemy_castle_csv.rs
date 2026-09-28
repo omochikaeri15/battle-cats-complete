@@ -8,17 +8,14 @@ use super::{
 const TERMINATOR: i32 = -999;
 
 pub fn load_enemy_castle_csv(ctx: &mut AppContext, which: i32) -> Result<(), Fault> {
-    let name: Option<&[u8]> = match which {
-        0 => Some(b"enemyCastleData0.csv"),
-        1 => Some(b"enemyCastleData1.csv"),
-        2 => Some(b"enemyCastleDataLegend.csv"),
-        3 => Some(b"enemyCastleData2.csv"),
-        _ => None,
+    let name: &[u8] = match which as u32 {
+        0 => b"enemyCastleData0.csv",
+        1 => b"enemyCastleData1.csv",
+        2 => b"enemyCastleDataLegend.csv",
+        3 => b"enemyCastleData2.csv",
+        _ => return Ok(()),
     };
-    let bytes = match name {
-        Some(name) => open_asset_stream(ctx, name, 0, 0)?.unwrap_or_default(),
-        None => Vec::new(),
-    };
+    let bytes = open_asset_stream(ctx, name, 0, 0)?.unwrap_or_default();
     let stm = &mut AssetStream::new(&bytes, b'\n');
     let castle_vec = &mut ctx.enemy_castle;
 

@@ -36,10 +36,10 @@ pub fn set_stage_unlock(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &mut ctx.stage_unlock_neg26,
-                0x02 => &mut ctx.stage_unlock_neg24,
-                0x03 => &mut ctx.stage_unlock_neg23,
-                _ => &mut ctx.stage_unlock_neg22,
+                0x00 => &mut ctx.stage_table_neg26.stage_unlock,
+                0x02 => &mut ctx.stage_table_neg24.stage_unlock,
+                0x03 => &mut ctx.stage_table_neg23.stage_unlock,
+                _ => &mut ctx.stage_table_neg22.stage_unlock,
             };
             let limit = maps.len() as i64;
             let cell = maps

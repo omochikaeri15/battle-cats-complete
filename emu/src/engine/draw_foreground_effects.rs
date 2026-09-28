@@ -426,7 +426,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                     );
                     let y = ops::cvttss2si(instance.y);
 
-                    draw_model(draw_context(&mut ctx.draw)?, &model, x, y);
+                    draw_model(draw_context(&mut ctx.draw)?, &model, x, y)?;
                     step = step.wrapping_add(1);
 
                     if step == end {

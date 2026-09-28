@@ -27,17 +27,17 @@ pub fn stage_condition_met(
             Ok(get_stage_record(ctx, -19, map_idx, stage, 0, 0)? > 0)
         }
         -11 => {
-            let missing = Fault::index_out_of_range(stage as i64, ctx.legend_stage_conditions.len() as i64);
+            let missing = Fault::index_out_of_range(stage as i64, ctx.play_dungeon_rows.len() as i64);
             let mut met = true;
 
             if ctx
-                .legend_stage_conditions
+                .play_dungeon_rows
                 .get(stage as i64 as usize)
                 .ok_or(missing.clone())?[0]
                 != 0
             {
                 let first = ctx
-                    .legend_stage_conditions
+                    .play_dungeon_rows
                     .get(stage as i64 as usize)
                     .ok_or(missing.clone())?[0];
 
@@ -45,13 +45,13 @@ pub fn stage_condition_met(
             }
 
             if ctx
-                .legend_stage_conditions
+                .play_dungeon_rows
                 .get(stage as i64 as usize)
                 .ok_or(missing.clone())?[1]
                 != 0
             {
                 let second = ctx
-                    .legend_stage_conditions
+                    .play_dungeon_rows
                     .get(stage as i64 as usize)
                     .ok_or(missing)?[1];
 

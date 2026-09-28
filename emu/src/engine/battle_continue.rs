@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, FormatArg, add_resource, analytics_record, app_on_draw, base_shake_reset,
+    AppContext, FormatArg, add_resource, analytics_nekokan_use, app_on_draw, base_shake_reset,
     get_global_map_id, get_stage_index, get_crown_level, is_ex_option_target, log_analytics_event,
     save_battle_snapshot,
 };
@@ -25,7 +25,7 @@ pub fn battle_continue(ctx: &mut AppContext) -> Result<(), Fault> {
             let stage = get_stage_index(ctx)?;
             let crown = get_crown_level(ctx)?;
 
-            analytics_record(
+            analytics_nekokan_use(
                 ctx,
                 0x13157fc,
                 0x1e,

@@ -22,7 +22,7 @@ pub fn load_autoset_rating_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.autoset_ratings
             .entry(group)
             .or_default()
-            .insert(unit, rating);
+            .insert(unit.wrapping_sub(1), rating);
     }
 
     Ok(())

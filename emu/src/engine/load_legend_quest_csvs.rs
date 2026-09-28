@@ -7,7 +7,7 @@ use super::{
 
 pub fn load_legend_quest_csvs(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.random_dungeon_rows.clear();
-    ctx.legend_stage_conditions.clear();
+    ctx.play_dungeon_rows.clear();
 
     if get_map_type(ctx, 0)? != -11 {
         return Ok(());
@@ -48,7 +48,7 @@ pub fn load_legend_quest_csvs(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut stage = 0i64;
 
         while read_csv_row(stm) {
-            ctx.legend_stage_conditions.push([
+            ctx.play_dungeon_rows.push([
                 read_csv_cell(stm, 0) as i32,
                 read_csv_cell(stm, 1) as i32,
                 read_csv_cell(stm, 2) as i32,

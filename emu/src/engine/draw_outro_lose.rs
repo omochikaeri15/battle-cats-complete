@@ -3,7 +3,7 @@ use crate::{Fault, ops};
 use super::{
     button_bank_find, draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_number_plain, draw_surface_aligned, fill_rect,
     get_bottom_inset_logical, get_design_height2, get_drawable_width, glow_set, hit_test_rect, imgcut_get_sprite_cut, new_button_draw, obf_value_read, set_tint,
-    set_tint_alpha, touch_is_down, AppContext, Surface, DECK_PRESS_SIZE_TABLE, LOSE_BANNER_SLIDE_TABLE, POPUP_GROW_TABLE,
+    set_tint_alpha, touch_is_down, AppContext, Surface, BUTTON_PRESS_BOUNCE, LOSE_BANNER_SLIDE_TABLE, POPUP_GROW_TABLE,
 };
 
 const BLANK_LINE: &[u8] = "\u{ff20}".as_bytes();
@@ -122,9 +122,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         let plate = ctx.img101_sheet.clone();
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
         let step = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
-        let press = *DECK_PRESS_SIZE_TABLE
+        let press = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
-            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+            .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = ops::div_2(press);
         let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(-0xbe);
         let y = ctx
@@ -250,9 +250,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
     for (counter, dx, cut) in [(AppContext::OUTRO_OK_PRESS, -0xe5, 0), (AppContext::LOSE_NO_PRESS, 0x3d, 0)] {
         let step = ctx.i32_at(counter)?;
-        let press = *DECK_PRESS_SIZE_TABLE
+        let press = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
-            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+            .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = ops::div_2(press);
         let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
 
@@ -264,9 +264,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
     for (counter, dx, cut) in [(AppContext::OUTRO_OK_PRESS, -0xdc, 4), (AppContext::LOSE_NO_PRESS, 0x46, 5)] {
         let step = ctx.i32_at(counter)?;
-        let press = *DECK_PRESS_SIZE_TABLE
+        let press = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
-            .ok_or(Fault::index_out_of_range(step as i64, DECK_PRESS_SIZE_TABLE.len() as i64))?;
+            .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = ops::div_2(press);
         let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(half).wrapping_add(dx);
 

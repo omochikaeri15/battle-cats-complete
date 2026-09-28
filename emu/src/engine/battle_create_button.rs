@@ -5,7 +5,7 @@ use crate::{Fault, ops};
 use super::{
     AppContext, battle_create_button_lambda_0, battle_create_button_lambda_1,
     get_bottom_inset_logical, get_drawable_width, get_right_inset_logical, imgcut_get_sprite_cut,
-    lose_exit_map_check, new_button_register, new_button_set_enabled, new_button_set_touchable,
+    is_aku_realm_map, new_button_register, new_button_set_enabled, new_button_set_touchable,
     ui_node_add_child, ui_node_set_anchor, ui_node_set_panel, ui_node_set_sprite,
     unlock_popup_is_unlocked,
 };
@@ -45,7 +45,7 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let enabled = ctx.i32_at(AppContext::OUTRO_MAP_LOCKED)? == 0
         && unlock_popup_is_unlocked(ctx, 0x4b)
-        && !lose_exit_map_check(ctx)?;
+        && !is_aku_realm_map(ctx)?;
     let map = new_button_set_enabled(&mut ctx.buttons, map, enabled as u8)?;
 
     new_button_set_touchable(&mut ctx.buttons, map, 0)?;
@@ -56,7 +56,7 @@ pub fn battle_create_button(ctx: &mut AppContext) -> Result<(), Fault> {
         .i32_at(AppContext::LETTERBOX_SHIFT)?
         .wrapping_sub(get_bottom_inset_logical(ctx)?);
     let common = Rc::clone(
-        ctx.img039_sheet
+        ctx.dialog_sheet
             .as_ref()
             .ok_or(Fault::null_pointer())?,
     );

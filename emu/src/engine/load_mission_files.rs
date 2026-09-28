@@ -213,12 +213,11 @@ pub fn load_mission_files(ctx: &mut AppContext) -> Result<(), Fault> {
                     entry.condition.limit_options = options;
                 }
             } else if conditions_type == 0x20 {
-                let first = ctx
+                let first = *ctx
                     .mission_data
                     .get(&id)
                     .and_then(|entry| entry.condition.values.first())
-                    .copied()
-                    .unwrap_or(0);
+                    .ok_or(Fault::null_pointer())?;
                 let setting = ctx
                     .mission_gatya_settings
                     .get(&first)

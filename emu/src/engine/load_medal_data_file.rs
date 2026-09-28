@@ -17,12 +17,8 @@ pub fn load_medal_data_file(ctx: &mut AppContext) -> Result<(), Fault> {
             let mut index = 0usize;
 
             loop {
-                let listed = match root.get(b"iconID".as_slice()) {
-                    Some(JsonNode::Array(values)) => Some(values),
-                    _ => None,
-                };
-                let Some(values) = listed else {
-                    break;
+                let Some(JsonNode::Array(values)) = root.get(b"iconID".as_slice()) else {
+                    return Err(Fault::null_pointer());
                 };
 
                 if values.len() <= index {

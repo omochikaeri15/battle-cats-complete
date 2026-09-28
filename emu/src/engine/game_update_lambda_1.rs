@@ -16,6 +16,10 @@ pub fn game_update_lambda_1(
 
     if event == 5 {
         ctx.set_block_at::<1>(AppContext::TUTORIAL_POPUP_OPEN, [0])?;
+        ctx.set_i32_at(
+            AppContext::TUTORIAL_STEP,
+            ctx.i32_at(AppContext::TUTORIAL_STEP)?.wrapping_add(1),
+        )?;
     }
 
     Ok(())

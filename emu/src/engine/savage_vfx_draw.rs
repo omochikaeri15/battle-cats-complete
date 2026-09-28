@@ -27,7 +27,7 @@ pub fn savage_vfx_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             .wrapping_add(0x44);
         let y = ops::div_10(ctx.savage_vfx[index].pos_y).wrapping_add(0x4d);
 
-        draw_model(draw_context(&mut ctx.draw)?, &ctx.strong_attack_model, x, y);
+        draw_model(draw_context(&mut ctx.draw)?, &ctx.strong_attack_model, x, y)?;
         index += 1;
 
         if index >= ctx.savage_vfx.len() {

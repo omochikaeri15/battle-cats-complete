@@ -77,7 +77,7 @@ impl Platform for InertPlatform {
 
     fn ranking_submit(&mut self, _entry: i32, _score: i32) {}
 
-    fn ads_available(&mut self) -> bool {
+    fn is_network_available(&mut self) -> bool {
         false
     }
 

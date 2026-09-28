@@ -1,4 +1,4 @@
-use crate::engine::{DrawSink, Imgcut, Mamodel, Surface};
+use crate::engine::{DrawSink, Imgcut, Surface};
 
 pub struct InertDraw {
     color: [i32; 4],
@@ -18,6 +18,10 @@ impl DrawSink for InertDraw {
     fn set_origin(&mut self, _x: i32, _y: i32) {}
 
     fn glow_set(&mut self, _mode: i32) {}
+
+    fn glow(&self) -> i32 {
+        0
+    }
 
     fn set_draw_scale(&mut self, _scale: f32) {}
 
@@ -116,6 +120,20 @@ impl DrawSink for InertDraw {
     ) {
     }
 
+    fn draw_region_scaled(
+        &mut self,
+        _sheet: &Imgcut,
+        _x: i32,
+        _y: i32,
+        _width: i32,
+        _height: i32,
+        _src_x: i32,
+        _src_y: i32,
+        _src_w: i32,
+        _src_h: i32,
+    ) {
+    }
+
     fn draw_surface_scaled(
         &mut self,
         _surface: Surface<'_>,
@@ -123,22 +141,6 @@ impl DrawSink for InertDraw {
         _y: i32,
         _width: i32,
         _height: i32,
-    ) {
-    }
-
-    fn draw_model(&mut self, _model: &Mamodel, _x: i32, _y: i32) {}
-
-    fn draw_model_scaled(
-        &mut self,
-        _model: &Mamodel,
-        _x: i32,
-        _y: i32,
-        _pivot_x: i32,
-        _pivot_y: i32,
-        _scale: f32,
-        _alpha: i32,
-        _first: i32,
-        _second: i32,
     ) {
     }
 
@@ -200,35 +202,6 @@ impl DrawSink for InertDraw {
         _pivot_x: i32,
         _pivot_y: i32,
         _pivot_align: i32,
-    ) {
-    }
-
-    fn draw_panel(
-        &mut self,
-        _sheet: &Imgcut,
-        _x: i32,
-        _y: i32,
-        _width: i32,
-        _height: i32,
-        _scale: f32,
-        _cut_a: i32,
-        _cut_b: i32,
-    ) {
-    }
-
-    fn draw_nine_slice(
-        &mut self,
-        _sheet: &Imgcut,
-        _x: i32,
-        _y: i32,
-        _width: i32,
-        _height: i32,
-        _scale: f32,
-        _cut: i32,
-        _border_x: i32,
-        _border_y: i32,
-        _inner_w: i32,
-        _inner_h: i32,
     ) {
     }
 

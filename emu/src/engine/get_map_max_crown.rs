@@ -11,7 +11,7 @@ pub struct MapOption {
     pub show_once: BTreeMap<i32, i32>,
     pub display_order: BTreeMap<i32, i32>,
     pub interval: BTreeMap<i32, i32>,
-    pub challenge_maps: Vec<i32>,
+    pub entry_record_maps: Vec<i32>,
     pub difficulty: BTreeMap<i32, i32>,
     pub hide_after_clear_maps: Vec<i32>,
     pub double_xp_ad_maps: Vec<i32>,

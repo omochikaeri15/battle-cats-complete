@@ -33,57 +33,43 @@ pub fn load_daily_login_grade_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
     for (stamp_key, entry) in stamps {
         let stamp_id = string_to_int(stamp_key)?;
-        let group_id = match entry {
-            JsonNode::Object(fields) => fields
-                .get(b"DailyLoginStampGroupID".as_slice())
-                .map_or(Ok(0), |found| match found {
-                    JsonNode::String(text) => json_string_as_int(text),
-                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                    _ => Ok(json_value_as_int(found)),
-                })?,
-            _ => 0,
-        } as i32;
+        let JsonNode::Object(fields) = entry else {
+            return Err(Fault::null_pointer());
+        };
+        let group_id = fields
+            .get(b"DailyLoginStampGroupID".as_slice())
+            .map_or(Ok(0), |found| match found {
+                JsonNode::String(text) => json_string_as_int(text),
+                JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                _ => Ok(json_value_as_int(found)),
+            })? as i32;
 
         ctx.daily_login_grades
             .entry(stamp_id)
             .or_default()
             .group_id = group_id;
 
-        let grade = match entry {
-            JsonNode::Object(fields) => fields
-                .get(b"DailyLoginStampGrade".as_slice())
-                .map_or(Ok(0), |found| match found {
-                    JsonNode::String(text) => json_string_as_int(text),
-                    JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
-                    _ => Ok(json_value_as_int(found)),
-                })?,
-            _ => 0,
-        } as i32;
+        let grade = fields
+            .get(b"DailyLoginStampGrade".as_slice())
+            .map_or(Ok(0), |found| match found {
+                JsonNode::String(text) => json_string_as_int(text),
+                JsonNode::Array(_) | JsonNode::Object(_) => Ok(json_container_as_int()),
+                _ => Ok(json_value_as_int(found)),
+            })? as i32;
 
         ctx.daily_login_grades.entry(stamp_id).or_default().grade = grade;
 
-        let listed = match entry {
-            JsonNode::Object(fields) => match fields.get(b"ConditionType".as_slice()) {
-                Some(JsonNode::Object(kinds)) => Some(kinds),
-                _ => None,
-            },
-            _ => None,
-        };
-        let Some(kinds) = listed else {
-            continue;
+        let Some(JsonNode::Object(kinds)) = fields.get(b"ConditionType".as_slice()) else {
+            return Err(Fault::null_pointer());
         };
 
         for (kind_key, kind_entry) in kinds {
             let kind = string_to_int(kind_key)?;
-            let parameters = match kind_entry {
-                JsonNode::Object(fields) => match fields.get(b"Parameters".as_slice()) {
-                    Some(JsonNode::Array(values)) => Some(values),
-                    _ => None,
-                },
-                _ => None,
+            let JsonNode::Object(kind_fields) = kind_entry else {
+                return Err(Fault::null_pointer());
             };
-            let Some(values) = parameters else {
-                continue;
+            let Some(JsonNode::Array(values)) = kind_fields.get(b"Parameters".as_slice()) else {
+                return Err(Fault::null_pointer());
             };
             let mut index = 0usize;
 

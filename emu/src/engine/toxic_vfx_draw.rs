@@ -32,7 +32,7 @@ pub fn toxic_vfx_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             &ctx.percentage_attack_model,
             x,
             y,
-        );
+        )?;
         index += 1;
 
         if index >= ctx.toxic_vfx.len() {

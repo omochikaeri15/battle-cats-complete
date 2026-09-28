@@ -1,9 +1,11 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, format_localized, open_asset_stream, query_localizable,
-    read_cell_stream, read_csv_cell, read_csv_row, read_stream_row, std_string_equals,
-    string_format_rank_comment,
+    AppContext, AssetStream, format_localized, load_ad_reward_table_csv,
+    load_castle_custom_limit_csv, load_castle_recipe_files, load_gamatoto_bonus_csv,
+    load_gamatoto_collabo_tsv, load_gamatoto_special_drop_csv, load_gamatoto_unlock_tsv,
+    open_asset_stream, query_localizable, read_cell_stream, read_csv_cell, read_csv_row,
+    read_stream_row, std_string_equals, string_format_rank_comment,
 };
 
 const TERMINATOR: &[u8] = &[0xef, 0xbc, 0xa0];
@@ -305,6 +307,14 @@ pub fn load_gamatoto_files(ctx: &mut AppContext) -> Result<(), Fault> {
             row += 1;
         }
     }
+
+    load_castle_recipe_files(ctx)?;
+    load_castle_custom_limit_csv(ctx)?;
+    load_ad_reward_table_csv(ctx)?;
+    load_gamatoto_collabo_tsv(ctx)?;
+    load_gamatoto_unlock_tsv(ctx)?;
+    load_gamatoto_bonus_csv(ctx)?;
+    load_gamatoto_special_drop_csv(ctx)?;
 
     Ok(())
 }

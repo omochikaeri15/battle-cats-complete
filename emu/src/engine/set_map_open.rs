@@ -23,10 +23,10 @@ pub fn set_map_open(
     match case {
         0x00 | 0x02..=0x04 => {
             let maps = match case {
-                0x00 => &mut ctx.map_open_neg26,
-                0x02 => &mut ctx.map_open_neg24,
-                0x03 => &mut ctx.map_open_neg23,
-                _ => &mut ctx.map_open_neg22,
+                0x00 => &mut ctx.stage_table_neg26.map_open,
+                0x02 => &mut ctx.stage_table_neg24.map_open,
+                0x03 => &mut ctx.stage_table_neg23.map_open,
+                _ => &mut ctx.stage_table_neg22.map_open,
             };
             let limit = maps.len() as i64;
             let cell = maps

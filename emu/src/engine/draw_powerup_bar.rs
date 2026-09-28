@@ -54,7 +54,7 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
         let bounce =
             *BUTTON_PRESS_BOUNCE
                 .get(press as i64 as usize)
-                .ok_or(Fault::index_out_of_range(press as i64, 6))?;
+                .ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
         let half = bounce / 2;
         let x = width
             .wrapping_add(position.wrapping_mul(0x58))

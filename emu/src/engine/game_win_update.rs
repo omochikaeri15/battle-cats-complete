@@ -153,7 +153,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.label_texts[0] = {
                 let font = ctx.default_font.clone();
                 let text = ctx
-                    .next_stage_names
+                    .treasure3_texts
                     .get(mode as i64 as usize)
                     .and_then(|names| names.get(unlocked as i64 as usize))
                     .map(|names| names[0].clone())
@@ -170,7 +170,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             };
             ctx.label_texts[1] = {
                 let font = ctx.default_font.clone();
-                let text = ctx.next_stage_caption.clone();
+                let text = ctx.treasure2_texts[6].clone();
 
                 Some(get_text_texture(
                     text_texture_cache(ctx)?,
@@ -314,14 +314,14 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let text = query_localizable(ctx, b"drop_popup_treasure");
                 let treasure = ctx.i32_at(AppContext::WIN_TREASURE)? as i64 as usize;
                 let first =
-                    ctx.treasure_names
+                    ctx.treasure2_texts
                         .get(treasure)
                         .cloned()
-                        .ok_or(Fault::index_out_of_range(treasure as i64, ctx.treasure_names.len() as i64))?;
+                        .ok_or(Fault::index_out_of_range(treasure as i64, ctx.treasure2_texts.len() as i64))?;
                 let map = (ctx.i32_at(AppContext::CHAPTER_MODE)? as i64).wrapping_add(3) as usize;
                 let stage = ctx.i32_at(AppContext::CASTLE_ID)? as i64 as usize;
                 let second = ctx
-                    .stage_names
+                    .stage_names_numbered
                     .get(map)
                     .and_then(|names| names.get(stage))
                     .cloned()
@@ -445,7 +445,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .get(order)
                         .ok_or(Fault::index_out_of_range(order as i64, 0x33))? as i64 as usize;
                     let name = ctx
-                        .stage_names
+                        .stage_names_numbered
                         .get(map)
                         .and_then(|names| names.get(stage))
                         .cloned()
@@ -699,7 +699,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 message = Vec::new();
 
                 let reward = reward_def_lookup(
-                    &ctx.reward_defs,
+                    &ctx.point_event_rewards,
                     *ctx.reward_queue
                         .first()
                         .ok_or(Fault::index_out_of_range(0, 0))?
@@ -716,15 +716,15 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 match reward.kind {
                     1 => {
-                        let text = query_localizable(ctx, &reward.message);
-                        let name = get_cat_name(ctx, reward.target, 0);
+                        let text = query_localizable(ctx, &reward.label0);
+                        let name = get_cat_name(ctx, reward.id, 0);
 
                         message = substitute_tokens(ctx, &text, &[(b"charaName", &name)])?;
                     }
                     0 => {
-                        let text = query_localizable(ctx, &reward.message);
-                        let name = get_item_name(ctx, reward.target);
-                        let amount = reward.amount.to_string().into_bytes();
+                        let text = query_localizable(ctx, &reward.label0);
+                        let name = get_item_name(ctx, reward.id);
+                        let amount = reward.quantity.to_string().into_bytes();
 
                         message = substitute_tokens(
                             ctx,
