@@ -111,23 +111,6 @@ pub struct SandboxSettings {
     pub video_format: VideoFormat,
     pub video_quality: Option<u32>,
     pub video_compression: Option<u32>,
-    pub tutorial: TutorialSettings,
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(default)]
-pub struct TutorialSettings {
-    pub battle_cleared: bool,
-    pub deck_seen: bool,
-    pub two_rows_seen: bool,
-    pub cat_god_seen: bool,
-    pub shop_seen: bool,
-}
-
-impl Default for TutorialSettings {
-    fn default() -> Self {
-        Self { battle_cleared: true, deck_seen: true, two_rows_seen: true, cat_god_seen: true, shop_seen: true }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]

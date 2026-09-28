@@ -1552,7 +1552,7 @@ impl BattleCatsApp {
                 if matches!(msg, sandbox::Message::Play)
                     && let Some(entry) = self.staged_entry()
                 {
-                    let setup = self.sandbox_state.setup(&self.app_state, &self.settings, entry);
+                    let setup = self.sandbox_state.setup(&self.app_state, entry);
 
                     let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label());
                     let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };

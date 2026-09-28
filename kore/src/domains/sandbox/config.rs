@@ -103,6 +103,22 @@ impl std::fmt::Display for StartSpeed {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Tutorial {
+    pub battle_cleared: bool,
+    pub deck_seen: bool,
+    pub two_rows_seen: bool,
+    pub cat_god_seen: bool,
+    pub shop_seen: bool,
+}
+
+impl Default for Tutorial {
+    fn default() -> Self {
+        Self { battle_cleared: true, deck_seen: true, two_rows_seen: true, cat_god_seen: true, shop_seen: true }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -119,6 +135,7 @@ pub struct Config {
     pub start_speed: StartSpeed,
     pub altar_level: String,
     pub cat_god: CatGod,
+    pub tutorial: Tutorial,
 }
 
 impl Default for Config {
@@ -137,6 +154,7 @@ impl Default for Config {
             start_speed: StartSpeed::Single,
             altar_level: String::new(),
             cat_god: CatGod::default(),
+            tutorial: Tutorial::default(),
         }
     }
 }

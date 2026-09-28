@@ -36,27 +36,9 @@ impl std::fmt::Display for BannerForm {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TutorialStep {
-    BattleCleared,
-    DeckSeen,
-    TwoRowsSeen,
-    CatGodSeen,
-    ShopSeen,
-}
-
-const TUTORIAL_STEPS: [(TutorialStep, &str, &str); 5] = [
-    (TutorialStep::BattleCleared, "First Battle", "Off replays the first battle's guided deployment and continue prompts"),
-    (TutorialStep::DeckSeen, "Deck Guide", "Off shows the deck guide popup when a battle starts"),
-    (TutorialStep::TwoRowsSeen, "Two Rows Guide", "Off shows the two-row deck guide popup when a battle starts"),
-    (TutorialStep::CatGodSeen, "Cat God Guide", "Off shows the Cat God guide popup on the first Cat God open"),
-    (TutorialStep::ShopSeen, "Shop Guide", "Off shows the Cat Food shop guide popup on the first shop open"),
-];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     General,
     Sandbox,
-    Tutorial,
     Cats,
     Enemies,
     Stages,
@@ -79,7 +61,6 @@ pub enum Message {
     SandboxBannerSelected(usize),
     ReplaySourceSelected(ReplaySource),
     ToggleDisableReplays(bool),
-    ToggleTutorial(TutorialStep, bool),
     KeyCapture(Bind),
     KeyCaptured(String),
     KeysReset,
@@ -234,19 +215,6 @@ impl State {
             }
             Message::ToggleDisableReplays(val) => {
                 core_settings.sandbox.disable_replays = val;
-                Task::none()
-            }
-            Message::ToggleTutorial(step, val) => {
-                let tutorial = &mut core_settings.sandbox.tutorial;
-
-                match step {
-                    TutorialStep::BattleCleared => tutorial.battle_cleared = val,
-                    TutorialStep::DeckSeen => tutorial.deck_seen = val,
-                    TutorialStep::TwoRowsSeen => tutorial.two_rows_seen = val,
-                    TutorialStep::CatGodSeen => tutorial.cat_god_seen = val,
-                    TutorialStep::ShopSeen => tutorial.shop_seen = val,
-                }
-
                 Task::none()
             }
             Message::ToggleInvalidCats(val) => {
@@ -434,7 +402,6 @@ impl State {
         let tabs = [
             (Tab::General, "General"),
             (Tab::Sandbox, "Sandbox"),
-            (Tab::Tutorial, "Tutorial"),
             (Tab::Cats, "Cats"),
             (Tab::Enemies, "Enemies"),
             (Tab::Stages, "Stages"),
@@ -473,7 +440,6 @@ impl State {
                 self.general.view(core_settings, updater_status).map(Message::General),
             ].spacing(SECTION_SPACING).into(),
             Tab::Sandbox => self.view_sandbox(core_settings),
-            Tab::Tutorial => Self::view_tutorial(core_settings),
             Tab::Cats => self.view_cats(core_settings),
             Tab::Enemies => self.view_enemies(core_settings),
             Tab::Stages => self.view_stages(core_settings),
@@ -551,28 +517,6 @@ impl State {
             ),
             header_section(text("Keybinds").size(24), binds),
         ].spacing(20).into()
-    }
-
-    fn view_tutorial<'a>(core_settings: &'a CoreSettings) -> Element<'a, Message> {
-        let tutorial = &core_settings.sandbox.tutorial;
-        let mut toggles = column![].spacing(10);
-
-        for (step, label, hint) in TUTORIAL_STEPS {
-            let cleared = match step {
-                TutorialStep::BattleCleared => tutorial.battle_cleared,
-                TutorialStep::DeckSeen => tutorial.deck_seen,
-                TutorialStep::TwoRowsSeen => tutorial.two_rows_seen,
-                TutorialStep::CatGodSeen => tutorial.cat_god_seen,
-                TutorialStep::ShopSeen => tutorial.shop_seen,
-            };
-
-            toggles = toggles.push(hover_hint(
-                toggle_row(cleared, text(label), Some(move |val| Message::ToggleTutorial(step, val))),
-                hint,
-            ));
-        }
-
-        column![header_section(text("Cleared Tutorials").size(24), toggles)].spacing(20).into()
     }
 
     fn view_cats<'a>(&'a self, core_settings: &'a CoreSettings) -> Element<'a, Message> {

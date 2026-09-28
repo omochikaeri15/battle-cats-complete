@@ -2,13 +2,13 @@ use iced::widget::{column, container, scrollable, text, Column};
 use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
-use kore::domains::sandbox::config::{CatGod, StartSpeed};
+use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial};
 use kore::domains::sandbox::{config, CHAPTERS, ITEMS, TECHS};
 use kore::Vfs;
 
 use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume};
 use crate::app::theme;
-use crate::widget::{combo_row, entry_row, list_row, section, smooth_scroll, toggle_row};
+use crate::widget::{combo_row, entry_row, hover_hint, list_row, section, smooth_scroll, toggle_row};
 
 const SIDEBAR_WIDTH: f32 = 110.0;
 const PANEL_PADDING: f32 = 20.0;
@@ -57,6 +57,33 @@ pub enum Slot {
     Foundation,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TutorialStep {
+    BattleCleared,
+    DeckSeen,
+    TwoRowsSeen,
+    CatGodSeen,
+    ShopSeen,
+}
+
+const TUTORIAL_STEPS: [(TutorialStep, &str, &str); 5] = [
+    (TutorialStep::BattleCleared, "First Battle", "Off replays the first battle's guided deployment and continue prompts"),
+    (TutorialStep::DeckSeen, "Deck Guide", "Off shows the deck guide popup when a battle starts"),
+    (TutorialStep::TwoRowsSeen, "Two Rows Guide", "Off shows the two-row deck guide popup when a battle starts"),
+    (TutorialStep::CatGodSeen, "Cat God Guide", "Off shows the Cat God guide popup on the first Cat God open"),
+    (TutorialStep::ShopSeen, "Shop Guide", "Off shows the Cat Food shop guide popup on the first shop open"),
+];
+
+fn tutorial_step(tutorial: &Tutorial, step: TutorialStep) -> bool {
+    match step {
+        TutorialStep::BattleCleared => tutorial.battle_cleared,
+        TutorialStep::DeckSeen => tutorial.deck_seen,
+        TutorialStep::TwoRowsSeen => tutorial.two_rows_seen,
+        TutorialStep::CatGodSeen => tutorial.cat_god_seen,
+        TutorialStep::ShopSeen => tutorial.shop_seen,
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Message {
     Panel(SandboxPanel),
@@ -74,6 +101,7 @@ pub enum Message {
     Altar(String),
     CatGod(CatGod),
     StartSpeed(StartSpeed),
+    Tutorial(TutorialStep, bool),
 }
 
 #[derive(Default)]
@@ -140,6 +168,17 @@ impl State {
                 Slot::Style => options.config.style = Some(part.id),
                 Slot::Foundation => options.config.foundation = Some(part.id),
             },
+            Message::Tutorial(step, cleared) => {
+                let tutorial = &mut options.config.tutorial;
+
+                match step {
+                    TutorialStep::BattleCleared => tutorial.battle_cleared = cleared,
+                    TutorialStep::DeckSeen => tutorial.deck_seen = cleared,
+                    TutorialStep::TwoRowsSeen => tutorial.two_rows_seen = cleared,
+                    TutorialStep::CatGodSeen => tutorial.cat_god_seen = cleared,
+                    TutorialStep::ShopSeen => tutorial.shop_seen = cleared,
+                }
+            }
             Message::CatGod(picked) => options.config.cat_god = picked,
             Message::StartSpeed(picked) => options.config.start_speed = picked,
             Message::Castle(entry) => {
@@ -178,6 +217,7 @@ impl State {
             (SandboxPanel::Tech, "Tech"),
             (SandboxPanel::Base, "Base"),
             (SandboxPanel::Items, "Items"),
+            (SandboxPanel::Tutorial, "Tutorial"),
         ];
 
         let mut tab_list = column![].spacing(TAB_SPACING);
@@ -200,6 +240,7 @@ impl State {
             SandboxPanel::Tech => Self::tech(options),
             SandboxPanel::Base => self.base(options),
             SandboxPanel::Items => Self::items(options),
+            SandboxPanel::Tutorial => Self::tutorial(options),
         };
 
         let page = container(body).padding(iced::Padding { bottom, ..iced::Padding::new(PANEL_PADDING) }).width(Length::Fill);
@@ -252,6 +293,19 @@ impl State {
             ]
                 .spacing(ROW_SPACING),
         )
+    }
+
+    fn tutorial(options: &SandboxState) -> Element<'_, Message> {
+        let mut rows = Column::new().spacing(ROW_SPACING);
+
+        for (step, label, hint) in TUTORIAL_STEPS {
+            rows = rows.push(hover_hint(
+                toggle_row(tutorial_step(&options.config.tutorial, step), text(label), Some(move |cleared| Message::Tutorial(step, cleared))),
+                hint,
+            ));
+        }
+
+        section("Cleared Tutorials", Length::Fill, rows)
     }
 
     fn items(options: &SandboxState) -> Element<'_, Message> {

@@ -128,6 +128,7 @@ pub enum SandboxPanel {
     Tech,
     Base,
     Items,
+    Tutorial,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

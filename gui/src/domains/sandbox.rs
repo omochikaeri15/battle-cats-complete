@@ -302,10 +302,10 @@ impl State {
         self.lineup.filter_popup_view(window).map(|view| view.map(Message::Lineup))
     }
 
-    pub(crate) fn setup(&self, app_state: &AppState, settings: &Settings, stage: StageEntry) -> Setup {
+    pub(crate) fn setup(&self, app_state: &AppState, stage: StageEntry) -> Setup {
         let options = &app_state.sandbox;
         let parts = self.config.parts();
-        let tutorial = &settings.sandbox.tutorial;
+        let tutorial = &options.config.tutorial;
         let mut setup = Setup {
             stage,
             tutorial: TutorialFlags {
