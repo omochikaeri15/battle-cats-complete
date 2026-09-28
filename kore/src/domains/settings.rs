@@ -116,17 +116,19 @@ pub struct SandboxSettings {
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum ReplaySource {
     #[default]
+    Hybrid,
     Bcv,
     Vfs,
 }
 
 impl ReplaySource {
-    pub const ALL: [Self; 2] = [Self::Bcv, Self::Vfs];
+    pub const ALL: [Self; 3] = [Self::Hybrid, Self::Bcv, Self::Vfs];
 }
 
 impl std::fmt::Display for ReplaySource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Hybrid => "Hybrid",
             Self::Bcv => "BCV",
             Self::Vfs => "VFS",
         })

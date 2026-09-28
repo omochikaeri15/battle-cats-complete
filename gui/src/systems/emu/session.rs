@@ -25,6 +25,7 @@ const STEP_TIME: Duration = Duration::from_millis(30);
 pub(super) struct Opened {
     pub(super) save: tape::Save,
     pub(super) frames: Vec<Vec<tape::Cue>>,
+    pub(super) faults: Vec<tape::Forgiven>,
     pub(super) index: FileIndex,
 }
 
@@ -36,13 +37,14 @@ pub(super) fn open(reel: &Reel) -> Result<Opened, String> {
             Ok(Opened {
                 save: tape::read_save(&dir)?,
                 frames: tape::read_input(&dir)?,
+                faults: tape::read_faults(&dir),
                 index: tape::index(&dir).map_err(|error| format!("the replay's asset list could not be read: {error}"))?,
             })
         }
         Reel::Bundle(bundle) => {
             let opened = tape::Bundle::open(bundle)?;
 
-            Ok(Opened { save: opened.save()?, frames: opened.input()?, index: opened.index() })
+            Ok(Opened { save: opened.save()?, frames: opened.input()?, faults: opened.faults(), index: opened.index() })
         }
     }
 }
@@ -251,12 +253,6 @@ impl Session {
         matches!(self.phase, Phase::Running | Phase::Faulted).then(|| self.driver.diagnose())
     }
 
-    pub fn cut_recording(&mut self) {
-        if self.phase == Phase::Running && !self.driver.watching() && self.driver.cut_recording() {
-            self.cut = true;
-        }
-    }
-
     pub fn take_cut(&mut self) -> bool {
         std::mem::take(&mut self.cut)
     }
@@ -394,6 +390,10 @@ impl Session {
 
         if let Err(reason) = self.driver.advance() {
             if self.driver.watching() {
+                if self.driver.forgive_scripted() {
+                    return;
+                }
+
                 warn!("emu: the replay was terminated by a fault: {reason}");
                 self.cut = true;
                 self.terminate();
@@ -435,9 +435,15 @@ impl Session {
         let index = match source {
             ReplaySource::Bcv => opened.index,
             ReplaySource::Vfs => DiskAssets::index(vfs),
+            ReplaySource::Hybrid => {
+                let mut index = DiskAssets::index(vfs);
+
+                index.extend(opened.index);
+                index
+            }
         };
 
-        self.driver.arm_playback(&opened.save, opened.frames, index);
+        self.driver.arm_playback(&opened.save, opened.frames, opened.faults, index);
 
         Ok(())
     }

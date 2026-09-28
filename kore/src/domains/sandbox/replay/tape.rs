@@ -23,11 +23,12 @@ pub enum Cue {
     Release,
     Pinch(i32),
     Settle,
+    Forgive,
 }
 
 impl Cue {
     pub fn before_input(self) -> bool {
-        matches!(self, Self::Key(..) | Self::Resize(..) | Self::Phone(_))
+        matches!(self, Self::Key(..) | Self::Resize(..) | Self::Phone(_) | Self::Forgive)
     }
 }
 
@@ -87,6 +88,7 @@ impl fmt::Display for Cue {
             Self::Release => f.write_char('r'),
             Self::Pinch(step) => write!(f, "z{step}"),
             Self::Settle => f.write_char('g'),
+            Self::Forgive => f.write_char('F'),
         }
     }
 }
@@ -108,6 +110,7 @@ impl std::str::FromStr for Cue {
             Some(("r", "")) => Some(Self::Release),
             Some(("z", step)) => step.parse().ok().map(Self::Pinch),
             Some(("g", "")) => Some(Self::Settle),
+            Some(("F", "")) => Some(Self::Forgive),
             _ => None,
         };
 
@@ -158,6 +161,7 @@ mod tests {
             Cue::Release,
             Cue::Pinch(-28),
             Cue::Settle,
+            Cue::Forgive,
         ];
         let text = format!("{}\n\n{}\n", format_frame(&frame), format_frame(&[Cue::Release]));
 

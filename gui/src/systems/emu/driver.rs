@@ -12,7 +12,7 @@ use emu::runtime::{
     VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
-use kore::domains::sandbox::replay::{self as tape, Cue, Recording};
+use kore::domains::sandbox::replay::{self as tape, Cue, Forgiven, Recording};
 use tracing::{info, trace, warn};
 
 use super::assets::{DiskAssets, FileIndex, Ledger, SharedLedger, SheetCache};
@@ -55,7 +55,7 @@ const UNIT_REWARD: i32 = 1;
 enum Tape {
     Off,
     Recording(Recording),
-    Playing { frames: Vec<Vec<Cue>>, at: usize },
+    Playing { frames: Vec<Vec<Cue>>, at: usize, faults: Vec<Forgiven> },
 }
 
 pub struct Driver {
@@ -81,6 +81,7 @@ pub struct Driver {
     booted: bool,
     forgiven: HashSet<Site>,
     tripped: Option<Site>,
+    reason: String,
     ledger: SharedLedger,
     seeds: Seeds,
     tape: Tape,
@@ -221,6 +222,7 @@ impl Driver {
             booted: false,
             forgiven: HashSet::new(),
             tripped: None,
+            reason: String::new(),
             ledger: Rc::new(RefCell::new(Ledger::default())),
             seeds: Seeds::draw(),
             tape: Tape::Off,
@@ -425,7 +427,7 @@ impl Driver {
         self.label = label;
     }
 
-    pub fn arm_playback(&mut self, save: &tape::Save, frames: Vec<Vec<Cue>>, index: FileIndex) {
+    pub fn arm_playback(&mut self, save: &tape::Save, frames: Vec<Vec<Cue>>, faults: Vec<Forgiven>, index: FileIndex) {
         self.close_tape();
         self.set_setup(replay::setup_from(&save.setup));
         self.phone = save.screen.phone;
@@ -433,32 +435,36 @@ impl Driver {
         self.set_options(replay::options_from(save.options));
         self.seeds = replay::seeds_from(save.seeds);
         self.adopt_index(index);
-        self.tape = Tape::Playing { frames, at: 0 };
+        self.tape = Tape::Playing { frames, at: 0, faults };
         self.cut = save.terminated;
     }
 
-    pub fn cut_recording(&mut self) -> bool {
-        if self.cut {
+    pub fn forgive_scripted(&mut self) -> bool {
+        let Some(site) = self.tripped else {
             return false;
-        }
-
-        let Tape::Recording(recording) = &mut self.tape else {
+        };
+        let Tape::Playing { frames, at, faults } = &self.tape else {
+            return false;
+        };
+        let Some(failed) = at.checked_sub(1) else {
+            return false;
+        };
+        let scripted = frames.get(*at).is_some_and(|cues| cues.contains(&Cue::Forgive));
+        let Some(entry) = faults.iter().find(|entry| entry.frame == failed) else {
             return false;
         };
 
-        self.cut = true;
-
-        if let Some(save) = self.recorded.as_mut() {
-            save.terminated = true;
-
-            if let Err(error) = recording.write_save(save) {
-                warn!("emu: the latest battle could not be marked as terminated: {error}");
-            }
+        if !scripted || entry.site != site.to_string() {
+            return false;
         }
 
-        if let Err(error) = recording.finish() {
-            warn!("emu: the latest battle could not be written out: {error}");
+        if entry.reason == self.reason {
+            trace!("emu: replay forgives the recorded fault at frame {failed} ({site}): {}", entry.reason);
+        } else {
+            trace!("emu: replay forgives the recorded fault at frame {failed} ({site}), recorded as: {} / now: {}", entry.reason, self.reason);
         }
+
+        self.forgive();
 
         true
     }
@@ -664,6 +670,7 @@ impl Driver {
                 emu::engine::app_on_touch(&mut self.ctx, TOUCH_PRESSED, x, y, 0)
             }
             Cue::Release => emu::engine::app_on_touch(&mut self.ctx, TOUCH_RELEASED, self.finger.0, self.finger.1, 0),
+            Cue::Forgive => Ok(()),
             Cue::Key(key, pressed) => {
                 let action = replay::action_of(key);
 
@@ -935,6 +942,7 @@ impl Driver {
             }
             Err((site, reason)) => {
                 self.tripped = Some(site);
+                self.reason.clone_from(&reason);
 
                 Err(reason)
             }
@@ -959,6 +967,14 @@ impl Driver {
         if self.forgiven.insert(site) {
             info!("emu: {site} was continued past, so it stays quiet for the rest of this battle");
         }
+
+        if let Tape::Recording(recording) = &mut self.tape {
+            self.pending.push(Cue::Forgive);
+
+            if let Err(error) = recording.forgive(&site.to_string(), &self.reason) {
+                warn!("emu: the forgiven fault could not be written to the latest battle: {error}");
+            }
+        }
     }
 
     fn run_frame(&mut self) -> Result<(), (Site, String)> {
@@ -967,7 +983,7 @@ impl Driver {
         }
 
         let script = match &mut self.tape {
-            Tape::Playing { frames, at } => {
+            Tape::Playing { frames, at, .. } => {
                 let Some(cues) = frames.get_mut(*at).map(mem::take) else {
                     self.finished = true;
 

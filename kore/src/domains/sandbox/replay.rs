@@ -27,6 +27,7 @@ pub const VANILLA_APP: &str = "The Battle Cats";
 
 const SAVE: &str = "save";
 const INPUT: &str = "input";
+const FAULT: &str = "fault";
 const MANIFEST: &str = "manifest";
 const ASSETS: &str = architecture::REPLAY;
 const LATEST: &str = "sandbox";
@@ -140,13 +141,59 @@ fn stored_name(path: &Path, taken: &BTreeSet<Box<str>>) -> Box<str> {
         .map_or_else(|| Box::from(base), Box::from)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Forgiven {
+    pub frame: usize,
+    pub site: String,
+    pub reason: String,
+}
+
+fn escape(text: &str) -> String {
+    text.replace('\\', "\\\\").replace('\n', "\\n").replace('\t', "\\t")
+}
+
+fn unescape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars();
+
+    while let Some(glyph) = chars.next() {
+        if glyph != '\\' {
+            out.push(glyph);
+
+            continue;
+        }
+
+        match chars.next() {
+            Some('n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some(other) => out.push(other),
+            None => out.push('\\'),
+        }
+    }
+
+    out
+}
+
+fn parse_faults(text: &str) -> Vec<Forgiven> {
+    text.lines()
+        .filter_map(|line| {
+            let (frame, rest) = line.split_once('\t')?;
+            let (site, reason) = rest.split_once('\t')?;
+
+            Some(Forgiven { frame: frame.parse().ok()?, site: site.to_owned(), reason: unescape(reason) })
+        })
+        .collect()
+}
+
 pub struct Recording {
     dir: PathBuf,
     input: BufWriter<File>,
+    fault: Option<BufWriter<File>>,
     manifest: BufWriter<File>,
     kept: BTreeSet<Box<str>>,
     stored: BTreeMap<PathBuf, Box<str>>,
     taken: BTreeSet<Box<str>>,
+    written: usize,
 }
 
 impl Recording {
@@ -164,10 +211,12 @@ impl Recording {
         Ok(Self {
             dir: dir.to_path_buf(),
             input: BufWriter::new(File::create(dir.join(INPUT))?),
+            fault: None,
             manifest: BufWriter::new(File::create(dir.join(MANIFEST))?),
             kept: BTreeSet::new(),
             stored: BTreeMap::new(),
             taken: BTreeSet::new(),
+            written: 0,
         })
     }
 
@@ -229,11 +278,29 @@ impl Recording {
     }
 
     pub fn frame(&mut self, cues: &[Cue]) -> io::Result<()> {
+        self.written += 1;
+
         writeln!(self.input, "{}", format_frame(cues))
+    }
+
+    pub fn forgive(&mut self, site: &str, reason: &str) -> io::Result<()> {
+        let frame = self.written.saturating_sub(1);
+        let fault = match self.fault.as_mut() {
+            Some(fault) => fault,
+            None => self.fault.insert(BufWriter::new(File::create(self.dir.join(FAULT))?)),
+        };
+
+        writeln!(fault, "{frame}\t{}\t{}", escape(site), escape(reason))?;
+        fault.flush()
     }
 
     pub fn finish(&mut self) -> io::Result<()> {
         self.input.flush()?;
+
+        if let Some(fault) = self.fault.as_mut() {
+            fault.flush()?;
+        }
+
         self.manifest.flush()
     }
 }
@@ -289,6 +356,10 @@ impl Bundle {
         parse(self.text(INPUT).ok_or("the replay has no readable input")?)
     }
 
+    pub fn faults(&self) -> Vec<Forgiven> {
+        self.text(FAULT).map(parse_faults).unwrap_or_default()
+    }
+
     fn assets(&self) -> impl Iterator<Item = (&str, &Arc<[u8]>)> {
         self.entries.iter().filter_map(|(name, bytes)| Some((name.strip_prefix(ASSETS)?.strip_prefix('/')?, bytes)))
     }
@@ -329,6 +400,10 @@ pub fn read_save(dir: &Path) -> Result<Save, String> {
     let text = fs::read_to_string(dir.join(SAVE)).map_err(|error| format!("the replay has no readable save: {error}"))?;
 
     serde_json::from_str(&text).map_err(|error| format!("the replay save is malformed: {error}"))
+}
+
+pub fn read_faults(dir: &Path) -> Vec<Forgiven> {
+    fs::read_to_string(dir.join(FAULT)).map(|text| parse_faults(&text)).unwrap_or_default()
 }
 
 pub fn read_input(dir: &Path) -> Result<Vec<Vec<Cue>>, String> {
@@ -650,4 +725,29 @@ pub fn list(library: &Path) -> Vec<PathBuf> {
 
     found.sort_by_key(|path| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
     found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // A forgiven fault's reason can hold newlines and tabs; the fault file keeps one record per line.
+    #[test]
+    fn fault_records_survive_a_round_trip() {
+        let reason = "main_draw:imgcut_get_sprite_cut:9\treached 16\npast its limit of 1 \\ end";
+        let text = format!("12\t{}\t{}\n", escape("main_draw.rs:9"), escape(reason));
+
+        assert_eq!(parse_faults(&text), vec![Forgiven { frame: 12, site: "main_draw.rs:9".to_owned(), reason: reason.to_owned() }]);
+        assert!(parse_faults("garbage without tabs\n").is_empty());
+    }
+
+    // A tape written before the tutorial flags and the Legend Quest redirect existed must still open.
+    #[test]
+    fn an_older_save_still_parses() {
+        let text = r#"{"setup":{"stage":{"map_id":24052,"stage":9,"layout":null,"crown":0,"map_name":"","stage_name":""},"lineup":[],"tech":[],"treasures":[],"cannon":0,"style":0,"foundation":0,"parts":{},"items":[],"speed_engaged":false,"altar":null,"cat_god":"Present"}}"#;
+        let save: Save = serde_json::from_str(text).expect("older save");
+
+        assert!(save.setup.tutorial.battle_cleared && save.setup.tutorial.shop_seen);
+        assert_eq!(save.setup.stage.dungeon_stage, None);
+    }
 }

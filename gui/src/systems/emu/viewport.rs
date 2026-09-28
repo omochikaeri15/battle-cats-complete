@@ -275,11 +275,9 @@ impl<Message> shader::Program<Message> for Viewport {
                 return None;
             }
 
-            let dragged = cursor.position().filter(|_| matches!(event, iced::Event::Mouse(mouse::Event::CursorMoved { .. })));
-
-            if let Some(point) = dragged.filter(|_| at.is_none()) {
-                let x = (point.x - bounds.x).clamp(0.0, bounds.width).round() as i32;
-                let y = (point.y - bounds.y).clamp(0.0, bounds.height).round() as i32;
+            if let iced::Event::Mouse(mouse::Event::CursorMoved { position }) = event {
+                let x = (position.x - bounds.x).clamp(0.0, bounds.width).round() as i32;
+                let y = (position.y - bounds.y).clamp(0.0, bounds.height).round() as i32;
 
                 self.touches.borrow_mut().push(Touch::Moved { x, y });
 

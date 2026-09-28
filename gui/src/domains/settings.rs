@@ -504,7 +504,7 @@ impl State {
                 column![
                     combo_row(
                         "Replay Source",
-                        "BCV plays a replay with the game files it was recorded with, VFS plays it with your own game files instead",
+                        "Hybrid plays a replay with the game files it was recorded with and your own files for anything it did not keep, BCV uses the recorded files only, VFS uses your own game files only",
                         ReplaySource::ALL,
                         Some(core_settings.sandbox.replay_source),
                         Some(Message::ReplaySourceSelected),

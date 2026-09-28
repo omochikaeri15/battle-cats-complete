@@ -13,7 +13,7 @@ use iced::futures::executor::block_on;
 use iced::futures::Stream;
 use iced::widget::shader::Pipeline as _;
 use iced::{wgpu, Rectangle};
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 
 use kore::Vfs;
 use kore::common::architecture::Workspace;
@@ -38,7 +38,8 @@ const WORK_FOLDER: &str = "video";
 
 pub struct VideoJob {
     reel: Source,
-    index: Option<FileIndex>,
+    source: ReplaySource,
+    index: FileIndex,
     format: VideoFormat,
     quality: Quality,
     title: String,
@@ -47,12 +48,7 @@ pub struct VideoJob {
 
 impl VideoJob {
     pub fn new(reel: Source, source: ReplaySource, vfs: &Vfs, format: VideoFormat, quality: Quality, title: String, abort: Arc<AtomicBool>) -> Self {
-        let index = match source {
-            ReplaySource::Bcv => None,
-            ReplaySource::Vfs => Some(DiskAssets::index(vfs)),
-        };
-
-        Self { reel, index, format, quality, title, abort }
+        Self { reel, source, index: DiskAssets::index(vfs), format, quality, title, abort }
     }
 }
 
@@ -106,8 +102,18 @@ fn run(job: &VideoJob, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
 
 fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, String> {
     let opened = session::open(&job.reel)?;
-    let (save, frames) = (opened.save, opened.frames);
-    let index = job.index.clone().unwrap_or(opened.index);
+    let (save, frames, faults) = (opened.save, opened.frames, opened.faults);
+    let index = match job.source {
+        ReplaySource::Bcv => opened.index,
+        ReplaySource::Vfs => job.index.clone(),
+        ReplaySource::Hybrid => {
+            let mut index = job.index.clone();
+
+            index.extend(opened.index);
+            index
+        }
+    };
+
     let total = u32::try_from(frames.len()).unwrap_or(u32::MAX);
     let (width, height) = (even(save.screen.width), even(save.screen.height));
 
@@ -116,7 +122,7 @@ fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, 
     let log = Rc::new(RefCell::new(SoundLog::new(save.options.music, save.options.effects)));
     let mut driver = Driver::headless(Rc::clone(&log));
 
-    driver.arm_playback(&save, frames, index.clone());
+    driver.arm_playback(&save, frames, faults, index.clone());
 
     if !driver.boot() {
         return Err("the replay's game data could not be loaded".to_owned());
@@ -230,9 +236,13 @@ impl Reel<'_> {
             self.played += 1;
 
             if let Err(reason) = advanced {
-                warn!("Replay video closes at a fault on frame {}: {reason}", self.drawn);
-                self.close()?;
-                break;
+                if self.driver.forgive_scripted() {
+                    trace!("Replay video continues past a recorded fault on frame {}: {reason}", self.drawn);
+                } else {
+                    warn!("Replay video closes at a fault on frame {}: {reason}", self.drawn);
+                    self.close()?;
+                    break;
+                }
             }
 
             if !self.driver.in_battle() {

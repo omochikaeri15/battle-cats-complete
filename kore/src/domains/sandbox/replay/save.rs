@@ -96,6 +96,7 @@ pub struct Setup {
     pub speed_engaged: bool,
     pub altar: Option<i32>,
     pub cat_god: God,
+    #[serde(default)]
     pub tutorial: Tutorial,
 }
 

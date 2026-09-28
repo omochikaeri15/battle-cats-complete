@@ -59,7 +59,7 @@ const CAT_CPU_ITEM: i32 = 3;
 const SNIPER_ITEM: i32 = 5;
 const STATUS_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
 const CUT_LIFETIME: std::time::Duration = std::time::Duration::from_secs(3);
-const REPLAY_TERMINATED: &str = "Replay terminated!";
+const REPLAY_TERMINATED: &str = "Replay Terminated!";
 const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
@@ -725,8 +725,6 @@ impl State {
 
                     match session.diagnose().filter(|_| self.diagnosing) {
                         Some(probe) => {
-                            session.cut_recording();
-
                             if self.probe.as_ref() != Some(&probe) {
                                 self.readout = Readout::of(&probe);
                                 self.probe = Some(probe);
