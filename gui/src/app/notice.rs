@@ -1,13 +1,12 @@
 use iced::widget::{button, column, markdown, scrollable, text, Space};
 use iced::{Alignment, Element, Length, Size, Theme};
-use sha2::{Digest, Sha256};
 
+use crate::common::digest;
 use crate::widget::{popup, smooth_scroll};
 
 use super::Message;
 
 const POPUP: popup::Spec = popup::Spec::new(popup::Kind::Notice, Size::new(500.0, 400.0));
-const HASH_BYTES: usize = 8;
 const SCROLLBAR_GAP: f32 = 8.0;
 
 // If "NOTICE_CONTENT" is empty, no notice appears
@@ -19,22 +18,8 @@ pub(super) fn parse_content() -> Vec<markdown::Item> {
     crate::common::markdown::parse(NOTICE_CONTENT)
 }
 
-fn digest(title: &str, content: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(title.as_bytes());
-    hasher.update([0u8]);
-    hasher.update(content.as_bytes());
-
-    hasher
-        .finalize()
-        .iter()
-        .take(HASH_BYTES)
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 pub(super) fn hash() -> String {
-    digest(NOTICE_TITLE, NOTICE_CONTENT)
+    digest::hash(&[NOTICE_TITLE, NOTICE_CONTENT])
 }
 
 pub(super) fn should_show(acknowledged: &[String]) -> bool {

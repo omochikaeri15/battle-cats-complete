@@ -337,8 +337,7 @@ pub enum Message {
     Editor(editor::Message),
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)]
+#[derive(serde::Serialize)]
 pub struct BattleCatsApp {
     #[serde(skip)]
     pub current_page: Page,

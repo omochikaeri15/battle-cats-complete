@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use iced::futures::channel::mpsc;
 use iced::{Size, Task};
+use serde::{Deserialize, Serialize};
 use smol::Timer;
 use tracing::{debug, error, info, warn};
 
@@ -14,7 +15,7 @@ use kore::common::dirs;
 use kore::common::io::json;
 use kore::domains::import;
 use kore::domains::mods;
-use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, UpdateMode, WindowSettings};
+use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, Settings, UpdateMode};
 #[cfg(target_os = "linux")]
 use kore::domains::settings::desktop;
 use kore::{ContentStore, Vault};
@@ -22,23 +23,25 @@ use kore::{ContentStore, Vault};
 use crate::domains::home;
 use crate::widget::popup;
 
+use super::theme::AppTheme;
 use super::{logging, notice, updater, ActivePopup, BattleCatsApp, Message};
 
-#[derive(serde::Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
-struct WindowConfig {
-    settings: SettingsWindowField,
+struct Saved {
+    window_measured: bool,
+    settings: Settings,
+    app_theme: AppTheme,
 }
 
-#[derive(serde::Deserialize, Default)]
-#[serde(default)]
-struct SettingsWindowField {
-    window: WindowSettings,
+impl Saved {
+    fn load() -> Self {
+        json::salvage(json::config_file("settings.json"))
+    }
 }
 
 pub(crate) fn saved_window() -> (Size, bool) {
-    let config: WindowConfig = json::load("settings.json").unwrap_or_default();
-    let window = config.settings.window;
+    let window = Saved::load().settings.window;
 
     (Size::new(window.width.max(800.0), window.height.max(600.0)), window.fullscreen)
 }
@@ -54,8 +57,14 @@ impl BattleCatsApp {
         let boot = Instant::now();
         let mut phase = boot;
 
-        let mut app: Self = json::load("settings.json").unwrap_or_default();
-        app.app_state = json::load_state("state.json").unwrap_or_default();
+        let saved = Saved::load();
+        let mut app = Self {
+            window_measured: saved.window_measured,
+            settings: saved.settings,
+            app_theme: saved.app_theme,
+            ..Self::default()
+        };
+        app.app_state = json::salvage(json::state_file("state.json"));
         app.sandbox_state.set_banner_form(app.settings.sandbox.banner_form);
         let settings_ms = split(&mut phase);
 

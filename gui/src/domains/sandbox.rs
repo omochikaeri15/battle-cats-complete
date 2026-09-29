@@ -30,7 +30,7 @@ use crate::app::theme;
 use crate::domains::{cat, stage};
 use crate::systems::emu::{Action, Diagnostics, Frame as EmuFrame, Label, Occupant, Session, Vitals};
 use crate::systems::emu::SheetCache;
-use crate::common::feedback::Slot;
+use crate::common::{digest, feedback::Slot};
 use crate::widget::{headline, popup, smooth_scroll};
 
 const ACKNOWLEDGEMENT: &str = r#"
@@ -206,6 +206,10 @@ fn game_key(event: iced::Event, _status: iced::event::Status, _window: iced::win
     }
 }
 
+fn agreement() -> String {
+    digest::hash(&[ACKNOWLEDGEMENT])
+}
+
 impl Message {
     pub(crate) fn dropping(cell: kore::domains::sandbox::Cell) -> Self {
         Self::Lineup(lineup::Message::Drop(cell))
@@ -214,7 +218,7 @@ impl Message {
 
 impl State {
     pub(crate) fn enter(&mut self, app_state: &AppState, settings: &Settings, ctx: GlobalContext<'_>) -> Task<Message> {
-        self.prompt_open = !app_state.sandbox.acknowledged;
+        self.prompt_open = app_state.sandbox.agreement != agreement();
         self.config.enter(&ctx.vault.vfs);
         self.altars = Altars::load(&ctx.vault.vfs);
         self.clamp(app_state);
@@ -541,7 +545,7 @@ impl State {
                 Task::none()
             }
             Message::Agree => {
-                app_state.sandbox.acknowledged = true;
+                app_state.sandbox.agreement = agreement();
                 self.prompt_open = false;
 
                 Task::none()

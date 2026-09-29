@@ -898,7 +898,7 @@ impl ExceptionList {
     }
 
     pub fn load_or_default() -> Self {
-        json::load("exceptions.json").unwrap_or_default()
+        json::salvage(json::config_file("exceptions.json"))
     }
 
     pub fn save_to_file(&mut self, path: &Path) -> Result<(), std::io::Error> {
@@ -913,9 +913,7 @@ impl ExceptionList {
     }
 
     pub fn sync_on_boot() {
-        let disk_list = json::load::<ExceptionList>("exceptions.json");
-
-        let needs_overwrite = disk_list.is_none_or(|list| list.source == RuleSource::Default);
+        let needs_overwrite = Self::load_or_default().source == RuleSource::Default;
 
         if needs_overwrite {
             info!("Syncing default exceptions.json to disk...");
@@ -943,7 +941,7 @@ pub struct UserKeys {
 
 impl UserKeys {
     pub fn load() -> Self {
-        json::load("keys.json").unwrap_or_default()
+        json::salvage(json::config_file("keys.json"))
     }
 
     pub fn save(&self) {

@@ -10,7 +10,7 @@ use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::common::{architecture, io};
+use crate::common::{architecture, io::{self, json}};
 use crate::{Conflict, Vault, Vfs, VfsError};
 
 use super::mods::export::ExportState;
@@ -235,11 +235,7 @@ impl Default for ModMetadata {
 
 impl ModMetadata {
     pub fn load<P: AsRef<Path>>(mod_folder_path: P) -> Self {
-        let Some(meta_path) = locate(mod_folder_path.as_ref(), METADATA) else {
-            return Self::default();
-        };
-
-        fs::read_to_string(meta_path).map_or_else(|_| Self::default(), |data| serde_json::from_str(&data).unwrap_or_default())
+        json::salvage(locate(mod_folder_path.as_ref(), METADATA))
     }
 
     pub fn destination<P: AsRef<Path>>(mod_folder_path: P) -> PathBuf {

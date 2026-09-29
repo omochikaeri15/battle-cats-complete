@@ -134,7 +134,7 @@ pub enum SandboxPanel {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub(crate) struct SandboxState {
-    pub acknowledged: bool,
+    pub agreement: String,
     pub tab: SandboxTab,
     pub panel: SandboxPanel,
     pub roster: kore::domains::sandbox::Roster,
@@ -152,7 +152,7 @@ pub(crate) struct SandboxState {
 impl Default for SandboxState {
     fn default() -> Self {
         Self {
-            acknowledged: false,
+            agreement: String::new(),
             tab: SandboxTab::default(),
             panel: SandboxPanel::default(),
             roster: kore::domains::sandbox::Roster::default(),

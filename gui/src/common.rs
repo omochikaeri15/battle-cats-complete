@@ -1,5 +1,6 @@
 pub mod ability_icon;
 pub mod dialog;
+pub(crate) mod digest;
 pub mod feedback;
 pub mod fonts;
 pub(crate) mod glyphs;
