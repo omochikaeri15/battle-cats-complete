@@ -4,11 +4,9 @@ pub mod pack;
 
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
-
 use crate::common::region::Region;
 
-#[derive(Clone, PartialEq, Default, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub enum ExportType {
     #[default]
     Apk,
@@ -16,14 +14,14 @@ pub enum ExportType {
     Pack,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub struct ExportState {
     pub tab: ExportType,
     pub target_region: Region,
     pub app_title: String,
     pub package_suffix: String,
     pub pack_name: String,
-    #[serde(skip)] pub selected_apk: Option<PathBuf>,
+    pub selected_apk: Option<PathBuf>,
 }
 
 impl Default for ExportState {

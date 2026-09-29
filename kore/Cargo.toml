@@ -38,3 +38,4 @@ thiserror = "2.0.20"
 tracing = "0.1.44"
 zstd = { version = "0.14", features = ["zstdmt"] }
 tar = "0.4"
+serde_ignored = "0.1.14"

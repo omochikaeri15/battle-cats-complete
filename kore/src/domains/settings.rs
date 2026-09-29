@@ -53,7 +53,7 @@ pub enum ExportBehavior {
     Update,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Settings {
     pub general: GeneralSettings,
@@ -892,7 +892,7 @@ impl Default for ExceptionList {
 impl ExceptionList {
     pub fn save(&mut self) {
         self.source = RuleSource::Custom;
-        if let Err(err) = json::save("exceptions.json", self) {
+        if let Err(err) = json::persist(json::config_file("exceptions.json"), self) {
             warn!("Failed to save exceptions.json: {}", err);
         }
     }
@@ -918,7 +918,7 @@ impl ExceptionList {
         if needs_overwrite {
             info!("Syncing default exceptions.json to disk...");
             let default_list = Self::default();
-            if let Err(err) = json::save("exceptions.json", &default_list) {
+            if let Err(err) = json::persist(json::config_file("exceptions.json"), &default_list) {
                 warn!("Failed to save exceptions.json: {}", err);
             }
         }
@@ -945,7 +945,7 @@ impl UserKeys {
     }
 
     pub fn save(&self) {
-        if let Err(err) = json::save("keys.json", self) {
+        if let Err(err) = json::persist(json::config_file("keys.json"), self) {
             warn!("Failed to save keys.json: {}", err);
         }
     }

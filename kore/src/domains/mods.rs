@@ -260,20 +260,19 @@ impl ModMetadata {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct ModData {
     pub folder_name: String,
     pub enabled: bool,
-    #[serde(skip)] pub metadata: ModMetadata,
+    pub metadata: ModMetadata,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Default)]
 pub struct ModDataState {
     pub search_query: String,
     pub selected_mod: Option<String>,
-    #[serde(skip)] pub loaded_mods: Vec<ModData>,
-    #[serde(skip)] pub rename_buffer: String,
+    pub loaded_mods: Vec<ModData>,
+    pub rename_buffer: String,
     pub import: ModImportState,
     pub export: ExportState,
 }

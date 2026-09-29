@@ -337,109 +337,61 @@ pub enum Message {
     Editor(editor::Message),
 }
 
-#[derive(serde::Serialize)]
 pub struct BattleCatsApp {
-    #[serde(skip)]
     pub current_page: Page,
-    #[serde(skip)]
     pub sidebar_open: bool,
-    #[serde(skip)]
     pub window_size: Size,
     window_measured: bool,
-    #[serde(skip)]
     active_popups: Vec<ActivePopup>,
-    #[serde(skip)]
     notice_popup: popup::State,
-    #[serde(skip)]
     notice_open: bool,
-    #[serde(skip)]
     notice_items: Vec<markdown::Item>,
-    #[serde(skip)]
     init_errors: errors::State,
-    #[serde(skip)]
     rebuild_running: bool,
-    #[serde(skip)]
     rebuild_queued: bool,
-    #[serde(skip)]
     index_persisting: bool,
-    #[serde(skip)]
     index_dirty: bool,
-    #[serde(skip)]
     index_persisted_at: Option<Instant>,
-    #[serde(skip)]
     last_change_at: Option<Instant>,
-    #[serde(skip)]
     replay: Vec<PathBuf>,
-    #[serde(skip)]
     validated_key: Option<u64>,
-    #[serde(skip)]
     frames_painted: u8,
-    #[serde(skip)]
     window_shown: bool,
-    #[serde(skip)]
     pub(crate) boot: Option<Instant>,
 
-    #[serde(skip)]
     pub home_state: home::State,
-    #[serde(skip)]
     pub cat_state: cat::State,
-    #[serde(skip)]
     pub enemy_state: enemy::EnemyState,
-    #[serde(skip)]
     pub stage_state: stage::State,
-    #[serde(skip)]
     pub mods_state: mods::State,
-    #[serde(skip)]
     pub files_state: files::State,
-    #[serde(skip)]
     pub import_state: import::State,
-    #[serde(skip)]
     pub mining_state: mining::State,
-    #[serde(skip)]
     pub studio_state: studio::State,
-    #[serde(skip)]
     pub sandbox_state: sandbox::State,
-    #[serde(skip)]
     pub help_state: help::State,
-    #[serde(skip)]
     pub utilities_state: utilities::State,
-    #[serde(skip)]
     pub settings_state: gui_settings::State,
-    #[serde(skip)]
     pub(crate) editor: editor::State,
 
     pub settings: Settings,
 
-    #[serde(skip)]
     pub vault: Arc<Vault>,
-    #[serde(skip)]
     pub vault_ready: bool,
 
-    #[serde(skip)]
     pub app_state: AppState,
 
-    #[serde(skip)]
     pub param: Param,
-    #[serde(skip)]
     pub localizable: Localizable,
-    #[serde(skip)]
     pub last_saved_hash: u64,
-    #[serde(skip)]
     pub last_saved_state_hash: u64,
 
-    #[serde(skip)]
     pub updater_handle: Option<task::Handle>,
-    #[serde(skip)]
     pub updater_status: UpdateStatus,
-    #[serde(skip)]
     pub updater_status_handle: Option<task::Handle>,
-    #[serde(skip)]
     updater_popup: popup::State,
-    #[serde(skip)]
     updater_popup_open: bool,
-    #[serde(skip)]
     updater_never_confirm: Slot<()>,
-    #[serde(skip)]
     pub download_progress: f32,
 
     pub app_theme: AppTheme,
@@ -2161,7 +2113,8 @@ impl BattleCatsApp {
     }
 
     fn check_auto_save(&mut self) {
-        let Ok(json_string) = serde_json::to_string(self) else { return; };
+        let saved = startup::Saved::of(self);
+        let Ok(json_string) = serde_json::to_string(&saved) else { return; };
 
         let mut hasher = FxHasher::default();
         json_string.hash(&mut hasher);
@@ -2169,7 +2122,7 @@ impl BattleCatsApp {
 
         if self.last_saved_hash != current_hash {
             trace!("Settings changed. Saving to settings.json");
-            if let Err(err) = json::save("settings.json", self) {
+            if let Err(err) = json::persist(json::config_file("settings.json"), &saved) {
                 warn!("Failed to save settings.json: {}", err);
                 return;
             }
@@ -2188,7 +2141,7 @@ impl BattleCatsApp {
 
         if self.last_saved_state_hash != current_hash {
             trace!("App state changed. Saving to state.json");
-            if let Err(err) = json::save_state("state.json", &self.app_state) {
+            if let Err(err) = json::persist(json::state_file("state.json"), &self.app_state) {
                 warn!("Failed to save state.json: {}", err);
                 return;
             }

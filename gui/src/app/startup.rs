@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -28,15 +29,19 @@ use super::{logging, notice, updater, ActivePopup, BattleCatsApp, Message};
 
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
-struct Saved {
+pub(super) struct Saved<'a> {
     window_measured: bool,
-    settings: Settings,
+    settings: Cow<'a, Settings>,
     app_theme: AppTheme,
 }
 
-impl Saved {
+impl<'a> Saved<'a> {
     fn load() -> Self {
         json::salvage(json::config_file("settings.json"))
+    }
+
+    pub(super) fn of(app: &'a BattleCatsApp) -> Self {
+        Self { window_measured: app.window_measured, settings: Cow::Borrowed(&app.settings), app_theme: app.app_theme }
     }
 }
 
@@ -60,7 +65,7 @@ impl BattleCatsApp {
         let saved = Saved::load();
         let mut app = Self {
             window_measured: saved.window_measured,
-            settings: saved.settings,
+            settings: saved.settings.into_owned(),
             app_theme: saved.app_theme,
             ..Self::default()
         };

@@ -4,7 +4,6 @@ pub(crate) mod extract;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
 use tracing::{error, info, trace};
 
 use crate::common::job::JobEvent;
@@ -13,7 +12,7 @@ use crate::domains::import::engine::keys;
 
 use super::{taken, ModMetadata};
 
-#[derive(Clone, PartialEq, Default, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub enum ModImportTab {
     #[default]
     New,
@@ -22,15 +21,14 @@ pub enum ModImportTab {
     Pack,
 }
 
-#[derive(PartialEq, Clone, Copy, Default, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Clone, Copy, Default, Debug)]
 pub enum ModPackType {
     #[default]
     Apk,
     Pack,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Default)]
 pub struct ModImportState {
     pub tab: ModImportTab,
     pub package_suffix: String,

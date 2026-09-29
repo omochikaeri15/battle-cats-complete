@@ -54,21 +54,21 @@ pub struct MapAddress {
     pub data_file: Option<Box<str>>,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default)]
 pub struct StageDataState {
-    #[serde(skip)] pub registry: StageRegistry,
+    pub registry: StageRegistry,
     pub search_query: String,
     pub selected_category: Option<Category>,
     pub selected_map: Option<GlobalMapId>,
     pub selected_stage: Option<GlobalStageId>,
 
-    #[serde(skip)] pub enemy_registry: HashMap<u32, EnemyEntry>,
-    #[serde(skip)] pub enemy_name_registry: Vec<String>,
-    #[serde(skip)] pub drop_chara_registry: HashMap<u32, u32>,
-    #[serde(skip)] pub unit_buy_registry: HashMap<u32, UnitBuy>,
-    #[serde(skip)] pub cat_name_registry: HashMap<u32, Vec<String>>,
-    #[serde(skip)] pub lock_skip_registry: HashMap<u32, LockSkipDataEntry>,
-    #[serde(skip)] pub scat_cpu_setting: ScatCpuSetting,
+    pub enemy_registry: HashMap<u32, EnemyEntry>,
+    pub enemy_name_registry: Vec<String>,
+    pub drop_chara_registry: HashMap<u32, u32>,
+    pub unit_buy_registry: HashMap<u32, UnitBuy>,
+    pub cat_name_registry: HashMap<u32, Vec<String>>,
+    pub lock_skip_registry: HashMap<u32, LockSkipDataEntry>,
+    pub scat_cpu_setting: ScatCpuSetting,
 }
 
 impl StageDataState {
