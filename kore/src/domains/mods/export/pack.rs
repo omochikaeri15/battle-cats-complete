@@ -5,19 +5,14 @@ use std::path::{Path, PathBuf};
 use nyanko::pack::cryptology;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::common::job::JobEvent;
-use crate::common::region::Region;
+use crate::common::{io, job::JobEvent, region::Region};
 use crate::domains::import::engine::keys;
 use crate::domains::settings::RegionKey;
 
 pub fn run(mod_folder: String, pack_name: String, target_region: Region, enforce_validation: bool, emit: impl Fn(JobEvent) + Sync) -> Result<(), String> {
     info!("Initializing Pack Export for mod: {}", mod_folder);
 
-    let pack_name = if pack_name.trim().is_empty() {
-        "DownloadLocal".to_string()
-    } else {
-        pack_name
-    };
+    let pack_name = Some(io::filename(&pack_name)).filter(|name| !name.is_empty()).unwrap_or_else(|| "DownloadLocal".to_string());
 
     let log_callback = |message: String| emit(JobEvent::Log(message));
 

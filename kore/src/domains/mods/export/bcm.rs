@@ -3,8 +3,7 @@ use std::path::{Path, PathBuf};
 
 use tracing::{debug, error, info, info_span, trace, warn};
 
-use crate::common::job::JobEvent;
-use crate::common::solid;
+use crate::common::{io, job::JobEvent, solid};
 
 pub const BCM_COMPRESSION_MIN: i64 = solid::MIN_LEVEL as i64;
 pub const BCM_COMPRESSION_MAX: i64 = solid::MAX_LEVEL as i64;
@@ -15,11 +14,7 @@ pub fn run(mod_folder: String, app_title: String, compression: i64, emit: impl F
 
     info!("Initializing BCM Export for mod: {}", mod_folder);
 
-    let export_name = if app_title.trim().is_empty() {
-        mod_folder.clone()
-    } else {
-        app_title.trim().to_string()
-    };
+    let export_name = Some(io::filename(&app_title)).filter(|name| !name.is_empty()).unwrap_or_else(|| mod_folder.clone());
 
     let log_callback = |message: String| emit(JobEvent::Log(message));
 

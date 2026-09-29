@@ -16,7 +16,7 @@ use zip::{CompressionMethod, ZipWriter};
 pub use aim::{resolve, Aim, Roster};
 pub use crate::domains::mods::patch_root;
 
-use crate::common::architecture::{GAME, MODS, STUDIO};
+use crate::common::{architecture::{GAME, MODS, STUDIO}, io::filename};
 use crate::domains::settings::FrameCount;
 use crate::systems::animation::{self, Motion, MotionSet, Rigging};
 use crate::Source;
@@ -338,15 +338,7 @@ pub fn vacant(wanted: &str) -> String {
 }
 
 pub fn sanitize(wanted: &str) -> String {
-    let cleaned: String = wanted
-        .chars()
-        .filter(|glyph| !matches!(glyph, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
-        .collect();
-
-    match cleaned.trim() {
-        "" => DEFAULT_NAME.to_owned(),
-        trimmed => trimmed.to_owned(),
-    }
+    Some(filename(wanted)).filter(|name| !name.is_empty()).unwrap_or_else(|| DEFAULT_NAME.to_owned())
 }
 
 pub fn adopt(name: &str, set: &Set) -> io::Result<Set> {

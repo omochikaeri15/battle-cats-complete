@@ -61,6 +61,28 @@ pub(crate) fn hidden_temp(path: &Path) -> PathBuf {
     path.with_file_name(hidden)
 }
 
+const RESERVED_STEMS: [&str; 22] = [
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+];
+
+pub(crate) fn filename(wanted: &str) -> String {
+    let cleaned: String = wanted
+        .chars()
+        .filter(|glyph| !glyph.is_control() && !matches!(glyph, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+        .collect();
+
+    let trimmed = cleaned.trim_start().trim_end_matches(|glyph: char| glyph == '.' || glyph.is_whitespace());
+    let stem = trimmed.split('.').next().unwrap_or_default().trim_end();
+
+    if RESERVED_STEMS.iter().any(|reserved| stem.eq_ignore_ascii_case(reserved)) {
+        format!("{}_", trimmed)
+    } else {
+        trimmed.to_owned()
+    }
+}
+
 pub(crate) const ASSET_IMG015_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.png$";
 pub(crate) const ASSET_015CUT_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.imgcut$";
 pub(crate) const ASSET_IMG022_PATTERN: &str = r"^img022(?:_([a-z]{2}))?\.png$";

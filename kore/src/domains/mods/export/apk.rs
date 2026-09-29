@@ -7,7 +7,7 @@ use resand::res_value::ResValueType;
 use tracing::{debug, error, info, info_span, trace, warn};
 use zip::ZipArchive;
 
-use crate::common::architecture;
+use crate::common::{architecture, io};
 use crate::common::job::JobEvent;
 use crate::common::region::Region;
 use crate::systems::addons::apkeditor::xapk;
@@ -293,7 +293,7 @@ pub fn run(
         return Err(format!("Native Signing Error: {}", error));
     }
 
-    let output_name = if app_title.trim().is_empty() { final_id } else { app_title.trim().to_string() };
+    let output_name = Some(io::filename(&app_title)).filter(|name| !name.is_empty()).unwrap_or(final_id);
 
     let get_incremental_path = |dir: &PathBuf, base_name: &str| -> PathBuf {
         let mut counter = 0;
