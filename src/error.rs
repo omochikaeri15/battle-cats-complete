@@ -16,7 +16,7 @@ use crate::chapter::stage::{
     StageOptionError,
 };
 use crate::chapter::treasure::{TreasureDataError, TreasureTextError};
-use crate::combat::{DictionaryIndexError, EntityError, GlossaryError, TraitLabelError};
+use crate::combat::{AttributeIndexError, DictionaryIndexError, EntityError, GlossaryError, TraitLabelError};
 use crate::files::{GatyaItemBuyError, GatyaItemNameError, LocalizableError, ParamError};
 use crate::enemy::{EnemyNameError, EnemyPictureBookError};
 
@@ -35,6 +35,8 @@ pub enum Error {
     Glossary(GlossaryError),
     /// The Cat dictionary's ability table could not be parsed.
     DictionaryIndex(DictionaryIndexError),
+    /// The Cat dictionary's trait table could not be parsed.
+    AttributeIndex(AttributeIndexError),
     /// The orb trait label table could not be parsed.
     TraitLabel(TraitLabelError),
     /// A unit could not be aggregated from its sources.
@@ -133,6 +135,7 @@ impl Error {
             Self::Entity(source) => source,
             Self::Glossary(source) => source,
             Self::DictionaryIndex(source) => source,
+            Self::AttributeIndex(source) => source,
             Self::TraitLabel(source) => source,
             Self::Assemble(source) => source,
             Self::UnitBuy(source) => source,
@@ -199,6 +202,12 @@ impl error::Error for Error {
 impl From<EntityError> for Error {
     fn from(source: EntityError) -> Self {
         Self::Entity(source)
+    }
+}
+
+impl From<AttributeIndexError> for Error {
+    fn from(source: AttributeIndexError) -> Self {
+        Self::AttributeIndex(source)
     }
 }
 
