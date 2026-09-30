@@ -15,6 +15,7 @@ use crate::chapter::stage::{
     DropCharaError, FixedFormationError, MapStageDataError, ScatCpuSettingError, StageNameError,
     StageOptionError,
 };
+use crate::chapter::treasure::{TreasureDataError, TreasureTextError};
 use crate::combat::EntityError;
 use crate::files::{GatyaItemBuyError, GatyaItemNameError, LocalizableError, ParamError};
 use crate::enemy::{EnemyNameError, EnemyPictureBookError};
@@ -78,6 +79,10 @@ pub enum Error {
     StageName(StageNameError),
     /// The stage lineup restriction table could not be parsed.
     StageOption(StageOptionError),
+    /// A chapter's treasure set table could not be parsed.
+    TreasureData(TreasureDataError),
+    /// A localized treasure text table could not be parsed.
+    TreasureText(TreasureTextError),
     /// The map drop table could not be parsed.
     DropItem(DropItemError),
     /// The EX map link table could not be parsed.
@@ -144,6 +149,8 @@ impl Error {
             Self::ScatCpuSetting(source) => source,
             Self::StageName(source) => source,
             Self::StageOption(source) => source,
+            Self::TreasureData(source) => source,
+            Self::TreasureText(source) => source,
             Self::DropItem(source) => source,
             Self::ExOption(source) => source,
             Self::LockSkipData(source) => source,
@@ -189,6 +196,18 @@ impl From<EntityError> for Error {
 impl From<AssembleError> for Error {
     fn from(source: AssembleError) -> Self {
         Self::Assemble(source)
+    }
+}
+
+impl From<TreasureDataError> for Error {
+    fn from(source: TreasureDataError) -> Self {
+        Self::TreasureData(source)
+    }
+}
+
+impl From<TreasureTextError> for Error {
+    fn from(source: TreasureTextError) -> Self {
+        Self::TreasureText(source)
     }
 }
 

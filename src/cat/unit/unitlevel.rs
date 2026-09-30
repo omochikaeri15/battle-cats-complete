@@ -46,16 +46,18 @@ impl LevelCurve {
     /// Growth is applied one level at a time, drawing the scaling factor for
     /// each step from the ten-level bracket that step falls into. Levels beyond
     /// the last declared bracket continue to accrue at the final bracket's rate.
-    /// The result is scaled by the engine's fixed display multiplier, so it is
-    /// directly comparable to the values the game presents.
+    /// The result is then raised by the treasure effect that governs the
+    /// statistic, the cat health effect for health and the cat attack effect for
+    /// damage.
     ///
     /// # Arguments
     /// * `base_value` - The unscaled statistic as declared in the unit's combat row.
     /// * `target_level` - The one-based level to project the statistic to.
+    /// * `treasure` - The treasure effect's value, from 0 with none held to 150 with every Empire of Cats chapter fully Superior.
     ///
     /// # Returns
     /// An `i32` containing the projected statistic at the requested level.
-    pub fn calculate_stat(&self, base_value: i32, target_level: i32) -> i32 {
+    pub fn calculate_stat(&self, base_value: i32, target_level: i32, treasure: i32) -> i32 {
         let base_float = base_value as f64;
         let mut current_stat = base_float;
         let max_scaled_level = (self.increments.len() * 10) as i32;
@@ -75,9 +77,9 @@ impl LevelCurve {
             }
         }
 
-        let rounded_stat = current_stat.round();
-        let final_stat = (rounded_stat * 2.5).floor();
-        final_stat as i32
+        let leveled = current_stat.round() as i64;
+
+        (leveled + leveled * i64::from(treasure) / 100) as i32
     }
 
     /// Parses the level growth table into curves keyed by unit identifier.
