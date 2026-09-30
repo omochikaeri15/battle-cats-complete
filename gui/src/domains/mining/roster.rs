@@ -1,4 +1,5 @@
 use super::*;
+use kore::common::glyphs::ARROW;
 use iced::widget::{button, column, container, row, rule, Column, Row, Space};
 
 pub(super) struct Icons<'a> {
@@ -162,7 +163,7 @@ fn change_row<'a>(change: &forms::Change) -> Element<'a, Message> {
         line = line.push(strong(shift, VALUE_TEXT_SIZE).color(CHIP_TEXT));
     }
 
-    line = line.push(strong("->", VALUE_TEXT_SIZE).color(CHIP_TEXT));
+    line = line.push(strong(ARROW, VALUE_TEXT_SIZE).color(CHIP_TEXT));
     line = line.push(strong(&change.after, VALUE_TEXT_SIZE).color(CHIP_TEXT));
 
     line.into()
@@ -466,7 +467,7 @@ impl State {
 
         let reading = row![
             strong(raised.before.label(), UNIT_NAME_SIZE),
-            strong("->", UNIT_NAME_SIZE),
+            strong(ARROW, UNIT_NAME_SIZE),
             strong(raised.after.label(), UNIT_NAME_SIZE),
         ]
         .spacing(VALUE_LABEL_GAP)

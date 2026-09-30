@@ -1,4 +1,5 @@
 use super::*;
+use kore::common::glyphs::ARROW;
 use iced::widget::{button, column, container, row, rule, text, Column};
 
 struct Lands<'a, 'b> {
@@ -88,7 +89,7 @@ fn crown_shift<'a>(before: u8, after: u8) -> Element<'a, Message> {
     row![
         strong(before, VALUE_TEXT_SIZE).color(CHIP_TEXT),
         crown(),
-        strong("->", VALUE_TEXT_SIZE).color(CHIP_TEXT),
+        strong(ARROW, VALUE_TEXT_SIZE).color(CHIP_TEXT),
         strong(after, VALUE_TEXT_SIZE).color(CHIP_TEXT),
         crown(),
     ]

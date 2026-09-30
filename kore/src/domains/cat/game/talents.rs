@@ -4,6 +4,7 @@ use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
 use nyanko::combat::{get_talent, Ability, Attribute, AttrUnit, Entity, Identity};
 
 use crate::common::frames;
+use crate::common::glyphs::ARROW;
 use crate::domains::cat::game::stats;
 use crate::systems::combat::comparable;
 use crate::systems::combat::registry::{get_display_def, StatContext, CAT_STATS_REGISTRY};
@@ -74,9 +75,9 @@ pub fn calculate_talent_display(
             if value_one_minimum == value_one_maximum {
                 return Some(format!("Resist: {}%", value_one_minimum));
             }
-            return Some(format!("Resist: 0% (+{}%) -> 0%", value_one));
+            return Some(format!("Resist: 0% (+{}%) {ARROW} 0%", value_one));
         }
-        return Some(format!("Resist: 0% (+{}%) -> {}%", value_one, value_one));
+        return Some(format!("Resist: 0% (+{}%) {ARROW} {}%", value_one, value_one));
     }
 
     let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talent_id == Some(talent_group.ability_id));
@@ -111,7 +112,7 @@ pub fn calculate_talent_display(
         let new_string_format = stat_definition.under_talent(new_stat_value);
         let modifier_string = stat_definition.talent_modifier_fmt.map(|format_func| format_func(value_one, value_two)).unwrap_or_default();
 
-        return Some(format!("{}: {} {} -> {}", stat_definition.display_name, old_string_format, modifier_string, new_string_format));
+        return Some(format!("{}: {} {} {ARROW} {}", stat_definition.display_name, old_string_format, modifier_string, new_string_format));
     }
 
     None
@@ -144,7 +145,7 @@ fn process_generic_attributes(
         let string_old = if old_active_value > 0 { "Active" } else { "Inactive" };
         let string_new = if new_active_value > 0 { "Active" } else { "Inactive" };
 
-        strings_changed.push(format!("{} -> {}", string_old, string_new));
+        strings_changed.push(format!("{} {ARROW} {}", string_old, string_new));
         handled_attribute_keys.insert("Active");
     }
 
@@ -263,7 +264,7 @@ fn process_range_attribute(
         format!("({}{}~{}{})", sign_minimum, delta_minimum, sign_maximum, delta_maximum)
     };
 
-    strings_changed.push(format!("{}: {} {} -> {}", suffix, format_range(old_minimum, old_maximum), difference_string, format_range(new_minimum, new_maximum)));
+    strings_changed.push(format!("{}: {} {} {ARROW} {}", suffix, format_range(old_minimum, old_maximum), difference_string, format_range(new_minimum, new_maximum)));
 }
 
 fn process_single_attribute(
@@ -317,7 +318,7 @@ fn process_single_attribute(
         AttrUnit::Range | AttrUnit::None => format!("({}{})", prefix_sign, delta_value),
     };
 
-    strings_changed.push(format!("{}: {} {} -> {}", attribute_key, format_value(old_value), difference_string, format_value(new_value)));
+    strings_changed.push(format!("{}: {} {} {ARROW} {}", attribute_key, format_value(old_value), difference_string, format_value(new_value)));
 }
 
 fn apply_target_traits(battle_stats: &mut Entity, target_name_id: i16, bitmask_type_id: u16) {

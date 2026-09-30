@@ -7,6 +7,7 @@ pub mod formats;
 pub mod frames;
 pub mod game;
 pub mod gfx;
+pub mod glyphs;
 pub mod github;
 pub mod io;
 pub mod job;

@@ -279,7 +279,7 @@ mod tests {
     fn the_spawn_width_line_is_dropped_but_its_neighbours_survive() {
         assert!(ignored("Width: 400"));
         assert!(!ignored("Range: 400~800"));
-        assert!(!ignored("Chance: 0% (+30%) -> 30%"));
+        assert!(!ignored("Chance: 0% (+30%) \u{2192} 30%"));
         assert!(!ignored("Widthless"));
     }
 

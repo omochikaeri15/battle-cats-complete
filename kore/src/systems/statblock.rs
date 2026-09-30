@@ -215,6 +215,7 @@ pub fn build_statblock_image(
     }
 
     let font = selected_font;
+    let line_font = |line: &str| -> &FontRef { if font_supports_string(font, line) { font } else { &jp_font } };
 
     let measure_style = SuperscriptStyle::new(ABILITY_TEXT_SIZE, 1.0, COLOR_SUPERSCRIPT);
     let ability_style = SuperscriptStyle::new(ABILITY_TEXT_SIZE, scale_f, COLOR_SUPERSCRIPT);
@@ -231,12 +232,12 @@ pub fn build_statblock_image(
         let text_x = start_x + ABILITY_ICON_SIZE + ABILITY_TEXT_GAP;
 
         for line in spirit.dmg_text.split('\n') {
-            spirit_max = spirit_max.max(text_x + measure_style.measure(font, line) as f32);
+            spirit_max = spirit_max.max(text_x + measure_style.measure(line_font(line), line) as f32);
         }
 
         for spirit_item in spirit.b1.iter().chain(spirit.b2.iter()) {
             for line in spirit_item.text.split('\n') {
-                spirit_max = spirit_max.max(text_x + measure_style.measure(font, line) as f32);
+                spirit_max = spirit_max.max(text_x + measure_style.measure(line_font(line), line) as f32);
             }
         }
 
@@ -252,7 +253,7 @@ pub fn build_statblock_image(
     for item in data.b1.iter().chain(data.b2.iter()) {
         let mut max_line_width = 0.0_f32;
         for line in item.text.split('\n') {
-            max_line_width = max_line_width.max(measure_style.measure(font, line) as f32);
+            max_line_width = max_line_width.max(measure_style.measure(line_font(line), line) as f32);
         }
 
         let mut container_width =
@@ -424,7 +425,7 @@ pub fn build_statblock_image(
         let mut line_y = icon_y + (icon_size - block_height) / 2;
 
         for line in lines {
-            ability_style.draw(canvas_image, COLOR_TEXT, icon_x + icon_size + text_gap_x, line_y + ability_offset, font, line);
+            ability_style.draw(canvas_image, COLOR_TEXT, icon_x + icon_size + text_gap_x, line_y + ability_offset, line_font(line), line);
             line_y += ability_line_height;
         }
     };
