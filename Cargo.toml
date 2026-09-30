@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "data",
     "emu",
     "kore",
     "gui",
@@ -15,11 +16,7 @@ authors = ["omochikaeri15 <251449262+omochikaeri15@users.noreply.github.com>"]
 repository = "https://github.com/omochikaeri15/battle-cats-complete"
 
 [workspace.dependencies]
-nyanko = { git = "https://github.com/omochikaeri15/nyanko" }
-
-
-#[patch."https://github.com/omochikaeri15/nyanko"]
-#nyanko = { path = "../nyanko" }
+nyanko = { path = "data" }
 
 [profile.dev]
 debug = "line-tables-only"
