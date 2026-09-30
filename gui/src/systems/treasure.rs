@@ -62,12 +62,13 @@ impl State {
 
         for (arc, name) in ARCS.iter().enumerate() {
             let entry = entry_row(name, &placeholder, &config.arcs[arc], move |entry| Message::Arc(arc, entry));
+            let mut line = row![entry].spacing(ROW_SPACING).align_y(Vertical::Center);
 
-            arcs = arcs.push(if config.is_tuned(arc) {
-                row![entry, note("Adjusted per treasure below")].spacing(ROW_SPACING).align_y(Vertical::Center).into()
-            } else {
-                entry
-            });
+            if config.is_tuned(arc) {
+                line = line.push(note("Adjusted per treasure below"));
+            }
+
+            arcs = arcs.push(line);
         }
 
         let mut chapters = Column::new().spacing(ROW_SPACING);
