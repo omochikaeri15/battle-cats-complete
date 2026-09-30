@@ -16,7 +16,7 @@ use kore::common::dirs;
 use kore::common::io::json;
 use kore::domains::import;
 use kore::domains::mods;
-use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, Settings, UpdateMode};
+use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, Settings, UpdateMode, WindowSettings};
 #[cfg(target_os = "linux")]
 use kore::domains::settings::desktop;
 use kore::{ContentStore, Vault};
@@ -30,7 +30,6 @@ use super::{logging, notice, updater, ActivePopup, BattleCatsApp, Message};
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
 pub(super) struct Saved<'a> {
-    window_measured: bool,
     settings: Cow<'a, Settings>,
     app_theme: AppTheme,
 }
@@ -41,14 +40,18 @@ impl<'a> Saved<'a> {
     }
 
     pub(super) fn of(app: &'a BattleCatsApp) -> Self {
-        Self { window_measured: app.window_measured, settings: Cow::Borrowed(&app.settings), app_theme: app.app_theme }
+        Self { settings: Cow::Borrowed(&app.settings), app_theme: app.app_theme }
     }
 }
 
 pub(crate) fn saved_window() -> (Size, bool) {
     let window = Saved::load().settings.window;
 
-    (Size::new(window.width.max(800.0), window.height.max(600.0)), window.fullscreen)
+    (opening_size(&window), window.fullscreen)
+}
+
+fn opening_size(window: &WindowSettings) -> Size {
+    Size::new(window.width.max(800.0), window.height.max(600.0))
 }
 
 fn split(phase: &mut Instant) -> u128 {
@@ -64,7 +67,7 @@ impl BattleCatsApp {
 
         let saved = Saved::load();
         let mut app = Self {
-            window_measured: saved.window_measured,
+            window_size: opening_size(&saved.settings.window),
             settings: saved.settings.into_owned(),
             app_theme: saved.app_theme,
             ..Self::default()

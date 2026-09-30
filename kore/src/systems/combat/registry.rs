@@ -8,7 +8,7 @@ use nyanko::files::{img015, Param};
 use serde::{Deserialize, Serialize};
 
 use crate::common::frames;
-use crate::systems::combat::CustomIcon;
+use crate::systems::combat::{CustomIcon, NameBook};
 use crate::systems::treasure::Bonus;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -48,6 +48,7 @@ pub struct FormatContext<'a> {
     pub magnification: Magnification,
     pub param: &'a Param,
     pub treasure: &'a Bonus,
+    pub names: &'a NameBook,
 }
 
 pub struct AbilityDisplayDef {
@@ -79,6 +80,21 @@ fn pick<T>(faction: Faction, cat: T, enemy: T) -> T {
 
 fn side(ctx: &FormatContext<'_>, cat: &str, enemy: &str) -> String {
     pick(ctx.stats.faction, cat, enemy).to_string()
+}
+
+fn named<'a>(ctx: &FormatContext<'a>, identity: Identity) -> &'a str {
+    ctx.names.ability(identity, ctx.stats.faction)
+}
+
+fn trait_of<'a>(ctx: &FormatContext<'a>, identity: Identity) -> &'a str {
+    ctx.names.trait_label(identity)
+}
+
+fn targets(ctx: &FormatContext<'_>, identity: Identity) -> String {
+    match ctx.stats.faction {
+        Faction::Cat => format!("Targets {}", ctx.names.trait_plural(identity)),
+        Faction::Enemy => trait_of(ctx, identity).to_owned(),
+    }
 }
 
 fn fruit(ctx: &FormatContext<'_>, multiplier: fn(TraitBonus) -> f64, reciprocal: bool) -> String {
@@ -268,19 +284,21 @@ fn fmt_resistance_groups(base_description: &str, groups: HashMap<i32, Vec<&str>>
     format!("{}\n{}", base_description, formatted_lines.join("\n"))
 }
 
-fn fmt_sage_slayer(param: &Param) -> String {
+fn fmt_sage_slayer(ctx: &FormatContext<'_>) -> String {
+    let param = ctx.param;
     let mut groups: HashMap<i32, Vec<&str>> = HashMap::new();
 
-    groups.entry(param.sage_slayer_resist_weaken).or_default().push("Weaken");
-    groups.entry(param.sage_slayer_resist_freeze).or_default().push("Freeze");
-    groups.entry(param.sage_slayer_resist_slow).or_default().push("Slow");
-    groups.entry(param.sage_slayer_resist_curse).or_default().push("Curse");
-    groups.entry(param.sage_slayer_resist_other).or_default().push("Knockback");
-    groups.entry(param.sage_slayer_resist_other).or_default().push("Delay");
-    groups.entry(param.sage_slayer_resist_warp).or_default().push("Warp");
+    groups.entry(param.sage_slayer_resist_weaken).or_default().push(named(ctx, Identity::Weaken));
+    groups.entry(param.sage_slayer_resist_freeze).or_default().push(named(ctx, Identity::Freeze));
+    groups.entry(param.sage_slayer_resist_slow).or_default().push(named(ctx, Identity::Slow));
+    groups.entry(param.sage_slayer_resist_curse).or_default().push(named(ctx, Identity::Curse));
+    groups.entry(param.sage_slayer_resist_other).or_default().push(named(ctx, Identity::Knockback));
+    groups.entry(param.sage_slayer_resist_other).or_default().push(named(ctx, Identity::Drain));
+    groups.entry(param.sage_slayer_resist_warp).or_default().push(named(ctx, Identity::Warp));
 
+    let sages = ctx.names.trait_plural(Identity::TraitSage);
     let base_description = format!(
-        "Deals {:.1}× Damage to and takes {:.1}× Damage from Sage Enemies\nIgnores the Crowd Control resistance of Sage Enemies\nCrowd Control effects originating from Sage Enemies reduced by",
+        "Deals {:.1}× Damage to and takes {:.1}× Damage from {sages}\nIgnores the Crowd Control resistance of {sages}\nCrowd Control effects originating from {sages} reduced by",
         param.sage_slayer_attack_multiplier as f32 / 1000.0,
         param.sage_slayer_defense_multiplier as f32 / 1000.0
     );
@@ -288,16 +306,17 @@ fn fmt_sage_slayer(param: &Param) -> String {
     fmt_resistance_groups(&base_description, groups)
 }
 
-fn fmt_sage_trait(param: &Param) -> String {
+fn fmt_sage_trait(ctx: &FormatContext<'_>) -> String {
+    let param = ctx.param;
     let mut groups: HashMap<i32, Vec<&str>> = HashMap::new();
 
-    groups.entry(param.sage_type_resist_weaken).or_default().push("Weaken");
-    groups.entry(param.sage_type_resist_freeze).or_default().push("Freeze");
-    groups.entry(param.sage_type_resist_slow).or_default().push("Slow");
-    groups.entry(param.sage_type_resist_curse).or_default().push("Curse");
-    groups.entry(param.sage_type_resist_knockback).or_default().push("Knockback");
+    groups.entry(param.sage_type_resist_weaken).or_default().push(named(ctx, Identity::Weaken));
+    groups.entry(param.sage_type_resist_freeze).or_default().push(named(ctx, Identity::Freeze));
+    groups.entry(param.sage_type_resist_slow).or_default().push(named(ctx, Identity::Slow));
+    groups.entry(param.sage_type_resist_curse).or_default().push(named(ctx, Identity::Curse));
+    groups.entry(param.sage_type_resist_knockback).or_default().push(named(ctx, Identity::Knockback));
 
-    fmt_resistance_groups("Crowd Control effects inflicted upon Sage Enemies are reduced by", groups)
+    fmt_resistance_groups(&format!("Crowd Control effects inflicted upon {} are reduced by", ctx.names.trait_plural(Identity::TraitSage)), groups)
 }
 
 
@@ -447,84 +466,84 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Red",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_RED),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Red Enemies", "Red"),
+            formatter: |ctx| targets(ctx, Identity::TraitRed),
         },
         Identity::TraitFloating => AbilityDisplayDef {
             name: "Floating",
             fallback: "Float",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_FLOATING),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Floating Enemies", "Floating"),
+            formatter: |ctx| targets(ctx, Identity::TraitFloating),
         },
         Identity::TraitDark => AbilityDisplayDef {
             name: "Dark",
             fallback: "Dark",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_BLACK),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Dark Enemies", "Dark"),
+            formatter: |ctx| targets(ctx, Identity::TraitDark),
         },
         Identity::TraitMetal => AbilityDisplayDef {
             name: "Metal",
             fallback: "Metal",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_METAL),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Metal Enemies", "Metal"),
+            formatter: |ctx| targets(ctx, Identity::TraitMetal),
         },
         Identity::TraitTraitless => AbilityDisplayDef {
             name: "Traitless",
             fallback: "NoTrt",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_TRAITLESS),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Traitless Enemies", "Traitless"),
+            formatter: |ctx| targets(ctx, Identity::TraitTraitless),
         },
         Identity::TraitAngel => AbilityDisplayDef {
             name: "Angel",
             fallback: "Angel",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ANGEL),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Angel Enemies", "Angel"),
+            formatter: |ctx| targets(ctx, Identity::TraitAngel),
         },
         Identity::TraitAlien => AbilityDisplayDef {
             name: "Alien",
             fallback: "Alien",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ALIEN),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Alien Enemies", "Alien"),
+            formatter: |ctx| targets(ctx, Identity::TraitAlien),
         },
         Identity::TraitZombie => AbilityDisplayDef {
             name: "Zombie",
             fallback: "Zomb",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_ZOMBIE),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Zombie Enemies", "Zombie"),
+            formatter: |ctx| targets(ctx, Identity::TraitZombie),
         },
         Identity::TraitRelic => AbilityDisplayDef {
             name: "Relic",
             fallback: "Relic",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_RELIC),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Relic Enemies", "Relic"),
+            formatter: |ctx| targets(ctx, Identity::TraitRelic),
         },
         Identity::TraitAku => AbilityDisplayDef {
             name: "Aku",
             fallback: "Aku",
             icon: AbilityIcon::Standard(img015::ICON_TRAIT_AKU),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Aku Enemies", "Aku"),
+            formatter: |ctx| targets(ctx, Identity::TraitAku),
         },
         Identity::TraitWitch => AbilityDisplayDef {
             name: "Witch",
             fallback: "Witch",
             icon: AbilityIcon::Standard(img015::ICON_WITCH),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets Witch Enemies", "Witch Enemy"),
+            formatter: |ctx| targets(ctx, Identity::TraitWitch),
         },
         Identity::TraitEva => AbilityDisplayDef {
             name: "EVA Angel",
             fallback: "EVA",
             icon: AbilityIcon::Standard(img015::ICON_EVA),
             group: DisplayGroup::Trait,
-            formatter: |ctx| side(ctx, "Targets EVA Angels", "EVA Angel"),
+            formatter: |ctx| targets(ctx, Identity::TraitEva),
         },
 
         Identity::TraitDojo => AbilityDisplayDef {
@@ -532,49 +551,49 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Dojo",
             icon: AbilityIcon::Custom(CustomIcon::Dojo),
             group: DisplayGroup::Headline1,
-            formatter: |_| "Dojo".into(),
+            formatter: |ctx| trait_of(ctx, Identity::TraitDojo).to_owned(),
         },
         Identity::TraitStarredAlien => AbilityDisplayDef {
             name: "Starred Alien",
             fallback: "Star",
             icon: AbilityIcon::Custom(CustomIcon::StarredAlien),
             group: DisplayGroup::Headline1,
-            formatter: |_| "Starred Alien".into(),
+            formatter: |ctx| trait_of(ctx, Identity::TraitStarredAlien).to_owned(),
         },
         Identity::TraitCatGod => AbilityDisplayDef {
             name: "Cat God",
             fallback: "God",
             icon: AbilityIcon::Custom(CustomIcon::God),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("CotC {} Cat God", finite(ctx.value) - 1),
+            formatter: |ctx| format!("CotC {} {}", finite(ctx.value) - 1, trait_of(ctx, Identity::TraitCatGod)),
         },
         Identity::TraitColossus => AbilityDisplayDef {
             name: "Colossus",
             fallback: "Colos",
             icon: AbilityIcon::Standard(img015::ICON_COLOSSUS),
             group: DisplayGroup::Headline1,
-            formatter: |_| "Colossus Enemy".into(),
+            formatter: |ctx| format!("{} Enemy", trait_of(ctx, Identity::TraitColossus)),
         },
         Identity::TraitBehemoth => AbilityDisplayDef {
             name: "Behemoth",
             fallback: "Behem",
             icon: AbilityIcon::Standard(img015::ICON_BEHEMOTH),
             group: DisplayGroup::Headline1,
-            formatter: |_| "Behemoth Enemy".into(),
+            formatter: |ctx| format!("{} Enemy", trait_of(ctx, Identity::TraitBehemoth)),
         },
         Identity::TraitSage => AbilityDisplayDef {
             name: "Sage",
             fallback: "Sage",
             icon: AbilityIcon::Standard(img015::ICON_SAGE),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| fmt_sage_trait(ctx.param),
+            formatter: |ctx| fmt_sage_trait(ctx),
         },
         Identity::TraitKaijin => AbilityDisplayDef {
             name: "Kaijin",
             fallback: "Villn",
             icon: AbilityIcon::Standard(img015::ICON_SUPERVILLIAN),
             group: DisplayGroup::Headline1,
-            formatter: |_| "Kaijin Enemy".into(),
+            formatter: |ctx| format!("{} Enemy", trait_of(ctx, Identity::TraitKaijin)),
         },
 
         Identity::AttackOnly => AbilityDisplayDef {
@@ -625,7 +644,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Metal",
             icon: AbilityIcon::Standard(img015::ICON_METAL),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Damage taken is reduced to 1 for Non-Critical attacks".into(),
+            formatter: |ctx| format!("Damage taken is reduced to 1 for Non-{} attacks", named(ctx, Identity::CriticalHit)),
         },
         Identity::BaseDestroyer => AbilityDisplayDef {
             name: "Base Destroyer",
@@ -646,28 +665,28 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Zkill",
             icon: AbilityIcon::Standard(img015::ICON_ZOMBIE_KILLER),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Prevents Zombies from reviving".into(),
+            formatter: |ctx| format!("Prevents {} from reviving", ctx.names.trait_plural(Identity::TraitZombie)),
         },
         Identity::Soulstrike => AbilityDisplayDef {
             name: "Soulstrike",
             fallback: "SolStk",
             icon: AbilityIcon::Standard(img015::ICON_SOULSTRIKE),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Will attack Zombie corpses".into(),
+            formatter: |ctx| format!("Will attack {} corpses", trait_of(ctx, Identity::TraitZombie)),
         },
         Identity::ColossusSlayer => AbilityDisplayDef {
             name: "Colossus Slayer",
             fallback: "Colos",
             icon: AbilityIcon::Standard(img015::ICON_COLOSSUS_SLAYER),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Deals 1.6× Damage to and takes 0.7× Damage from Colossus Enemies".into(),
+            formatter: |ctx| format!("Deals 1.6× Damage to and takes 0.7× Damage from {}", ctx.names.trait_plural(Identity::TraitColossus)),
         },
         Identity::SageSlayer => AbilityDisplayDef {
             name: "Sage Slayer",
             fallback: "Sage",
             icon: AbilityIcon::Standard(img015::ICON_SAGE_SLAYER),
             group: DisplayGroup::Headline2,
-            formatter: |ctx| fmt_sage_slayer(ctx.param),
+            formatter: |ctx| fmt_sage_slayer(ctx),
         },
         Identity::BehemothSlayer => AbilityDisplayDef {
             name: "Behemoth Slayer",
@@ -675,13 +694,15 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_BEHEMOTH_SLAYER),
             group: DisplayGroup::Headline2,
             formatter: |ctx| {
+                let behemoths = ctx.names.trait_plural(Identity::TraitBehemoth);
                 let mut formatted_text = format!(
-                    "Deals {:.1}× Damage to and takes {:.1}× Damage from Behemoth Enemies",
+                    "Deals {:.1}× Damage to and takes {:.1}× Damage from {}",
                     ctx.param.behemoth_slayer_attack_multiplier as f32 / 1000.0,
-                    ctx.param.behemoth_slayer_defense_multiplier as f32 / 1000.0
+                    ctx.param.behemoth_slayer_defense_multiplier as f32 / 1000.0,
+                    behemoths
                 );
                 if ctx.stats.behemoth_dodge_chance > 0 {
-                    formatted_text.push_str(&format!("\n{}% Chance to Dodge Behemoth Enemies for {}", ctx.stats.behemoth_dodge_chance, fmt_time(ctx.stats.behemoth_dodge_duration)));
+                    formatted_text.push_str(&format!("\n{}% Chance to {} against {} for {}", ctx.stats.behemoth_dodge_chance, named(ctx, Identity::Dodge), behemoths, fmt_time(ctx.stats.behemoth_dodge_duration)));
                 }
                 formatted_text
             },
@@ -691,28 +712,28 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Witch",
             icon: AbilityIcon::Standard(img015::ICON_WITCH_KILLER),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Deals 5× Damage to and takes 0.1× Damage from Witches".into(),
+            formatter: |ctx| format!("Deals 5× Damage to and takes 0.1× Damage from {}", ctx.names.trait_plural(Identity::TraitWitch)),
         },
         Identity::EvaKiller => AbilityDisplayDef {
             name: "Eva Killer",
             fallback: "Eva",
             icon: AbilityIcon::Standard(img015::ICON_EVA_KILLER),
             group: DisplayGroup::Headline2,
-            formatter: |_| "Deals 5× Damage to and takes 0.2× Damage from Eva Angels".into(),
+            formatter: |ctx| format!("Deals 5× Damage to and takes 0.2× Damage from {}", ctx.names.trait_plural(Identity::TraitEva)),
         },
         Identity::WaveBlock => AbilityDisplayDef {
             name: "Wave Block",
             fallback: "W-Blk",
             icon: AbilityIcon::Standard(img015::ICON_WAVE_BLOCK),
             group: DisplayGroup::Headline2,
-            formatter: |_| "When hit with a Wave Attack, nullifies its Damage and prevents its advancement".into(),
+            formatter: |ctx| format!("When hit with a {}, nullifies its Damage and prevents its advancement", named(ctx, Identity::WaveAttack)),
         },
         Identity::CounterSurge => AbilityDisplayDef {
             name: "Counter Surge",
             fallback: "C-Srg",
             icon: AbilityIcon::Standard(img015::ICON_COUNTER_SURGE),
             group: DisplayGroup::Headline2,
-            formatter: |_| "When hit with a Surge Attack, create a Surge of equal Type, Level, and Range".into(),
+            formatter: |ctx| format!("When hit with a {}, create a Surge of equal Type, Level, and Range", named(ctx, Identity::SurgeAttack)),
         },
         Identity::Kamikaze => AbilityDisplayDef {
             name: "Kamikaze",
@@ -791,21 +812,21 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "MetKil",
             icon: AbilityIcon::Standard(img015::ICON_METAL_KILLER),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("Reduces Metal enemies current HP by {}% upon hit", finite(ctx.value)),
+            formatter: |ctx| format!("Reduces {} enemies current HP by {}% upon hit", trait_of(ctx, Identity::TraitMetal), finite(ctx.value)),
         },
         Identity::WaveAttack => AbilityDisplayDef {
             name: "Wave Attack",
             fallback: "Wave",
             icon: AbilityIcon::Standard(img015::ICON_WAVE),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to create a Level {} Wave\nWave reaches {} Range", finite(ctx.value), ctx.stats.wave_level, wave_reach(ctx.stats)),
+            formatter: |ctx| format!("{}% Chance to create a Level {} {}\nReaches {} Range", finite(ctx.value), ctx.stats.wave_level, named(ctx, Identity::WaveAttack), wave_reach(ctx.stats)),
         },
         Identity::MiniWave => AbilityDisplayDef {
             name: "Mini-Wave",
             fallback: "MiniW",
             icon: AbilityIcon::Standard(img015::ICON_MINI_WAVE),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to create a Level {} Mini-Wave\nMini-Wave reaches {} Range", finite(ctx.value), ctx.stats.wave_level, wave_reach(ctx.stats)),
+            formatter: |ctx| format!("{}% Chance to create a Level {} {}\nReaches {} Range", finite(ctx.value), ctx.stats.wave_level, named(ctx, Identity::MiniWave), wave_reach(ctx.stats)),
         },
         Identity::SurgeAttack => AbilityDisplayDef {
             name: "Surge Attack",
@@ -813,9 +834,10 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_SURGE),
             group: DisplayGroup::Body1,
             formatter: |ctx| format!(
-                "{}% Chance to create a Level {} Surge\n{} Range",
+                "{}% Chance to create a Level {} {}\n{} Range",
                 finite(ctx.value),
                 ctx.stats.surge_level,
+                named(ctx, Identity::SurgeAttack),
                 fmt_spawn_range(ctx.stats.surge_spawn_anchor, ctx.stats.surge_spawn_span)
             ),
         },
@@ -825,9 +847,10 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_MINI_SURGE),
             group: DisplayGroup::Body1,
             formatter: |ctx| format!(
-                "{}% Chance to create a Level {} Mini-Surge\n{} Range",
+                "{}% Chance to create a Level {} {}\n{} Range",
                 finite(ctx.value),
                 ctx.stats.surge_level,
+                named(ctx, Identity::MiniSurge),
                 fmt_spawn_range(ctx.stats.surge_spawn_anchor, ctx.stats.surge_spawn_span)
             ),
         },
@@ -837,9 +860,10 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_DEATH_SURGE),
             group: DisplayGroup::Body1,
             formatter: |ctx| format!(
-                "{}% Chance to create a Level {} Surge\n{} Range upon death",
+                "{}% Chance to create a Level {} {}\n{} Range upon death",
                 finite(ctx.value),
                 ctx.stats.death_surge_level,
+                named(ctx, Identity::DeathSurge),
                 fmt_spawn_range(ctx.stats.death_surge_spawn_anchor, ctx.stats.death_surge_spawn_span)
             ),
         },
@@ -849,8 +873,9 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_EXPLOSION),
             group: DisplayGroup::Body1,
             formatter: |ctx| format!(
-                "{}% Chance to create an Explosion {} Range",
+                "{}% Chance to create an {} {} Range",
                 finite(ctx.value),
+                named(ctx, Identity::Explosion),
                 fmt_spawn_range(ctx.stats.explosion_spawn_anchor, ctx.stats.explosion_spawn_span)
             ),
         },
@@ -859,14 +884,14 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Savge",
             icon: AbilityIcon::Standard(img015::ICON_SAVAGE_BLOW),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to Savage Blow\ndealing +{}% Damage", finite(ctx.value), ctx.stats.savage_blow_boost),
+            formatter: |ctx| format!("{}% Chance to {}\ndealing +{}% Damage", finite(ctx.value), named(ctx, Identity::SavageBlow), ctx.stats.savage_blow_boost),
         },
         Identity::CriticalHit => AbilityDisplayDef {
             name: "Critical Hit",
             fallback: "Crit",
             icon: AbilityIcon::Standard(img015::ICON_CRITICAL_HIT),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to Critical Hit dealing +100% Damage\nCritcal Hits bypass Metal resistance", finite(ctx.value)),
+            formatter: |ctx| format!("{}% Chance to {} dealing +100% Damage\nBypasses {} resistance", finite(ctx.value), named(ctx, Identity::CriticalHit), trait_of(ctx, Identity::TraitMetal)),
         },
         Identity::Strengthen => AbilityDisplayDef {
             name: "Strengthen",
@@ -880,21 +905,21 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Surv",
             icon: AbilityIcon::Standard(img015::ICON_SURVIVE),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to Survive a lethal strike", finite(ctx.value)),
+            formatter: |ctx| format!("{}% Chance to {} a lethal strike", finite(ctx.value), named(ctx, Identity::Survive)),
         },
         Identity::BarrierBreaker => AbilityDisplayDef {
             name: "Barrier Breaker",
             fallback: "Brkr",
             icon: AbilityIcon::Standard(img015::ICON_BARRIER_BREAKER),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to break enemy Barriers", finite(ctx.value)),
+            formatter: |ctx| format!("{}% Chance to break an enemy {}", finite(ctx.value), named(ctx, Identity::Barrier)),
         },
         Identity::ShieldPiercer => AbilityDisplayDef {
             name: "Shield Piercer",
             fallback: "Spierc",
             icon: AbilityIcon::Standard(img015::ICON_SHIELD_PIERCER),
             group: DisplayGroup::Body1,
-            formatter: |ctx| format!("{}% Chance to pierce enemy Shields", finite(ctx.value)),
+            formatter: |ctx| format!("{}% Chance to pierce an enemy {}", finite(ctx.value), named(ctx, Identity::AkuShield)),
         },
 
         Identity::Barrier => AbilityDisplayDef {
@@ -902,7 +927,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Barri",
             icon: AbilityIcon::Standard(img015::ICON_BARRIER),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("Has a Barrier with {} HP", finite(ctx.value)),
+            formatter: |ctx| format!("Has a {} with {} HP", named(ctx, Identity::Barrier), finite(ctx.value)),
         },
         Identity::AkuShield => AbilityDisplayDef {
             name: "Aku Shield",
@@ -911,10 +936,12 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             group: DisplayGroup::Body2,
             formatter: |ctx| {
                 let scaled_hp = (finite(ctx.value) as f32 * (ctx.magnification.hitpoints as f32 / 100.0)).round() as i32;
+                let shield = named(ctx, Identity::AkuShield);
+
                 if ctx.stats.shield_regen > 0 {
-                    format!("Has a Shield with {} HP\nShield regenerates {}% HP when knocked back", scaled_hp, ctx.stats.shield_regen)
+                    format!("Has a {} with {} HP\n{} regenerates {}% HP when knocked back", shield, scaled_hp, shield, ctx.stats.shield_regen)
                 } else {
-                    format!("Has a Shield with {} HP", scaled_hp)
+                    format!("Has a {} with {} HP", shield, scaled_hp)
                 }
             },
         },
@@ -931,10 +958,11 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Custom(CustomIcon::Revive),
             group: DisplayGroup::Body2,
             formatter: |ctx| format!(
-                "Revives {} with {}% HP after {} \nDoesn't revive if Z-Killed",
+                "Revives {} with {}% HP after {} \nDoesn't revive after {}",
                 fmt_count(ctx.value),
                 ctx.stats.revive_hp,
-                fmt_time(ctx.stats.revive_time)
+                fmt_time(ctx.stats.revive_time),
+                named(ctx, Identity::ZombieKiller)
             ),
         },
         Identity::Toxic => AbilityDisplayDef {
@@ -958,7 +986,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             group: DisplayGroup::Body2,
             formatter: |ctx| {
                 let dodged = pick(ctx.stats.faction, ctx.target, "attacks");
-                format!("{}% Chance to Dodge {} for {}", finite(ctx.value), dodged, fruit_time(ctx))
+                format!("{}% Chance to {} against {} for {}", finite(ctx.value), named(ctx, Identity::Dodge), dodged, fruit_time(ctx))
             },
         },
         Identity::Weaken => AbilityDisplayDef {
@@ -967,8 +995,9 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_WEAKEN),
             group: DisplayGroup::Body2,
             formatter: |ctx| format!(
-                "{}% Chance to weaken {}\nto {}% Attack Power for {}",
+                "{}% Chance to {} {}\nto {}% Attack Power for {}",
                 finite(ctx.value),
+                named(ctx, Identity::Weaken),
                 ctx.target,
                 ctx.stats.weaken_to,
                 fruit_time(ctx)
@@ -979,28 +1008,28 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Freez",
             icon: AbilityIcon::Standard(img015::ICON_FREEZE),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Freeze {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
+            formatter: |ctx| format!("{}% Chance to {} {} for {}", finite(ctx.value), named(ctx, Identity::Freeze), ctx.target, fruit_time(ctx)),
         },
         Identity::Slow => AbilityDisplayDef {
             name: "Slow",
             fallback: "Slow",
             icon: AbilityIcon::Standard(img015::ICON_SLOW),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Slow {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
+            formatter: |ctx| format!("{}% Chance to {} {} for {}", finite(ctx.value), named(ctx, Identity::Slow), ctx.target, fruit_time(ctx)),
         },
         Identity::Knockback => AbilityDisplayDef {
             name: "Knockback",
             fallback: "KB",
             icon: AbilityIcon::Standard(img015::ICON_KNOCKBACK),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Knockback {}", finite(ctx.value), ctx.target),
+            formatter: |ctx| format!("{}% Chance to {} {}", finite(ctx.value), named(ctx, Identity::Knockback), ctx.target),
         },
         Identity::Curse => AbilityDisplayDef {
             name: "Curse",
             fallback: "Curse",
             icon: AbilityIcon::Standard(img015::ICON_CURSE),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Curse {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
+            formatter: |ctx| format!("{}% Chance to {} {} for {}", finite(ctx.value), named(ctx, Identity::Curse), ctx.target, fruit_time(ctx)),
         },
         Identity::Warp => AbilityDisplayDef {
             name: "Warp",
@@ -1008,8 +1037,9 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             icon: AbilityIcon::Standard(img015::ICON_WARP),
             group: DisplayGroup::Body2,
             formatter: |ctx| format!(
-                "{}% Chance to Warp {}\n{} Range for {}",
+                "{}% Chance to {} {}\n{} Range for {}",
                 finite(ctx.value),
+                named(ctx, Identity::Warp),
                 ctx.target,
                 fmt_compress(ctx.stats.warp_distance_anchor, ctx.stats.warp_distance_span),
                 fmt_time(ctx.duration)
@@ -1032,77 +1062,77 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "NoWav",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WAVE),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Wave Attacks".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneWave).to_owned(),
         },
         Identity::ImmuneSurge => AbilityDisplayDef {
             name: "Immune Surge",
             fallback: "NoSrg",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_SURGE),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Surge Attacks".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneSurge).to_owned(),
         },
         Identity::ImmuneExplosion => AbilityDisplayDef {
             name: "Immune Explosion",
             fallback: "NoExp",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_EXPLOSION),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Explosions".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneExplosion).to_owned(),
         },
         Identity::ImmuneWeaken => AbilityDisplayDef {
             name: "Immune Weaken",
             fallback: "NoWk",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WEAKEN),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Weaken".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneWeaken).to_owned(),
         },
         Identity::ImmuneFreeze => AbilityDisplayDef {
             name: "Immune Freeze",
             fallback: "NoFrz",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_FREEZE),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Freeze".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneFreeze).to_owned(),
         },
         Identity::ImmuneSlow => AbilityDisplayDef {
             name: "Immune Slow",
             fallback: "NoSlw",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_SLOW),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Slow".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneSlow).to_owned(),
         },
         Identity::ImmuneKnockback => AbilityDisplayDef {
             name: "Immune Knockback",
             fallback: "NoKB",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_KNOCKBACK),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Knockback".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneKnockback).to_owned(),
         },
         Identity::ImmuneCurse => AbilityDisplayDef {
             name: "Immune Curse",
             fallback: "NoCur",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_CURSE),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Curse".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneCurse).to_owned(),
         },
         Identity::ImmuneDrain => AbilityDisplayDef {
             name: "Immune Drain",
             fallback: "NoDrn",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_DRAIN),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Drain".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneDrain).to_owned(),
         },
         Identity::ImmuneWarp => AbilityDisplayDef {
             name: "Immune Warp",
             fallback: "NoWrp",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_WARP),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Warp".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneWarp).to_owned(),
         },
         Identity::ImmuneToxic => AbilityDisplayDef {
             name: "Immune Toxic",
             fallback: "NoTox",
             icon: AbilityIcon::Standard(img015::ICON_IMMUNE_TOXIC),
             group: DisplayGroup::Footer,
-            formatter: |_| "Immune to Toxic".into(),
+            formatter: |ctx| named(ctx, Identity::ImmuneToxic).to_owned(),
         },
         Identity::ImmuneBossWave => AbilityDisplayDef {
             name: "Immune Boss Wave",
@@ -1117,63 +1147,63 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "ReWkn",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WEAKEN),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Weaken ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistWeaken), finite(ctx.value)),
         },
         Identity::ResistFreeze => AbilityDisplayDef {
             name: "Resist Freeze",
             fallback: "ReFrz",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_FREEZE),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Freeze ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistFreeze), finite(ctx.value)),
         },
         Identity::ResistSlow => AbilityDisplayDef {
             name: "Resist Slow",
             fallback: "ReSlw",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_SLOW),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Slow ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistSlow), finite(ctx.value)),
         },
         Identity::ResistKnockback => AbilityDisplayDef {
             name: "Resist Knockback",
             fallback: "ReKB",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_KNOCKBACK),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Knockback ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistKnockback), finite(ctx.value)),
         },
         Identity::ResistWave => AbilityDisplayDef {
             name: "Resist Wave",
             fallback: "ReWav",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WAVE),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Wave ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistWave), finite(ctx.value)),
         },
         Identity::ResistWarp => AbilityDisplayDef {
             name: "Resist Warp",
             fallback: "ReWrp",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_WARP),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Warp ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistWarp), finite(ctx.value)),
         },
         Identity::ResistCurse => AbilityDisplayDef {
             name: "Resist Curse",
             fallback: "ReCur",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_CURSE),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Curse ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistCurse), finite(ctx.value)),
         },
         Identity::ResistToxic => AbilityDisplayDef {
             name: "Resist Toxic",
             fallback: "ReTox",
             icon: AbilityIcon::Standard(img015::ICON_RESIST_TOXIC),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Toxic ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistToxic), finite(ctx.value)),
         },
         Identity::ResistSurge => AbilityDisplayDef {
             name: "Resist Surge",
             fallback: "ReSrg",
             icon: AbilityIcon::Standard(img015::ICON_SURGE_RESIST),
             group: DisplayGroup::Footer,
-            formatter: |ctx| format!("Resist Surge ({}%)", finite(ctx.value)),
+            formatter: |ctx| format!("{} ({}%)", named(ctx, Identity::ResistSurge), finite(ctx.value)),
         },
 
         Identity::CostDown => AbilityDisplayDef {

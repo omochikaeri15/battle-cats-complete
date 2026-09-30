@@ -6,6 +6,7 @@ use iced::Size;
 use nyanko::files::{Localizable, Param};
 
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::common::formats::{fitting_cut, imgcut};
 use kore::domains::sandbox::replay::{self as tape, Save, Summary};
 use kore::domains::settings::{ScannerConfig, Settings};
@@ -25,15 +26,16 @@ pub(crate) fn gather(vault: &Vault, save: Save, config: &ScannerConfig) -> Vec<(
     let staged = Arc::new(tape::staged(Summary { save: Some(save), ..Summary::default() }, vault.fork(), config));
     let (param, localizable) = (Param::default(), Localizable::default());
     let treasure = Bonus::default();
+    let names = NameBook::default();
     let (mut settings, mut app_state) = (Settings::default(), AppState::default());
     let mut page = State::new();
 
     page.staged = Some(Arc::clone(&staged));
-    drop(page.adopt(Arc::clone(&staged)));
+    drop(page.adopt(Arc::clone(&staged), &localizable));
     drop(page.view(0.0));
 
     for slot in 0..page.tiles.len() {
-        let ctx = GlobalContext { param: &param, localizable: &localizable, vault: &staged.vault, treasure: &treasure };
+        let ctx = GlobalContext { param: &param, localizable: &localizable, vault: &staged.vault, treasure: &treasure, names: &names };
 
         page.open_unit(slot);
         drop(page.unit_popup_view(WINDOW, &settings, &app_state, ctx));

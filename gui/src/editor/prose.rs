@@ -13,6 +13,7 @@ use kore::common::preview::{self, Stamp};
 use kore::Vfs;
 use kore::domains::mods;
 use kore::domains::stage::names;
+use nyanko::combat::{Faction, Identity};
 
 use crate::app::{theme, Page};
 use crate::common::feedback::{Slot, CONFIRM_LABEL};
@@ -42,6 +43,22 @@ const ITEM_NAME_LABELS: &[&str] =
     &["Item Name...", "Description Line 1...", "Description Line 2...", "Description Line 3..."];
 
 const STAGE_NAME_LABELS: &[&str] = &["Stage Name..."];
+
+const GLOSSARY_LABELS: &[&str] = &["Name...", "Description Line 1...", "Description Line 2...", "Description Line 3..."];
+
+const GLOSSARY_TERMINATOR: &str = "＠";
+const GLOSSARY_OPEN: char = '【';
+const GLOSSARY_CLOSE: char = '】';
+
+const GLOSSARY_FILES: [&str; 4] = [
+    "nyankoPictureBook2.csv",
+    "EnemyPictureBook2.csv",
+    "nyankoPictureBookData_EffectAbility.csv",
+    "nyankoPictureBookData_Attribute.csv",
+];
+
+const GLOSSARY_NOTICE: &str =
+    "Every dictionary file is copied into the mod together, so a moved line never drifts from its tables";
 
 const TALENT_TEXT_LABELS: &[&str] = &["Description Line 1...", "Description Line 2..."];
 
@@ -73,7 +90,7 @@ fn next_token() -> u64 {
     NEXT_TOKEN.fetch_add(1, Ordering::Relaxed)
 }
 
-pub(super) const COUNT: usize = 8;
+pub(super) const COUNT: usize = 10;
 
 pub(super) const SUBJECTS: [Subject; COUNT] = [
     Subject::Explanation,
@@ -84,6 +101,8 @@ pub(super) const SUBJECTS: [Subject; COUNT] = [
     Subject::MapName,
     Subject::StageName,
     Subject::ItemName,
+    Subject::CatGlossary,
+    Subject::EnemyGlossary,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -96,6 +115,8 @@ pub enum Subject {
     MapName,
     StageName,
     ItemName,
+    CatGlossary,
+    EnemyGlossary,
 }
 
 impl Subject {
@@ -105,8 +126,8 @@ impl Subject {
 
     pub(super) fn page(self) -> Page {
         match self {
-            Self::Explanation | Self::ComboName | Self::TalentText => Page::Cats,
-            Self::EnemyName | Self::EnemyDescription => Page::Enemies,
+            Self::Explanation | Self::ComboName | Self::TalentText | Self::CatGlossary => Page::Cats,
+            Self::EnemyName | Self::EnemyDescription | Self::EnemyGlossary => Page::Enemies,
             Self::MapName | Self::StageName | Self::ItemName => Page::Stages,
         }
     }
@@ -121,6 +142,7 @@ impl Subject {
             Self::MapName => MAP_NAME_LABELS,
             Self::StageName => STAGE_NAME_LABELS,
             Self::ItemName => ITEM_NAME_LABELS,
+            Self::CatGlossary | Self::EnemyGlossary => GLOSSARY_LABELS,
         }
     }
 
@@ -134,6 +156,8 @@ impl Subject {
             Self::MapName => popup::Kind::MapName,
             Self::StageName => popup::Kind::StageName,
             Self::ItemName => popup::Kind::ItemName,
+            Self::CatGlossary => popup::Kind::CatGlossary,
+            Self::EnemyGlossary => popup::Kind::EnemyGlossary,
         }
     }
 
@@ -158,7 +182,15 @@ impl Subject {
     }
 
     fn notice(self) -> Option<&'static str> {
-        matches!(self, Self::TalentText).then_some(TALENT_TEXT_NOTICE)
+        match self {
+            Self::TalentText => Some(TALENT_TEXT_NOTICE),
+            Self::CatGlossary | Self::EnemyGlossary => Some(GLOSSARY_NOTICE),
+            _ => None,
+        }
+    }
+
+    fn glossary(self) -> bool {
+        matches!(self, Self::CatGlossary | Self::EnemyGlossary)
     }
 
     fn skipped(self) -> usize {
@@ -168,14 +200,16 @@ impl Subject {
             | Self::EnemyName
             | Self::ComboName
             | Self::StageName
-            | Self::ItemName => 0,
+            | Self::ItemName
+            | Self::CatGlossary
+            | Self::EnemyGlossary => 0,
         }
     }
 
     fn width(self) -> f32 {
         match self {
             Self::EnemyName | Self::ComboName | Self::MapName | Self::StageName => NARROW_WIDTH,
-            Self::Explanation | Self::EnemyDescription | Self::TalentText | Self::ItemName => POPUP_WIDTH,
+            Self::Explanation | Self::EnemyDescription | Self::TalentText | Self::ItemName | Self::CatGlossary | Self::EnemyGlossary => POPUP_WIDTH,
         }
     }
 }
@@ -230,6 +264,7 @@ pub(crate) struct Plan {
     file: String,
     game: PathBuf,
     target_mod: Option<String>,
+    aim: Option<(Identity, Faction)>,
 }
 
 impl Plan {
@@ -247,6 +282,14 @@ impl Plan {
 
     pub(super) fn keyed(self, keyed: Keyed) -> Plan {
         Plan { keyed: Some(keyed), ..self }
+    }
+
+    pub(super) fn aiming(self, aim: Option<(Identity, Faction)>) -> Plan {
+        Plan { aim, ..self }
+    }
+
+    pub(super) fn aim(&self) -> Option<(Identity, Faction)> {
+        self.aim
     }
 
     pub(super) fn sourced(self) -> Plan {
@@ -455,6 +498,56 @@ impl State {
     }
 }
 
+fn stage_glossary(vfs: &Vfs, mod_name: &str) {
+    for base in GLOSSARY_FILES {
+        for name in vfs.variants(base) {
+            let Some(source) = vfs.pristine(name.as_str()) else {
+                continue;
+            };
+
+            if let Err(err) = mods::ensure_as(vfs, mod_name, &source, &name) {
+                warn!(source = %source.display(), "Prose editor could not stage a dictionary file: {}", err);
+            }
+        }
+    }
+}
+
+fn glossary_row(line: &str, delimiter: char) -> (Vec<String>, Vec<String>, Vec<String>) {
+    let cells: Vec<&str> = line.split(delimiter).collect();
+    let end = cells.iter().position(|cell| cell.trim().starts_with(GLOSSARY_TERMINATOR)).unwrap_or(cells.len());
+    let (body, rest) = cells.split_at(end);
+    let name = body
+        .first()
+        .map(|cell| cell.trim())
+        .map(|cell| cell.strip_prefix(GLOSSARY_OPEN).and_then(|inner| inner.strip_suffix(GLOSSARY_CLOSE)).unwrap_or(cell))
+        .unwrap_or_default();
+    let mut fields = vec![name.to_owned()];
+
+    fields.extend((1..GLOSSARY_LABELS.len()).map(|index| body.get(index).map_or(String::new(), |cell| cell.trim().to_owned())));
+
+    (Vec::new(), fields, rest.iter().map(|cell| (*cell).to_owned()).collect())
+}
+
+fn glossary_join(fields: &[String], tail: &[String], delimiter: char) -> String {
+    let name = fields.first().map(|name| name.trim()).unwrap_or_default();
+    let mut cells: Vec<String> = Vec::new();
+
+    if !name.is_empty() {
+        cells.push(format!("{GLOSSARY_OPEN}{name}{GLOSSARY_CLOSE}"));
+    }
+
+    let mut lines: Vec<&str> = fields.iter().skip(1).map(|line| line.trim()).collect();
+
+    while lines.last().is_some_and(|line| line.is_empty()) {
+        lines.pop();
+    }
+
+    cells.extend(lines.into_iter().map(str::to_owned));
+    cells.extend(tail.iter().cloned());
+
+    cells.join(&delimiter.to_string())
+}
+
 fn write_now(path: &Path, body: &[u8], stamp: Stamp) -> Option<Stamp> {
     preview::save(path, body, stamp)
         .inspect_err(|err| warn!(path = %path.display(), "Prose editor could not write the file: {}", err))
@@ -543,6 +636,10 @@ impl Draft {
             .inspect_err(|err| warn!(source = %self.plan.game.display(), "Prose editor could not stage the file: {}", err))
             .ok()?;
 
+        if self.plan.subject.glossary() {
+            stage_glossary(vfs, name);
+        }
+
         preview::stamp(&path).map(|stamp| (path, stamp))
     }
 
@@ -551,8 +648,11 @@ impl Draft {
             self.lines.push(String::new());
         }
 
-        let joined =
-            join(&self.head, &self.fields, &self.tail, self.delimiter, self.plan.subject.wrapped());
+        let joined = if self.plan.subject.glossary() {
+            glossary_join(&self.fields, &self.tail, self.delimiter.unwrap_or(PIPE))
+        } else {
+            join(&self.head, &self.fields, &self.tail, self.delimiter, self.plan.subject.wrapped())
+        };
         let Some(slot) = self.lines.get_mut(self.row) else {
             self.failed = true;
 
@@ -761,6 +861,11 @@ fn parse(
     subject: Subject,
 ) -> (Vec<String>, Vec<String>, Vec<String>) {
     let source = body.lines().nth(index).unwrap_or_default();
+
+    if subject.glossary() {
+        return glossary_row(source, delimiter.unwrap_or(PIPE));
+    }
+
     let (head, fields, tail) = row(source, delimiter, skip, subject.labels().len(), subject.wrapped());
 
     if !subject.borrows() || filled(&head) {
@@ -855,6 +960,7 @@ pub(super) fn plan(
         file,
         game: game.to_path_buf(),
         target_mod,
+        aim: None,
     }
 }
 
@@ -897,6 +1003,22 @@ mod tests {
         for subject in [Subject::Explanation, Subject::EnemyName, Subject::EnemyDescription, Subject::ComboName] {
             assert_eq!(subject.notice(), None, "{subject:?} edits a row that belongs to what it names");
         }
+    }
+
+    // A glossary line keeps the name in its corner brackets and the terminator behind
+    // the explanation, and an emptied trailing line drops out rather than leaving a gap.
+    #[test]
+    fn a_glossary_line_round_trips_its_brackets_and_terminator() {
+        let line = "【Freeze】|Indicated enemy types will become unable to|move for a set amount of time.|＠";
+        let (head, fields, tail) = super::glossary_row(line, '|');
+
+        assert!(head.is_empty());
+        assert_eq!(fields, ["Freeze", "Indicated enemy types will become unable to", "move for a set amount of time.", ""]);
+        assert_eq!(tail, ["＠"]);
+        assert_eq!(super::glossary_join(&fields, &tail, '|'), line);
+
+        let shortened = ["Freeze".to_owned(), "One line.".to_owned(), String::new(), String::new()];
+        assert_eq!(super::glossary_join(&shortened, &tail, '|'), "【Freeze】|One line.|＠");
     }
 
     #[test]

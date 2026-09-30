@@ -34,6 +34,38 @@
       }
     },
     {
+      "pattern": "CalendarFilter|CastleRecipeDescriptions|Mission_Name|TitleMessage|jinja_level|matatabi_Popup|omikuji_text",
+      "extension": "csv",
+      "handling": "Only",
+      "languages": {
+        "en": true,
+        "ja": true,
+        "tw": true,
+        "ko": true,
+        "es": true,
+        "de": true,
+        "fr": true,
+        "it": true,
+        "th": true
+      }
+    },
+    {
+      "pattern": "All_day_event|Guerrilla_calendar|medalname|omikuji_rewardtext|rankGiftMessage|talk_[0-9]{3}|user_info",
+      "extension": "tsv",
+      "handling": "Only",
+      "languages": {
+        "en": true,
+        "ja": true,
+        "tw": true,
+        "ko": true,
+        "es": true,
+        "de": true,
+        "fr": true,
+        "it": true,
+        "th": true
+      }
+    },
+    {
       "pattern": "SkillDescriptions|GatyaitemName|MapStageLimitMessage|Map_Name",
       "extension": "csv",
       "handling": "Only",

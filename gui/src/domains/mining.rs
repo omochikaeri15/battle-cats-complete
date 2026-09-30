@@ -21,6 +21,7 @@ use rustc_hash::FxHasher;
 use nyanko::combat::{Entity, REGISTRY};
 
 use kore::common::formats::SpriteSheet as CoreSpriteSheet;
+use kore::systems::combat::NameBook;
 use kore::domains::cat::files as cat_files;
 use kore::domains::cat::game::stats as cat_stats;
 use kore::domains::cat::game::talents as talent_logic;

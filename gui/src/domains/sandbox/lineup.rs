@@ -8,6 +8,7 @@ use iced::widget::{button, column, container, image as iced_image, mouse_area, r
 use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Theme};
 
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::domains::cat::scanner::{self, CatEntry};
 use kore::domains::cat::game::stats::get_final_stats;
 use kore::systems::treasure::Bonus;
@@ -260,7 +261,7 @@ impl State {
 
     pub fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         let adopted = self.inspector.adopt_cats(cats, ctx.vault).map(Message::Cat);
-        let orbs = self.orbs.load(ctx.vault).map(Message::Orbs);
+        let orbs = self.orbs.load(ctx.vault, ctx.names).map(Message::Orbs);
 
         self.combos.invalidate();
         self.decoded.borrow_mut().clear();
@@ -815,8 +816,8 @@ impl State {
         Some(self.orb_popup.view("Orb", ORB_POPUP, window, Message::OrbPopup, move || self.orbs.view(held, allowance).map(Message::Orbs), None))
     }
 
-    pub fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
-        self.inspector.filter_popup_view(window).map(|view| view.map(Message::Cat))
+    pub fn filter_popup_view<'a>(&'a self, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
+        self.inspector.filter_popup_view(window, names).map(|view| view.map(Message::Cat))
     }
 
     pub fn view<'a>(&'a self, app_state: &'a AppState) -> Element<'a, Message> {

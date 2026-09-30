@@ -2,6 +2,7 @@ use iced::widget::{column, container, scrollable, text, Column};
 use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
+use kore::systems::combat::NameBook;
 use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial};
 use kore::domains::sandbox::{config, ITEMS, TECHS};
 use kore::systems::treasure::Catalog;
@@ -124,19 +125,19 @@ fn offered(parts: &std::collections::BTreeMap<i32, i32>, label: impl Fn(i32) -> 
 }
 
 impl State {
-    pub fn enter(&mut self, vfs: &Vfs) {
+    pub fn enter(&mut self, vfs: &Vfs, names: &NameBook) {
         if self.loaded {
             return;
         }
 
-        self.reload(vfs);
+        self.reload(vfs, names);
     }
 
-    pub fn reload(&mut self, vfs: &Vfs) {
+    pub fn reload(&mut self, vfs: &Vfs, names: &NameBook) {
         self.parts = Parts::load(vfs);
-        self.cannons = offered(&self.parts.cannons, base::name);
-        self.styles = offered(&self.parts.styles, |id| self.parts.style_label(id));
-        self.foundations = offered(&self.parts.foundations, |id| self.parts.foundation_label(id));
+        self.cannons = offered(&self.parts.cannons, |id| names.cannon(id).map_or_else(|| base::name(id), str::to_owned));
+        self.styles = offered(&self.parts.styles, |id| self.parts.style_label(id, names));
+        self.foundations = offered(&self.parts.foundations, |id| self.parts.foundation_label(id, names));
         self.loaded = true;
     }
 

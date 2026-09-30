@@ -18,6 +18,7 @@ use iced::{Alignment, Element, Length, Padding, Size, Task};
 use tracing::{debug, info, warn};
 
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::domains::enemy::scanner::EnemyEntry;
 use kore::domains::settings::{Settings, SidebarBehavior};
 use kore::domains::stage::filter::enemy::EnemyFilter;
@@ -352,11 +353,11 @@ impl State {
         self.filter.filter_state.is_open
     }
 
-    pub fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+    pub fn filter_popup_view<'a>(&'a self, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
         self.filter
             .filter_state
             .is_open
-            .then(|| self.filter.view(window).map(Message::Filter))
+            .then(|| self.filter.view(window, names).map(Message::Filter))
     }
 
     fn prune_selection(&mut self) {
@@ -506,7 +507,7 @@ impl State {
 
         if let Some(preset) = stage.fixed_lineups.get(&self.selected_crown) {
             let resolved = core_fixedlineup::resolve_lineup(vfs, preset);
-            content = content.push(self.fixedlineup.view(&resolved, preset, vfs));
+            content = content.push(self.fixedlineup.view(&resolved, preset, vfs, global_ctx.names));
         }
 
         content = content.push(self.battleground.view(stage, map, self.selected_crown, &self.data.enemy_registry, &self.data.enemy_name_registry, global_ctx.treasure));

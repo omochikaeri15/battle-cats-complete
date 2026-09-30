@@ -4,6 +4,7 @@ use iced::{Alignment, Border, Element, Length, Theme};
 use nyanko::files::img015;
 
 use kore::domains::cat::game::stats::get_final_stats;
+use nyanko::combat::Faction;
 use kore::domains::cat::waiter::unitid;
 use kore::domains::settings::Settings;
 use kore::systems::combat::abilities::collect_ability_data;
@@ -92,7 +93,7 @@ impl State {
 
         if !s_traits.is_empty() {
             col = col.push(ability_spacer(ABILITY_Y));
-            col = col.push(self.shared.icon_row(&s_traits, sheets, assets, per_row));
+            col = col.push(self.shared.icon_row(&s_traits, sheets, assets, per_row, Faction::Cat));
             prev = true;
             last_was_trait = true;
         }
@@ -101,7 +102,7 @@ impl State {
             if headline.is_empty() { continue; }
 
             col = col.push(ability_spacer(if last_was_trait { TRAIT_Y } else { ABILITY_Y }));
-            col = col.push(self.shared.icon_row(headline, sheets, assets, per_row));
+            col = col.push(self.shared.icon_row(headline, sheets, assets, per_row, Faction::Cat));
             prev = true;
             last_was_trait = false;
         }
@@ -124,7 +125,7 @@ impl State {
             if prev {
                 col = col.push(ability_spacer(if last_was_trait { TRAIT_Y } else { ABILITY_Y }));
             }
-            col = col.push(self.shared.icon_row(&s_footer, sheets, assets, per_row));
+            col = col.push(self.shared.icon_row(&s_footer, sheets, assets, per_row, Faction::Cat));
         }
 
         container(col).width(Length::Shrink).padding(8).style(spirit_card_container).into()

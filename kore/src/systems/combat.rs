@@ -1,5 +1,8 @@
 pub mod abilities;
+pub mod names;
 pub mod registry;
+
+pub use names::NameBook;
 
 use std::collections::{HashMap, HashSet};
 

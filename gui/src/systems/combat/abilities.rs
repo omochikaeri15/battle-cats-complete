@@ -2,10 +2,12 @@ use iced::widget::{column, container, image as iced_image, responsive, row, scro
 use iced::{Alignment, Element, Length, Size};
 
 use kore::systems::combat::abilities::collect_ability_data;
+use nyanko::combat::Faction;
 use kore::systems::combat::registry::{get_fallback_by_icon, AbilityIcon};
 use kore::systems::combat::{AbilityItem, CustomIcon, RenderContext, ABILITY_X, ABILITY_Y, TRAIT_Y};
 
 use crate::common::ability_icon;
+use crate::editor;
 use crate::common::{CustomAssets, SpriteSheet};
 use crate::widget::text_with_superscript;
 use crate::widget::{ability_spacer, fallback_icon, icons_per_row, smooth_scroll, ICON_SIZE};
@@ -44,6 +46,7 @@ impl State {
         body: impl Fn(&[AbilityItem], ListLayout) -> Element<'a, Message> + 'a,
     ) -> Element<'a, Message> {
         let (grp_trait, grp_hl1, grp_hl2, grp_b1, grp_b2, grp_footer) = collect_ability_data(ctx);
+        let faction = ctx.final_stats.faction;
 
         responsive(move |size: Size| {
             let per_row = icons_per_row(size.width, ABILITY_X);
@@ -53,7 +56,7 @@ impl State {
             let mut last_was_trait = false;
 
             if !grp_trait.is_empty() {
-                col = col.push(self.icon_row(&grp_trait, sheets, assets, per_row));
+                col = col.push(self.icon_row(&grp_trait, sheets, assets, per_row, faction));
                 previous_content = true;
                 last_was_trait = true;
             }
@@ -66,7 +69,7 @@ impl State {
                     last_was_trait = false;
                 }
 
-                col = col.push(self.icon_row(headline, sheets, assets, per_row));
+                col = col.push(self.icon_row(headline, sheets, assets, per_row, faction));
                 previous_content = true;
             }
 
@@ -91,7 +94,7 @@ impl State {
                 if previous_content {
                     col = col.push(ability_spacer(if last_was_trait { TRAIT_Y } else { ABILITY_Y }));
                 }
-                col = col.push(self.icon_row(&grp_footer, sheets, assets, per_row));
+                col = col.push(self.icon_row(&grp_footer, sheets, assets, per_row, faction));
             }
 
             smooth_scroll(scrollable(col).height(Length::Fill).width(Length::Fill)).into()
@@ -104,6 +107,7 @@ impl State {
         sheets: &[SpriteSheet],
         assets: &CustomAssets,
         per_row: usize,
+        faction: Faction,
     ) -> Element<'a, Message> {
         let mut col = column![].spacing(ABILITY_Y);
 
@@ -111,11 +115,13 @@ impl State {
             let mut wrapped_row = row![].spacing(ABILITY_X).align_y(Alignment::Center);
 
             for item in chunk {
-                wrapped_row = wrapped_row.push(tooltip(
+                let shown = tooltip(
                     self.icon_element(item, sheets, assets),
                     container(text_with_superscript(&item.text, DESCRIPTION_TEXT_SIZE)).padding(6).style(container::bordered_box),
                     tooltip::Position::Top,
-                ));
+                );
+
+                wrapped_row = wrapped_row.push(editor::target(shown, editor::Target::Ability(item.identity, faction)));
             }
 
             col = col.push(wrapped_row);
@@ -130,11 +136,15 @@ impl State {
         sheets: &[SpriteSheet],
         assets: &CustomAssets,
         layout: ListLayout,
+        faction: Faction,
     ) -> Element<'a, Message> {
         let icon = self.icon_element(item, sheets, assets);
         let description = container(text_with_superscript(&item.text, DESCRIPTION_TEXT_SIZE)).width(layout.width());
 
-        row![icon, description].spacing(8).align_y(Alignment::Center).width(layout.width()).into()
+        editor::target(
+            row![icon, description].spacing(8).align_y(Alignment::Center).width(layout.width()),
+            editor::Target::Ability(item.identity, faction),
+        )
     }
 
     pub(crate) fn ability_list<'a, Message: 'a>(
@@ -143,11 +153,12 @@ impl State {
         sheets: &[SpriteSheet],
         assets: &CustomAssets,
         layout: ListLayout,
+        faction: Faction,
     ) -> Element<'a, Message> {
         let mut col = column![].spacing(0).width(layout.width());
 
         for (index, item) in items.iter().enumerate() {
-            col = col.push(self.ability_row(item, sheets, assets, layout));
+            col = col.push(self.ability_row(item, sheets, assets, layout, faction));
 
             if index + 1 < items.len() {
                 col = col.push(ability_spacer(ABILITY_Y));

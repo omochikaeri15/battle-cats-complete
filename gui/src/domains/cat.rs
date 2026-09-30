@@ -24,6 +24,7 @@ use nyanko::combat::Entity;
 use tracing::info;
 
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::common::formats::SpriteSheet as CoreSpriteSheet;
 use kore::domains::cat::animation as cat_animation;
 use kore::domains::cat::game::stats::{get_final_stats, seeded_level};
@@ -935,11 +936,11 @@ impl State {
         self.filter.restore_scroll()
     }
 
-    pub fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+    pub fn filter_popup_view<'a>(&'a self, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
         self.filter
             .filter_state
             .is_open
-            .then(|| self.filter.view(&self.img015_sheets, &self.custom_assets, window).map(Message::Filter))
+            .then(|| self.filter.view(&self.img015_sheets, &self.custom_assets, window, names).map(Message::Filter))
     }
 
     pub(crate) fn export_scroll_task<M: 'static>(&self) -> Task<M> {
@@ -1334,6 +1335,7 @@ impl State {
             curve: cat.curve.as_ref(),
             unit_level: self.current_level,
             treasure: global_ctx.treasure,
+            names: global_ctx.names,
             sheets: &self.img015_sheets,
             img022_sheets: &self.img022_sheets,
             assets: &self.custom_assets,

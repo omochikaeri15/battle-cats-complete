@@ -40,6 +40,7 @@ pub(super) struct UnitContext<'a> {
     pub(super) level: i32,
     pub(super) treasure: &'a Bonus,
     pub(super) traits: Option<Entity>,
+    pub(super) names: &'a NameBook,
 }
 
 pub(super) fn changed_diff<'a>(
@@ -274,6 +275,7 @@ impl State {
         cats: &'a [CatEntry],
         vfs: &'a Vfs,
         treasure: &'a Bonus,
+        names: &'a NameBook,
         settings: &'a Settings,
         width: f32,
     ) -> Element<'a, Message> {
@@ -355,7 +357,7 @@ impl State {
                     .talents
                     .iter()
                     .filter_map(|slot| report.finds.get(*slot))
-                    .map(|find| self.view_find(find, cats, vfs, treasure, settings))
+                    .map(|find| self.view_find(find, cats, vfs, treasure, names, settings))
                     .collect();
 
                 uniform_grid(cards, CARD_SPACING).columns(cards_per_row(width, UNIT_MIN_WIDTH)).into()

@@ -6,6 +6,7 @@ use iced::{Element, Length, Size, Task};
 use nyanko::combat::{AttrUnit, Identity, REGISTRY};
 
 use kore::domains::enemy::filter::evaluation::get_identity_name;
+use kore::systems::combat::NameBook;
 use kore::domains::enemy::filter::{EnemyFilterState, MatchMode, ATTACK_TYPE_IDENTITIES};
 use kore::domains::enemy::scanner::EnemyEntry;
 use kore::systems::combat::present_identities;
@@ -94,15 +95,15 @@ impl State {
         }
     }
 
-    pub fn view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, window: Size) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, window: Size, names: &'a NameBook) -> Element<'a, Message> {
         let per_row = icons_per_row(self.popup.body_width(POPUP, window) - CONTENT_PADDING * 2.0, ICON_SPACING);
 
         self.popup.view("Advanced Enemy Filter", POPUP, window, Message::Popup, move || {
-            self.content_view(sheets, assets, per_row)
+            self.content_view(sheets, assets, per_row, names)
         }, None)
     }
 
-    fn content_view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, per_row: usize) -> Element<'a, Message> {
+    fn content_view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, per_row: usize, names: &'a NameBook) -> Element<'a, Message> {
         let match_mode_label = if self.filter_state.match_mode == MatchMode::And { "And" } else { "Or" };
 
         let mode_row = row![
@@ -135,9 +136,9 @@ impl State {
             .filter(|&identity| self.available.contains(&identity))
             .filter(|&identity| get_display_def(identity).group == DisplayGroup::Trait)
             .collect();
-        let type_row = self.icon_wrap(type_identities.into_iter(), sheets, assets, per_row);
+        let type_row = self.icon_wrap(type_identities.into_iter(), sheets, assets, per_row, names);
 
-        let attack_row = self.icon_wrap(ATTACK_TYPE_IDENTITIES.iter().copied(), sheets, assets, per_row);
+        let attack_row = self.icon_wrap(ATTACK_TYPE_IDENTITIES.iter().copied(), sheets, assets, per_row, names);
 
         let mut rendered_identities: HashSet<Identity> = HashSet::new();
         let mut abilities_col = column![].spacing(0);
@@ -145,7 +146,7 @@ impl State {
         for group in [DisplayGroup::Headline1, DisplayGroup::Headline2] {
             let group_identities = self.collect_group_identities(group, &mut rendered_identities);
             if !group_identities.is_empty() {
-                abilities_col = abilities_col.push(self.icon_wrap(group_identities.into_iter(), sheets, assets, per_row));
+                abilities_col = abilities_col.push(self.icon_wrap(group_identities.into_iter(), sheets, assets, per_row, names));
                 abilities_col = abilities_col.push(Space::new().height(Length::Fixed(8.0)));
             }
         }
@@ -155,7 +156,7 @@ impl State {
             if !group_identities.is_empty() {
                 let mut col = column![].spacing(4);
                 for identity in group_identities {
-                    col = col.push(self.icon_row_with_label(identity, sheets, assets));
+                    col = col.push(self.icon_row_with_label(identity, sheets, assets, names));
                 }
                 abilities_col = abilities_col.push(col);
                 abilities_col = abilities_col.push(Space::new().height(Length::Fixed(8.0)));
@@ -164,7 +165,7 @@ impl State {
 
         let footer_identities = self.collect_group_identities(DisplayGroup::Footer, &mut rendered_identities);
         if !footer_identities.is_empty() {
-            abilities_col = abilities_col.push(self.icon_wrap(footer_identities.into_iter(), sheets, assets, per_row));
+            abilities_col = abilities_col.push(self.icon_wrap(footer_identities.into_iter(), sheets, assets, per_row, names));
         }
 
         let content = column![
@@ -218,22 +219,23 @@ impl State {
         sheets: &'a [SpriteSheet],
         assets: &'a CustomAssets,
         per_row: usize,
+        names: &'a NameBook,
     ) -> Element<'a, Message> {
         let items: Vec<Identity> = identities.collect();
         let mut col = column![].spacing(ICON_SPACING);
         for chunk in items.chunks(per_row) {
             let mut wrapped_row = row![].spacing(ICON_SPACING).align_y(Vertical::Center);
             for &identity in chunk {
-                wrapped_row = wrapped_row.push(self.icon_with_tooltip(identity, sheets, assets));
+                wrapped_row = wrapped_row.push(self.icon_with_tooltip(identity, sheets, assets, names));
             }
             col = col.push(wrapped_row);
         }
         col.into()
     }
 
-    fn icon_with_tooltip<'a>(&'a self, identity: Identity, sheets: &'a [SpriteSheet], assets: &'a CustomAssets) -> Element<'a, Message> {
+    fn icon_with_tooltip<'a>(&'a self, identity: Identity, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, names: &NameBook) -> Element<'a, Message> {
         let is_active = self.filter_state.active_identities.contains(&identity);
-        let name = get_identity_name(identity);
+        let name = get_identity_name(identity, names);
 
         tooltip(
             self.icon_button(identity, sheets, assets, is_active),
@@ -242,9 +244,9 @@ impl State {
         ).into()
     }
 
-    fn icon_row_with_label<'a>(&'a self, identity: Identity, sheets: &'a [SpriteSheet], assets: &'a CustomAssets) -> Element<'a, Message> {
+    fn icon_row_with_label<'a>(&'a self, identity: Identity, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, names: &NameBook) -> Element<'a, Message> {
         let is_active = self.filter_state.active_identities.contains(&identity);
-        let name = get_identity_name(identity);
+        let name = get_identity_name(identity, names);
         let schema = ability_schema(identity);
         let expanded = is_active && !schema.is_empty();
 

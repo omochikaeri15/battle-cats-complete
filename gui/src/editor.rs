@@ -16,6 +16,7 @@ use rustc_hash::FxHashMap;
 use tracing::{info, trace, warn};
 
 use kore::domains::cat::animation as cat_animation;
+use nyanko::combat::{Faction, Identity};
 use kore::domains::cat::combo as cat_combo;
 use kore::domains::cat::files as cat_files;
 use kore::domains::cat::waiter as cat_waiter;
@@ -82,6 +83,7 @@ pub enum Target {
     CatExplanation,
     EnemyName,
     EnemyDescription,
+    Ability(Identity, Faction),
 }
 
 pub(crate) struct Context {
@@ -373,6 +375,7 @@ struct ProseTarget {
     cell: Option<usize>,
     unlocked: bool,
     active_mod: Option<String>,
+    aim: Option<(Identity, Faction)>,
 }
 
 impl ProseTarget {
@@ -685,6 +688,7 @@ pub(crate) struct State {
     prose: [prose::State; prose::COUNT],
     ground: ground::State,
     synced: Option<Key>,
+    glossary_aim: Option<(Identity, Faction)>,
 }
 
 struct Snapshot {
@@ -826,7 +830,7 @@ impl State {
 
             let slot = &self.figures[subject.slot()];
 
-            if let Some(view) = slot.view(window, cap, used, &app.cat_state.data.cats, &app.vault) {
+            if let Some(view) = slot.view(window, cap, used, &app.cat_state.data.cats, &app.vault, &app.names) {
                 views.push((slot.raised(), figures::kind(subject), view.map(move |inner| Message::Figures(subject, inner))));
             }
         }
@@ -1081,6 +1085,10 @@ impl State {
             }
             Action::EditProse(plan) => {
                 let subject = plan.subject();
+
+                if let Some(aim) = plan.aim() {
+                    self.glossary_aim = Some(aim);
+                }
                 let already = self.prose[subject.slot()].drafting();
                 let nudge = self.stacked(subject.page()) - usize::from(already);
 
@@ -1501,6 +1509,33 @@ fn item_name_target(app: &BattleCatsApp, item: Option<u32>) -> Option<ProseTarge
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
+    })
+}
+
+fn glossary_target(app: &BattleCatsApp, identity: Identity, faction: Faction) -> Option<ProseTarget> {
+    let (subject, file, page) = match faction {
+        Faction::Cat => (prose::Subject::CatGlossary, "nyankoPictureBook2.csv", Page::Cats),
+        Faction::Enemy => (prose::Subject::EnemyGlossary, "EnemyPictureBook2.csv", Page::Enemies),
+    };
+
+    if scene(app) != page {
+        return None;
+    }
+
+    let row = usize::from(app.names.glossary_line(identity, faction)?).checked_sub(1)?;
+
+    Some(ProseTarget {
+        subject,
+        asset: Asset::Exception(exception(app, file.to_owned())?),
+        label: app.names.ability(identity, faction).to_owned(),
+        row,
+        rows: Vec::new(),
+        keyed: None,
+        cell: None,
+        unlocked: app.settings.files.unlock_game_mount,
+        active_mod: app.mods_state.active_mod(),
+        aim: Some((identity, faction)),
     })
 }
 
@@ -1939,6 +1974,10 @@ fn prose_payloads(app: &BattleCatsApp, target: Option<Target>, broad: bool) -> V
         return item_name_target(app, Some(item)).into_iter().collect();
     }
 
+    if let Some(Target::Ability(identity, faction)) = target {
+        return glossary_target(app, identity, faction).into_iter().collect();
+    }
+
     if !broad {
         let Some(subject) = prose_subject(target) else {
             return Vec::new();
@@ -2131,6 +2170,7 @@ fn talent_text_target(app: &BattleCatsApp) -> Option<ProseTarget> {
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
 }
 
@@ -2203,6 +2243,8 @@ fn prose_tab(app: &BattleCatsApp, subject: prose::Subject) -> bool {
         prose::Subject::EnemyDescription => app.enemy_state.selected_tab == EnemyTab::Details,
         prose::Subject::ComboName => held_view(app).selected_tab == DetailTab::Details,
         prose::Subject::TalentText => talents_tab(app),
+        prose::Subject::CatGlossary => held_view(app).selected_tab == DetailTab::Abilities,
+        prose::Subject::EnemyGlossary => app.enemy_state.selected_tab == EnemyTab::Abilities,
         prose::Subject::Explanation
         | prose::Subject::EnemyName
         | prose::Subject::MapName
@@ -2257,6 +2299,8 @@ fn prose_subject(target: Option<Target>) -> Option<prose::Subject> {
         Target::MapName => Some(prose::Subject::MapName),
         Target::StageName => Some(prose::Subject::StageName),
         Target::TreasureDrop(_) => Some(prose::Subject::ItemName),
+        Target::Ability(_, Faction::Cat) => Some(prose::Subject::CatGlossary),
+        Target::Ability(_, Faction::Enemy) => Some(prose::Subject::EnemyGlossary),
         _ => None,
     }
 }
@@ -2271,6 +2315,7 @@ fn prose_target(app: &BattleCatsApp, subject: prose::Subject) -> Option<ProseTar
         prose::Subject::MapName => map_name_target(app, None),
         prose::Subject::StageName => stage_name_target(app, None),
         prose::Subject::ItemName => item_name_target(app, None),
+        prose::Subject::CatGlossary | prose::Subject::EnemyGlossary => None,
     }
 }
 
@@ -2318,6 +2363,7 @@ fn map_name_target(app: &BattleCatsApp, map: Option<u32>) -> Option<ProseTarget>
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
     .map(|target| target.keyed(prose::Keyed::Map(global)))
 }
@@ -2359,6 +2405,7 @@ fn stage_name_target(app: &BattleCatsApp, stage: Option<u32>) -> Option<ProseTar
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
     .map(|target| target.keyed(prose::Keyed::Stage(keyed)).celled(cell))
 }
@@ -2386,6 +2433,7 @@ fn combo_name_target(app: &BattleCatsApp, line: Option<usize>) -> Option<ProseTa
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
 }
 
@@ -2406,6 +2454,7 @@ fn enemy_name_target(app: &BattleCatsApp) -> Option<ProseTarget> {
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
 }
 
@@ -2427,6 +2476,7 @@ fn enemy_description_target(app: &BattleCatsApp) -> Option<ProseTarget> {
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
 }
 
@@ -2476,6 +2526,7 @@ fn explanation_target(app: &BattleCatsApp, id: u32) -> Option<ProseTarget> {
         cell: None,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
+        aim: None,
     })
 }
 
@@ -2857,7 +2908,12 @@ fn snapshot(app: &BattleCatsApp, editor: &State) -> Snapshot {
                 return Vec::new();
             }
 
-            prose_target(app, subject).map(|target| registry::prose_plans(&target)).unwrap_or_default()
+            let target = match (subject, editor.glossary_aim) {
+                (prose::Subject::CatGlossary | prose::Subject::EnemyGlossary, Some((identity, faction))) => glossary_target(app, identity, faction),
+                _ => prose_target(app, subject),
+            };
+
+            target.map(|target| registry::prose_plans(&target)).unwrap_or_default()
         }),
         ground: current_ground(app),
     }

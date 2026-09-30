@@ -6,6 +6,7 @@ use iced::{Element, Length, Size, Task, Theme};
 use nyanko::combat::{AttrUnit, Identity, REGISTRY};
 
 use kore::domains::cat::combo::{self, ComboEffects};
+use kore::systems::combat::NameBook;
 use kore::domains::cat::filter::{icons, ATTACK_TYPE_ICONS, CatFilterState, MatchMode, TalentFilterMode};
 use kore::domains::cat::scanner::CatEntry;
 use kore::Vault;
@@ -186,15 +187,15 @@ impl State {
         }
     }
 
-    pub fn view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, window: Size) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, window: Size, names: &'a NameBook) -> Element<'a, Message> {
         let per_row = icons_per_row(self.popup.body_width(POPUP, window) - CONTENT_PADDING * 2.0, ICON_SPACING);
 
         self.popup.view("Advanced Cat Filter", POPUP, window, Message::Popup, move || {
-            self.content_view(sheets, assets, per_row)
+            self.content_view(sheets, assets, per_row, names)
         }, None)
     }
 
-    fn content_view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, per_row: usize) -> Element<'a, Message> {
+    fn content_view<'a>(&'a self, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, per_row: usize, names: &'a NameBook) -> Element<'a, Message> {
         let rarity_labels = ["Normal", "Special", "Rare", "Super Rare", "Uber Rare", "Legend Rare"];
         let mut rarity_row = row![].spacing(4);
         for (i, &label) in rarity_labels.iter().enumerate() {
@@ -247,9 +248,9 @@ impl State {
             .filter(|display_def| display_def.group == DisplayGroup::Trait)
             .map(|display_def| display_def.icon)
             .collect();
-        let traits_row = self.icon_wrap(trait_icons.into_iter(), sheets, assets, per_row);
+        let traits_row = self.icon_wrap(trait_icons.into_iter(), sheets, assets, per_row, names);
 
-        let attack_row = self.icon_wrap(ATTACK_TYPE_ICONS.iter().copied(), sheets, assets, per_row);
+        let attack_row = self.icon_wrap(ATTACK_TYPE_ICONS.iter().copied(), sheets, assets, per_row, names);
 
         let mut rendered_icons: HashSet<AbilityIcon> = HashSet::new();
         let mut abilities_col = column![].spacing(0);
@@ -257,7 +258,7 @@ impl State {
         for group in [DisplayGroup::Headline1, DisplayGroup::Headline2] {
             let group_icons = self.collect_group_icons(group, &mut rendered_icons);
             if !group_icons.is_empty() {
-                abilities_col = abilities_col.push(self.icon_wrap(group_icons.into_iter(), sheets, assets, per_row));
+                abilities_col = abilities_col.push(self.icon_wrap(group_icons.into_iter(), sheets, assets, per_row, names));
                 abilities_col = abilities_col.push(Space::new().height(Length::Fixed(8.0)));
             }
         }
@@ -267,7 +268,7 @@ impl State {
             if !group_icons.is_empty() {
                 let mut col = column![].spacing(4);
                 for icon in group_icons {
-                    col = col.push(self.icon_row_with_label(icon, sheets, assets));
+                    col = col.push(self.icon_row_with_label(icon, sheets, assets, names));
                 }
                 abilities_col = abilities_col.push(col);
                 abilities_col = abilities_col.push(Space::new().height(Length::Fixed(8.0)));
@@ -276,7 +277,7 @@ impl State {
 
         let footer_icons = self.collect_group_icons(DisplayGroup::Footer, &mut rendered_icons);
         if !footer_icons.is_empty() {
-            abilities_col = abilities_col.push(self.icon_wrap(footer_icons.into_iter(), sheets, assets, per_row));
+            abilities_col = abilities_col.push(self.icon_wrap(footer_icons.into_iter(), sheets, assets, per_row, names));
             abilities_col = abilities_col.push(Space::new().height(Length::Fixed(8.0)));
         }
 
@@ -299,7 +300,7 @@ impl State {
             if !talent_icons.is_empty() {
                 abilities_col = abilities_col.push(text("Talents").size(18));
                 abilities_col = abilities_col.push(Space::new().height(Length::Fixed(5.0)));
-                abilities_col = abilities_col.push(self.icon_wrap(talent_icons.into_iter(), sheets, assets, per_row));
+                abilities_col = abilities_col.push(self.icon_wrap(talent_icons.into_iter(), sheets, assets, per_row, names));
             }
         }
 
@@ -364,22 +365,23 @@ impl State {
         sheets: &'a [SpriteSheet],
         assets: &'a CustomAssets,
         per_row: usize,
+        names: &'a NameBook,
     ) -> Element<'a, Message> {
         let items: Vec<AbilityIcon> = icons.collect();
         let mut col = column![].spacing(ICON_SPACING);
         for chunk in items.chunks(per_row) {
             let mut wrapped_row = row![].spacing(ICON_SPACING).align_y(Vertical::Center);
             for &icon in chunk {
-                wrapped_row = wrapped_row.push(self.icon_with_tooltip(icon, sheets, assets));
+                wrapped_row = wrapped_row.push(self.icon_with_tooltip(icon, sheets, assets, names));
             }
             col = col.push(wrapped_row);
         }
         col.into()
     }
 
-    fn icon_with_tooltip<'a>(&'a self, icon: AbilityIcon, sheets: &'a [SpriteSheet], assets: &'a CustomAssets) -> Element<'a, Message> {
+    fn icon_with_tooltip<'a>(&'a self, icon: AbilityIcon, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, names: &NameBook) -> Element<'a, Message> {
         let is_active = self.filter_state.active_icons.contains(&icon);
-        let name = icons::get_icon_name(&icon);
+        let name = icons::get_icon_name(&icon, names);
 
         tooltip(
             self.icon_button(icon, sheets, assets, is_active),
@@ -388,9 +390,9 @@ impl State {
         ).into()
     }
 
-    fn icon_row_with_label<'a>(&'a self, icon: AbilityIcon, sheets: &'a [SpriteSheet], assets: &'a CustomAssets) -> Element<'a, Message> {
+    fn icon_row_with_label<'a>(&'a self, icon: AbilityIcon, sheets: &'a [SpriteSheet], assets: &'a CustomAssets, names: &NameBook) -> Element<'a, Message> {
         let is_active = self.filter_state.active_icons.contains(&icon);
-        let name = icons::get_icon_name(&icon);
+        let name = icons::get_icon_name(&icon, names);
         let schema = ability_schema(icon);
         let expanded = is_active && !schema.is_empty();
 

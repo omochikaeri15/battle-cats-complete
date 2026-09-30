@@ -3,6 +3,7 @@ mod cat;
 mod content;
 mod enemy;
 mod item;
+mod names;
 mod stage;
 mod treasure;
 
@@ -16,6 +17,7 @@ pub use cat::CatStore;
 pub use content::ContentStore;
 pub use enemy::EnemyStore;
 pub use item::ItemStore;
+pub use names::NameStore;
 pub use stage::StageStore;
 pub use treasure::TreasureStore;
 
@@ -26,6 +28,7 @@ pub struct Vds {
     pub cats: CatStore,
     pub enemies: EnemyStore,
     pub items: ItemStore,
+    pub names: NameStore,
     pub stages: StageStore,
     pub treasures: TreasureStore,
 }
@@ -35,6 +38,7 @@ impl Vds {
         self.cats.evict(filename);
         self.enemies.evict(filename);
         self.items.evict(filename);
+        self.names.evict(filename);
         self.stages.evict(filename);
         self.treasures.evict(filename);
     }
@@ -49,6 +53,7 @@ impl Vds {
         self.cats.clear();
         self.enemies.clear();
         self.items.clear();
+        self.names.clear();
         self.stages.clear();
         self.treasures.clear();
     }

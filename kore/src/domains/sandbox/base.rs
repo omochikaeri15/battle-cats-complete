@@ -2,6 +2,9 @@ use std::collections::BTreeMap;
 
 use tracing::trace;
 
+use nyanko::combat::{Faction, Identity};
+
+use crate::systems::combat::NameBook;
 use crate::Vfs;
 
 const CANNON_GROWTH: &str = "CC_AllParts_growth.csv";
@@ -25,21 +28,29 @@ pub const CANNONS: [&str; 8] = [
     "Curseblast",
 ];
 
-const STYLE_RESISTS: [&str; 7] = ["Slow", "Wave", "Freeze", "Surge", "Weaken", "Toxic", "Curse"];
+const STYLE_RESISTS: [Identity; 7] = [
+    Identity::Slow,
+    Identity::WaveAttack,
+    Identity::Freeze,
+    Identity::SurgeAttack,
+    Identity::Weaken,
+    Identity::Toxic,
+    Identity::Curse,
+];
 
-const FOUNDATION_RESISTS: [&str; 12] = [
-    "Red",
-    "Floating",
-    "Dark",
-    "Metal",
-    "Angel",
-    "Alien",
-    "Zombie",
-    "Relic",
-    "Traitless",
-    "Witch",
-    "EVA Angel",
-    "Aku",
+const FOUNDATION_RESISTS: [Identity; 12] = [
+    Identity::TraitRed,
+    Identity::TraitFloating,
+    Identity::TraitDark,
+    Identity::TraitMetal,
+    Identity::TraitAngel,
+    Identity::TraitAlien,
+    Identity::TraitZombie,
+    Identity::TraitRelic,
+    Identity::TraitTraitless,
+    Identity::TraitWitch,
+    Identity::TraitEva,
+    Identity::TraitAku,
 ];
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -66,23 +77,23 @@ impl Parts {
         Self { cannons, styles, foundations, castle: castle(vfs), style_kinds, foundation_kinds }
     }
 
-    pub fn style_label(&self, part: i32) -> String {
-        resist_label(part, self.style_kinds.get(&part), &STYLE_RESISTS)
+    pub fn style_label(&self, part: i32, names: &NameBook) -> String {
+        resist_label(part, self.style_kinds.get(&part), &STYLE_RESISTS, |identity| names.ability(identity, Faction::Enemy))
     }
 
-    pub fn foundation_label(&self, part: i32) -> String {
-        resist_label(part, self.foundation_kinds.get(&part), &FOUNDATION_RESISTS)
+    pub fn foundation_label(&self, part: i32, names: &NameBook) -> String {
+        resist_label(part, self.foundation_kinds.get(&part), &FOUNDATION_RESISTS, |identity| names.trait_label(identity))
     }
 }
 
-fn resist_label(part: i32, kind: Option<&i32>, resists: &[&str]) -> String {
+fn resist_label<'a>(part: i32, kind: Option<&i32>, resists: &[Identity], label: impl Fn(Identity) -> &'a str) -> String {
     if part == BARE {
         return "None".to_owned();
     }
 
     kind.and_then(|kind| usize::try_from(*kind).ok())
         .and_then(|kind| resists.get(kind))
-        .map_or_else(|| name(part), |resist| (*resist).to_owned())
+        .map_or_else(|| name(part), |resist| label(*resist).to_owned())
 }
 
 pub fn name(part: i32) -> String {

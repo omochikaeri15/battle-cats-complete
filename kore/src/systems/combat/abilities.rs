@@ -49,6 +49,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
             magnification: ctx.magnification,
             param: ctx.global.param,
             treasure: ctx.global.treasure,
+            names: ctx.global.names,
         };
 
         groups[slot].push(AbilityItem {
@@ -90,6 +91,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
                         magnification: ctx.magnification,
                         param: ctx.global.param,
                         treasure: ctx.global.treasure,
+                        names: ctx.global.names,
                     };
 
                     let text = (display_def.formatter)(&format_ctx);

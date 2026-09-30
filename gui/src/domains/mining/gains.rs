@@ -38,6 +38,7 @@ impl State {
         cats: &'a [CatEntry],
         vfs: &'a Vfs,
         treasure: &'a Bonus,
+        names: &'a NameBook,
         settings: &'a Settings,
     ) -> Element<'a, Message> {
         let cat = cats.iter().find(|entry| entry.id == find.cat_id);
@@ -52,6 +53,7 @@ impl State {
             costs: cat.map(|entry| entry.talent_costs.as_ref()),
             level: level.value,
             treasure,
+            names,
             traits: cat.and_then(|entry| {
                 let base = entry.stats.get(form)?.as_ref()?;
                 let talent_data = entry.talent_data.as_ref()?;
@@ -181,7 +183,7 @@ impl State {
 
         let name: Element<'_, Message> = match skill_name::load(&self.plates, &gain.group, vfs, true) {
             Some(handle) => iced_image(handle).height(Length::Fixed(NAME_PLATE_HEIGHT)).into(),
-            None => header_text(gain.name).into(),
+            None => header_text(unit.names.talent(gain.group.ability_id).unwrap_or(gain.name)).into(),
         };
 
         row![

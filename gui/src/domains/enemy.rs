@@ -20,6 +20,8 @@ use nyanko::combat::Entity;
 use tracing::info;
 
 use kore::common::context::GlobalContext;
+use nyanko::combat::Faction;
+use kore::systems::combat::NameBook;
 use kore::common::formats::SpriteSheet as CoreSpriteSheet;
 use kore::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_CASH_DROP, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_SPEED};
 use kore::systems::combat::RenderContext;
@@ -545,11 +547,11 @@ impl EnemyState {
         self.filter.restore_scroll()
     }
 
-    pub fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+    pub fn filter_popup_view<'a>(&'a self, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
         self.filter
             .filter_state
             .is_open
-            .then(|| self.filter.view(&self.img015_sheets, &self.custom_assets, window).map(Message::Filter))
+            .then(|| self.filter.view(&self.img015_sheets, &self.custom_assets, window, names).map(Message::Filter))
     }
 
     pub(crate) fn export_scroll_task<M: 'static>(&self) -> Task<M> {
@@ -814,7 +816,7 @@ impl EnemyState {
                 self.view_stats(enemy, stats, global_ctx.treasure),
                 Space::new().height(Length::Fixed(8.0)),
                 self.abilities.view(&enemy_ctx, &self.img015_sheets, &self.custom_assets, |items, layout| {
-                    self.abilities.ability_list(items, &self.img015_sheets, &self.custom_assets, layout)
+                    self.abilities.ability_list(items, &self.img015_sheets, &self.custom_assets, layout, Faction::Enemy)
                 })
             ]
                 .width(Length::Fill)

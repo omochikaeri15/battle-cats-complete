@@ -118,7 +118,7 @@ impl State {
     ) -> Element<'a, Message> {
         let body = match self.tab {
             Tab::Meta => self.view_meta(window),
-            Tab::Cats => self.view_cats(cats, &global.vault.vfs, global.treasure, settings, window.width - SIDEBAR_WIDTH),
+            Tab::Cats => self.view_cats(cats, &global.vault.vfs, global.treasure, global.names, settings, window.width - SIDEBAR_WIDTH),
             Tab::Enemies => self.view_enemies(foes, window.width - SIDEBAR_WIDTH),
             Tab::Stages => self.view_stages(registry, window.width - SIDEBAR_WIDTH),
             Tab::Files => self.view_files(window),

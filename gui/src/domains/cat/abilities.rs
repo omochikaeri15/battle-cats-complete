@@ -6,6 +6,7 @@ use nyanko::cat::unit::LevelCurve;
 use nyanko::files::img015;
 
 use kore::common::context::GlobalContext;
+use nyanko::combat::Faction;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::settings::Settings;
 use kore::systems::combat::{AbilityItem, CustomIcon, RenderContext, ABILITY_Y};
@@ -88,7 +89,7 @@ impl State {
             let item_row = if is_conjure {
                 self.conjure_row(item, spirit, sheets, assets, settings)
             } else {
-                self.shared.ability_row(item, sheets, assets, layout)
+                self.shared.ability_row(item, sheets, assets, layout, Faction::Cat)
             };
 
             col = col.push(item_row);

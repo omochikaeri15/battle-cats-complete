@@ -28,6 +28,7 @@ use nyanko::common;
 use tracing::warn;
 
 use kore::common::preview::{self, Stamp};
+use kore::systems::combat::NameBook;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::{mods, settings::EditorMode};
 use kore::{Vault, Vfs};
@@ -461,6 +462,7 @@ pub(super) struct Frame<'a> {
     names: &'a talents::Names,
     catalogue: &'a combos::Catalogue,
     vault: &'a Vault,
+    glossary: &'a NameBook,
     picker: Option<usize>,
     hunt: &'a str,
 }
@@ -730,6 +732,7 @@ impl State {
         used: Marks,
         cats: &'a [CatEntry],
         vault: &'a Vault,
+        glossary: &'a NameBook,
     ) -> Option<Element<'a, Message>> {
         let draft = self.draft.as_ref()?;
         let spec = spec(draft.plan.subject());
@@ -751,6 +754,7 @@ impl State {
             names: &self.names,
             catalogue: &self.catalogue,
             vault,
+            glossary,
             picker: self.picker,
             hunt: &self.hunt,
         };

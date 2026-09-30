@@ -8,6 +8,8 @@ use iced::widget::{column, container, image as iced_image, pick_list, row, text,
 use iced::{Element, Length, Task};
 
 use kore::common::formats::SpriteSheet as CoreSpriteSheet;
+use kore::systems::combat::NameBook;
+use nyanko::combat::Identity;
 use kore::domains::sandbox::orb::{self, Allowance, Kind, GRADES};
 use kore::{Vault, Vfs};
 use image::{imageops, RgbaImage};
@@ -29,8 +31,20 @@ const OVERSAMPLE: f32 = 2.0;
 const BEST_GRADE: usize = 4;
 const IDLE_PADDING: f32 = 5.0;
 
-const TRAITS: [&str; 12] =
-    ["Red", "Floating", "Dark", "Metal", "Angel", "Alien", "Zombie", "Relic", "Traitless", "Witch", "Eva", "Aku"];
+const TRAITS: [Identity; 12] = [
+    Identity::TraitRed,
+    Identity::TraitFloating,
+    Identity::TraitDark,
+    Identity::TraitMetal,
+    Identity::TraitAngel,
+    Identity::TraitAlien,
+    Identity::TraitZombie,
+    Identity::TraitRelic,
+    Identity::TraitTraitless,
+    Identity::TraitWitch,
+    Identity::TraitEva,
+    Identity::TraitAku,
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Layer {
@@ -57,15 +71,15 @@ pub struct Choice {
     label: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Aim(i32);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Aim {
+    attribute: i32,
+    label: String,
+}
 
 impl std::fmt::Display for Aim {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match usize::try_from(self.0).ok().and_then(|index| TRAITS.get(index)) {
-            Some(named) => f.write_str(named),
-            None => write!(f, "Trait {}", self.0),
-        }
+        f.write_str(&self.label)
     }
 }
 
@@ -117,12 +131,15 @@ pub struct State {
     choices: Vec<Choice>,
     sheets: [Vec<SpriteSheet>; 3],
     drawn: RefCell<HashMap<(u32, u32), Handle>>,
+    trait_labels: Vec<String>,
 }
 
 impl State {
-    pub fn load(&mut self, vault: &Vault) -> Task<Message> {
+    pub fn load(&mut self, vault: &Vault, names: &NameBook) -> Task<Message> {
         let vfs = &vault.vfs;
         let effects = effect_names(vfs);
+
+        self.trait_labels = TRAITS.iter().map(|identity| names.trait_label(*identity).to_owned()).collect();
 
         self.orbs = vault.vds.cats.orbs(vfs);
         self.kinds = orb::kinds(&self.orbs);
@@ -159,7 +176,7 @@ impl State {
                 let grade = held.and_then(|orb| orb::grade(&self.orbs, orb)).unwrap_or(BEST_GRADE);
                 let aimed = held.and_then(|orb| orb::kind(&self.orbs, orb)).and_then(|kind| kind.attribute);
                 let offered = self.aims(choice.content, allowance);
-                let attribute = offered.iter().find(|aim| Some(aim.0) == aimed).or_else(|| offered.first()).map(|aim| aim.0);
+                let attribute = offered.iter().find(|aim| Some(aim.attribute) == aimed).or_else(|| offered.first()).map(|aim| aim.attribute);
 
                 Outcome::Equip(orb::pick(&self.orbs, Kind { content: choice.content, attribute }, grade))
             }
@@ -169,7 +186,7 @@ impl State {
                 };
                 let grade = held.and_then(|orb| orb::grade(&self.orbs, orb)).unwrap_or(BEST_GRADE);
 
-                Outcome::Equip(orb::pick(&self.orbs, Kind { attribute: Some(aim.0), ..kind }, grade))
+                Outcome::Equip(orb::pick(&self.orbs, Kind { attribute: Some(aim.attribute), ..kind }, grade))
             }
             Message::Grade(grade) => {
                 let Some(kind) = held.and_then(|orb| orb::kind(&self.orbs, orb)) else {
@@ -186,8 +203,17 @@ impl State {
         orb::attributes(&self.kinds, content)
             .into_iter()
             .filter(|attribute| allowance.permits(Kind { content, attribute: Some(*attribute) }))
-            .map(Aim)
+            .map(|attribute| self.aim(attribute))
             .collect()
+    }
+
+    fn aim(&self, attribute: i32) -> Aim {
+        let label = usize::try_from(attribute)
+            .ok()
+            .and_then(|index| self.trait_labels.get(index))
+            .map_or_else(|| format!("Trait {attribute}"), String::clone);
+
+        Aim { attribute, label }
     }
 
     fn cut(&self, layer: Layer, index: i32) -> Option<RgbaImage> {
@@ -243,7 +269,7 @@ impl State {
             .collect();
         let chosen = kind.and_then(|kind| offered.iter().find(|choice| choice.content == kind.content)).cloned();
         let aims = kind.map_or_else(Vec::new, |kind| self.aims(kind.content, allowance));
-        let aim = kind.and_then(|kind| kind.attribute).map(Aim);
+        let aim = kind.and_then(|kind| kind.attribute).map(|attribute| self.aim(attribute));
         let trait_pick: Element<'_, Message> = if aims.is_empty() {
             container(text("None").size(PICK_TEXT).style(|theme: &iced::Theme| text::Style { color: Some(theme::weak_text_color(theme)) }))
                 .padding(IDLE_PADDING)

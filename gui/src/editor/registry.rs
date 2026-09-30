@@ -757,7 +757,7 @@ fn plans(target: &ProseTarget, scopes: &[Scope<'_>], target_mod: Option<&str>) -
                 None => made,
             };
 
-            let made = made.sourced();
+            let made = made.sourced().aiming(target.aim);
 
             prose::seated(&made).then(|| made.over(target.rows.clone()))
         })

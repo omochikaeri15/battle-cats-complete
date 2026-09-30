@@ -4,6 +4,7 @@ use iced::{Element, Length, Size, Theme};
 use nyanko::chapter::stage::{CataminGrade, CostType};
 
 use kore::domains::stage::cost::grade_label;
+use kore::systems::combat::NameBook;
 use kore::domains::stage::filter::enemy::EnemyFilter;
 use kore::domains::stage::filter::lineup::LineupFilter;
 use kore::domains::stage::filter::material::MaterialFilter;
@@ -131,7 +132,7 @@ fn flag_mut(state: &mut StageFilterState, flag: Flag) -> &mut Option<bool> {
     }
 }
 
-fn flag_label(flag: Flag) -> &'static str {
+fn flag_label(flag: Flag, names: &NameBook) -> &str {
     match flag {
         Flag::Continues => "Continues",
         Flag::BossGuard => "Boss Guard",
@@ -147,14 +148,14 @@ fn flag_label(flag: Flag) -> &'static str {
         Flag::RuleMegaCatCannon => "Mega Cat Cannon",
         Flag::RuleUniformMotion => "Uniform Motion",
         Flag::InvalidCombos => "Invalid Combos",
-        Flag::BonusWeaken => "Weaken",
-        Flag::BonusFreeze => "Freeze",
-        Flag::BonusSlow => "Slow",
-        Flag::BonusKnockback => "Knockback",
-        Flag::BonusStrongAttack => "Strong Attack",
-        Flag::BonusMassiveDamage => "Massive Damage",
-        Flag::BonusStrongDefense => "Strong Defense",
-        Flag::BonusResist => "Resist",
+        Flag::BonusWeaken => names.bonus(0).unwrap_or("Weaken"),
+        Flag::BonusKnockback => names.bonus(1).unwrap_or("Knockback"),
+        Flag::BonusStrongAttack => names.bonus(2).unwrap_or("Strong Attack"),
+        Flag::BonusFreeze => names.bonus(3).unwrap_or("Freeze"),
+        Flag::BonusMassiveDamage => names.bonus(4).unwrap_or("Massive Damage"),
+        Flag::BonusSlow => names.bonus(5).unwrap_or("Slow"),
+        Flag::BonusStrongDefense => names.bonus(6).unwrap_or("Strong Defense"),
+        Flag::BonusResist => names.bonus(7).unwrap_or("Resist"),
     }
 }
 
@@ -448,29 +449,29 @@ impl State {
         }
     }
 
-    pub fn view(&self, window: Size) -> Element<'_, Message> {
-        self.popup.view("Advanced Stage Filter", POPUP, window, Message::Popup, move || self.content_view(), None)
+    pub fn view<'a>(&'a self, window: Size, names: &'a NameBook) -> Element<'a, Message> {
+        self.popup.view("Advanced Stage Filter", POPUP, window, Message::Popup, move || self.content_view(names), None)
     }
 
-    fn content_view(&self) -> Element<'_, Message> {
+    fn content_view<'a>(&'a self, names: &'a NameBook) -> Element<'a, Message> {
         let name_grid = column![
             name_field("Category:", &self.filter_state.category_name, Message::CategoryChanged),
             name_field("Map:", &self.filter_state.map_name, Message::MapChanged),
             name_field("Stage:", &self.filter_state.stage_name, Message::StageChanged),
         ].spacing(6);
 
-        let general_rules = wrap_pairs([Flag::Continues, Flag::BossGuard, Flag::UseSuperCpu], &self.filter_state);
+        let general_rules = wrap_pairs([Flag::Continues, Flag::BossGuard, Flag::UseSuperCpu], &self.filter_state, names);
 
         let special_rules = wrap_pairs([
             Flag::RuleTrustFund, Flag::RuleCooldownEquality, Flag::RuleRarityLimit, Flag::RuleCheapLabor,
             Flag::RuleCatCost, Flag::RuleCatProduction, Flag::RuleTotalDeployLimit, Flag::RuleMoreThanOne,
             Flag::RuleMegaCatCannon, Flag::RuleUniformMotion, Flag::InvalidCombos,
-        ], &self.filter_state);
+        ], &self.filter_state, names);
 
         let score_bonuses = wrap_pairs([
             Flag::BonusWeaken, Flag::BonusFreeze, Flag::BonusSlow, Flag::BonusKnockback,
             Flag::BonusStrongAttack, Flag::BonusMassiveDamage, Flag::BonusStrongDefense, Flag::BonusResist,
-        ], &self.filter_state);
+        ], &self.filter_state, names);
 
         let stats = range_pairs([
             Range::BaseHp, Range::Width, Range::TimeLimit, Range::MaxEnemies, Range::Xp,
@@ -576,7 +577,7 @@ fn tristate_button<'a>(value: Option<bool>, on_press: Message) -> Element<'a, Me
         .into()
 }
 
-fn wrap_pairs<'a>(flags: impl IntoIterator<Item = Flag>, filter_state: &'a StageFilterState) -> Element<'a, Message> {
+fn wrap_pairs<'a>(flags: impl IntoIterator<Item = Flag>, filter_state: &'a StageFilterState, names: &'a NameBook) -> Element<'a, Message> {
     let mut col = column![].spacing(6);
     let mut current = row![].spacing(PAIR_SPACING).align_y(Vertical::Center);
     let mut count = 0;
@@ -585,7 +586,7 @@ fn wrap_pairs<'a>(flags: impl IntoIterator<Item = Flag>, filter_state: &'a Stage
         let value = flag_ref(filter_state, flag);
         current = current.push(
             row![
-                text(format!("{}:", flag_label(flag))).size(CONTROL_TEXT_SIZE).width(Length::Fixed(FLAG_LABEL_WIDTH)),
+                text(format!("{}:", flag_label(flag, names))).size(CONTROL_TEXT_SIZE).width(Length::Fixed(FLAG_LABEL_WIDTH)),
                 tristate_button(value, Message::FlagToggled(flag)),
             ]
                 .spacing(FIELD_SPACING)

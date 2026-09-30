@@ -15,6 +15,7 @@ use tracing::warn;
 
 use emu::runtime::VERSION;
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::common::frames;
 use kore::domains::cat::scanner;
 use kore::domains::sandbox::orb::Allowance;
@@ -22,6 +23,7 @@ use kore::domains::sandbox::replay::{self as tape, Staged, Summary, Unit};
 use kore::domains::settings::{ScannerConfig, Settings};
 use kore::systems::treasure::{self, Bonus};
 use kore::Vault;
+use nyanko::files::Localizable;
 use kore::common::gfx::open_image;
 
 use crate::app::state::AppState;
@@ -157,6 +159,8 @@ pub struct State {
     rename: String,
     manage: manage::State,
     treasure: Bonus,
+    glossary: NameBook,
+    pub(super) names_dynamic: bool,
 }
 
 pub fn is_bundle(path: &Path) -> bool {
@@ -291,7 +295,7 @@ impl State {
         self.inspector.subscription().map(Message::Cat)
     }
 
-    pub fn refresh(&mut self, settings: &Settings) -> Task<Message> {
+    pub fn refresh(&mut self, settings: &Settings, localizable: &Localizable) -> Task<Message> {
         self.bundles = tape::list(&tape::library());
         self.manage.refresh(settings, &self.bundles);
         self.filter();
@@ -301,15 +305,15 @@ impl State {
             other => other,
         };
 
-        self.select(picked.unwrap_or(Pick::Latest), settings.scanner_config(None))
+        self.select(picked.unwrap_or(Pick::Latest), settings.scanner_config(None), localizable)
     }
 
-    pub fn relist(&mut self, config: ScannerConfig) -> Task<Message> {
+    pub fn relist(&mut self, config: ScannerConfig, localizable: &Localizable) -> Task<Message> {
         self.bundles = tape::list(&tape::library());
         self.filter();
 
         match &self.picked {
-            Some(Pick::Bundle(path)) if !self.bundles.contains(path) => self.select(Pick::Latest, config),
+            Some(Pick::Bundle(path)) if !self.bundles.contains(path) => self.select(Pick::Latest, config, localizable),
             _ => Task::none(),
         }
     }
@@ -321,7 +325,7 @@ impl State {
         }
     }
 
-    fn select(&mut self, pick: Pick, config: ScannerConfig) -> Task<Message> {
+    fn select(&mut self, pick: Pick, config: ScannerConfig, localizable: &Localizable) -> Task<Message> {
         let target = target_of(&pick);
         let stamp = target.as_deref().and_then(tape::stamp);
         let cached = stamp
@@ -351,7 +355,7 @@ impl State {
                 }
 
                 self.failure = None;
-                self.adopt(staged)
+                self.adopt(staged, localizable)
             }
             Err(reason) => {
                 warn!("Replay could not be read: {reason}");
@@ -367,8 +371,9 @@ impl State {
         }
     }
 
-    fn adopt(&mut self, staged: Arc<Staged>) -> Task<Message> {
+    fn adopt(&mut self, staged: Arc<Staged>, localizable: &Localizable) -> Task<Message> {
         self.details = Some(describe(self.title(), &staged.summary));
+        self.glossary = if self.names_dynamic { staged.vault.vds.names.book(&staged.vault.vfs, localizable) } else { NameBook::default() };
 
         let catalog = staged.vault.vds.treasures.catalog(&staged.vault.vfs);
 
@@ -380,7 +385,7 @@ impl State {
         self.inspector.set_treasure(self.treasure);
 
         let adopted = self.inspector.adopt_cats(&staged.cats, &staged.vault).map(Message::Cat);
-        let orbs = self.orbs.load(&staged.vault).map(Message::Orbs);
+        let orbs = self.orbs.load(&staged.vault, &self.glossary).map(Message::Orbs);
 
         self.coin = staged.vault.vfs.find(NP_ICON).and_then(|path| open_image(&staged.vault.vfs.source(&path))).map(|opened| {
             let cropped = kore::common::gfx::autocrop(opened.to_rgba8());
@@ -510,7 +515,7 @@ impl State {
             Message::Select(pick) => {
                 self.manage.forget_confirm();
 
-                self.select(pick, settings.scanner_config(None))
+                self.select(pick, settings.scanner_config(None), ctx.localizable)
             }
             Message::Search(query) => {
                 self.search = query;
@@ -551,7 +556,7 @@ impl State {
                 let Some(vault) = self.staged.as_deref().map(|staged| &staged.vault) else {
                     return Task::none();
                 };
-                let scoped = GlobalContext { vault, treasure: &self.treasure, ..ctx };
+                let scoped = GlobalContext { vault, treasure: &self.treasure, names: &self.glossary, ..ctx };
 
                 self.inspector.update(msg, settings, app_state, scoped).map(Message::Cat)
             }
@@ -574,11 +579,11 @@ impl State {
 
                 match effect {
                     manage::Effect::None => task,
-                    manage::Effect::Saved => Task::batch([task, self.refresh(settings)]),
+                    manage::Effect::Saved => Task::batch([task, self.refresh(settings, ctx.localizable)]),
                     manage::Effect::Deleted(bundle) => {
                         self.cache.retain(|(pick, _, _)| *pick != Pick::Bundle(bundle.clone()));
 
-                        Task::batch([task, self.refresh(settings)])
+                        Task::batch([task, self.refresh(settings, ctx.localizable)])
                     }
                 }
             }
@@ -658,7 +663,7 @@ impl State {
     ) -> Option<Element<'a, Message>> {
         let tile = self.tiles.get(self.open?)?;
         let vault = self.vault()?;
-        let scoped = GlobalContext { vault, treasure: &self.treasure, ..ctx };
+        let scoped = GlobalContext { vault, treasure: &self.treasure, names: &self.glossary, ..ctx };
         let title = self.inspector.cat(tile.id).map_or("Unit", |cat| cat.names.get(tile.form).and_then(Option::as_deref).unwrap_or("Unit"));
 
         Some(self.unit_popup.view(

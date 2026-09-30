@@ -9,6 +9,7 @@ use nyanko::chapter::stage::{AbilityType, CannonType, CertificationPreset, Evolu
 
 use kore::domains::cat::waiter::unitexplanation;
 use kore::domains::stage::fixedlineup::{ResolvedFixedLineup, ResolvedSlot};
+use kore::systems::combat::NameBook;
 use kore::Vfs;
 use kore::Source;
 
@@ -56,7 +57,7 @@ impl State {
         Some(handle)
     }
 
-    pub fn view<'a>(&'a self, resolved_lineup: &ResolvedFixedLineup, preset: &'a CertificationPreset, vfs: &'a Vfs) -> Element<'a, super::Message> {
+    pub fn view<'a>(&'a self, resolved_lineup: &ResolvedFixedLineup, preset: &'a CertificationPreset, vfs: &'a Vfs, names: &'a NameBook) -> Element<'a, super::Message> {
         let mut top_row = row![].spacing(ICON_GAP_H);
         for slot in resolved_lineup.slots.iter().take(5) {
             top_row = top_row.push(self.slot_view(slot, preset, vfs));
@@ -69,7 +70,7 @@ impl State {
 
         let slots_col = column![top_row, bottom_row].spacing(ICON_GAP_V);
 
-        let upgrades_scroller = scrollable(upgrades_section(preset))
+        let upgrades_scroller = scrollable(upgrades_section(preset, names))
             .height(Length::Fixed(SCROLL_AREA_HEIGHT))
             .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new().spacing(SCROLLBAR_SPACING)));
 
@@ -199,18 +200,19 @@ fn zebra_table<'a>(label_header: &'a str, value_header: &'a str, label_width: f3
     table.into()
 }
 
-fn upgrades_section<'a>(preset: &'a CertificationPreset) -> Element<'a, super::Message> {
-    let cannon_name = match preset.slot_cannon_type {
-        CannonType::Basic => "Basic",
-        CannonType::SlowBeam => "Slow Beam",
-        CannonType::IronWall => "Iron Wall",
-        CannonType::Thunderbolt => "Thunderbolt",
-        CannonType::Waterblast => "Waterblast",
-        CannonType::HolyBlast => "HolyBlast",
-        CannonType::Breakerblast => "Breakerblast",
-        CannonType::Curseblast => "Curseblast",
-        CannonType::Unknown(_) => "Unknown",
+fn upgrades_section<'a>(preset: &'a CertificationPreset, names: &'a NameBook) -> Element<'a, super::Message> {
+    let (cannon_id, fallback) = match preset.slot_cannon_type {
+        CannonType::Basic => (0, "Basic"),
+        CannonType::SlowBeam => (1, "Slow Beam"),
+        CannonType::IronWall => (2, "Iron Wall"),
+        CannonType::Thunderbolt => (3, "Thunderbolt"),
+        CannonType::Waterblast => (4, "Waterblast"),
+        CannonType::HolyBlast => (5, "Holy Blast"),
+        CannonType::Breakerblast => (6, "Breakerblast"),
+        CannonType::Curseblast => (7, "Curseblast"),
+        CannonType::Unknown(id) => (i32::from(id), "Unknown"),
     };
+    let cannon_name = names.cannon(cannon_id).unwrap_or(fallback);
     let cannon_level = preset.cannon_levels.get(&preset.slot_cannon_type).copied().unwrap_or(0);
 
     let cannon_grid = zebra_table("Cannon", "Level", CANNON_LABEL_WIDTH, vec![(cannon_name.to_string(), cannon_level.to_string())]);

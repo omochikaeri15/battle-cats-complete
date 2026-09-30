@@ -244,6 +244,7 @@ impl std::fmt::Display for Utf8Mode {
 #[serde(default)]
 pub struct ModsSettings {
     pub export_behavior: ExportBehavior,
+    pub force_name_fallbacks: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

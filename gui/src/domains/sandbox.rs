@@ -16,6 +16,7 @@ use std::rc::Rc;
 
 use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags, VERSION};
 use kore::common::context::GlobalContext;
+use kore::systems::combat::NameBook;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
 use kore::systems::treasure::{Bonus, Catalog};
@@ -25,6 +26,7 @@ use kore::domains::sandbox::TECHS;
 use kore::domains::sandbox::replay as replay_tape;
 use kore::domains::settings::{ReplaySource, ScannerConfig, Settings};
 use kore::Vault;
+use nyanko::files::Localizable;
 
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
@@ -222,11 +224,11 @@ impl Message {
 impl State {
     pub(crate) fn enter(&mut self, app_state: &AppState, settings: &Settings, ctx: GlobalContext<'_>) -> Task<Message> {
         self.prompt_open = app_state.sandbox.agreement != agreement();
-        self.config.enter(&ctx.vault.vfs);
+        self.config.enter(&ctx.vault.vfs, ctx.names);
         self.altars = Altars::load(&ctx.vault.vfs);
         self.clamp(app_state);
 
-        let replays = if app_state.sandbox.tab == SandboxTab::Replay { self.refresh_replays(settings) } else { Task::none() };
+        let replays = if app_state.sandbox.tab == SandboxTab::Replay { self.refresh_replays(settings, ctx.localizable) } else { Task::none() };
 
         self.lineup.set_banner_form(settings.sandbox.banner_form);
 
@@ -267,7 +269,7 @@ impl State {
     }
 
     pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
-        self.config.reload(&ctx.vault.vfs);
+        self.config.reload(&ctx.vault.vfs, ctx.names);
         self.lineup.adopt_cats(cats, app_state, ctx).map(Message::Lineup)
     }
 
@@ -277,6 +279,10 @@ impl State {
 
     pub(crate) fn set_treasure(&mut self, treasure: Bonus) {
         self.lineup.set_treasure(treasure);
+    }
+
+    pub(crate) fn set_names_dynamic(&mut self, dynamic: bool) {
+        self.replay.names_dynamic = dynamic;
     }
 
     pub(crate) fn inspector(&self) -> Option<&cat::State> {
@@ -309,8 +315,8 @@ impl State {
         self.lineup.orb_popup_view(window, app_state).map(|view| view.map(Message::Lineup))
     }
 
-    pub(crate) fn filter_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
-        self.lineup.filter_popup_view(window).map(|view| view.map(Message::Lineup))
+    pub(crate) fn filter_popup_view<'a>(&'a self, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
+        self.lineup.filter_popup_view(window, names).map(|view| view.map(Message::Lineup))
     }
 
     pub(crate) fn setup(&self, app_state: &AppState, stage: StageEntry) -> Setup {
@@ -435,12 +441,12 @@ impl State {
         replay::is_bundle(path)
     }
 
-    pub(crate) fn relist_replays(&mut self, settings: &Settings) -> Task<Message> {
-        self.replay.relist(settings.scanner_config(None)).map(Message::Replay)
+    pub(crate) fn relist_replays(&mut self, settings: &Settings, localizable: &Localizable) -> Task<Message> {
+        self.replay.relist(settings.scanner_config(None), localizable).map(Message::Replay)
     }
 
-    fn refresh_replays(&mut self, settings: &Settings) -> Task<Message> {
-        self.replay.refresh(settings).map(Message::Replay)
+    fn refresh_replays(&mut self, settings: &Settings, localizable: &Localizable) -> Task<Message> {
+        self.replay.refresh(settings, localizable).map(Message::Replay)
     }
 
     pub(crate) fn replay_unit_open(&self) -> bool {
@@ -694,7 +700,7 @@ impl State {
                 app_state.sandbox.tab = tab;
 
                 if tab == SandboxTab::Replay {
-                    return self.refresh_replays(settings);
+                    return self.refresh_replays(settings, ctx.localizable);
                 }
 
                 Task::none()
@@ -717,7 +723,7 @@ impl State {
                 let running = self.session.as_ref().is_some_and(Session::running);
 
                 let mut replays = if self.was_running && !running && app_state.sandbox.tab == SandboxTab::Replay {
-                    self.refresh_replays(settings)
+                    self.refresh_replays(settings, ctx.localizable)
                 } else {
                     Task::none()
                 };

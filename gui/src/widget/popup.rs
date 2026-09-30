@@ -110,6 +110,8 @@ pub enum Kind {
     DropChara,
     ItemBuy,
     ItemName,
+    CatGlossary,
+    EnemyGlossary,
     Battleground,
     EnemyPick,
     Animator,
@@ -128,7 +130,7 @@ pub enum Kind {
     ReplayAnimationExport,
 }
 
-pub(crate) const KIND_COUNT: usize = 51;
+pub(crate) const KIND_COUNT: usize = 53;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -165,6 +167,8 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::DropChara,
     Kind::ItemBuy,
     Kind::ItemName,
+    Kind::CatGlossary,
+    Kind::EnemyGlossary,
     Kind::Battleground,
     Kind::EnemyPick,
     Kind::Animator,
@@ -222,6 +226,8 @@ impl Kind {
             Self::DropChara => "drop_chara",
             Self::ItemBuy => "item_buy",
             Self::ItemName => "item_name",
+            Self::CatGlossary => "cat_glossary",
+            Self::EnemyGlossary => "enemy_glossary",
             Self::Battleground => "battleground",
             Self::EnemyPick => "enemy_pick",
             Self::Animator => "animator",

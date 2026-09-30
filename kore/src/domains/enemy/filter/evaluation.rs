@@ -1,9 +1,10 @@
-use nyanko::combat::{Entity, Identity, REGISTRY};
+use nyanko::combat::{Entity, Faction, Identity, REGISTRY};
 
 use crate::systems::combat::comparable;
-use crate::systems::combat::registry::{get_display_def, Magnification, StatContext, ENEMY_STATS_REGISTRY};
+use crate::systems::combat::registry::{Magnification, StatContext, ENEMY_STATS_REGISTRY};
 use crate::domains::enemy::filter::{EnemyFilterState, MatchMode};
 use crate::domains::enemy::scanner::EnemyEntry;
+use crate::systems::combat::NameBook;
 use crate::systems::treasure::Bonus;
 
 pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32, treasure: &Bonus) -> i32 {
@@ -19,8 +20,8 @@ pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32,
         .map_or(0, |def| (def.get_value)(&StatContext::enemy(s, anim_frames, magnification, treasure)))
 }
 
-pub fn get_identity_name(identity: Identity) -> String {
-    get_display_def(identity).name.to_string()
+pub fn get_identity_name(identity: Identity, names: &NameBook) -> String {
+    names.ability(identity, Faction::Enemy).to_string()
 }
 
 pub(crate) fn has_trait_or_ability(s: &Entity, identity: Identity) -> bool {

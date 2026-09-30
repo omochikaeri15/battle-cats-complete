@@ -1,6 +1,7 @@
 use nyanko::files::Localizable;
 use nyanko::files::Param;
 
+use crate::systems::combat::NameBook;
 use crate::systems::treasure::Bonus;
 use crate::Vault;
 
@@ -10,4 +11,5 @@ pub struct GlobalContext<'a> {
     pub localizable: &'a Localizable,
     pub vault: &'a Vault,
     pub treasure: &'a Bonus,
+    pub names: &'a NameBook,
 }

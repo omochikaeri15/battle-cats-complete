@@ -10,8 +10,9 @@ const POPUP: popup::Spec = popup::Spec::new(popup::Kind::Notice, Size::new(500.0
 const SCROLLBAR_GAP: f32 = 8.0;
 
 // If "NOTICE_CONTENT" is empty, no notice appears
-pub(super) const NOTICE_TITLE: &str = "NOTICE";
+pub(super) const NOTICE_TITLE: &str = "NEW LOCALIZED FILES";
 pub(super) const NOTICE_CONTENT: &str = r#"
+As of v4.2.0 a ton of new localized files were added to the exceptions, and tons of pages were updated to read their contents instead of using hardcoded strings. Many localized files that were not caught by exceptions get imported as Thai only, which means the app may display only Thai to you. To fix your languages, go to `Settings > Import > Manage Exceptions` and click `Set to Default` if it isn't default already. Then delete your game data under `Settings > Files` and click `Delete "game"`. Finally, re-import under the Import page.
 "#;
 
 pub(super) fn parse_content() -> Vec<markdown::Item> {

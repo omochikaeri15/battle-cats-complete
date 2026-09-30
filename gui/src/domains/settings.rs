@@ -75,6 +75,7 @@ pub enum Message {
     ScrubBehaviorSelected(ScrubBehavior),
     SidebarBehaviorSelected(SidebarBehavior),
     ExportBehaviorSelected(ExportBehavior),
+    ToggleForceNames(bool),
     ToggleKeyValidation(bool),
     ToggleIgnoreModifiedApp(bool),
     ImportStructureSelected(ImportStructure),
@@ -273,6 +274,10 @@ impl State {
 
             Message::ExportBehaviorSelected(val) => {
                 core_settings.mods.export_behavior = val;
+                Task::none()
+            }
+            Message::ToggleForceNames(val) => {
+                core_settings.mods.force_name_fallbacks = val;
                 Task::none()
             }
             Message::Pem(msg) => self.pem.update(msg).map(Message::Pem),
@@ -630,8 +635,14 @@ impl State {
             ].spacing(10).align_y(Alignment::Center),
         ].spacing(10);
 
+        let behavior_content = hover_hint(
+            toggle_row(core_settings.mods.force_name_fallbacks, text("Force Name Fallbacks"), Some(Message::ToggleForceNames)),
+            "Names abilities, traits and cannons with the app's own words even while a mod is enabled\nWithout a mod the app's own words are always used, so a dictionary that a game update\nmoved cannot mislabel anything while datamining",
+        );
+
         column![
             header_section(text("Export").size(24), export_content),
+            header_section(text("Behavior").size(24), behavior_content),
         ].spacing(SECTION_SPACING).into()
     }
 

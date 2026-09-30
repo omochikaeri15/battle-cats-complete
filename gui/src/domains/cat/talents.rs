@@ -5,11 +5,12 @@ use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, row, scrollable, slider, text, text_input, Space};
 use iced::alignment::{Horizontal, Vertical};
 use iced::{font, Alignment, Color, Element, Length, Padding, Theme};
-use nyanko::combat::{get_talent, Entity};
+use nyanko::combat::{get_talent, Entity, Faction};
 use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
 use nyanko::files::img022;
 
 use kore::systems::combat::registry::{get_display_def, AbilityIcon};
+use kore::systems::combat::NameBook;
 use kore::systems::treasure::Bonus;
 use kore::domains::cat::game::talents as talent_logic;
 use kore::Vfs;
@@ -104,6 +105,7 @@ pub struct ViewCtx<'a, 'b> {
     pub curve: Option<&'a LevelCurve>,
     pub unit_level: i32,
     pub treasure: &'a Bonus,
+    pub names: &'a NameBook,
     pub sheets: &'a [SpriteSheet],
     pub img022_sheets: &'a [SpriteSheet],
     pub assets: &'a CustomAssets,
@@ -263,8 +265,10 @@ impl State {
         let name_el: Element<Message> = match self.skill_name_handle(group, ctx.vfs) {
             Some(handle) => iced_image(handle).height(Length::Fixed(HEADER_NAME_HEIGHT)).into(),
             None => {
-                let fallback_text = get_talent(group.ability_id)
-                    .map_or_else(|| format!("Unknown Skill (ID: {})", group.ability_id), |def| get_display_def(def.identity).name.to_string());
+                let fallback_text = ctx.names.talent(group.ability_id).map(str::to_owned).unwrap_or_else(|| {
+                    get_talent(group.ability_id)
+                        .map_or_else(|| format!("Unknown Skill (ID: {})", group.ability_id), |def| ctx.names.ability(def.identity, Faction::Cat).to_owned())
+                });
                 bold_text(fallback_text, HEADER_NAME_TEXT_SIZE).into()
             }
         };
