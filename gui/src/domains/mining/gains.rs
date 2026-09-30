@@ -52,6 +52,13 @@ impl State {
             costs: cat.map(|entry| entry.talent_costs.as_ref()),
             level: level.value,
             treasure,
+            traits: cat.and_then(|entry| {
+                let base = entry.stats.get(form)?.as_ref()?;
+                let talent_data = entry.talent_data.as_ref()?;
+                let maxed = talent_logic::maxed_levels(talent_data);
+
+                Some(cat_stats::get_final_stats(base, entry.curve.as_ref(), level.value, Some(talent_data), Some(&maxed), treasure))
+            }),
         };
 
         let mut ordered: Vec<(&talents::Gain, bool)> = find
@@ -140,7 +147,7 @@ impl State {
 
         let reading = unit
             .base
-            .and_then(|stats| talent_logic::calculate_talent_display(&gain.group, stats, cap, unit.curve, unit.level, unit.treasure))
+            .and_then(|stats| talent_logic::calculate_talent_display(&gain.group, stats, cap, unit.curve, unit.level, unit.treasure, unit.traits.as_ref().unwrap_or(stats)))
             .unwrap_or_default();
 
         let mut inner = Column::new()

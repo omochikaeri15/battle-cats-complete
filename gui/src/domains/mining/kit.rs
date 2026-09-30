@@ -35,7 +35,7 @@ pub(super) fn value_row<'a>(line: &str) -> Element<'a, Message> {
     let content: Element<'a, Message> = match line.split_once(": ") {
         Some((label, reading)) => row![
             plain(label, VALUE_TEXT_SIZE).color(CHIP_TEXT),
-            strong(reading, VALUE_TEXT_SIZE).color(CHIP_TEXT),
+            strong_superscript(reading, VALUE_TEXT_SIZE, Some(CHIP_TEXT)),
         ]
         .spacing(VALUE_LABEL_GAP)
         .align_y(Vertical::Center)

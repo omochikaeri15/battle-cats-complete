@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
-use nyanko::combat::{get_talent, Ability, Attribute, AttrUnit, Entity};
+use nyanko::combat::{get_talent, Ability, Attribute, AttrUnit, Entity, Identity};
 
+use crate::common::frames;
 use crate::domains::cat::game::stats;
 use crate::systems::combat::comparable;
 use crate::systems::combat::registry::{get_display_def, StatContext, CAT_STATS_REGISTRY};
 use crate::systems::treasure::Bonus;
+
+const FRUIT_SCALED: [Identity; 5] = [Identity::Freeze, Identity::Slow, Identity::Weaken, Identity::Curse, Identity::Dodge];
 
 pub(crate) fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_level: u8) -> i32 {
     if level == 0 { return 0; }
@@ -30,6 +33,7 @@ pub fn calculate_talent_display(
     level_curve: Option<&LevelCurve>,
     unit_level: i32,
     treasure: &Bonus,
+    traits: &Entity,
 ) -> Option<String> {
     let pure_definition = get_talent(talent_group.ability_id)?;
     let display_definition = get_display_def(pure_definition.identity);
@@ -59,7 +63,7 @@ pub fn calculate_talent_display(
     let maximum_attributes = (pure_definition.attributes)(&dummy_max_stats);
 
     if !maximum_attributes.is_empty() {
-        return process_generic_attributes(pure_definition, &leveled_base_stats, &mutated_stats, &dummy_min_stats, &maximum_attributes);
+        return process_generic_attributes(pure_definition, &leveled_base_stats, &mutated_stats, &dummy_min_stats, &maximum_attributes, treasure, traits);
     }
 
     if display_definition.name.starts_with("Resist ") {
@@ -118,7 +122,9 @@ fn process_generic_attributes(
     leveled_base_stats: &Entity,
     mutated_stats: &Entity,
     dummy_min_stats: &Entity,
-    maximum_attributes: &[Attribute]
+    maximum_attributes: &[Attribute],
+    treasure: &Bonus,
+    traits: &Entity,
 ) -> Option<String> {
     let mut strings_changed = Vec::new();
     let mut strings_unchanged = Vec::new();
@@ -147,6 +153,7 @@ fn process_generic_attributes(
         new: &new_attributes,
         min: &min_attributes,
         max: maximum_attributes,
+        scale: FrameScale { treasure, stats: traits, fruit: FRUIT_SCALED.contains(&pure_definition.identity) },
     };
 
     for &(attribute_key, attribute_unit) in pure_definition.schema {
@@ -175,6 +182,30 @@ struct AttrSnapshots<'a> {
     new: &'a [Attribute],
     min: &'a [Attribute],
     max: &'a [Attribute],
+    scale: FrameScale<'a>,
+}
+
+#[derive(Clone, Copy)]
+struct FrameScale<'a> {
+    treasure: &'a Bonus,
+    stats: &'a Entity,
+    fruit: bool,
+}
+
+impl FrameScale<'_> {
+    fn frames(&self, value: i32) -> (i32, i32) {
+        if self.fruit { self.treasure.fruit_frames(self.stats, value) } else { (value, value) }
+    }
+}
+
+fn frames_delta(low: i32, high: i32) -> String {
+    let sign = |delta: i32| if delta >= 0 { "+" } else { "" };
+
+    if low == high {
+        format!("({}{}f)", sign(low), low)
+    } else {
+        format!("({}{}f~{}{}f)", sign(low), low, sign(high), high)
+    }
 }
 
 fn process_range_attribute(
@@ -254,9 +285,14 @@ fn process_single_attribute(
 
     let is_scalable = absolute_minimum_value != absolute_maximum_value;
 
+    let scaled = |value| snapshots.scale.frames(value);
     let format_value = |value| match attribute_unit {
         AttrUnit::Percent => format!("{}%", value),
-        AttrUnit::Frames => format!("{}f", value),
+        AttrUnit::Frames => {
+            let (low, high) = scaled(value);
+
+            frames::span(low, high)
+        }
         AttrUnit::Range | AttrUnit::None => format!("{}", value),
     };
 
@@ -272,7 +308,12 @@ fn process_single_attribute(
 
     let difference_string = match attribute_unit {
         AttrUnit::Percent => format!("({}{}%)", prefix_sign, delta_value),
-        AttrUnit::Frames => format!("({}{}f)", prefix_sign, delta_value),
+        AttrUnit::Frames => {
+            let (old_low, old_high) = scaled(old_value);
+            let (new_low, new_high) = scaled(new_value);
+
+            frames_delta(new_low - old_low, new_high - old_high)
+        }
         AttrUnit::Range | AttrUnit::None => format!("({}{})", prefix_sign, delta_value),
     };
 
@@ -309,6 +350,10 @@ fn apply_target_traits(battle_stats: &mut Entity, target_name_id: i16, bitmask_t
             }
         }
     }
+}
+
+pub fn maxed_levels(talent_data: &Talent) -> HashMap<u8, u8> {
+    talent_data.groups.iter().enumerate().map(|(index, group)| (index as u8, group.max_level)).collect()
 }
 
 pub(crate) fn apply_talent_stats(base_stats: &Entity, talent_data: &Talent, talent_levels: &HashMap<u8, u8>) -> Entity {

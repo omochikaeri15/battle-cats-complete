@@ -1,7 +1,7 @@
 mod catalog;
 mod config;
 
-use nyanko::chapter::treasure::{enemy_money, unit_recharge, TraitBonus, TreasureEffect, ARC_SLOTS, SLOTS};
+use nyanko::chapter::treasure::{enemy_money, unit_recharge, TraitBonus, TreasureEffect, TreasureLevels, ARC_SLOTS, SLOTS, STAGES};
 use nyanko::chapter::Category;
 use nyanko::combat::{Entity, Faction};
 
@@ -43,9 +43,12 @@ pub struct Bonus {
 
 impl Bonus {
     pub fn resolve(catalog: &Catalog, config: &Config) -> Self {
-        let levels = config.levels();
+        Self::from_levels(catalog, &config.levels())
+    }
+
+    pub fn from_levels(catalog: &Catalog, levels: &TreasureLevels) -> Self {
         let treasures = &catalog.treasures;
-        let value = |effect| treasures.value(&levels, effect, None);
+        let value = |effect| treasures.value(levels, effect, None);
 
         let mut weakenings = [[0; WEAKENINGS.len()]; SLOTS + 1];
 
@@ -53,7 +56,7 @@ impl Bonus {
             let chapter = (index != OUTSIDE_STORY).then_some(index);
 
             for (gap, effect) in row.iter_mut().zip(WEAKENINGS) {
-                *gap = treasures.uncapped(effect, chapter) - treasures.value(&levels, effect, chapter);
+                *gap = treasures.uncapped(effect, chapter) - treasures.value(levels, effect, chapter);
             }
         }
 
@@ -62,7 +65,7 @@ impl Bonus {
             cat_attack: value(TreasureEffect::CatAttack),
             enemy_money: value(TreasureEffect::EnemyMoney),
             cat_recharge: value(TreasureEffect::CatRecharge),
-            fruits: FRUITS.map(|effect| treasures.capped(&levels, effect, FRUIT_PERCENT, None)),
+            fruits: FRUITS.map(|effect| treasures.capped(levels, effect, FRUIT_PERCENT, None)),
             weakenings,
         }
     }
@@ -99,6 +102,16 @@ impl Bonus {
         (TraitBonus(low), TraitBonus(high))
     }
 
+    pub fn fruit_frames(&self, stats: &Entity, frames: i32) -> (i32, i32) {
+        if stats.faction != Faction::Cat {
+            return (frames, frames);
+        }
+
+        let (low, high) = self.fruit_span(stats);
+
+        (low.scale_duration(frames), high.scale_duration(frames))
+    }
+
     pub fn strength(&self, stats: &Entity, percent: i32) -> f32 {
         let gap = if stats.faction == Faction::Enemy { self.weakening(stats, None) } else { 0 };
 
@@ -112,6 +125,18 @@ impl Bonus {
     pub fn recharge(&self, cooldown: i32) -> i32 {
         unit_recharge(cooldown, MAX_TECH, self.cat_recharge)
     }
+}
+
+pub fn recorded_levels(rows: &[Vec<i32>]) -> TreasureLevels {
+    let mut levels = [[0; STAGES]; SLOTS];
+
+    for (row, recorded) in levels.iter_mut().zip(rows) {
+        for (level, held) in row.iter_mut().zip(recorded) {
+            *level = *held;
+        }
+    }
+
+    levels
 }
 
 pub fn chapter(category: &Category, map_id: u32) -> Option<usize> {

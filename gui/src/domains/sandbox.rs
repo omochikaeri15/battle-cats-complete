@@ -18,7 +18,7 @@ use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, Tec
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
-use kore::systems::treasure::Catalog;
+use kore::systems::treasure::{Bonus, Catalog};
 use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::altar::Altars;
 use kore::domains::sandbox::TECHS;
@@ -213,6 +213,10 @@ impl Message {
     pub(crate) fn dropping(cell: kore::domains::sandbox::Cell) -> Self {
         Self::Lineup(lineup::Message::Drop(cell))
     }
+
+    pub(crate) fn retunes_treasure(&self) -> bool {
+        matches!(self, Self::Config(config::Message::Treasure(_)))
+    }
 }
 
 impl State {
@@ -269,6 +273,10 @@ impl State {
 
     pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
         self.lineup.set_banner_form(banner_form);
+    }
+
+    pub(crate) fn set_treasure(&mut self, treasure: Bonus) {
+        self.lineup.set_treasure(treasure);
     }
 
     pub(crate) fn inspector(&self) -> Option<&cat::State> {

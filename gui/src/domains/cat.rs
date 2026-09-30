@@ -1318,6 +1318,9 @@ impl State {
 
         let dynamic_stats = self.dynamic_stats(&global_ctx.vault.vfs, cat.id);
         let base_stats = dynamic_stats.as_ref().and_then(|v| v.get(self.selected_form));
+        let traits = base_stats.map(|base| {
+            get_final_stats(base, cat.curve.as_ref(), self.current_level, Some(talent_data), self.talent_levels.get(&cat.id), global_ctx.treasure)
+        });
 
         let section = self.talents.view(talents::ViewCtx {
             cat_id: cat.id,
@@ -1327,6 +1330,7 @@ impl State {
             talent_costs: &cat.talent_costs,
             descriptions: &cat.skill_descriptions,
             current_stats: base_stats,
+            traits,
             curve: cat.curve.as_ref(),
             unit_level: self.current_level,
             treasure: global_ctx.treasure,

@@ -20,6 +20,7 @@ use kore::domains::cat::scanner;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::replay::{self as tape, Staged, Summary, Unit};
 use kore::domains::settings::{ScannerConfig, Settings};
+use kore::systems::treasure::{self, Bonus};
 use kore::Vault;
 use kore::common::gfx::open_image;
 
@@ -155,6 +156,7 @@ pub struct State {
     shown: Vec<usize>,
     rename: String,
     manage: manage::State,
+    treasure: Bonus,
 }
 
 pub fn is_bundle(path: &Path) -> bool {
@@ -368,6 +370,15 @@ impl State {
     fn adopt(&mut self, staged: Arc<Staged>) -> Task<Message> {
         self.details = Some(describe(self.title(), &staged.summary));
 
+        let catalog = staged.vault.vds.treasures.catalog(&staged.vault.vfs);
+
+        self.treasure = staged
+            .summary
+            .save
+            .as_ref()
+            .map_or_else(Bonus::default, |save| Bonus::from_levels(&catalog, &treasure::recorded_levels(&save.setup.treasures)));
+        self.inspector.set_treasure(self.treasure);
+
         let adopted = self.inspector.adopt_cats(&staged.cats, &staged.vault).map(Message::Cat);
         let orbs = self.orbs.load(&staged.vault).map(Message::Orbs);
 
@@ -540,7 +551,7 @@ impl State {
                 let Some(vault) = self.staged.as_deref().map(|staged| &staged.vault) else {
                     return Task::none();
                 };
-                let scoped = GlobalContext { vault, ..ctx };
+                let scoped = GlobalContext { vault, treasure: &self.treasure, ..ctx };
 
                 self.inspector.update(msg, settings, app_state, scoped).map(Message::Cat)
             }
@@ -647,7 +658,7 @@ impl State {
     ) -> Option<Element<'a, Message>> {
         let tile = self.tiles.get(self.open?)?;
         let vault = self.vault()?;
-        let scoped = GlobalContext { vault, ..ctx };
+        let scoped = GlobalContext { vault, treasure: &self.treasure, ..ctx };
         let title = self.inspector.cat(tile.id).map_or("Unit", |cat| cat.names.get(tile.form).and_then(Option::as_deref).unwrap_or("Unit"));
 
         Some(self.unit_popup.view(

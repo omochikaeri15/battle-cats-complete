@@ -39,6 +39,7 @@ pub(super) struct UnitContext<'a> {
     pub(super) costs: Option<&'a HashMap<u8, TalentCost>>,
     pub(super) level: i32,
     pub(super) treasure: &'a Bonus,
+    pub(super) traits: Option<Entity>,
 }
 
 pub(super) fn changed_diff<'a>(

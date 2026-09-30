@@ -1,13 +1,17 @@
 use iced::alignment::Vertical;
 use iced::{Color, Element, Length, Theme};
+use iced::font::{Font, Weight};
 use iced::widget::{column, row, text, Row, Space};
 
 const SUPERSCRIPT_SHRINK: f32 = 3.0;
 const SUPERSCRIPT_ALPHA: f32 = 0.7;
 const SUPERSCRIPT_SPACING: f32 = 1.25;
+const SUPERSCRIPT_ENDS: [char; 2] = [' ', '~'];
+
+const BOLD: Font = Font { weight: Weight::Bold, ..Font::DEFAULT };
 
 pub fn text_with_superscript<'a, Message: 'a>(raw_text: &str, text_size: f32) -> Element<'a, Message> {
-    tinted_superscript(raw_text, text_size, None)
+    superscript_lines(raw_text, text_size, None, false)
 }
 
 pub(crate) fn tinted_superscript<'a, Message: 'a>(
@@ -15,18 +19,31 @@ pub(crate) fn tinted_superscript<'a, Message: 'a>(
     text_size: f32,
     tint: Option<Color>,
 ) -> Element<'a, Message> {
+    superscript_lines(raw_text, text_size, tint, false)
+}
+
+pub(crate) fn strong_superscript<'a, Message: 'a>(
+    raw_text: &str,
+    text_size: f32,
+    tint: Option<Color>,
+) -> Element<'a, Message> {
+    superscript_lines(raw_text, text_size, tint, true)
+}
+
+fn superscript_lines<'a, Message: 'a>(raw_text: &str, text_size: f32, tint: Option<Color>, bold: bool) -> Element<'a, Message> {
     let mut lines_col = column![];
 
     for line in raw_text.split('\n') {
-        lines_col = lines_col.push(superscript_line(line, text_size, tint));
+        lines_col = lines_col.push(superscript_line(line, text_size, tint, bold));
     }
 
     lines_col.into()
 }
 
-fn superscript_line<'a, Message: 'a>(line: &str, text_size: f32, tint: Option<Color>) -> Element<'a, Message> {
+fn superscript_line<'a, Message: 'a>(line: &str, text_size: f32, tint: Option<Color>, bold: bool) -> Element<'a, Message> {
     let plain = |body: &str| {
         let node = text(body.to_string()).size(text_size);
+        let node = if bold { node.font(BOLD) } else { node };
 
         match tint {
             Some(color) => node.color(color),
@@ -49,7 +66,7 @@ fn superscript_line<'a, Message: 'a>(line: &str, text_size: f32, tint: Option<Co
     }
 
     for part in parts {
-        if let Some(break_idx) = part.find(' ') {
+        if let Some(break_idx) = part.find(SUPERSCRIPT_ENDS) {
             let super_str = &part[..break_idx];
             let normal_str = &part[break_idx..];
 

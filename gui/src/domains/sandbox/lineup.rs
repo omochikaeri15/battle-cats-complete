@@ -275,6 +275,10 @@ impl State {
         self.inspector.set_banner_form(banner_form);
     }
 
+    pub fn set_treasure(&mut self, treasure: Bonus) {
+        self.inspector.set_treasure(treasure);
+    }
+
     pub fn enter(&mut self, app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         self.settle(app_state, ctx);
 

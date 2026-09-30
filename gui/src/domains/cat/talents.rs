@@ -19,7 +19,7 @@ use crate::common::ability_icon;
 use crate::common::skill_name;
 use crate::common::fonts::{self, MISC_SYMBOLS_LINE_HEIGHT};
 use crate::common::{CustomAssets, SpriteSheet};
-use crate::widget::{fallback_icon, smooth_scroll};
+use crate::widget::{fallback_icon, smooth_scroll, strong_superscript};
 
 const HEADER_SCALE: f32 = 0.75;
 
@@ -100,6 +100,7 @@ pub struct ViewCtx<'a, 'b> {
     pub talent_costs: &'a HashMap<u8, TalentCost>,
     pub descriptions: &'a [String],
     pub current_stats: Option<&'b Entity>,
+    pub traits: Option<Entity>,
     pub curve: Option<&'a LevelCurve>,
     pub unit_level: i32,
     pub treasure: &'a Bonus,
@@ -316,8 +317,8 @@ impl State {
         let mut level_col = column![level_row].spacing(4);
 
         if let Some(stats) = ctx.current_stats
-            && let Some(display_text) = talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level, ctx.treasure) {
-            level_col = level_col.push(text(display_text).size(15).color(Color::WHITE).font(font::Font { weight: font::Weight::Bold, ..Default::default() }));
+            && let Some(display_text) = talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level, ctx.treasure, ctx.traits.as_ref().unwrap_or(stats)) {
+            level_col = level_col.push(strong_superscript(&display_text, 15.0, Some(Color::WHITE)));
         }
 
         let level_box = dark_box(level_col);

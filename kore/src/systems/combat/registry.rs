@@ -94,14 +94,9 @@ fn fruit(ctx: &FormatContext<'_>, multiplier: fn(TraitBonus) -> f64, reciprocal:
 }
 
 fn fruit_time(ctx: &FormatContext<'_>) -> String {
-    if ctx.stats.faction != Faction::Cat {
-        return fmt_time(ctx.duration);
-    }
+    let (shortest, longest) = ctx.treasure.fruit_frames(ctx.stats, ctx.duration);
 
-    let (low, high) = ctx.treasure.fruit_span(ctx.stats);
-    let (shortest, longest) = (low.scale_duration(ctx.duration), high.scale_duration(ctx.duration));
-
-    if shortest == longest { fmt_time(shortest) } else { format!("{}~{}", fmt_time(shortest), fmt_time(longest)) }
+    frames::span(shortest, longest)
 }
 
 fn trimmed(value: f64) -> String {
@@ -1396,7 +1391,7 @@ pub const STAT_COOLDOWN: StatsDef = StatsDef {
     display_name: "Cooldown",
     get_value: |ctx| ctx.treasure.recharge(ctx.stats.cooldown),
     formatter: frames::label,
-    talent_fmt: Some(|cooldown| format!("{}f", cooldown)),
+    talent_fmt: None,
     linked_talent_id: Some(26),
     talent_modifier_fmt: Some(|frames, _| format!("(-{}f)", frames)),
 };

@@ -385,6 +385,7 @@ pub struct BattleCatsApp {
     pub param: Param,
     pub localizable: Localizable,
     pub treasure: Bonus,
+    pub sandbox_treasure: Bonus,
     pub treasure_catalog: Arc<Catalog>,
     pub last_saved_hash: u64,
     pub last_saved_state_hash: u64,
@@ -444,6 +445,7 @@ impl Default for BattleCatsApp {
             param: Param::default(),
             localizable: Localizable::default(),
             treasure: Bonus::default(),
+            sandbox_treasure: Bonus::default(),
             treasure_catalog: Arc::default(),
             last_saved_hash: 0,
             last_saved_state_hash: 0,
@@ -582,7 +584,7 @@ impl BattleCatsApp {
             Page::Utilities => self.utilities_state.export_scroll_task(),
             Page::Studio => self.studio_state.export_scroll_task(),
             Page::Sandbox => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure };
 
                 self.stage_state.enter();
 
@@ -962,6 +964,12 @@ impl BattleCatsApp {
         self.treasure = Bonus::resolve(&self.treasure_catalog, &self.settings.general.treasures);
         self.cat_state.set_treasure(self.treasure);
         self.enemy_state.set_treasure(self.treasure);
+        self.refresh_sandbox_treasure();
+    }
+
+    fn refresh_sandbox_treasure(&mut self) {
+        self.sandbox_treasure = Bonus::resolve(&self.treasure_catalog, &self.app_state.sandbox.config.treasure);
+        self.sandbox_state.set_treasure(self.sandbox_treasure);
     }
 
     fn relocalize(&mut self) -> Task<Message> {
@@ -1533,8 +1541,13 @@ impl BattleCatsApp {
                     }
                 }
 
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
+                let retuned = msg.retunes_treasure();
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure };
                 let task = self.sandbox_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Sandbox);
+
+                if retuned {
+                    self.refresh_sandbox_treasure();
+                }
 
                 self.sync_sandbox_rules();
                 self.sync_sandbox_popups();
@@ -1642,7 +1655,7 @@ impl BattleCatsApp {
                 .map(Message::Studio),
             Page::Sandbox => {
                 let staged = (self.app_state.sandbox.tab == crate::app::state::SandboxTab::Stage).then(|| {
-                    self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure })
+                    self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure })
                 });
                 let playable = sandbox::State::playable(&self.app_state, self.staged_entry().is_some());
 
@@ -1791,7 +1804,7 @@ impl BattleCatsApp {
     }
 
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
-        let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
+        let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure };
 
         self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &self.app_state, global_ctx).map(Message::Sandbox)
     }
@@ -1971,7 +1984,7 @@ impl BattleCatsApp {
                                 self.window_size,
                                 &self.settings,
                                 &self.app_state,
-                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure },
                             )
                             .map(|view| view.map(Message::Sandbox))
                     }
@@ -2014,7 +2027,7 @@ impl BattleCatsApp {
                                 self.window_size,
                                 &self.settings,
                                 &self.app_state,
-                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure },
                             )
                             .map(|view| view.map(Message::Sandbox))
                     }

@@ -77,7 +77,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
 
             match group.ability_id {
                 25 | 26 | 27 | 31 | 32 | 61 | 82 => {
-                    if let Some(text) = talents::calculate_talent_display(group, ctx.base_stats, level, ctx.level_curve, ctx.current_level, ctx.global.treasure) {
+                    if let Some(text) = talents::calculate_talent_display(group, ctx.base_stats, level, ctx.level_curve, ctx.current_level, ctx.global.treasure, ctx.final_stats) {
                         talent_headline.push(AbilityItem { identity, icon_id, text, custom_icon: custom, border_id });
                     }
                 },

@@ -60,7 +60,7 @@ use crate::common::glyphs::Ruler;
 use crate::common::item_icon;
 use crate::common::{ability_icon, img015, skill_name, CustomAssets, SpriteSheet};
 use iced::widget::image::Handle;
-use crate::widget::{fallback_icon, list_row, smooth_scroll, tinted_superscript, uniform_grid};
+use crate::widget::{fallback_icon, list_row, smooth_scroll, strong_superscript, tinted_superscript, uniform_grid};
 
 const SIDEBAR_WIDTH: f32 = 110.0;
 const SIDEBAR_PADDING: f32 = 8.0;
