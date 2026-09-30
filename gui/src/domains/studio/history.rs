@@ -69,6 +69,8 @@ struct Entry {
 #[derive(Default)]
 pub(super) struct History {
     entries: Vec<Entry>,
+    holding: bool,
+    opened: bool,
 }
 
 impl History {
@@ -77,17 +79,32 @@ impl History {
             return true;
         };
 
-        last.tag != tag
-            || last.shot.anchor().map(Path::to_path_buf) != anchor.map(Path::to_path_buf)
-            || last.at.elapsed() >= COALESCE
+        let same = last.tag == tag && last.shot.anchor() == anchor;
+
+        if self.holding {
+            return !self.opened || !same;
+        }
+
+        !same || last.at.elapsed() >= COALESCE
     }
 
     pub(super) fn push(&mut self, tag: Tag, shot: Shot) {
         self.entries.push(Entry { tag, shot, at: Instant::now() });
+        self.opened = self.holding;
 
         while self.entries.len() > DEPTH {
             self.entries.remove(0);
         }
+    }
+
+    pub(super) fn hold(&mut self) {
+        self.holding = true;
+        self.opened = false;
+    }
+
+    pub(super) fn release(&mut self) {
+        self.holding = false;
+        self.opened = false;
     }
 
     pub(super) fn pop(&mut self) -> Option<Shot> {
@@ -96,6 +113,7 @@ impl History {
 
     pub(super) fn clear(&mut self) {
         self.entries.clear();
+        self.release();
     }
 }
 
@@ -120,6 +138,25 @@ mod tests {
         assert!(!history.wanted(tag, Some(&path)));
         assert!(history.wanted(Tag::Cut(0, 1), Some(&path)), "a different cell is a new edit");
         assert!(history.wanted(tag, Some(Path::new("studio/a/y.imgcut"))), "so is another file");
+    }
+
+    #[test]
+    fn a_gizmo_drag_costs_one_entry_however_long_it_runs() {
+        // Press, many commits well past the coalesce window, release: one shot.
+        let mut history = History::default();
+        let path = PathBuf::from("studio/a/x.imgcut");
+        let tag = Tag::Gizmo(3, Gizmo::Model);
+
+        history.hold();
+        assert!(history.wanted(tag, Some(&path)));
+        history.push(tag, Shot::Cuts(path.clone(), cuts()));
+
+        history.entries[0].at = Instant::now() - COALESCE * 4;
+        assert!(!history.wanted(tag, Some(&path)), "the window does not matter while held");
+
+        history.release();
+        history.hold();
+        assert!(history.wanted(tag, Some(&path)), "the next press on the same part is its own action");
     }
 
     #[test]

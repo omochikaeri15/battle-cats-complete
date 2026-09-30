@@ -1766,6 +1766,7 @@ impl State {
             }
             Message::Gizmo(gizmo::Turn::Halt) => {
                 session.gizmo.show(false);
+                session.history.release();
 
                 Task::none()
             }
@@ -1802,6 +1803,7 @@ impl State {
             }
             Message::Gizmo(gizmo::Turn::Drop) => {
                 session.gizmo.seize(None);
+                session.history.release();
 
                 Task::none()
             }

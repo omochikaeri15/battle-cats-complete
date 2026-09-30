@@ -106,6 +106,7 @@ impl Session {
     pub(super) fn grasp(&mut self, part: usize, grip: gizmo::Grip, hand: Gizmo) {
         self.gizmo.show(true);
         self.gizmo.seize(Some(grip));
+        self.history.hold();
         self.viewer.pause();
         self.drift.clear();
         self.sliding = None;
