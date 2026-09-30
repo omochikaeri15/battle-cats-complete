@@ -119,11 +119,8 @@ fn typable(entry: &str) -> bool {
     entry.len() <= LEVEL_DIGITS && entry.chars().all(|glyph| glyph.is_ascii_digit() || glyph == '+' || glyph == '%')
 }
 
-fn offered(parts: &std::collections::BTreeMap<i32, i32>, named: bool) -> Vec<Part> {
-    parts
-        .keys()
-        .map(|id| Part { id: *id, label: if named || *id != 0 { base::name(*id) } else { "None".to_owned() } })
-        .collect()
+fn offered(parts: &std::collections::BTreeMap<i32, i32>, label: impl Fn(i32) -> String) -> Vec<Part> {
+    parts.keys().map(|id| Part { id: *id, label: label(*id) }).collect()
 }
 
 impl State {
@@ -137,9 +134,9 @@ impl State {
 
     pub fn reload(&mut self, vfs: &Vfs) {
         self.parts = Parts::load(vfs);
-        self.cannons = offered(&self.parts.cannons, true);
-        self.styles = offered(&self.parts.styles, false);
-        self.foundations = offered(&self.parts.foundations, false);
+        self.cannons = offered(&self.parts.cannons, base::name);
+        self.styles = offered(&self.parts.styles, |id| self.parts.style_label(id));
+        self.foundations = offered(&self.parts.foundations, |id| self.parts.foundation_label(id));
         self.loaded = true;
     }
 
