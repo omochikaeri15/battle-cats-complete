@@ -20,4 +20,4 @@ pub use abilities::{
 pub use crate::common::Scale;
 pub use crate::common::Separator;
 pub use entity::{Column, Entity, EntityError, Faction};
-pub use glossary::{Glossary, GlossaryEntry, GlossaryError, TraitLabel, TraitLabelError, TraitLabels};
+pub use glossary::{DictionaryIndex, DictionaryIndexError, DictionaryRow, Glossary, GlossaryEntry, GlossaryError, TraitLabel, TraitLabelError, TraitLabels};

@@ -9,12 +9,25 @@
 //! form beside it. An ability's registry entry records the line that names it
 //! in each glossary and its row in the orb table, so a name is always read
 //! from the files rather than kept in the crate.
+//!
+//! The Cat dictionary does not address its glossary by line directly. Each
+//! ability it lists has a row in `nyankoPictureBookData_EffectAbility` giving
+//! the engine's own ability identifier and the glossary entry it is described
+//! by, so a glossary whose lines have moved still reads correctly as long as
+//! its table moved with it.
 
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::common::cell_value;
 use crate::common::file::{self, Separator};
+
+/// The number of trait lines a glossary opens with, which the table's entry index counts from.
+const TRAIT_LINES: u8 = 16;
+
+/// The row identifier that ends the table early.
+const END_ROW: i32 = -1;
 
 /// The character the engine ends a glossary line with, which is never rendered.
 const TERMINATOR: char = '＠';
@@ -133,6 +146,112 @@ fn parse_glossary(bytes: &[u8], separator: Option<Separator>) -> Result<Glossary
     Ok(Glossary { entries })
 }
 
+/// Represents errors that can occur while parsing the Cat dictionary's ability table.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum DictionaryIndexError {
+    /// The supplied bytes carried no rows.
+    EmptyFile,
+}
+
+impl fmt::Display for DictionaryIndexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyFile => write!(f, "The provided file bytes contained no dictionary ability rows."),
+        }
+    }
+}
+
+impl std::error::Error for DictionaryIndexError {}
+
+/// One row of the Cat dictionary's ability table, column for column.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DictionaryRow {
+    /// The row's own number.
+    pub row: i32,
+    /// The engine's identifier for the ability.
+    pub ability: i32,
+    /// The kind of entry: 0 for an innate ability, 1 for a talent, 2 for a talent that only buffs.
+    pub kind: i32,
+    /// The one-based glossary entry describing the ability, counted from after the trait lines, or 0 when it has none.
+    pub entry: i32,
+    /// The icon drawn for the entry.
+    pub icon: i32,
+    /// The icon drawn for the entry when the ability is inactive.
+    pub inactive_icon: i32,
+    /// The tab the entry is filed under.
+    pub category: i32,
+}
+
+/// The parsed contents of the Cat dictionary's ability table.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DictionaryIndex {
+    /// Every row before the end marker, in file order.
+    pub rows: Vec<DictionaryRow>,
+}
+
+impl DictionaryIndex {
+    /// Parses the Cat dictionary's ability table.
+    ///
+    /// Rows are read the way the engine reads them, stopping at the first row
+    /// whose number is the end marker.
+    ///
+    /// # Arguments
+    /// * `bytes` - The raw, decrypted byte slice of the `nyankoPictureBookData_EffectAbility.csv` file.
+    ///
+    /// # Returns
+    /// A `Result` containing the parsed rows on success, or a
+    /// `DictionaryIndexError` if the file held no rows.
+    pub fn parse<B: AsRef<[u8]>>(bytes: B) -> Result<Self, DictionaryIndexError> {
+        parse_index(bytes.as_ref())
+    }
+
+    /// Returns the glossary line describing an ability.
+    ///
+    /// # Arguments
+    /// * `ability` - The engine's identifier for the ability, as an ability's registry entry records it.
+    ///
+    /// # Returns
+    /// An `Option` holding the one-based line of `nyankoPictureBook2`, or `None`
+    /// when the table does not list the ability or lists it without an entry.
+    pub fn glossary_line(&self, ability: u8) -> Option<u8> {
+        let row = self.rows.iter().find(|row| row.ability == i32::from(ability))?;
+        let entry = u8::try_from(row.entry).ok().filter(|entry| *entry > 0)?;
+
+        entry.checked_add(TRAIT_LINES)
+    }
+}
+
+fn parse_index(bytes: &[u8]) -> Result<DictionaryIndex, DictionaryIndexError> {
+    let content = file::scrub(bytes);
+    let mut rows = Vec::new();
+
+    for line in content.lines() {
+        let cells: Vec<i32> = line.split(',').map(cell_value).collect();
+        let value = |index: usize| cells.get(index).copied().unwrap_or(0);
+
+        if value(0) == END_ROW {
+            break;
+        }
+
+        rows.push(DictionaryRow {
+            row: value(0),
+            ability: value(1),
+            kind: value(2),
+            entry: value(3),
+            icon: value(4),
+            inactive_icon: value(5),
+            category: value(6),
+        });
+    }
+
+    if rows.is_empty() {
+        return Err(DictionaryIndexError::EmptyFile);
+    }
+
+    Ok(DictionaryIndex { rows })
+}
+
 /// Represents errors that can occur while parsing the orb trait labels.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -240,6 +359,18 @@ mod tests {
         assert_eq!(glossary.name(1), Some("攻撃力ダウン"));
         assert_eq!(glossary.entry(1).unwrap().lines.len(), 1);
         assert_eq!(Glossary::parse("＠\n|＠", None), Err(GlossaryError::EmptyFile));
+    }
+
+    #[test]
+    fn the_ability_table_points_past_the_trait_lines() {
+        let index = DictionaryIndex::parse("0,0,0,1,163,195,0\n1,15,1,10,164,196,1\n14,28,1,0,177,209,1\n-1\n99,99,0,5,0,0,0\n").unwrap();
+
+        assert_eq!(index.rows.len(), 3);
+        assert_eq!(index.glossary_line(0), Some(17));
+        assert_eq!(index.glossary_line(15), Some(26));
+        assert_eq!(index.glossary_line(28), None, "an icon-only row names no glossary entry");
+        assert_eq!(index.glossary_line(99), None, "rows after the end marker are never read");
+        assert_eq!(DictionaryIndex::parse("-1\n"), Err(DictionaryIndexError::EmptyFile));
     }
 
     #[test]
