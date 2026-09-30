@@ -2,9 +2,9 @@
 //!
 //! Three tables share one layout. `Treasure1_*` names one treasure per line in
 //! stage order, `Treasure2_*` holds the grade names and the popup captions, and
-//! `Treasure3_*` names each set on its line, followed by the activation caption
-//! and the effect it announces, and then the captions shown while a set is
-//! still locked.
+//! `Treasure3_*` names each set on its line, followed by the two caption lines
+//! the set announces its effect with, and then the captions shown while a set
+//! is still locked.
 
 use std::fmt;
 
@@ -90,15 +90,20 @@ impl TreasureText {
         self.cell(row - 1, 0)
     }
 
-    /// Returns the effect a set announces from `Treasure3_*`.
+    /// Returns the caption a set announces its effect with from `Treasure3_*`.
+    ///
+    /// The caption is written across two cells, one per displayed line, and a
+    /// sentence often breaks between them, so the lines are joined by a space.
     ///
     /// # Arguments
     /// * `group` - The set index.
     ///
     /// # Returns
-    /// An `Option` holding the caption, or `None` when the line leaves it unwritten.
-    pub fn set_effect(&self, group: usize) -> Option<&str> {
-        self.cell(group, 2)
+    /// An `Option` holding the caption, or `None` when the line leaves both cells unwritten.
+    pub fn set_effect(&self, group: usize) -> Option<String> {
+        let lines: Vec<&str> = [1, 2].into_iter().filter_map(|column| self.cell(group, column)).collect();
+
+        (!lines.is_empty()).then(|| lines.join(" "))
     }
 }
 
@@ -135,8 +140,15 @@ mod tests {
         let text = TreasureText::parse("Energy Drink|Activated!|Worker Cat Efficiency increased!|\n", None).unwrap();
 
         assert_eq!(text.name(0), Some("Energy Drink"));
-        assert_eq!(text.set_effect(0), Some("Worker Cat Efficiency increased!"));
+        assert_eq!(text.set_effect(0).as_deref(), Some("Activated! Worker Cat Efficiency increased!"));
         assert_eq!(text.rows[0].len(), 3);
+    }
+
+    #[test]
+    fn a_caption_broken_across_its_lines_reads_as_one_sentence() {
+        let text = TreasureText::parse("Titanium Fruit|Anti-Metal abilities have|increased effect!|\n", None).unwrap();
+
+        assert_eq!(text.set_effect(0).as_deref(), Some("Anti-Metal abilities have increased effect!"));
     }
 
     #[test]

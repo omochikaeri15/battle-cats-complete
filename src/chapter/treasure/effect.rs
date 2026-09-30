@@ -214,6 +214,21 @@ impl TraitBonus {
     pub fn duration(self) -> f64 {
         f64::from(1500 + self.0) / 1500.0
     }
+
+    /// Returns a Freeze, Slow, Weaken or Curse duration a cat inflicts, or a cat's Dodge duration, after the treasures.
+    ///
+    /// The engine scales the frame count in integers and truncates, so a
+    /// duration that does not divide evenly comes out one frame shorter than
+    /// the multiplier alone suggests.
+    ///
+    /// # Arguments
+    /// * `frames` - The duration the unit's combat row declares.
+    ///
+    /// # Returns
+    /// An `i32` holding the duration in frames.
+    pub fn scale_duration(self, frames: i32) -> i32 {
+        (i64::from(frames) * i64::from(1500 + self.0) / 1500) as i32
+    }
 }
 
 /// Returns the money an enemy drops before combos and bounty doubling.
@@ -267,6 +282,13 @@ mod tests {
         assert_eq!(bonus.massive_dealt(), 4.0);
         assert_eq!(bonus.resist_taken(), 0.2);
         assert_eq!(TraitBonus(0).insanely_tough_taken(), 1.0 / 6.0);
+    }
+
+    #[test]
+    fn a_duration_truncates_the_way_the_engine_does() {
+        assert_eq!(TraitBonus(300).scale_duration(150), 180);
+        assert_eq!(TraitBonus(300).scale_duration(38), 45);
+        assert_eq!(TraitBonus(0).scale_duration(38), 38);
     }
 
     #[test]
