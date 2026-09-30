@@ -6,6 +6,7 @@ use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut, text_size, Canvas}
 use imageproc::rect::Rect;
 
 use crate::common::formats::SpriteSheet;
+use crate::common::superscript::{self, Segment};
 use crate::systems::combat::{AbilityItem, CustomIcon};
 
 const SUPERSCRIPT_SHRINK: f32 = 3.0;
@@ -29,55 +30,32 @@ impl SuperscriptStyle {
     }
 
     pub(super) fn measure(&self, font: &impl Font, text: &str) -> u32 {
-        let mut total_width = 0;
-        let mut parts = text.split('^');
-
-        if let Some(first) = parts.next()
-            && !first.is_empty() { total_width += text_size(self.base, font, first).0; }
-
-        for part in parts {
-            let (super_str, normal_str) = split_superscript(part);
-
-            if !super_str.is_empty() {
-                total_width += text_size(self.small, font, super_str).0 + self.gap as u32;
-            }
-            if !normal_str.is_empty() {
-                total_width += text_size(self.base, font, normal_str).0;
-            }
-        }
-
-        total_width
+        superscript::segments(text)
+            .into_iter()
+            .map(|segment| match segment {
+                Segment::Plain(body) => text_size(self.base, font, body).0,
+                Segment::Raised(body) => text_size(self.small, font, body).0 + self.gap as u32,
+            })
+            .sum()
     }
 
     pub(super) fn draw<C: Canvas<Pixel = Rgba<u8>>>(
         &self, img: &mut C, color: Rgba<u8>, mut x: i32, y: i32, font: &impl Font, text: &str,
     ) {
-        let mut parts = text.split('^');
-
-        if let Some(first) = parts.next()
-            && !first.is_empty() {
-            draw_text_mut(img, color, x, y, self.base, font, first);
-            x += text_size(self.base, font, first).0 as i32;
-        }
-
-        for part in parts {
-            let (super_str, normal_str) = split_superscript(part);
-
-            if !super_str.is_empty() {
-                x += self.gap;
-                draw_text_mut(img, self.weak, x, y, self.small, font, super_str);
-                x += text_size(self.small, font, super_str).0 as i32;
-            }
-            if !normal_str.is_empty() {
-                draw_text_mut(img, color, x, y, self.base, font, normal_str);
-                x += text_size(self.base, font, normal_str).0 as i32;
+        for segment in superscript::segments(text) {
+            match segment {
+                Segment::Plain(body) => {
+                    draw_text_mut(img, color, x, y, self.base, font, body);
+                    x += text_size(self.base, font, body).0 as i32;
+                }
+                Segment::Raised(body) => {
+                    x += self.gap;
+                    draw_text_mut(img, self.weak, x, y, self.small, font, body);
+                    x += text_size(self.small, font, body).0 as i32;
+                }
             }
         }
     }
-}
-
-fn split_superscript(part: &str) -> (&str, &str) {
-    part.find(' ').map_or((part, ""), |break_index| part.split_at(break_index))
 }
 
 pub(super) fn line_offset(font: &impl Font, scale: PxScale, line_height: i32) -> i32 {

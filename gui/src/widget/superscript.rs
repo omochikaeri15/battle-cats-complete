@@ -3,10 +3,11 @@ use iced::{Color, Element, Length, Theme};
 use iced::font::{Font, Weight};
 use iced::widget::{column, row, text, Row, Space};
 
+use kore::common::superscript::{self, Segment};
+
 const SUPERSCRIPT_SHRINK: f32 = 3.0;
 const SUPERSCRIPT_ALPHA: f32 = 0.7;
 const SUPERSCRIPT_SPACING: f32 = 1.25;
-const SUPERSCRIPT_ENDS: [char; 2] = [' ', '~'];
 
 const BOLD: Font = Font { weight: Weight::Bold, ..Font::DEFAULT };
 
@@ -51,37 +52,15 @@ fn superscript_line<'a, Message: 'a>(line: &str, text_size: f32, tint: Option<Co
         }
     };
 
-    if !line.contains('^') {
-        return plain(line).into();
-    }
-
     let mut result_row = row![].align_y(Vertical::Top);
-    let mut parts = line.split('^');
     let mut has_content = false;
 
-    if let Some(first) = parts.next()
-        && !first.is_empty() {
-        result_row = result_row.push(plain(first));
+    for segment in superscript::segments(line) {
+        result_row = match segment {
+            Segment::Plain(body) => result_row.push(plain(body)),
+            Segment::Raised(body) => push_superscript(result_row, has_content, body, text_size, tint),
+        };
         has_content = true;
-    }
-
-    for part in parts {
-        if let Some(break_idx) = part.find(SUPERSCRIPT_ENDS) {
-            let super_str = &part[..break_idx];
-            let normal_str = &part[break_idx..];
-
-            if !super_str.is_empty() {
-                result_row = push_superscript(result_row, has_content, super_str, text_size, tint);
-                has_content = true;
-            }
-            if !normal_str.is_empty() {
-                result_row = result_row.push(plain(normal_str));
-                has_content = true;
-            }
-        } else if !part.is_empty() {
-            result_row = push_superscript(result_row, has_content, part, text_size, tint);
-            has_content = true;
-        }
     }
 
     result_row.into()

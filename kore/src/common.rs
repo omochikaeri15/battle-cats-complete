@@ -10,6 +10,7 @@ pub mod gfx;
 pub mod github;
 pub mod io;
 pub mod job;
+pub mod superscript;
 pub mod junk;
 pub mod keys;
 pub mod preview;
