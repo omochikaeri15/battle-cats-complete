@@ -11,6 +11,7 @@
 
 mod abilities;
 pub(crate) mod entity;
+mod glossary;
 
 pub use abilities::{
     Ability, AttrUnit, AttrValue, Attribute, Identity, REGISTRY, Stored, TalentValue, get_ability,
@@ -19,3 +20,4 @@ pub use abilities::{
 pub use crate::common::Scale;
 pub use crate::common::Separator;
 pub use entity::{Column, Entity, EntityError, Faction};
+pub use glossary::{Glossary, GlossaryEntry, GlossaryError, TraitLabel, TraitLabelError, TraitLabels};

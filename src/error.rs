@@ -16,7 +16,7 @@ use crate::chapter::stage::{
     StageOptionError,
 };
 use crate::chapter::treasure::{TreasureDataError, TreasureTextError};
-use crate::combat::EntityError;
+use crate::combat::{EntityError, GlossaryError, TraitLabelError};
 use crate::files::{GatyaItemBuyError, GatyaItemNameError, LocalizableError, ParamError};
 use crate::enemy::{EnemyNameError, EnemyPictureBookError};
 
@@ -31,6 +31,10 @@ use crate::enemy::{EnemyNameError, EnemyPictureBookError};
 pub enum Error {
     /// A unit's combat statistic file could not be parsed.
     Entity(EntityError),
+    /// A dictionary glossary could not be parsed.
+    Glossary(GlossaryError),
+    /// The orb trait label table could not be parsed.
+    TraitLabel(TraitLabelError),
     /// A unit could not be aggregated from its sources.
     Assemble(AssembleError),
     /// The unit progression table could not be parsed.
@@ -125,6 +129,8 @@ impl Error {
     fn as_source(&self) -> &(dyn error::Error + 'static) {
         match self {
             Self::Entity(source) => source,
+            Self::Glossary(source) => source,
+            Self::TraitLabel(source) => source,
             Self::Assemble(source) => source,
             Self::UnitBuy(source) => source,
             Self::NyancomboData(source) => source,
@@ -190,6 +196,18 @@ impl error::Error for Error {
 impl From<EntityError> for Error {
     fn from(source: EntityError) -> Self {
         Self::Entity(source)
+    }
+}
+
+impl From<GlossaryError> for Error {
+    fn from(source: GlossaryError) -> Self {
+        Self::Glossary(source)
+    }
+}
+
+impl From<TraitLabelError> for Error {
+    fn from(source: TraitLabelError) -> Self {
+        Self::TraitLabel(source)
     }
 }
 
