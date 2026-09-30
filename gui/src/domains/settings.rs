@@ -637,7 +637,7 @@ impl State {
 
         let behavior_content = hover_hint(
             toggle_row(core_settings.mods.force_name_fallbacks, text("Force Name Fallbacks"), Some(Message::ToggleForceNames)),
-            "Names abilities, traits and cannons with the app's own words even while a mod is enabled\nWithout a mod the app's own words are always used, so a dictionary that a game update\nmoved cannot mislabel anything while datamining",
+            "Names abilities, traits and cannons with the app's own English words even while a mod is enabled\nWithout a mod they are always used, so a dictionary that a game update moved cannot mislabel\nanything while datamining. A language other than English, Base or None always reads the game files",
         );
 
         column![

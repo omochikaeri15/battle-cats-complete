@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::path::Path;
 
 use nyanko::combat::{AttributeIndex, DictionaryIndex, Glossary, TraitLabels};
 use nyanko::files::Localizable;
@@ -17,6 +19,7 @@ const DICTIONARY_INDEX: &str = "nyankoPictureBookData_EffectAbility.csv";
 const ATTRIBUTE_INDEX: &str = "nyankoPictureBookData_Attribute.csv";
 const PREFIXES: [&str; 5] = ["nyankoPictureBook2", "EnemyPictureBook2", "attribute_explonation", "CastleRecipeDescriptions", "nyankoPictureBookData_"];
 const BASE_ROW: i32 = 0;
+const ENGLISH: &str = "en";
 
 #[derive(Default)]
 pub struct NameStore {
@@ -43,6 +46,10 @@ impl NameStore {
         NameBook::new((*cat).clone(), (*enemy).clone(), (*traits).clone(), (*index).clone(), (*attributes).clone(), (*cannons).clone(), localizable)
     }
 
+    pub fn english(&self, vfs: &Vfs) -> bool {
+        vfs.list(CAT_GLOSSARY).first().is_none_or(|path| language(path).is_none_or(|code| code == ENGLISH))
+    }
+
     pub(super) fn evict(&self, filename: &str) {
         if PREFIXES.iter().any(|prefix| filename.starts_with(prefix)) {
             self.clear();
@@ -57,6 +64,10 @@ impl NameStore {
         super::reset(&self.attributes);
         super::reset(&self.cannons);
     }
+}
+
+fn language(path: &Path) -> Option<&str> {
+    path.file_stem().and_then(OsStr::to_str)?.rsplit_once('_').map(|(_, code)| code)
 }
 
 fn cannon_names(vfs: &Vfs) -> HashMap<i32, String> {

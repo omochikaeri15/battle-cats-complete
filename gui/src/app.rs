@@ -963,6 +963,10 @@ impl BattleCatsApp {
     }
 
     fn names_dynamic(&self) -> bool {
+        if !self.vault.vds.names.english(&self.vault.vfs) {
+            return true;
+        }
+
         self.mods_state.active_mod().is_some() && !self.settings.mods.force_name_fallbacks
     }
 
