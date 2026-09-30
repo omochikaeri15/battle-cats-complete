@@ -1,18 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const CHAPTERS: [&str; 9] = [
-    "Empire of Cats 1",
-    "Empire of Cats 2",
-    "Empire of Cats 3",
-    "Into the Future 1",
-    "Into the Future 2",
-    "Into the Future 3",
-    "Cats of the Cosmos 1",
-    "Cats of the Cosmos 2",
-    "Cats of the Cosmos 3",
-];
-
-pub const FULL_PERCENT: u32 = 100;
+use crate::systems::treasure;
 
 pub const ITEMS: [&str; 6] = ["Speed Up", "Treasure Radar", "Rich Cat", "Cat CPU", "Cat Jobs", "Sniper the Cat"];
 
@@ -122,7 +110,7 @@ impl Default for Tutorial {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    pub treasures: [String; 9],
+    pub treasure: treasure::Config,
     pub techs: [String; 10],
     pub cannon: Option<i32>,
     pub style: Option<i32>,
@@ -141,7 +129,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            treasures: Default::default(),
+            treasure: treasure::Config::default(),
             techs: Default::default(),
             cannon: None,
             style: None,
@@ -160,13 +148,6 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn treasure(&self, chapter: usize) -> u32 {
-        self.treasures
-            .get(chapter)
-            .and_then(|entry| entry.trim().trim_end_matches('%').trim().parse::<u32>().ok())
-            .map_or(FULL_PERCENT, |percent| percent.min(FULL_PERCENT))
-    }
-
     pub fn altar(&self) -> Option<i32> {
         self.altar_level.trim().parse::<i32>().ok().map(|level| level.max(1))
     }
@@ -193,7 +174,6 @@ mod tests {
     fn an_empty_entry_is_the_games_maximum() {
         let config = Config::default();
 
-        assert_eq!(config.treasure(0), 100);
         assert_eq!(config.tech(0), (20, 10));
         assert_eq!(config.tech(1), (10, 0), "cannon range stops at ten and has no plus levels");
         assert_eq!(level("", 30), 30);
@@ -212,10 +192,8 @@ mod tests {
         let mut config = Config::default();
 
         config.techs[0] = "99+99".to_owned();
-        config.treasures[2] = "250%".to_owned();
 
         assert_eq!(config.tech(0), (20, 10));
-        assert_eq!(config.treasure(2), 100);
         assert_eq!(level("45", 30), 30);
     }
 }

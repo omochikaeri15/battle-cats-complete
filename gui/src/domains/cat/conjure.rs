@@ -65,7 +65,7 @@ impl State {
             return container(text("Spirit data not found")).padding(8).into();
         };
 
-        let conjure_final = get_final_stats(conjure_stats, spirit.level_curve, spirit.current_level, None, None);
+        let conjure_final = get_final_stats(conjure_stats, spirit.level_curve, spirit.current_level, None, None, spirit.global.treasure);
 
         let spirit_ctx = RenderContext {
             global: spirit.global,

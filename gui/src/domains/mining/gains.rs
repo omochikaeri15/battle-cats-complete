@@ -37,6 +37,7 @@ impl State {
         find: &'a talents::Find,
         cats: &'a [CatEntry],
         vfs: &'a Vfs,
+        treasure: &'a Bonus,
         settings: &'a Settings,
     ) -> Element<'a, Message> {
         let cat = cats.iter().find(|entry| entry.id == find.cat_id);
@@ -50,6 +51,7 @@ impl State {
             curve: cat.and_then(|entry| entry.curve.as_ref()),
             costs: cat.map(|entry| entry.talent_costs.as_ref()),
             level: level.value,
+            treasure,
         };
 
         let mut ordered: Vec<(&talents::Gain, bool)> = find
@@ -138,7 +140,7 @@ impl State {
 
         let reading = unit
             .base
-            .and_then(|stats| talent_logic::calculate_talent_display(&gain.group, stats, cap, unit.curve, unit.level))
+            .and_then(|stats| talent_logic::calculate_talent_display(&gain.group, stats, cap, unit.curve, unit.level, unit.treasure))
             .unwrap_or_default();
 
         let mut inner = Column::new()

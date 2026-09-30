@@ -8,6 +8,7 @@ use crate::domains::cat::game::stats;
 use crate::domains::cat::waiter::unitid;
 use crate::systems::combat::registry::{self, AbilityIcon, DisplayGroup, Magnification, StatContext, CAT_STATS_REGISTRY, ENEMY_STATS_REGISTRY};
 use crate::systems::combat::{abilities, comparable, RenderContext};
+use crate::systems::treasure::Bonus;
 
 use super::FileDelta;
 
@@ -157,16 +158,16 @@ pub struct Subject<'a> {
 }
 
 pub fn compare(subject: &Subject<'_>) -> Diff {
-    let before = stats::apply_level(subject.previous, subject.curve, subject.level);
-    let after = stats::apply_level(subject.current, subject.curve, subject.level);
+    let before = stats::apply_level(subject.previous, subject.curve, subject.level, subject.global.treasure);
+    let after = stats::apply_level(subject.current, subject.curve, subject.level, subject.global.treasure);
 
     let mut diff = Diff::default();
 
     let faction = subject.current.faction;
 
     for stat in table_for(faction) {
-        let old = (stat.get_value)(&reading(faction, &before, subject.frames.0));
-        let new = (stat.get_value)(&reading(faction, &after, subject.frames.1));
+        let old = (stat.get_value)(&reading(faction, &before, subject.frames.0, subject.global.treasure));
+        let new = (stat.get_value)(&reading(faction, &after, subject.frames.1, subject.global.treasure));
 
         if old == new {
             continue;
@@ -199,10 +200,10 @@ fn table_for(faction: Faction) -> &'static [registry::StatsDef] {
     }
 }
 
-fn reading<'a>(faction: Faction, stats: &'a Entity, frames: i32) -> StatContext<'a> {
+fn reading<'a>(faction: Faction, stats: &'a Entity, frames: i32, treasure: &'a Bonus) -> StatContext<'a> {
     match faction {
-        Faction::Cat => StatContext::cat(stats, frames, None),
-        Faction::Enemy => StatContext::enemy(stats, frames, Magnification::default()),
+        Faction::Cat => StatContext::cat(stats, frames, None, treasure),
+        Faction::Enemy => StatContext::enemy(stats, frames, Magnification::default(), treasure),
     }
 }
 
@@ -437,7 +438,7 @@ mod tests {
         let entity = Entity::default();
 
         for stat in CAT_STATS_REGISTRY {
-            let value = (stat.get_value)(&StatContext::cat(&entity, 0, None));
+            let value = (stat.get_value)(&StatContext::cat(&entity, 0, None, &Bonus::default()));
             let shown = stat_text(stat.name, stat.formatter, value);
 
             assert!(!shown.contains('^'), "{} renders as {shown}, which needs a raw-frame override", stat.name);

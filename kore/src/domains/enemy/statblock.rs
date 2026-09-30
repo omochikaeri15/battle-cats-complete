@@ -28,7 +28,7 @@ pub fn build(subject: Subject<'_>) -> StatblockData {
 fn assemble(ctx: &RenderContext<'_>, enemy_entry: &EnemyEntry) -> StatblockData {
     let (traits, h1, h2, b1, b2, footer) = collect_ability_data(ctx);
 
-    let stat_ctx = StatContext::enemy(ctx.final_stats, enemy_entry.atk_anim_frames, ctx.magnification);
+    let stat_ctx = StatContext::enemy(ctx.final_stats, enemy_entry.atk_anim_frames, ctx.magnification, ctx.global.treasure);
     let cycle = (STAT_ATK_CYCLE.get_value)(&stat_ctx);
 
     let top_val_str = if ctx.magnification.hitpoints == ctx.magnification.attack {

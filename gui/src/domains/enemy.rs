@@ -27,6 +27,7 @@ use kore::domains::enemy::animation as enemy_animation;
 use kore::domains::enemy::scanner::{self, EnemyEntry};
 use kore::domains::enemy::EnemyDataState;
 use kore::domains::settings::Settings;
+use kore::systems::treasure::Bonus;
 use kore::{Vfs, Vault};
 
 use crate::systems::animation;
@@ -244,6 +245,11 @@ impl EnemyState {
         }
 
         self.header_icon_cache.borrow_mut().clear();
+        self.list.refresh(&self.data.enemies, &self.search_query, &self.filter.filter_state);
+    }
+
+    pub(crate) fn set_treasure(&mut self, treasure: Bonus) {
+        self.filter.filter_state.treasure = treasure;
         self.list.refresh(&self.data.enemies, &self.search_query, &self.filter.filter_state);
     }
 
@@ -805,7 +811,7 @@ impl EnemyState {
 
         editor::target(
             column![
-                self.view_stats(enemy, stats),
+                self.view_stats(enemy, stats, global_ctx.treasure),
                 Space::new().height(Length::Fixed(8.0)),
                 self.abilities.view(&enemy_ctx, &self.img015_sheets, &self.custom_assets, |items, layout| {
                     self.abilities.ability_list(items, &self.img015_sheets, &self.custom_assets, layout)
@@ -817,8 +823,8 @@ impl EnemyState {
         )
     }
 
-    fn view_stats(&self, enemy: &EnemyEntry, stats: &Entity) -> Element<'_, Message> {
-        let stat_ctx = StatContext::enemy(stats, enemy.atk_anim_frames, self.magnification);
+    fn view_stats(&self, enemy: &EnemyEntry, stats: &Entity, treasure: &Bonus) -> Element<'_, Message> {
+        let stat_ctx = StatContext::enemy(stats, enemy.atk_anim_frames, self.magnification, treasure);
 
         let atk_str = format_stat(&STAT_ATTACK, &stat_ctx);
         let dps_str = format_stat(&STAT_DPS, &stat_ctx);

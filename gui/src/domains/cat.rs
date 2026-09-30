@@ -33,6 +33,7 @@ use kore::domains::cat::CatDataState;
 use kore::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_COOLDOWN, STAT_COST, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_RARITY, STAT_SPEED};
 use kore::systems::combat::RenderContext;
 use kore::domains::settings::{ScannerConfig, Settings};
+use kore::systems::treasure::Bonus;
 use kore::{Vfs, Vault};
 
 use crate::systems::animation;
@@ -286,6 +287,11 @@ impl State {
 
     pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
         self.list.set_variant(banner_form);
+    }
+
+    pub(crate) fn set_treasure(&mut self, treasure: Bonus) {
+        self.filter.filter_state.treasure = treasure;
+        self.list.refresh(&self.data.cats, &self.search_query, &self.filter.filter_state);
     }
 
     pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], vault: &Vault) -> Task<Message> {
@@ -1226,7 +1232,7 @@ impl State {
         let talent_data = if form_allows_talents { cat.talent_data.as_ref() } else { None };
         let talent_levels = if form_allows_talents { self.talent_levels.get(&cat.id) } else { None };
 
-        let final_stats = get_final_stats(base_stats, cat.curve.as_ref(), self.current_level, talent_data, talent_levels);
+        let final_stats = get_final_stats(base_stats, cat.curve.as_ref(), self.current_level, talent_data, talent_levels, global_ctx.treasure);
 
         let cat_ctx = RenderContext {
             global: global_ctx,
@@ -1242,7 +1248,7 @@ impl State {
 
         editor::target(
             column![
-                self.view_stats(cat, &final_stats, self.selected_form),
+                self.view_stats(cat, &final_stats, self.selected_form, global_ctx.treasure),
                 Space::new().height(Length::Fixed(8.0)),
                 self.abilities.view(&cat_ctx, cat, global_ctx, &self.img015_sheets, &self.custom_assets, settings).map(Message::Abilities)
             ]
@@ -1252,8 +1258,8 @@ impl State {
         )
     }
 
-    fn view_stats(&self, cat: &CatEntry, final_stats: &Entity, form: usize) -> Element<'_, Message> {
-        let stat_ctx = StatContext::cat(final_stats, cat.atk_anim_frames[form], Some(&cat.unitbuy));
+    fn view_stats(&self, cat: &CatEntry, final_stats: &Entity, form: usize, treasure: &Bonus) -> Element<'_, Message> {
+        let stat_ctx = StatContext::cat(final_stats, cat.atk_anim_frames[form], Some(&cat.unitbuy), treasure);
 
         let atk_str = format_stat(&STAT_ATTACK, &stat_ctx);
         let dps_str = format_stat(&STAT_DPS, &stat_ctx);
@@ -1323,6 +1329,7 @@ impl State {
             current_stats: base_stats,
             curve: cat.curve.as_ref(),
             unit_level: self.current_level,
+            treasure: global_ctx.treasure,
             sheets: &self.img015_sheets,
             img022_sheets: &self.img022_sheets,
             assets: &self.custom_assets,

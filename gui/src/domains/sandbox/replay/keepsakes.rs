@@ -9,6 +9,7 @@ use kore::common::context::GlobalContext;
 use kore::common::formats::{fitting_cut, imgcut};
 use kore::domains::sandbox::replay::{self as tape, Save, Summary};
 use kore::domains::settings::{ScannerConfig, Settings};
+use kore::systems::treasure::Bonus;
 use kore::{Source, Vault};
 
 use crate::app::state::AppState;
@@ -23,6 +24,7 @@ const WINDOW: Size = Size::new(1280.0, 720.0);
 pub(crate) fn gather(vault: &Vault, save: Save, config: &ScannerConfig) -> Vec<(Box<str>, PathBuf)> {
     let staged = Arc::new(tape::staged(Summary { save: Some(save), ..Summary::default() }, vault.fork(), config));
     let (param, localizable) = (Param::default(), Localizable::default());
+    let treasure = Bonus::default();
     let (mut settings, mut app_state) = (Settings::default(), AppState::default());
     let mut page = State::new();
 
@@ -31,7 +33,7 @@ pub(crate) fn gather(vault: &Vault, save: Save, config: &ScannerConfig) -> Vec<(
     drop(page.view(0.0));
 
     for slot in 0..page.tiles.len() {
-        let ctx = GlobalContext { param: &param, localizable: &localizable, vault: &staged.vault };
+        let ctx = GlobalContext { param: &param, localizable: &localizable, vault: &staged.vault, treasure: &treasure };
 
         page.open_unit(slot);
         drop(page.unit_popup_view(WINDOW, &settings, &app_state, ctx));

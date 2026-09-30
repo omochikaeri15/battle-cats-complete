@@ -3,11 +3,13 @@ use std::collections::HashMap;
 
 use nyanko::cat::unit::UnitBuy;
 use nyanko::combat::{AttrValue, Entity, Faction, Identity, REGISTRY};
+use nyanko::chapter::treasure::TraitBonus;
 use nyanko::files::{img015, Param};
 use serde::{Deserialize, Serialize};
 
 use crate::common::frames;
 use crate::systems::combat::CustomIcon;
+use crate::systems::treasure::Bonus;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Magnification {
@@ -45,6 +47,7 @@ pub struct FormatContext<'a> {
     pub duration: i32,
     pub magnification: Magnification,
     pub param: &'a Param,
+    pub treasure: &'a Bonus,
 }
 
 pub struct AbilityDisplayDef {
@@ -76,6 +79,35 @@ fn pick<T>(faction: Faction, cat: T, enemy: T) -> T {
 
 fn side(ctx: &FormatContext<'_>, cat: &str, enemy: &str) -> String {
     pick(ctx.stats.faction, cat, enemy).to_string()
+}
+
+fn fruit(ctx: &FormatContext<'_>, multiplier: fn(TraitBonus) -> f64, reciprocal: bool) -> String {
+    let (low, high) = ctx.treasure.fruit_span(ctx.stats);
+    let label = |bonus: TraitBonus| {
+        let value = multiplier(bonus);
+        let shown = if reciprocal { format!("1/{}", trimmed(1.0 / value)) } else { trimmed(value) };
+
+        format!("{shown}×")
+    };
+
+    if low == high { label(low) } else { format!("{}~{}", label(low), label(high)) }
+}
+
+fn fruit_time(ctx: &FormatContext<'_>) -> String {
+    if ctx.stats.faction != Faction::Cat {
+        return fmt_time(ctx.duration);
+    }
+
+    let (low, high) = ctx.treasure.fruit_span(ctx.stats);
+    let (shortest, longest) = (low.scale_duration(ctx.duration), high.scale_duration(ctx.duration));
+
+    if shortest == longest { fmt_time(shortest) } else { format!("{}~{}", fmt_time(shortest), fmt_time(longest)) }
+}
+
+fn trimmed(value: f64) -> String {
+    let text = format!("{:.2}", value);
+
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 fn finite(value: AttrValue) -> i32 {
@@ -187,8 +219,8 @@ fn fmt_effective_range(stats: &Entity) -> String {
     format!("{} {}\nStands at {} Range relative to {}", label_prefix, range_strings.join(" / "), primary_anchor, opposing_base)
 }
 
-fn fmt_multihit(stats: &Entity, magnification: Magnification) -> String {
-    let magnification_factor = magnification.attack as f32 / 100.0;
+fn fmt_multihit(stats: &Entity, magnification: Magnification, treasure: &Bonus) -> String {
+    let magnification_factor = treasure.strength(stats, magnification.attack);
     let scale = |damage: i32| (damage as f32 * magnification_factor).round() as i32;
 
     let ability_flag_1 = if stats.attack_1_abilities > 0 { "True" } else { "False" };
@@ -562,35 +594,35 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Strng",
             icon: AbilityIcon::Standard(img015::ICON_STRONG_AGAINST),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("Deals 1.5×~1.8× Damage to and takes 0.5×~0.4× Damage from {}", ctx.target),
+            formatter: |ctx| format!("Deals {} Damage to and takes {} Damage from {}", fruit(ctx, TraitBonus::strong_dealt, false), fruit(ctx, TraitBonus::strong_taken, false), ctx.target),
         },
         Identity::MassiveDamage => AbilityDisplayDef {
             name: "Massive Damage",
             fallback: "Massv",
             icon: AbilityIcon::Standard(img015::ICON_MASSIVE_DAMAGE),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("Deals 3×~4× Damage to {}", ctx.target),
+            formatter: |ctx| format!("Deals {} Damage to {}", fruit(ctx, TraitBonus::massive_dealt, false), ctx.target),
         },
         Identity::InsaneDamage => AbilityDisplayDef {
             name: "Insane Damage",
             fallback: "InsDmg",
             icon: AbilityIcon::Standard(img015::ICON_INSANE_DAMAGE),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("Deals 5×~6× Damage to {}", ctx.target),
+            formatter: |ctx| format!("Deals {} Damage to {}", fruit(ctx, TraitBonus::insane_dealt, false), ctx.target),
         },
         Identity::Resist => AbilityDisplayDef {
             name: "Resist",
             fallback: "Resist",
             icon: AbilityIcon::Standard(img015::ICON_RESIST),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("Takes 1/4×~1/5× Damage from {}", ctx.target),
+            formatter: |ctx| format!("Takes {} Damage from {}", fruit(ctx, TraitBonus::resist_taken, true), ctx.target),
         },
         Identity::InsanelyTough => AbilityDisplayDef {
             name: "Insanely Tough",
             fallback: "InsRes",
             icon: AbilityIcon::Standard(img015::ICON_INSANELY_TOUGH),
             group: DisplayGroup::Headline1,
-            formatter: |ctx| format!("Takes 1/6×~1/7× Damage from {}", ctx.target),
+            formatter: |ctx| format!("Takes {} Damage from {}", fruit(ctx, TraitBonus::insanely_tough_taken, true), ctx.target),
         },
 
         Identity::IsMetal => AbilityDisplayDef {
@@ -736,7 +768,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Multi",
             icon: AbilityIcon::Custom(CustomIcon::Multihit),
             group: DisplayGroup::Body1,
-            formatter: |ctx| fmt_multihit(ctx.stats, ctx.magnification),
+            formatter: |ctx| fmt_multihit(ctx.stats, ctx.magnification, ctx.treasure),
         },
         Identity::LongDistance => AbilityDisplayDef {
             name: "Long Distance",
@@ -931,7 +963,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             group: DisplayGroup::Body2,
             formatter: |ctx| {
                 let dodged = pick(ctx.stats.faction, ctx.target, "attacks");
-                format!("{}% Chance to Dodge {} for {}", finite(ctx.value), dodged, fmt_time(ctx.duration))
+                format!("{}% Chance to Dodge {} for {}", finite(ctx.value), dodged, fruit_time(ctx))
             },
         },
         Identity::Weaken => AbilityDisplayDef {
@@ -944,7 +976,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
                 finite(ctx.value),
                 ctx.target,
                 ctx.stats.weaken_to,
-                fmt_time(ctx.duration)
+                fruit_time(ctx)
             ),
         },
         Identity::Freeze => AbilityDisplayDef {
@@ -952,14 +984,14 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Freez",
             icon: AbilityIcon::Standard(img015::ICON_FREEZE),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Freeze {} for {}", finite(ctx.value), ctx.target, fmt_time(ctx.duration)),
+            formatter: |ctx| format!("{}% Chance to Freeze {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
         },
         Identity::Slow => AbilityDisplayDef {
             name: "Slow",
             fallback: "Slow",
             icon: AbilityIcon::Standard(img015::ICON_SLOW),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Slow {} for {}", finite(ctx.value), ctx.target, fmt_time(ctx.duration)),
+            formatter: |ctx| format!("{}% Chance to Slow {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
         },
         Identity::Knockback => AbilityDisplayDef {
             name: "Knockback",
@@ -973,7 +1005,7 @@ pub fn get_display_def(identity: Identity) -> AbilityDisplayDef {
             fallback: "Curse",
             icon: AbilityIcon::Standard(img015::ICON_CURSE),
             group: DisplayGroup::Body2,
-            formatter: |ctx| format!("{}% Chance to Curse {} for {}", finite(ctx.value), ctx.target, fmt_time(ctx.duration)),
+            formatter: |ctx| format!("{}% Chance to Curse {} for {}", finite(ctx.value), ctx.target, fruit_time(ctx)),
         },
         Identity::Warp => AbilityDisplayDef {
             name: "Warp",
@@ -1215,19 +1247,24 @@ pub struct StatContext<'a> {
     pub animation_frames: i32,
     pub magnification: Magnification,
     pub unitbuy: Option<&'a UnitBuy>,
+    pub treasure: &'a Bonus,
 }
 
 impl<'a> StatContext<'a> {
-    pub fn cat(stats: &'a Entity, animation_frames: i32, unitbuy: Option<&'a UnitBuy>) -> Self {
-        Self { stats, animation_frames, magnification: Magnification::default(), unitbuy }
+    pub fn cat(stats: &'a Entity, animation_frames: i32, unitbuy: Option<&'a UnitBuy>, treasure: &'a Bonus) -> Self {
+        Self { stats, animation_frames, magnification: Magnification::default(), unitbuy, treasure }
     }
 
-    pub fn enemy(stats: &'a Entity, animation_frames: i32, magnification: Magnification) -> Self {
-        Self { stats, animation_frames, magnification, unitbuy: None }
+    pub fn enemy(stats: &'a Entity, animation_frames: i32, magnification: Magnification, treasure: &'a Bonus) -> Self {
+        Self { stats, animation_frames, magnification, unitbuy: None, treasure }
+    }
+
+    fn weakened(&self, percent: i32) -> f32 {
+        self.treasure.strength(self.stats, percent)
     }
 
     fn scaled_attack(&self) -> i32 {
-        let magnification_factor = self.magnification.attack as f32 / 100.0;
+        let magnification_factor = self.weakened(self.magnification.attack);
         let scale = |damage: i32| (damage as f32 * magnification_factor).round() as i32;
 
         scale(self.stats.attack_1_damage) + scale(self.stats.attack_2_damage) + scale(self.stats.attack_3_damage)
@@ -1253,7 +1290,7 @@ impl StatsDef {
 pub const STAT_HITPOINTS: StatsDef = StatsDef {
     name: "Hitpoints",
     display_name: "Hitpoints",
-    get_value: |ctx| (ctx.stats.hitpoints as f32 * (ctx.magnification.hitpoints as f32 / 100.0)).round() as i32,
+    get_value: |ctx| (ctx.stats.hitpoints as f32 * ctx.weakened(ctx.magnification.hitpoints)).round() as i32,
     formatter: |hitpoints| format!("{}", hitpoints),
     talent_fmt: None,
     linked_talent_id: Some(32),
@@ -1357,7 +1394,7 @@ pub const STAT_COST: StatsDef = StatsDef {
 pub const STAT_COOLDOWN: StatsDef = StatsDef {
     name: "Cooldown",
     display_name: "Cooldown",
-    get_value: |ctx| (ctx.stats.cooldown - 264).max(60),
+    get_value: |ctx| ctx.treasure.recharge(ctx.stats.cooldown),
     formatter: frames::label,
     talent_fmt: Some(|cooldown| format!("{}f", cooldown)),
     linked_talent_id: Some(26),
@@ -1377,7 +1414,7 @@ const STAT_ATTACK_COOLDOWN: StatsDef = StatsDef {
 pub const STAT_CASH_DROP: StatsDef = StatsDef {
     name: "Cash Drop",
     display_name: "Cash Drop",
-    get_value: |ctx| (ctx.stats.cash_drop as f32 * 3.95).floor() as i32,
+    get_value: |ctx| ctx.treasure.money(ctx.stats.cash_drop),
     formatter: |cash| format!("{}¢", cash),
     talent_fmt: None,
     linked_talent_id: None,

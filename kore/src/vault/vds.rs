@@ -4,6 +4,7 @@ mod content;
 mod enemy;
 mod item;
 mod stage;
+mod treasure;
 
 use std::sync::{Arc, RwLock};
 
@@ -16,6 +17,7 @@ pub use content::ContentStore;
 pub use enemy::EnemyStore;
 pub use item::ItemStore;
 pub use stage::StageStore;
+pub use treasure::TreasureStore;
 
 type Slot<T> = RwLock<Option<Arc<T>>>;
 
@@ -25,6 +27,7 @@ pub struct Vds {
     pub enemies: EnemyStore,
     pub items: ItemStore,
     pub stages: StageStore,
+    pub treasures: TreasureStore,
 }
 
 impl Vds {
@@ -33,6 +36,7 @@ impl Vds {
         self.enemies.evict(filename);
         self.items.evict(filename);
         self.stages.evict(filename);
+        self.treasures.evict(filename);
     }
 
     pub fn purge(&self, filenames: &[Box<str>]) {
@@ -46,6 +50,7 @@ impl Vds {
         self.enemies.clear();
         self.items.clear();
         self.stages.clear();
+        self.treasures.clear();
     }
 }
 

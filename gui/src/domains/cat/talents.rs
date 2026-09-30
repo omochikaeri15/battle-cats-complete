@@ -10,6 +10,7 @@ use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
 use nyanko::files::img022;
 
 use kore::systems::combat::registry::{get_display_def, AbilityIcon};
+use kore::systems::treasure::Bonus;
 use kore::domains::cat::game::talents as talent_logic;
 use kore::Vfs;
 
@@ -101,6 +102,7 @@ pub struct ViewCtx<'a, 'b> {
     pub current_stats: Option<&'b Entity>,
     pub curve: Option<&'a LevelCurve>,
     pub unit_level: i32,
+    pub treasure: &'a Bonus,
     pub sheets: &'a [SpriteSheet],
     pub img022_sheets: &'a [SpriteSheet],
     pub assets: &'a CustomAssets,
@@ -314,7 +316,7 @@ impl State {
         let mut level_col = column![level_row].spacing(4);
 
         if let Some(stats) = ctx.current_stats
-            && let Some(display_text) = talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level) {
+            && let Some(display_text) = talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level, ctx.treasure) {
             level_col = level_col.push(text(display_text).size(15).color(Color::WHITE).font(font::Font { weight: font::Weight::Bold, ..Default::default() }));
         }
 

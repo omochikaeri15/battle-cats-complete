@@ -22,6 +22,7 @@ use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::GlobalMapId;
+use kore::systems::treasure::{Bonus, Catalog};
 use kore::{ContentStore, Vault};
 
 use crate::common::feedback::Slot;
@@ -383,6 +384,8 @@ pub struct BattleCatsApp {
 
     pub param: Param,
     pub localizable: Localizable,
+    pub treasure: Bonus,
+    pub treasure_catalog: Arc<Catalog>,
     pub last_saved_hash: u64,
     pub last_saved_state_hash: u64,
 
@@ -440,6 +443,8 @@ impl Default for BattleCatsApp {
             app_state: AppState::default(),
             param: Param::default(),
             localizable: Localizable::default(),
+            treasure: Bonus::default(),
+            treasure_catalog: Arc::default(),
             last_saved_hash: 0,
             last_saved_state_hash: 0,
             updater_handle: None,
@@ -553,7 +558,7 @@ impl BattleCatsApp {
                 task.map(Message::Files)
             }
             Page::Cats => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let sheets_task = self.cat_state.update(cat::Message::SheetsCheck, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Cat);
                 let scroll_task = operation::scroll_to(
                     cat::State::list_scrollable_id(),
@@ -562,7 +567,7 @@ impl BattleCatsApp {
                 Task::batch([sheets_task, scroll_task, self.cat_state.filter_scroll_task(), self.cat_state.export_scroll_task()])
             }
             Page::Enemies => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let sheets_task = self.enemy_state.update(enemy::Message::SheetsCheck, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Enemy);
                 let scroll_task = operation::scroll_to(
                     enemy::EnemyState::list_scrollable_id(),
@@ -577,7 +582,7 @@ impl BattleCatsApp {
             Page::Utilities => self.utilities_state.export_scroll_task(),
             Page::Studio => self.studio_state.export_scroll_task(),
             Page::Sandbox => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
 
                 self.stage_state.enter();
 
@@ -592,7 +597,7 @@ impl BattleCatsApp {
                     cats: &self.cat_state.data.cats,
                     foes: &self.enemy_state.data.enemies,
                     registry: &self.stage_state.data.registry,
-                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                     settings: &self.settings,
                 };
 
@@ -752,7 +757,8 @@ impl BattleCatsApp {
         self.cat_state.reload_selected(&self.vault, &cat_config);
         self.enemy_state.reload_selected(&self.vault, self.settings.show_invalid_enemies());
         self.stage_state.reload_selected(&self.vault);
-        self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault });
+        self.refresh_treasure();
+        self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure });
 
         self.stage_state.invalidate_assets(&items, &enemies, stage_coarse, &self.vault);
 
@@ -834,7 +840,7 @@ impl BattleCatsApp {
             cats: &self.cat_state.data.cats,
             foes: &self.enemy_state.data.enemies,
             registry: &self.stage_state.data.registry,
-            global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+            global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
             settings: &self.settings,
         };
 
@@ -951,9 +957,17 @@ impl BattleCatsApp {
         Task::stream(rx)
     }
 
+    fn refresh_treasure(&mut self) {
+        self.treasure_catalog = self.vault.vds.treasures.catalog(&self.vault.vfs);
+        self.treasure = Bonus::resolve(&self.treasure_catalog, &self.settings.general.treasures);
+        self.cat_state.set_treasure(self.treasure);
+        self.enemy_state.set_treasure(self.treasure);
+    }
+
     fn relocalize(&mut self) -> Task<Message> {
         info!(priority = ?self.settings.general.language_priority, "Language priority settled, dropping every resolved file");
         self.vault.priority(&self.settings.general.language_priority);
+        self.refresh_treasure();
         self.editor.relocalize();
 
         let sheets = Task::batch([
@@ -1175,7 +1189,8 @@ impl BattleCatsApp {
                 info!("Core tables loaded");
                 self.param = param;
                 self.localizable = localizable;
-                self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault });
+                self.refresh_treasure();
+                self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure });
                 Task::none()
             }
             Message::VaultValidated { vault, key, mounted } => self.finish_validation(vault, key, mounted),
@@ -1224,7 +1239,7 @@ impl BattleCatsApp {
                 task
             }
             Message::Cat(msg) => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let loaded = matches!(msg, cat::Message::Loaded(..));
                 let retabbed = matches!(msg, cat::Message::SelectTab(..));
                 let task = self.cat_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Cat);
@@ -1251,7 +1266,7 @@ impl BattleCatsApp {
                 self.update(Message::Stage(stage::Message::ShowEnemyAppearances(id))),
             ]),
             Message::Enemy(msg) => {
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let enemies_loaded = matches!(msg, enemy::Message::Loaded(..));
                 let retabbed = matches!(msg, enemy::Message::SelectTab(..));
                 let task = self.enemy_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Enemy);
@@ -1286,7 +1301,7 @@ impl BattleCatsApp {
             ]),
             Message::Stage(msg) => {
                 let stages_loaded = matches!(msg, stage::Message::Loaded(..));
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let task = self.stage_state.update(msg, global_ctx).map(Message::Stage);
                 if stages_loaded {
                     self.persist_content();
@@ -1344,7 +1359,7 @@ impl BattleCatsApp {
                     cats: &self.cat_state.data.cats,
                     foes: &self.enemy_state.data.enemies,
                     registry: &self.stage_state.data.registry,
-                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                     settings: &self.settings,
                 };
 
@@ -1363,7 +1378,7 @@ impl BattleCatsApp {
                     cats: &self.cat_state.data.cats,
                     foes: &self.enemy_state.data.enemies,
                     registry: &self.stage_state.data.registry,
-                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                     settings: &self.settings,
                 };
 
@@ -1374,7 +1389,7 @@ impl BattleCatsApp {
                     cats: &self.cat_state.data.cats,
                     foes: &self.enemy_state.data.enemies,
                     registry: &self.stage_state.data.registry,
-                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                     settings: &self.settings,
                 };
 
@@ -1518,7 +1533,7 @@ impl BattleCatsApp {
                     }
                 }
 
-                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+                let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
                 let task = self.sandbox_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Sandbox);
 
                 self.sync_sandbox_rules();
@@ -1572,7 +1587,12 @@ impl BattleCatsApp {
                     matches!(msg, gui_settings::Message::General(gui_settings::general::Message::ToggleIgnoreWatcherFailure(_)));
 
                 let scanned_with = self.scanner_fingerprint();
+                let treasures_before = self.settings.general.treasures.clone();
                 let task = self.settings_state.update(msg, &mut self.settings).map(Message::Settings);
+
+                if self.settings.general.treasures != treasures_before {
+                    self.refresh_treasure();
+                }
 
                 if conflicts_toggled && !self.rebuild_running {
                     self.report_conflicts();
@@ -1609,31 +1629,31 @@ impl BattleCatsApp {
 
         let content = match self.current_page {
             Page::Home => self.home_state.view(self.settings.general.enable_nightly).map(Message::Home),
-            Page::Cats => self.cat_state.view(&self.settings, &self.app_state, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault }).map(Message::Cat),
-            Page::Enemies => self.enemy_state.view(&self.settings, &self.app_state, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault }).map(Message::Enemy),
-            Page::Stages => self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault }).map(Message::Stage),
+            Page::Cats => self.cat_state.view(&self.settings, &self.app_state, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure }).map(Message::Cat),
+            Page::Enemies => self.enemy_state.view(&self.settings, &self.app_state, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure }).map(Message::Enemy),
+            Page::Stages => self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure }).map(Message::Stage),
             Page::Mods => self.mods_state.view().map(Message::Mod),
             Page::Files => self.files_state.view().map(Message::Files),
             Page::Import => self.import_state.view(&self.app_state).map(Message::Import),
-            Page::Mining => self.mining_state.view(&self.cat_state.data.cats, &self.enemy_state.data.enemies, &self.stage_state.data.registry, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault }, &self.settings, self.window_size).map(Message::Mining),
+            Page::Mining => self.mining_state.view(&self.cat_state.data.cats, &self.enemy_state.data.enemies, &self.stage_state.data.registry, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure }, &self.settings, self.window_size).map(Message::Mining),
             Page::Studio => self
                 .studio_state
                 .view(&self.settings, &self.app_state.animation)
                 .map(Message::Studio),
             Page::Sandbox => {
                 let staged = (self.app_state.sandbox.tab == crate::app::state::SandboxTab::Stage).then(|| {
-                    self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault })
+                    self.stage_state.view(&self.settings, GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure })
                 });
                 let playable = sandbox::State::playable(&self.app_state, self.staged_entry().is_some());
 
-                self.sandbox_state.view(&self.app_state, staged, playable).map(Message::Sandbox)
+                self.sandbox_state.view(&self.app_state, staged, playable, &self.treasure_catalog).map(Message::Sandbox)
             }
             Page::Utilities => self.utilities_state.view(&self.settings, &self.app_state).map(Message::Utilities),
             Page::Help => {
                 let ui_theme = self.theme();
                 self.help_state.view(&ui_theme).map(Message::Help)
             }
-            Page::Settings => self.settings_state.view(&self.settings, &self.updater_status).map(Message::Settings),
+            Page::Settings => self.settings_state.view(&self.settings, &self.updater_status, &self.treasure_catalog).map(Message::Settings),
         };
 
         let content_container = container(content)
@@ -1771,7 +1791,7 @@ impl BattleCatsApp {
     }
 
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
-        let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault };
+        let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure };
 
         self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &self.app_state, global_ctx).map(Message::Sandbox)
     }
@@ -1951,7 +1971,7 @@ impl BattleCatsApp {
                                 self.window_size,
                                 &self.settings,
                                 &self.app_state,
-                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                             )
                             .map(|view| view.map(Message::Sandbox))
                     }
@@ -1994,7 +2014,7 @@ impl BattleCatsApp {
                                 self.window_size,
                                 &self.settings,
                                 &self.app_state,
-                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault },
+                                GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure },
                             )
                             .map(|view| view.map(Message::Sandbox))
                     }

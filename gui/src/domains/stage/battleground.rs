@@ -13,6 +13,7 @@ use tracing::warn;
 use kore::common::context::GlobalContext;
 use kore::domains::enemy::scanner::EnemyEntry;
 use kore::domains::stage::{restrictions, Map, Stage};
+use kore::systems::treasure::{self, Bonus};
 use kore::Source;
 
 use crate::app::theme;
@@ -263,6 +264,7 @@ impl State {
         selected_crown: u8,
         enemy_registry: &'a HashMap<u32, EnemyEntry>,
         enemy_name_registry: &'a [String],
+        bonus: &Bonus,
     ) -> Element<'a, super::Message> {
         let mut content = column![].spacing(BODY_SPACING);
 
@@ -294,6 +296,7 @@ impl State {
         }
 
         let crown_mag = stage.crown_magnification(selected_crown.saturating_add(1)).unwrap_or(100);
+        let chapter = treasure::chapter(&stage.category, stage.map_id);
 
         let show_score_column = stage.enemies.iter().any(|enemy| enemy.score > 0);
         let is_dojo_mechanic = stage.enemies.iter().any(|enemy| enemy.base_hp_perc > 100);
@@ -359,10 +362,13 @@ impl State {
                 tooltip::Position::Top,
             ).into();
 
+            let gap = enemy_registry.get(&spawn.enemy_id).map_or(0, |entry| bonus.weakening(&entry.stats, chapter));
+            let strengthened = |magnification: u32| (i64::from(magnification) * i64::from(100 + gap) / 100).to_string();
+
             let formatted_mag = if same_mag {
-                format!("{}%", final_hp_mag)
+                format!("{}%", strengthened(final_hp_mag))
             } else {
-                format!("{}% / {}%", final_hp_mag, final_atk_mag)
+                format!("{}% / {}%", strengthened(final_hp_mag), strengthened(final_atk_mag))
             };
 
             let mut value_row = row![

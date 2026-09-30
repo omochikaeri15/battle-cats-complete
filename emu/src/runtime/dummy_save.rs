@@ -9,6 +9,7 @@ use crate::{
 use super::{CatGod, Setup, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
+const POINT_CAP: i32 = 9_999_999;
 const LEGEND_TYPE: i32 = -8;
 const LEGEND_MAP_STRIDE: i64 = 0x30;
 const ALTAR_KEY_STAGES: i32 = 100;
@@ -125,6 +126,10 @@ pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     }
 
     Ok(())
+}
+
+pub fn seed_point_cap(ctx: &mut AppContext) {
+    ctx.event_items.get_or_insert_with(Default::default).point_cap = POINT_CAP;
 }
 
 pub fn seed_altar_records(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {

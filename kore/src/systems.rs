@@ -3,3 +3,4 @@ pub mod animation;
 pub mod apk;
 pub mod combat;
 pub mod statblock;
+pub mod treasure;

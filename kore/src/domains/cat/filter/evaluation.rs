@@ -78,7 +78,7 @@ fn evaluate_single_form(
     trace!(cat_id = cat.id, form = form_index, "evaluating entity form filter tree");
 
     let filter_level = filter.level_input.parse::<i32>().unwrap_or(50);
-    let base_leveled = apply_level(raw_stats, cat.curve.as_ref(), filter_level);
+    let base_leveled = apply_level(raw_stats, cat.curve.as_ref(), filter_level, &filter.treasure);
 
     let mut state_normal = base_leveled.clone();
     let mut state_ultra = base_leveled.clone();

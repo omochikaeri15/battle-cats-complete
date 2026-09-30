@@ -6,6 +6,7 @@ use nyanko::combat::{get_talent, Ability, Attribute, AttrUnit, Entity};
 use crate::domains::cat::game::stats;
 use crate::systems::combat::comparable;
 use crate::systems::combat::registry::{get_display_def, StatContext, CAT_STATS_REGISTRY};
+use crate::systems::treasure::Bonus;
 
 pub(crate) fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_level: u8) -> i32 {
     if level == 0 { return 0; }
@@ -27,12 +28,13 @@ pub fn calculate_talent_display(
     base_stats: &Entity,
     talent_level: u8,
     level_curve: Option<&LevelCurve>,
-    unit_level: i32
+    unit_level: i32,
+    treasure: &Bonus,
 ) -> Option<String> {
     let pure_definition = get_talent(talent_group.ability_id)?;
     let display_definition = get_display_def(pure_definition.identity);
 
-    let leveled_base_stats = stats::apply_level(base_stats, level_curve, unit_level);
+    let leveled_base_stats = stats::apply_level(base_stats, level_curve, unit_level, treasure);
     let mut mutated_stats = leveled_base_stats.clone();
     let mut dummy_min_stats = leveled_base_stats.clone();
     let mut dummy_max_stats = leveled_base_stats.clone();
@@ -76,8 +78,8 @@ pub fn calculate_talent_display(
     let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talent_id == Some(talent_group.ability_id));
 
     if let Some(stat_definition) = target_stat_definition {
-        let old_stat_value = (stat_definition.get_value)(&StatContext::cat(&leveled_base_stats, 0, None));
-        let new_stat_value = (stat_definition.get_value)(&StatContext::cat(&mutated_stats, 0, None));
+        let old_stat_value = (stat_definition.get_value)(&StatContext::cat(&leveled_base_stats, 0, None, treasure));
+        let new_stat_value = (stat_definition.get_value)(&StatContext::cat(&mutated_stats, 0, None, treasure));
 
         let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
         let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
@@ -91,7 +93,7 @@ pub fn calculate_talent_display(
                 (&dummy_min_stats, value_one_minimum, value_two_minimum)
             };
 
-            let displayed_value = (stat_definition.get_value)(&StatContext::cat(displayed_stats, 0, None));
+            let displayed_value = (stat_definition.get_value)(&StatContext::cat(displayed_stats, 0, None, treasure));
             let modifier_string = stat_definition.talent_modifier_fmt.map(|format_func| format_func(modifier_one, modifier_two)).unwrap_or_default();
 
             return Some(if modifier_string.is_empty() {

@@ -4,8 +4,9 @@ use crate::systems::combat::comparable;
 use crate::systems::combat::registry::{get_display_def, Magnification, StatContext, ENEMY_STATS_REGISTRY};
 use crate::domains::enemy::filter::{EnemyFilterState, MatchMode};
 use crate::domains::enemy::scanner::EnemyEntry;
+use crate::systems::treasure::Bonus;
 
-pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32) -> i32 {
+pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32, treasure: &Bonus) -> i32 {
     let reg_name = match stat {
         "Atk Cycle (f)" => "Atk Cycle",
         _ => stat,
@@ -15,7 +16,7 @@ pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32)
 
     ENEMY_STATS_REGISTRY.iter()
         .find(|d| d.name == reg_name)
-        .map_or(0, |def| (def.get_value)(&StatContext::enemy(s, anim_frames, magnification)))
+        .map_or(0, |def| (def.get_value)(&StatContext::enemy(s, anim_frames, magnification, treasure)))
 }
 
 pub fn get_identity_name(identity: Identity) -> String {
@@ -47,7 +48,7 @@ pub fn entity_passes_filter(enemy: &EnemyEntry, filter: &EnemyFilterState) -> bo
             if range.min.is_empty() && range.max.is_empty() { continue; }
             active_conditions += 1;
 
-            let val = get_stat_value(stats, stat_name, enemy.atk_anim_frames, mag);
+            let val = get_stat_value(stats, stat_name, enemy.atk_anim_frames, mag, &filter.treasure);
 
             let r_min = range.min.parse::<i32>().unwrap_or(i32::MIN);
             let r_max = range.max.parse::<i32>().unwrap_or(i32::MAX);

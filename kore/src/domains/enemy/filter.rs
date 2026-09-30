@@ -4,6 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use nyanko::combat::Identity;
 
+use crate::systems::treasure::Bonus;
+
 pub const ATTACK_TYPE_IDENTITIES: &[Identity] = &[
     Identity::SingleAttack,
     Identity::AreaAttack,
@@ -33,6 +35,7 @@ pub struct EnemyFilterState {
     pub adv_ranges: HashMap<Identity, HashMap<&'static str, RangeInput>>,
     pub mag_input: String,
     pub stat_ranges: HashMap<&'static str, RangeInput>,
+    pub treasure: Bonus,
 }
 
 impl Default for EnemyFilterState {
@@ -44,6 +47,7 @@ impl Default for EnemyFilterState {
             adv_ranges: HashMap::new(),
             mag_input: String::new(),
             stat_ranges: HashMap::new(),
+            treasure: Bonus::default(),
         }
     }
 }

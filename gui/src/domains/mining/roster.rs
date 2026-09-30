@@ -38,6 +38,7 @@ pub(super) struct UnitContext<'a> {
     pub(super) curve: Option<&'a LevelCurve>,
     pub(super) costs: Option<&'a HashMap<u8, TalentCost>>,
     pub(super) level: i32,
+    pub(super) treasure: &'a Bonus,
 }
 
 pub(super) fn changed_diff<'a>(
@@ -271,6 +272,7 @@ impl State {
         &'a self,
         cats: &'a [CatEntry],
         vfs: &'a Vfs,
+        treasure: &'a Bonus,
         settings: &'a Settings,
         width: f32,
     ) -> Element<'a, Message> {
@@ -352,7 +354,7 @@ impl State {
                     .talents
                     .iter()
                     .filter_map(|slot| report.finds.get(*slot))
-                    .map(|find| self.view_find(find, cats, vfs, settings))
+                    .map(|find| self.view_find(find, cats, vfs, treasure, settings))
                     .collect();
 
                 uniform_grid(cards, CARD_SPACING).columns(cards_per_row(width, UNIT_MIN_WIDTH)).into()

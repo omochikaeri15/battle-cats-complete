@@ -7,10 +7,12 @@ use tracing::debug;
 
 use kore::domains::settings::{lang, nightly};
 use kore::domains::settings::{Settings as CoreSettings, UpdateMode};
+use kore::systems::treasure::Catalog;
 
 use crate::app::theme;
 use crate::app::{CheckFailure, UpdateStatus};
 use crate::common::fonts;
+use crate::systems::treasure;
 use crate::widget::toggle_row;
 #[cfg(target_os = "linux")]
 use crate::common::feedback::Slot;
@@ -61,6 +63,7 @@ pub enum Message {
     DesktopFeedbackExpired,
     ManualUpdateCheck,
     ShowUpdatePopup,
+    Treasure(treasure::Message),
 }
 
 #[derive(Default)]
@@ -68,6 +71,7 @@ pub struct State {
     drag: Drag,
     baseline: Vec<String>,
     settled: bool,
+    treasure: treasure::State,
 
     #[cfg(target_os = "linux")]
     desktop_feedback: Slot<DesktopFeedback>,
@@ -174,6 +178,10 @@ impl State {
                 debug!("Updater popup re-open requested, deferring to root app");
                 Task::none()
             }
+            Message::Treasure(message) => {
+                self.treasure.update(message, &mut core_settings.general.treasures);
+                Task::none()
+            }
         }
     }
 
@@ -185,7 +193,7 @@ impl State {
         std::mem::take(&mut self.settled)
     }
 
-    pub fn view<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus, catalog: &'a Catalog) -> Element<'a, Message> {
         let update_modes = vec!["Prompt", "Ignore"];
         let current_update_mode = match core_settings.general.update_mode {
             UpdateMode::Prompt => "Prompt",
@@ -285,6 +293,10 @@ impl State {
             header_section(text("System").size(24), system_content),
             header_section(text("Behavior").size(24), behavior_content),
             header_section(text("Language Priority").size(24), language_content),
+            header_section(
+                text("Treasures").size(24),
+                self.treasure.view(&core_settings.general.treasures, catalog).map(Message::Treasure),
+            ),
         ].spacing(SECTION_SPACING).into()
     }
 

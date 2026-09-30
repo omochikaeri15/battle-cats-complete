@@ -6,6 +6,7 @@ use nyanko::combat::Entity;
 use crate::domains::cat::game::talents;
 use crate::domains::cat::scanner::CatEntry;
 use crate::domains::settings::Settings;
+use crate::systems::treasure::Bonus;
 
 pub use crate::domains::cat::waiter::unitid;
 
@@ -36,13 +37,13 @@ pub fn seeded_level(cat: &CatEntry, settings: &Settings) -> (i32, String) {
     }
 }
 
-pub(crate) fn apply_level(base_stats: &Entity, curve: Option<&LevelCurve>, level: i32) -> Entity {
+pub(crate) fn apply_level(base_stats: &Entity, curve: Option<&LevelCurve>, level: i32, bonus: &Bonus) -> Entity {
     let mut s = base_stats.clone();
     if let Some(c) = curve {
-        s.hitpoints = c.calculate_stat(s.hitpoints, level);
-        s.attack_1_damage = c.calculate_stat(s.attack_1_damage, level);
-        s.attack_2_damage = c.calculate_stat(s.attack_2_damage, level);
-        s.attack_3_damage = c.calculate_stat(s.attack_3_damage, level);
+        s.hitpoints = c.calculate_stat(s.hitpoints, level, bonus.cat_health);
+        s.attack_1_damage = c.calculate_stat(s.attack_1_damage, level, bonus.cat_attack);
+        s.attack_2_damage = c.calculate_stat(s.attack_2_damage, level, bonus.cat_attack);
+        s.attack_3_damage = c.calculate_stat(s.attack_3_damage, level, bonus.cat_attack);
     }
     s
 }
@@ -52,9 +53,10 @@ pub fn get_final_stats(
     curve: Option<&LevelCurve>,
     level: i32,
     talent_data: Option<&Talent>,
-    talent_levels: Option<&HashMap<u8, u8>>
+    talent_levels: Option<&HashMap<u8, u8>>,
+    bonus: &Bonus,
 ) -> Entity {
-    let leveled = apply_level(base_stats, curve, level);
+    let leveled = apply_level(base_stats, curve, level, bonus);
     if let (Some(t_data), Some(levels)) = (talent_data, talent_levels) {
         talents::apply_talent_stats(&leveled, t_data, levels)
     } else {

@@ -5,8 +5,9 @@ use tracing::trace;
 use crate::domains::cat::filter::{CatFilterState, FilterCounts};
 use crate::domains::cat::scanner::CatEntry;
 use crate::systems::combat::registry::{StatContext, CAT_STATS_REGISTRY};
+use crate::systems::treasure::Bonus;
 
-pub(crate) fn get_stat_value(battle_stats: &Entity, stat_name: &str, animation_frames: i32, unitbuy: Option<&UnitBuy>) -> i32 {
+pub(crate) fn get_stat_value(battle_stats: &Entity, stat_name: &str, animation_frames: i32, unitbuy: Option<&UnitBuy>, treasure: &Bonus) -> i32 {
     let registry_name = match stat_name {
         "Cooldown (f)" => "Cooldown",
         "Atk Cycle (f)" => "Atk Cycle",
@@ -15,7 +16,7 @@ pub(crate) fn get_stat_value(battle_stats: &Entity, stat_name: &str, animation_f
 
     CAT_STATS_REGISTRY.iter()
         .find(|stat_definition| stat_definition.name == registry_name)
-        .map_or(0, |definition| (definition.get_value)(&StatContext::cat(battle_stats, animation_frames, unitbuy)))
+        .map_or(0, |definition| (definition.get_value)(&StatContext::cat(battle_stats, animation_frames, unitbuy, treasure)))
 }
 
 pub(crate) fn evaluate_stat_ranges(
@@ -35,8 +36,8 @@ pub(crate) fn evaluate_stat_ranges(
 
         counts.active += 1;
 
-        let value_a = get_stat_value(stats_min, stat_name, animation_frames, unitbuy_ref);
-        let value_b = get_stat_value(stats_max, stat_name, animation_frames, unitbuy_ref);
+        let value_a = get_stat_value(stats_min, stat_name, animation_frames, unitbuy_ref, &filter.treasure);
+        let value_b = get_stat_value(stats_max, stat_name, animation_frames, unitbuy_ref, &filter.treasure);
 
         let actual_min = value_a.min(value_b);
         let actual_max = value_a.max(value_b);

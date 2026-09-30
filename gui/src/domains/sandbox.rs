@@ -14,10 +14,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::rc::Rc;
 
-use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TREASURE_STAGES, TutorialFlags, VERSION};
+use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags, VERSION};
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::config::CatGod;
+use kore::systems::treasure::Catalog;
 use kore::domains::sandbox::keybind::Bind;
 use kore::domains::sandbox::altar::Altars;
 use kore::domains::sandbox::TECHS;
@@ -74,8 +75,6 @@ const TAB_HEIGHT: f32 = 28.0;
 const TAB_SIZE: f32 = 13.0;
 const TAB_SPACING: f32 = 4.0;
 const TAB_PADDING: f32 = 6.0;
-const FULL_PERCENT: u32 = 100;
-const SUPERIOR_TREASURE: i32 = 3;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -360,14 +359,7 @@ impl State {
             }
         }
 
-        for (chapter, stages) in setup.treasures.iter_mut().enumerate() {
-            let percent = if chapter < options.config.treasures.len() { options.config.treasure(chapter) } else { FULL_PERCENT };
-            let owned = (TREASURE_STAGES as u32 * percent).div_ceil(FULL_PERCENT) as usize;
-
-            for level in stages.iter_mut().take(owned) {
-                *level = SUPERIOR_TREASURE;
-            }
-        }
+        setup.treasures = options.config.treasure.levels();
 
         setup.altar = options.config.altar();
         setup.cat_god = match options.config.cat_god {
@@ -965,6 +957,7 @@ impl State {
         app_state: &'a AppState,
         staged: Option<Element<'a, stage::Message>>,
         playable: bool,
+        catalog: &'a Catalog,
     ) -> Element<'a, Message> {
         let options = &app_state.sandbox;
         let tabs = [
@@ -989,7 +982,7 @@ impl State {
 
         let body: Element<'a, Message> = match (options.tab, staged) {
             (SandboxTab::Stage, Some(staged)) => staged.map(Message::Stage),
-            (SandboxTab::Config, _) => self.config.view(options, PLAY_RESERVE).map(Message::Config),
+            (SandboxTab::Config, _) => self.config.view(options, catalog, PLAY_RESERVE).map(Message::Config),
             (SandboxTab::Replay, _) => self.replay.view(PLAY_RESERVE).map(Message::Replay),
             _ => self.lineup.view(app_state).map(Message::Lineup),
         };

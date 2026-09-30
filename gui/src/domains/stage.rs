@@ -509,7 +509,7 @@ impl State {
             content = content.push(self.fixedlineup.view(&resolved, preset, vfs));
         }
 
-        content = content.push(self.battleground.view(stage, map, self.selected_crown, &self.data.enemy_registry, &self.data.enemy_name_registry));
+        content = content.push(self.battleground.view(stage, map, self.selected_crown, &self.data.enemy_registry, &self.data.enemy_name_registry, global_ctx.treasure));
 
         smooth_scroll(
             scrollable(content)

@@ -17,6 +17,7 @@ use crate::common::io::json;
 use crate::common::keys::sanitize;
 use crate::systems::addons::ffmpeg::video::VideoFormat;
 use crate::systems::animation::Loop;
+use crate::systems::treasure;
 
 const EXPECTED_HASHES: [(&str, &str); 4] = [
     ("bac299d3cf278544782427ff7c71ef58", "6910fae125547fd957a505c67e1c72bd"),
@@ -255,6 +256,7 @@ pub struct GeneralSettings {
     pub enable_logging: bool,
     pub ignore_conflict_errors: bool,
     pub ignore_watcher_failure: bool,
+    pub treasures: treasure::Config,
 }
 
 impl Default for GeneralSettings {
@@ -266,6 +268,7 @@ impl Default for GeneralSettings {
             enable_logging: true,
             ignore_conflict_errors: false,
             ignore_watcher_failure: false,
+            treasures: treasure::Config::default(),
         }
     }
 }

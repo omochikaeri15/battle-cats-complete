@@ -8,6 +8,7 @@ use nyanko::files::img015;
 
 use crate::systems::combat::CustomIcon;
 use crate::systems::combat::registry::AbilityIcon;
+use crate::systems::treasure::Bonus;
 
 pub const ATTACK_TYPE_ICONS: &[AbilityIcon] = &[
     AbilityIcon::Standard(img015::ICON_SINGLE_ATTACK),
@@ -69,6 +70,7 @@ pub struct CatFilterState {
     pub stat_ranges: HashMap<&'static str, RangeInput>,
     pub combo_effects: HashSet<i32>,
     pub combo_units: HashSet<u32>,
+    pub treasure: Bonus,
 }
 
 impl Default for CatFilterState {
@@ -86,6 +88,7 @@ impl Default for CatFilterState {
             stat_ranges: HashMap::new(),
             combo_effects: HashSet::new(),
             combo_units: HashSet::new(),
+            treasure: Bonus::default(),
         }
     }
 }

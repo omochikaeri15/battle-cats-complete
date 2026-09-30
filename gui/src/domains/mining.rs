@@ -33,6 +33,7 @@ use kore::domains::mining::{self, changes, enemies, forms, levels, localized, st
 
 use kore::domains::settings::{ScannerConfig, Settings};
 use kore::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
+use kore::systems::treasure::Bonus;
 use kore::common::context::GlobalContext;
 use kore::Vfs;
 use kore::Source;

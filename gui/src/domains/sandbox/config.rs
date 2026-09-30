@@ -3,11 +3,13 @@ use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
 use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial};
-use kore::domains::sandbox::{config, CHAPTERS, ITEMS, TECHS};
+use kore::domains::sandbox::{config, ITEMS, TECHS};
+use kore::systems::treasure::Catalog;
 use kore::Vfs;
 
 use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume};
 use crate::app::theme;
+use crate::systems::treasure;
 use crate::widget::{combo_row, entry_row, hover_hint, list_row, section, smooth_scroll, toggle_row};
 
 const SIDEBAR_WIDTH: f32 = 110.0;
@@ -15,7 +17,6 @@ const PANEL_PADDING: f32 = 20.0;
 const ROW_SPACING: f32 = 10.0;
 const TAB_SPACING: f32 = 4.0;
 const TAB_SIZE: f32 = 14.0;
-const FULL_TREASURE: &str = "100";
 const NO_CAP: &str = "None";
 const LEVEL_DIGITS: usize = 6;
 
@@ -92,7 +93,7 @@ pub enum Message {
     Effects(SandboxVolume),
     Formation(Formation),
     Vibrate(bool),
-    Treasure(usize, String),
+    Treasure(treasure::Message),
     Tech(usize, String),
     Part(Slot, Part),
     Level(Slot, String),
@@ -111,6 +112,7 @@ pub struct State {
     styles: Vec<Part>,
     foundations: Vec<Part>,
     loaded: bool,
+    treasure: treasure::State,
 }
 
 fn typable(entry: &str) -> bool {
@@ -153,11 +155,7 @@ impl State {
             Message::Effects(volume) => options.effects_volume = volume.percent(),
             Message::Formation(formation) => options.two_rows = formation == Formation::Double,
             Message::Vibrate(enabled) => options.vibrate = enabled,
-            Message::Treasure(chapter, entry) => {
-                if let Some(held) = options.config.treasures.get_mut(chapter).filter(|_| typable(&entry)) {
-                    *held = entry;
-                }
-            }
+            Message::Treasure(message) => self.treasure.update(message, &mut options.config.treasure),
             Message::Tech(index, entry) => {
                 if let Some(held) = options.config.techs.get_mut(index).filter(|_| typable(&entry)) {
                     *held = entry;
@@ -210,7 +208,7 @@ impl State {
         }
     }
 
-    pub fn view<'a>(&'a self, options: &'a SandboxState, bottom: f32) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, options: &'a SandboxState, catalog: &'a Catalog, bottom: f32) -> Element<'a, Message> {
         let tabs = [
             (SandboxPanel::Settings, "Settings"),
             (SandboxPanel::Treasure, "Treasure"),
@@ -236,7 +234,7 @@ impl State {
 
         let body = match options.panel {
             SandboxPanel::Settings => Self::settings(options),
-            SandboxPanel::Treasure => Self::treasure(options),
+            SandboxPanel::Treasure => section("Treasures", Length::Fill, self.treasure.view(&options.config.treasure, catalog).map(Message::Treasure)),
             SandboxPanel::Tech => Self::tech(options),
             SandboxPanel::Base => self.base(options),
             SandboxPanel::Items => Self::items(options),
@@ -331,18 +329,6 @@ impl State {
         }
 
         section("Battle Items", Length::Fill, rows)
-    }
-
-    fn treasure(options: &SandboxState) -> Element<'_, Message> {
-        let mut rows = Column::new().spacing(ROW_SPACING);
-
-        for (chapter, name) in CHAPTERS.iter().enumerate() {
-            rows = rows.push(entry_row(name, FULL_TREASURE, &options.config.treasures[chapter], move |entry| {
-                Message::Treasure(chapter, entry)
-            }));
-        }
-
-        section("Treasure Completion (%)", Length::Fill, rows)
     }
 
     fn tech(options: &SandboxState) -> Element<'_, Message> {

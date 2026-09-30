@@ -540,7 +540,7 @@ impl State {
                 let Some(vault) = self.staged.as_deref().map(|staged| &staged.vault) else {
                     return Task::none();
                 };
-                let scoped = GlobalContext { param: ctx.param, localizable: ctx.localizable, vault };
+                let scoped = GlobalContext { vault, ..ctx };
 
                 self.inspector.update(msg, settings, app_state, scoped).map(Message::Cat)
             }
@@ -647,7 +647,7 @@ impl State {
     ) -> Option<Element<'a, Message>> {
         let tile = self.tiles.get(self.open?)?;
         let vault = self.vault()?;
-        let scoped = GlobalContext { param: ctx.param, localizable: ctx.localizable, vault };
+        let scoped = GlobalContext { vault, ..ctx };
         let title = self.inspector.cat(tile.id).map_or("Unit", |cat| cat.names.get(tile.form).and_then(Option::as_deref).unwrap_or("Unit"));
 
         Some(self.unit_popup.view(

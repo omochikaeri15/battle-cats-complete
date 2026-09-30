@@ -13,6 +13,7 @@ use iced::widget::{
 use iced::{Alignment, Element, Length, Size, Task};
 
 use kore::domains::cat::files as cat_files;
+use kore::systems::treasure::Catalog;
 use kore::domains::sandbox::keybind::Bind;
 use kore::domains::settings::{lang, nightly, ContextScope, EditorMode, ReplaySource, Utf8Mode};
 use kore::domains::settings::{
@@ -368,12 +369,12 @@ impl State {
         self.pem.is_open.then(|| self.pem.view(window).map(Message::Pem))
     }
 
-    pub fn view<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus, catalog: &'a Catalog) -> Element<'a, Message> {
         let tab_area: Element<'a, Message> = if self.active_tab == Tab::About {
             container(self.view_about()).width(Length::Fill).height(Length::Fill).padding(15).into()
         } else {
             smooth_scroll(
-                scrollable(container(self.view_tab_content(core_settings, updater_status)).padding(15))
+                scrollable(container(self.view_tab_content(core_settings, updater_status, catalog)).padding(15))
                     .width(Length::Fill)
                     .height(Length::Fill)
             ).into()
@@ -433,11 +434,11 @@ impl State {
             .into()
     }
 
-    fn view_tab_content<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus) -> Element<'a, Message> {
+    fn view_tab_content<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus, catalog: &'a Catalog) -> Element<'a, Message> {
         match self.active_tab {
             Tab::General => column![
                 header_section(text("Keys & IV").size(24), self.view_keys(core_settings)),
-                self.general.view(core_settings, updater_status).map(Message::General),
+                self.general.view(core_settings, updater_status, catalog).map(Message::General),
             ].spacing(SECTION_SPACING).into(),
             Tab::Sandbox => self.view_sandbox(core_settings),
             Tab::Cats => self.view_cats(core_settings),

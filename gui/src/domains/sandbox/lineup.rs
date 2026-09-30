@@ -10,6 +10,7 @@ use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Th
 use kore::common::context::GlobalContext;
 use kore::domains::cat::scanner::{self, CatEntry};
 use kore::domains::cat::game::stats::get_final_stats;
+use kore::systems::treasure::Bonus;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::rules::Rules;
 use kore::domains::sandbox::{mount_of, Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
@@ -345,7 +346,7 @@ impl State {
             let talents = (member.form >= FIRST_TALENT_FORM).then_some(&member.talents);
             let (level, plus) = member.levels();
             let base = stats.map_or(0, |stats| {
-                get_final_stats(stats, cat.and_then(|cat| cat.curve.as_ref()), (level + plus) as i32, cat.and_then(|cat| cat.talent_data.as_ref()), talents)
+                get_final_stats(stats, cat.and_then(|cat| cat.curve.as_ref()), (level + plus) as i32, cat.and_then(|cat| cat.talent_data.as_ref()), talents, &Bonus::default())
                     .eoc1_cost
             });
             let rarity = cat.and_then(|cat| usize::try_from(cat.unitbuy.rarity).ok()).unwrap_or(0);

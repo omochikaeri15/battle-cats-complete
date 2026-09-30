@@ -8,5 +8,5 @@ pub mod rules;
 pub mod replay;
 pub mod scored;
 
-pub use config::{Config, Tech, CHAPTERS, ITEMS, TECHS};
+pub use config::{Config, Tech, ITEMS, TECHS};
 pub use lineup::{mount_of, Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS, TOP_ROW};

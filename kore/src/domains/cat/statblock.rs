@@ -28,7 +28,7 @@ pub fn build(subject: Subject<'_>) -> Option<StatblockData> {
     let form_allows_talents = subject.form >= 2;
     let talent_data = if form_allows_talents { cat.talent_data.as_ref() } else { None };
     let talent_levels = if form_allows_talents { subject.talent_levels } else { None };
-    let final_stats = get_final_stats(base_stats, cat.curve.as_ref(), subject.current_level, talent_data, talent_levels);
+    let final_stats = get_final_stats(base_stats, cat.curve.as_ref(), subject.current_level, talent_data, talent_levels, subject.global.treasure);
 
     let ctx = RenderContext {
         global: subject.global,
@@ -61,7 +61,7 @@ fn assemble(
     };
 
     let anim_frames = cat_entry.atk_anim_frames[current_form];
-    let stat_ctx = StatContext::cat(ctx.final_stats, anim_frames, Some(&cat_entry.unitbuy));
+    let stat_ctx = StatContext::cat(ctx.final_stats, anim_frames, Some(&cat_entry.unitbuy), ctx.global.treasure);
     let cycle = (STAT_ATK_CYCLE.get_value)(&stat_ctx);
 
     let headers_1 = vec![
@@ -121,7 +121,7 @@ fn build_spirit_data(ctx: &RenderContext<'_>) -> Option<SpiritData> {
     let conjure_stats_vec = unitid(&ctx.global.vault.vfs, ctx.base_stats.conjure_unit_id)?;
     let conjure_stats = conjure_stats_vec.first()?;
 
-    let conjure_final = get_final_stats(conjure_stats, ctx.level_curve, ctx.current_level, None, None);
+    let conjure_final = get_final_stats(conjure_stats, ctx.level_curve, ctx.current_level, None, None, ctx.global.treasure);
 
     let spirit_ctx = RenderContext {
         base_stats: conjure_stats,

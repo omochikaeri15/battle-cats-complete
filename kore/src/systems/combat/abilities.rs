@@ -48,6 +48,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
             duration: attrs.iter().find(|(_, _, unit)| *unit == AttrUnit::Frames).map_or(0, |(_, value, _)| frames(*value)),
             magnification: ctx.magnification,
             param: ctx.global.param,
+            treasure: ctx.global.treasure,
         };
 
         groups[slot].push(AbilityItem {
@@ -76,7 +77,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
 
             match group.ability_id {
                 25 | 26 | 27 | 31 | 32 | 61 | 82 => {
-                    if let Some(text) = talents::calculate_talent_display(group, ctx.base_stats, level, ctx.level_curve, ctx.current_level) {
+                    if let Some(text) = talents::calculate_talent_display(group, ctx.base_stats, level, ctx.level_curve, ctx.current_level, ctx.global.treasure) {
                         talent_headline.push(AbilityItem { identity, icon_id, text, custom_icon: custom, border_id });
                     }
                 },
@@ -88,6 +89,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
                         duration: 0,
                         magnification: ctx.magnification,
                         param: ctx.global.param,
+                        treasure: ctx.global.treasure,
                     };
 
                     let text = (display_def.formatter)(&format_ctx);

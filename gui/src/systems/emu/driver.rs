@@ -9,7 +9,7 @@ use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
     BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
-    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, stock_battle_items, unlock_dummy_combos,
+    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, seed_point_cap, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use kore::domains::sandbox::replay::{self as tape, Cue, Forgiven, Recording};
@@ -860,6 +860,8 @@ impl Driver {
         if let Err(fault) = seed_altar_records(&mut self.ctx, &self.setup) {
             warn!("emu: altar records could not be seeded: {fault}");
         }
+
+        seed_point_cap(&mut self.ctx);
 
         if let Err(fault) = self.select_stage() {
             warn!("emu: stage could not be selected: {fault}");
