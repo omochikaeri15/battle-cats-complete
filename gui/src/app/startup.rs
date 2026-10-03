@@ -184,7 +184,7 @@ impl BattleCatsApp {
                 stored
             });
 
-            let rebuilt = walk_vault(&config);
+            let rebuilt = secluded(|| walk_vault(&config));
             let index = rebuilt.hash(config.active_mod.as_deref());
             let key = Some(Vault::key_for(index, &config));
 
@@ -231,6 +231,16 @@ impl BattleCatsApp {
             self.enemy_state.start_load(&self.settings, &self.vault, active_mod.clone(), cached).map(Message::Enemy),
             self.stage_state.start_load(&self.settings, &self.vault, active_mod, cached).map(Message::Stage),
         ])
+    }
+}
+
+fn secluded<T: Send>(job: impl FnOnce() -> T + Send) -> T {
+    match rayon::ThreadPoolBuilder::new().thread_name(|worker| format!("vault_walk_{worker}")).build() {
+        Ok(pool) => pool.install(job),
+        Err(err) => {
+            warn!("Could not give the file index walk its own thread pool, sharing the global one: {}", err);
+            job()
+        }
     }
 }
 

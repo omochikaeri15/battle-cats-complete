@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -55,6 +55,14 @@ pub(super) fn stat(path: &Path) -> Option<(u64, u64)> {
     path.metadata().ok().map(|meta| (modified(&meta), meta.len()))
 }
 
+fn is_folder(entry: &DirEntry, path: &Path) -> bool {
+    entry
+        .file_type()
+        .ok()
+        .filter(|kind| !kind.is_symlink())
+        .map_or_else(|| path.is_dir(), |kind| kind.is_dir())
+}
+
 fn modified(meta: &fs::Metadata) -> u64 {
     meta.modified()
         .ok()
@@ -80,7 +88,7 @@ fn scan(root: &Path, dir: &Path) -> Collected {
             continue;
         }
 
-        if path.is_dir() {
+        if is_folder(&entry, &path) {
             if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
                 nested.push(Box::<str>::from(name));
             }
@@ -150,4 +158,33 @@ fn merge(into: &mut Collected, from: Collected) {
 
     into.dirs.extend(from.dirs);
     into.folders.extend(from.folders);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+
+    // Folders are told apart from the listing alone, so a linked folder needs its own look.
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_folder_is_still_walked_into() {
+        let root = env::temp_dir().join(format!("bcc-walk-link-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+
+        fs::create_dir_all(root.join("mount/cats")).expect("plain folder");
+        fs::create_dir_all(root.join("elsewhere")).expect("link target");
+        fs::write(root.join("mount/cats/plain.csv"), "0").expect("plain file");
+        fs::write(root.join("elsewhere/linked.csv"), "0").expect("linked file");
+        std::os::unix::fs::symlink(root.join("elsewhere"), root.join("mount/linked")).expect("link");
+
+        let mounted = walk(&root.join("mount")).expect("walk");
+
+        assert!(mounted.files.contains_key("plain.csv"));
+        assert!(mounted.files.contains_key("linked.csv"));
+        assert_eq!(mounted.folders.get("").map(Vec::len), Some(2));
+
+        let _ = fs::remove_dir_all(&root);
+    }
 }
