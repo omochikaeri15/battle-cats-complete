@@ -384,10 +384,6 @@ fn flag(raw: i32) -> Vec<Attribute> {
     if raw > 0 { active() } else { Vec::new() }
 }
 
-fn get_dur_val(v1: i32, v2: i32) -> i32 {
-    if v1 != 0 { v1 } else { v2 }
-}
-
 fn wave_reach(stats: &Entity) -> i32 {
     let base = match stats.faction {
         Faction::Cat => 332.5,
@@ -636,7 +632,7 @@ pub static REGISTRY: &[Ability] = &[
     },
     Ability {
         identity: Identity::TraitWitch,
-        talent_id: None,
+        talent_id: Some(42),
         icon_id: Some(img015::ICON_WITCH),
         cat_glossary: None,
         enemy_glossary: Some(14),
@@ -649,7 +645,7 @@ pub static REGISTRY: &[Ability] = &[
     },
     Ability {
         identity: Identity::TraitEva,
-        talent_id: None,
+        talent_id: Some(43),
         icon_id: Some(img015::ICON_EVA),
         cat_glossary: None,
         enemy_glossary: Some(15),
@@ -835,7 +831,7 @@ pub static REGISTRY: &[Ability] = &[
     },
     Ability {
         identity: Identity::IsMetal,
-        talent_id: Some(43),
+        talent_id: None,
         icon_id: Some(img015::ICON_METAL),
         cat_glossary: Some(31),
         enemy_glossary: None,
@@ -940,8 +936,8 @@ pub static REGISTRY: &[Ability] = &[
         },
         apply_talent: Some(|stats, chance, duration, _| {
             stats.behemoth_slayer = 1;
-            stats.behemoth_dodge_chance = if chance > 0 { chance } else { 5 };
-            stats.behemoth_dodge_duration = if duration > 0 { duration } else { 30 };
+            stats.behemoth_dodge_chance += chance;
+            stats.behemoth_dodge_duration += duration;
         }),
     },
     Ability {
@@ -1087,7 +1083,7 @@ pub static REGISTRY: &[Ability] = &[
     },
     Ability {
         identity: Identity::WaveBlock,
-        talent_id: None,
+        talent_id: Some(23),
         icon_id: Some(img015::ICON_WAVE_BLOCK),
         cat_glossary: Some(42),
         enemy_glossary: None,
@@ -1134,7 +1130,7 @@ pub static REGISTRY: &[Ability] = &[
                 ]
             } else { Vec::new() }
         },
-        apply_talent: Some(|stats, chance, level, _| { stats.wave_chance += chance; stats.wave_level = level; }),
+        apply_talent: Some(|stats, chance, level, _| { stats.wave_chance += chance; stats.wave_level += level; }),
     },
     Ability {
         identity: Identity::MiniWave,
@@ -1159,7 +1155,12 @@ pub static REGISTRY: &[Ability] = &[
                 ]
             } else { Vec::new() }
         },
-        apply_talent: Some(|stats, chance, level, _| { stats.mini_wave_flag = 1; stats.wave_chance += chance; stats.wave_level = level; }),
+        apply_talent: Some(|stats, chance, level, _| {
+            if chance != 0 { stats.mini_wave_flag = 1; }
+
+            stats.wave_chance += chance;
+            stats.wave_level += level;
+        }),
     },
     Ability {
         identity: Identity::SurgeAttack,
@@ -1195,9 +1196,9 @@ pub static REGISTRY: &[Ability] = &[
         },
         apply_talent: Some(|stats, chance, level, group_data| {
             stats.surge_chance += chance;
-            stats.surge_level = level;
-            stats.surge_spawn_anchor = group_data.min_3 as i32 / 4;
-            stats.surge_spawn_span = group_data.min_4 as i32 / 4;
+            stats.surge_level += level;
+            stats.surge_spawn_anchor += group_data.min_3 as i32 / 4;
+            stats.surge_spawn_span += group_data.min_4 as i32 / 4;
         }),
     },
     Ability {
@@ -1233,11 +1234,12 @@ pub static REGISTRY: &[Ability] = &[
             } else { Vec::new() }
         },
         apply_talent: Some(|stats, chance, level, group_data| {
-            stats.mini_surge_flag = 1;
+            if chance != 0 { stats.mini_surge_flag = 1; }
+
             stats.surge_chance += chance;
-            stats.surge_level = level;
-            stats.surge_spawn_anchor = group_data.min_3 as i32 / 4;
-            stats.surge_spawn_span = group_data.min_4 as i32 / 4;
+            stats.surge_level += level;
+            stats.surge_spawn_anchor += group_data.min_3 as i32 / 4;
+            stats.surge_spawn_span += group_data.min_4 as i32 / 4;
         }),
     },
     Ability {
@@ -1271,8 +1273,8 @@ pub static REGISTRY: &[Ability] = &[
         },
         apply_talent: Some(|stats, chance, _, group_data| {
             stats.explosion_chance += chance;
-            stats.explosion_spawn_anchor = group_data.min_2 as i32 / 4;
-            stats.explosion_spawn_span = group_data.min_3 as i32 / 4;
+            stats.explosion_spawn_anchor += group_data.min_2 as i32 / 4;
+            stats.explosion_spawn_span += group_data.min_3 as i32 / 4;
         }),
     },
     Ability {
@@ -1295,7 +1297,7 @@ pub static REGISTRY: &[Ability] = &[
         },
         apply_talent: Some(|stats, chance, boost, _| {
             stats.savage_blow_chance += chance;
-            if boost > 0 { stats.savage_blow_boost = boost; }
+            stats.savage_blow_boost += boost;
         }),
     },
     Ability {
@@ -1334,12 +1336,10 @@ pub static REGISTRY: &[Ability] = &[
             } else { Vec::new() }
         },
         apply_talent: Some(|stats, threshold, boost, _| {
-            if stats.strengthen_boost == 0 {
-                stats.strengthen_threshold = 100 - threshold;
-                stats.strengthen_boost = boost;
-            } else {
-                stats.strengthen_boost += if threshold != 0 { threshold } else { boost };
-            }
+            let carried = if stats.strengthen_threshold != 0 { stats.strengthen_threshold } else { 100 };
+
+            stats.strengthen_threshold = (carried - threshold).max(0);
+            stats.strengthen_boost += boost;
         }),
     },
     Ability {
@@ -1403,16 +1403,11 @@ pub static REGISTRY: &[Ability] = &[
             } else { Vec::new() }
         },
         apply_talent: Some(|stats, chance, duration, group_data| {
-            if stats.weaken_chance == 0 {
-                stats.weaken_chance = chance;
-                stats.weaken_duration = duration;
-                stats.weaken_to = (100 - group_data.min_3) as i32;
-            } else if group_data.text_id == 42 {
-                stats.weaken_duration += get_dur_val(chance, duration);
-            } else {
-                stats.weaken_chance += chance;
-                stats.weaken_duration += duration;
-            }
+            let carried = if stats.weaken_chance != 0 { stats.weaken_to } else { 100 };
+
+            stats.weaken_to = (carried - group_data.min_3 as i32).max(0);
+            stats.weaken_chance += chance;
+            stats.weaken_duration += duration;
         }),
     },
     Ability {
@@ -1433,16 +1428,7 @@ pub static REGISTRY: &[Ability] = &[
                 ]
             } else { Vec::new() }
         },
-        apply_talent: Some(|stats, chance, duration, group_data| {
-            if stats.freeze_chance == 0 {
-                stats.freeze_chance = chance;
-                stats.freeze_duration = duration;
-            } else if group_data.text_id == 74 {
-                stats.freeze_chance += chance;
-            } else {
-                stats.freeze_duration += get_dur_val(chance, duration);
-            }
-        }),
+        apply_talent: Some(|stats, chance, duration, _| { stats.freeze_chance += chance; stats.freeze_duration += duration; }),
     },
     Ability {
         identity: Identity::Slow,
@@ -1462,16 +1448,7 @@ pub static REGISTRY: &[Ability] = &[
                 ]
             } else { Vec::new() }
         },
-        apply_talent: Some(|stats, chance, duration, group_data| {
-            if stats.slow_chance == 0 {
-                stats.slow_chance = chance;
-                stats.slow_duration = duration;
-            } else if group_data.text_id == 63 {
-                stats.slow_chance += chance;
-            } else {
-                stats.slow_duration += get_dur_val(chance, duration);
-            }
-        }),
+        apply_talent: Some(|stats, chance, duration, _| { stats.slow_chance += chance; stats.slow_duration += duration; }),
     },
     Ability {
         identity: Identity::Knockback,
@@ -1508,16 +1485,7 @@ pub static REGISTRY: &[Ability] = &[
                 ]
             } else { Vec::new() }
         },
-        apply_talent: Some(|stats, chance, duration, group_data| {
-            if stats.curse_chance == 0 {
-                stats.curse_chance = chance;
-                stats.curse_duration = duration;
-            } else if group_data.text_id == 93 {
-                stats.curse_duration += get_dur_val(chance, duration);
-            } else {
-                stats.curse_chance += chance;
-            }
-        }),
+        apply_talent: Some(|stats, chance, duration, _| { stats.curse_chance += chance; stats.curse_duration += duration; }),
     },
     Ability {
         identity: Identity::Warp,
@@ -2169,5 +2137,46 @@ mod tests {
         assert!(!anchor.interpolated);
         assert_eq!(anchor.scale, Scale::Quarter);
         assert_eq!(stats.surge_spawn_anchor, anchor.scale.apply(i32::from(group.min_3)));
+    }
+
+    #[test]
+    fn a_status_talent_adds_both_pairs_whatever_its_text_says() {
+        // A cat that already freezes, given a row shaped like a brand new ability.
+        for text_id in [0, 2, 43, 74] {
+            let group = TalentGroup { text_id, ..Default::default() };
+            let mut stats = Entity { freeze_chance: 20, freeze_duration: 60, ..Default::default() };
+
+            if let Some(apply) = get_talent(2).and_then(|freeze| freeze.apply_talent) {
+                apply(&mut stats, 30, 15, &group);
+            }
+
+            assert_eq!((stats.freeze_chance, stats.freeze_duration), (50, 75));
+        }
+    }
+
+    #[test]
+    fn weaken_and_strengthen_subtract_from_what_the_cat_already_carries() {
+        let group = TalentGroup { min_3: 10, ..Default::default() };
+        let mut stats = Entity { weaken_chance: 40, weaken_to: 50, strengthen_threshold: 60, strengthen_boost: 100, ..Default::default() };
+
+        if let Some(apply) = get_talent(1).and_then(|weaken| weaken.apply_talent) {
+            apply(&mut stats, 0, 20, &group);
+        }
+        if let Some(apply) = get_talent(10).and_then(|strengthen| strengthen.apply_talent) {
+            apply(&mut stats, 15, 50, &group);
+        }
+
+        assert_eq!(stats.weaken_to, 40);
+        assert_eq!((stats.strengthen_threshold, stats.strengthen_boost), (45, 150));
+    }
+
+    #[test]
+    fn a_mid_level_value_is_truncated_not_rounded() {
+        // 5 + 5 * 10 / 9 is 10.56, and the engine keeps the 10.
+        assert_eq!(TalentGroup::calculate_value(5, 15, 6, 10), 10);
+        assert_eq!(TalentGroup::calculate_value(5, 15, 1, 10), 5);
+        assert_eq!(TalentGroup::calculate_value(5, 15, 10, 10), 15);
+        assert_eq!(TalentGroup::calculate_value(5, 15, 0, 10), 0);
+        assert_eq!(TalentGroup::calculate_value(7, 7, 1, 0), 7);
     }
 }

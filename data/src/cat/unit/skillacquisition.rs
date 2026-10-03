@@ -72,9 +72,10 @@ impl TalentGroup {
     /// Interpolates a talent's effect value at a given progression level.
     ///
     /// The value scales linearly between the declared minimum and maximum
-    /// boundaries across the talent's level range. Level zero yields no effect,
-    /// the first level yields exactly the minimum, and the maximum level yields
-    /// exactly the maximum, so the endpoints are never subject to rounding.
+    /// boundaries across the talent's level range, and the engine truncates the
+    /// division instead of rounding it. Level zero yields no effect, the first
+    /// level yields exactly the minimum, and the maximum level yields exactly
+    /// the maximum.
     ///
     /// # Arguments
     /// * `min` - The boundary parameter representing the effect at the first level.
@@ -83,21 +84,16 @@ impl TalentGroup {
     /// * `max_level` - The highest level this talent may reach.
     ///
     /// # Returns
-    /// An `i32` containing the rounded effect value at the requested level, or
+    /// An `i32` containing the truncated effect value at the requested level, or
     /// zero when the talent is unlearned.
     pub fn calculate_value(min: u16, max: u16, level: u8, max_level: u8) -> i32 {
         if level == 0 { return 0; }
         if max_level <= 1 { return min as i32; }
-        if level == 1 { return min as i32; }
-        if level == max_level { return max as i32; }
 
-        let minimum_float = min as f32;
-        let maximum_float = max as f32;
-        let level_float = level as f32;
-        let maximum_level_float = max_level as f32;
+        let span = max as i32 - min as i32;
+        let steps = max_level as i32 - 1;
 
-        let calculated_value = minimum_float + (maximum_float - minimum_float) * (level_float - 1.0) / (maximum_level_float - 1.0);
-        calculated_value.round() as i32
+        min as i32 + (level as i32 - 1) * span / steps
     }
 }
 

@@ -3,7 +3,7 @@ use crate::{
     engine::{AppContext, is_score_stage, map_type_of_map_id, obfuscate_value},
 };
 
-use super::{BATTLE_ITEMS, DECK_SLOTS, Setup};
+use super::{BATTLE_ITEMS, DECK_SLOTS, Setup, setup::SCORE_MODE_TYPES};
 
 const EMPTY_SLOT: i32 = -1;
 const DECK_BIAS: i32 = 2;
@@ -89,11 +89,13 @@ pub fn fill_dummy_talents(ctx: &mut AppContext, setup: &Setup) {
 }
 
 pub fn usable_items(map_id: i32, scored: bool) -> [bool; BATTLE_ITEMS] {
-    if map_type_of_map_id(map_id) == GAUNTLET_TYPE {
+    let map_type = map_type_of_map_id(map_id);
+
+    if map_type == GAUNTLET_TYPE {
         return GAUNTLET_ITEMS;
     }
 
-    if scored || map_type_of_map_id(map_id) == LABYRINTH_TYPE {
+    if scored || map_type == LABYRINTH_TYPE || SCORE_MODE_TYPES.contains(&map_type) {
         return SCORED_STAGE_ITEMS;
     }
 

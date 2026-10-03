@@ -24,7 +24,7 @@ const COSMOS_MODE: i32 = 7;
 const EXTRA_TYPE: i32 = -8;
 const EXTRA_MODE: i32 = 0x63;
 const BATTLE_INTRO_START: i32 = 0x726;
-const SCORED_TYPES: [i32; 3] = [3, 4, -24];
+pub(super) const SCORE_MODE_TYPES: [i32; 3] = [3, 4, -24];
 const CAT_SIDE: i32 = 1;
 const ENEMY_SIDE: i32 = 2;
 const DUNGEON_TYPE: i32 = -11;
@@ -136,7 +136,7 @@ pub fn select_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault
     };
 
     ctx.set_i32_at(AppContext::CHAPTER_MODE, mode)?;
-    ctx.set_block_at::<1>(AppContext::SCORE_MODE_FLAG, [u8::from(SCORED_TYPES.contains(&map_type))])?;
+    ctx.set_block_at::<1>(AppContext::SCORE_MODE_FLAG, [u8::from(SCORE_MODE_TYPES.contains(&map_type))])?;
 
     if mode == FREE_MAP_MODE {
         ctx.set_i32_at(AppContext::SAVED_MAP_TYPE, map_type_as_index(map_type))?;

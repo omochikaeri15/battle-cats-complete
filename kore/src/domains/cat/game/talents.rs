@@ -13,18 +13,7 @@ use crate::systems::treasure::Bonus;
 const FRUIT_SCALED: [Identity; 5] = [Identity::Freeze, Identity::Slow, Identity::Weaken, Identity::Curse, Identity::Dodge];
 
 pub(crate) fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_level: u8) -> i32 {
-    if level == 0 { return 0; }
-    if max_level <= 1 { return minimum as i32; }
-    if level == 1 { return minimum as i32; }
-    if level == max_level { return maximum as i32; }
-
-    let min_float = minimum as f32;
-    let max_float = maximum as f32;
-    let level_float = level as f32;
-    let max_level_float = max_level as f32;
-
-    let calculated_value = min_float + (max_float - min_float) * (level_float - 1.0) / (max_level_float - 1.0);
-    calculated_value.round() as i32
+    TalentGroup::calculate_value(minimum, maximum, level, max_level)
 }
 
 pub fn calculate_talent_display(

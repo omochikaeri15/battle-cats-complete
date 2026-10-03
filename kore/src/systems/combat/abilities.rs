@@ -174,12 +174,12 @@ fn talent_border(ctx: &RenderContext<'_>, ability_id: u8) -> Option<usize> {
 }
 
 fn is_trait_id(id: u8) -> bool {
-    (33..=41).contains(&id) || id == 57
+    (33..=43).contains(&id) || id == 57
 }
 
 fn enables_trait(name_id: i16, type_id: u16, target_id: u8) -> bool {
     let bit_idx = match target_id {
-        33 => 0, 34 => 1, 35 => 2, 36 => 3, 37 => 4, 38 => 5, 39 => 6, 40 => 7, 41 => 8, 57 => 11,
+        33 => 0, 34 => 1, 35 => 2, 36 => 3, 37 => 4, 38 => 5, 39 => 6, 40 => 7, 41 => 8, 42 => 9, 43 => 10, 57 => 11,
         _ => return false,
     };
 
