@@ -208,6 +208,8 @@ enum ActivePopup {
     SettingsKeys,
     SettingsExceptions,
     SettingsPem,
+    SettingsSource,
+    SettingsProvider,
     UtilityExport,
     UtilitySettings,
     StudioManage,
@@ -228,7 +230,7 @@ enum ActivePopup {
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 30] = [
+    const ALL: [Self; 32] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -243,6 +245,8 @@ impl ActivePopup {
         Self::SettingsKeys,
         Self::SettingsExceptions,
         Self::SettingsPem,
+        Self::SettingsSource,
+        Self::SettingsProvider,
         Self::UtilityExport,
         Self::UtilitySettings,
         Self::StudioManage,
@@ -277,6 +281,8 @@ impl ActivePopup {
             Self::SettingsKeys => popup::Kind::Keys,
             Self::SettingsExceptions => popup::Kind::Exceptions,
             Self::SettingsPem => popup::Kind::Pem,
+            Self::SettingsSource => popup::Kind::Source,
+            Self::SettingsProvider => popup::Kind::Provider,
             Self::UtilityExport => popup::Kind::UtilityAnimationExport,
             Self::UtilitySettings => popup::Kind::UtilityAnimationSettings,
             Self::StudioManage => popup::Kind::StudioManage,
@@ -1381,18 +1387,7 @@ impl BattleCatsApp {
                     return task;
                 }
 
-                let packs = self.files_state.reload_packs().map(Message::Files);
-                let scope = mining::Scope {
-                    cats: &self.cat_state.data.cats,
-                    foes: &self.enemy_state.data.enemies,
-                    registry: &self.stage_state.data.registry,
-                    global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure, names: &self.names },
-                    settings: &self.settings,
-                };
-
-                let mined = self.mining_state.reload(scope, self.window_size).map(Message::Mining);
-
-                Task::batch([task, packs, mined, self.rebuild_content()])
+                Task::batch([task, self.reload_game_data()])
             }
             Message::Mining(mining::Message::CreateBase) => {
                 self.mining_state.begin(mining::Chore::Snapshot).map(Message::Mining)
@@ -1621,7 +1616,7 @@ impl BattleCatsApp {
                 let scanned_with = self.scanner_fingerprint();
                 let treasures_before = self.settings.general.treasures.clone();
                 let forced_before = self.settings.mods.force_name_fallbacks;
-                let task = self.settings_state.update(msg, &mut self.settings).map(Message::Settings);
+                let task = self.settings_state.update(msg, &mut self.settings, &mut self.app_state).map(Message::Settings);
 
                 if self.settings.general.treasures != treasures_before || self.settings.mods.force_name_fallbacks != forced_before {
                     self.refresh_treasure();
@@ -1651,8 +1646,15 @@ impl BattleCatsApp {
                 self.sync_popup(ActivePopup::SettingsKeys, self.settings_state.keys_popup_open());
                 self.sync_popup(ActivePopup::SettingsExceptions, self.settings_state.exceptions_popup_open());
                 self.sync_popup(ActivePopup::SettingsPem, self.settings_state.pem_popup_open());
+                self.sync_popup(ActivePopup::SettingsSource, self.settings_state.source_popup_open());
+                self.sync_popup(ActivePopup::SettingsProvider, self.settings_state.provider_popup_open());
 
-                Task::batch(iter::once(task).chain(relocalize).chain(rescan).chain(left_nightly))
+                let reloaded = self.settings_state.take_source_refresh().then(|| {
+                    info!("Game data was replaced from its source, reloading everything");
+                    self.reload_game_data()
+                });
+
+                Task::batch(iter::once(task).chain(relocalize).chain(rescan).chain(left_nightly).chain(reloaded))
             }
         }
     }
@@ -1719,7 +1721,7 @@ impl BattleCatsApp {
 
         let popups = popup::layered(popups.into_iter().map(|(_, kind, view)| (kind, view)).collect());
 
-        let modal = self.active_popups.contains(&ActivePopup::SandboxAcknowledge);
+        let modal = self.active_popups.iter().any(|popup| matches!(popup, ActivePopup::SandboxAcknowledge | ActivePopup::SettingsProvider));
 
         let layers = match (expanded, modal) {
             (Some(expanded), true) => stack![content_container, sidebar_overlay, expanded, crate::widget::scrim(), popups],
@@ -1827,6 +1829,21 @@ impl BattleCatsApp {
         let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure, names: &self.names };
 
         self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &self.app_state, global_ctx).map(Message::Sandbox)
+    }
+
+    fn reload_game_data(&mut self) -> Task<Message> {
+        let packs = self.files_state.reload_packs().map(Message::Files);
+        let scope = mining::Scope {
+            cats: &self.cat_state.data.cats,
+            foes: &self.enemy_state.data.enemies,
+            registry: &self.stage_state.data.registry,
+            global: GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure, names: &self.names },
+            settings: &self.settings,
+        };
+
+        let mined = self.mining_state.reload(scope, self.window_size).map(Message::Mining);
+
+        Task::batch([packs, mined, self.rebuild_content()])
     }
 
     fn sync_popup(&mut self, popup: ActivePopup, open: bool) {
@@ -2071,6 +2088,12 @@ impl BattleCatsApp {
                         }
 
                         self.settings_state.pem_popup_view(self.window_size).map(|view| view.map(Message::Settings))
+                    }
+                    ActivePopup::SettingsSource => {
+                        self.settings_state.source_popup_view(self.window_size).map(|view| view.map(Message::Settings))
+                    }
+                    ActivePopup::SettingsProvider => {
+                        self.settings_state.provider_popup_view(self.window_size, self.theme()).map(|view| view.map(Message::Settings))
                     }
                 }?;
 

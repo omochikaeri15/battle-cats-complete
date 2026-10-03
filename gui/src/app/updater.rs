@@ -209,7 +209,7 @@ fn view_update_found<'a>(target: &UpdateTarget, confirming_never: bool) -> Eleme
     .extend(stepping)
     .push(text("Would you like to download the update now?").size(BODY_SIZE))
     .push(actions)
-    .push(subtle_text("\"Never\" stops all future update checks."))
+    .push(subtle_text("\"Never\" stops all future update checks"))
     .spacing(CONTENT_SPACING)
     .align_x(Alignment::Center)
     .into()
@@ -222,7 +222,7 @@ fn view_downloading<'a>(tag: &str, progress: f32) -> Element<'a, Message> {
             .length(Length::Fixed(PROGRESS_WIDTH))
             .girth(Length::Fixed(PROGRESS_HEIGHT))
             .style(theme::progress_track),
-        subtle_text("You will be prompted once it is ready to install."),
+        subtle_text("You will be prompted once it is ready to install"),
     ]
     .spacing(CONTENT_SPACING)
     .align_x(Alignment::Center)
@@ -242,7 +242,7 @@ fn view_restart_pending<'a>(tag: &str) -> Element<'a, Message> {
         theme::bold_text(format!("{} is installed", display_version(tag))).size(TITLE_SIZE),
         text("Would you like to restart and apply the update now?").size(BODY_SIZE),
         actions,
-        subtle_text("Declining keeps the update until the next launch."),
+        subtle_text("Declining keeps the update until the next launch"),
     ]
     .spacing(CONTENT_SPACING)
     .align_x(Alignment::Center)

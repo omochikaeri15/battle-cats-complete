@@ -225,7 +225,7 @@ impl State {
             UpdateStatus::CheckFailed(CheckFailure::InvalidUrl) => ("Invalid URL!", theme::danger_button, None),
             UpdateStatus::CheckFailed(CheckFailure::Install) => ("Update Failed!", theme::danger_button, None),
             UpdateStatus::CheckFailed(CheckFailure::Unknown) => ("Failed to Check!", theme::danger_button, None),
-            UpdateStatus::Downloading(_) => ("Downloading Update...", theme::primary_button, Some(Message::ShowUpdatePopup)),
+            UpdateStatus::Downloading(_) => ("Downloading Update...", theme::warning_button, Some(Message::ShowUpdatePopup)),
             UpdateStatus::RestartPending(_) => ("Restart Pending!", theme::warning_button, Some(Message::ShowUpdatePopup)),
             UpdateStatus::Idle => ("Check for Update Now", theme::primary_button, Some(Message::ManualUpdateCheck)),
         };

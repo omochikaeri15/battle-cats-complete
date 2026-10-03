@@ -21,7 +21,7 @@ use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, Setti
 use kore::domains::settings::desktop;
 use kore::{ContentStore, Vault};
 
-use crate::domains::home;
+use crate::domains::{home, settings::{self as gui_settings, source}};
 use crate::widget::popup;
 
 use super::theme::AppTheme;
@@ -142,6 +142,14 @@ impl BattleCatsApp {
             Task::none()
         };
 
+        let source = &app.settings.files;
+        let source_task = if source.source_mode != UpdateMode::Ignore && !source.source_link.trim().is_empty() {
+            info!("Checking the game data source at startup");
+            Task::done(Message::Settings(gui_settings::Message::Source(source::Message::Check { manual: false })))
+        } else {
+            Task::none()
+        };
+
         let (home_state, home_task) = home::State::new();
         app.home_state = home_state;
 
@@ -156,7 +164,7 @@ impl BattleCatsApp {
 
         info!(total_ms = boot.elapsed().as_millis(), "Initialization sequence complete");
 
-        (app, Task::batch([home_task.map(Message::Home), updater_task, icon_streams, store_task, reveal_fallback]))
+        (app, Task::batch([home_task.map(Message::Home), updater_task, source_task, icon_streams, store_task, reveal_fallback]))
     }
 
     pub(super) fn spawn_vault_build(&mut self, hydrate: bool) -> Task<Message> {

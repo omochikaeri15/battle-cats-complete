@@ -5,12 +5,13 @@ mod exceptions;
 pub(crate) mod general;
 mod keys;
 mod pem;
+pub(crate) mod source;
 
 use iced::mouse::Interaction;
 use iced::widget::{
     column, container, mouse_area, pick_list, row, rule, scrollable, text, text_input, Space, Stack,
 };
-use iced::{Alignment, Element, Length, Size, Task};
+use iced::{Alignment, Element, Length, Size, Task, Theme};
 
 use kore::domains::cat::files as cat_files;
 use kore::systems::treasure::Catalog;
@@ -21,6 +22,7 @@ use kore::domains::settings::{
     SidebarBehavior,
 };
 
+use crate::app::state::AppState;
 use crate::app::theme;
 use crate::app::UpdateStatus;
 use crate::widget::{combo_row, hover_hint, list_row, smooth_scroll, toggle_row};
@@ -87,6 +89,7 @@ pub enum Message {
     Disk(disk::Message),
     Snapshot(snapshot::Message),
     Pem(pem::Message),
+    Source(source::Message),
     Addons(addons::Message),
     ToggleUnlockGameMount(bool),
     Utf8ModeSelected(Utf8Mode),
@@ -114,6 +117,7 @@ pub struct State {
     addons: addons::State,
     disk: disk::State,
     snapshot: snapshot::State,
+    source: source::State,
 }
 
 const KEY_PROMPT: &str = "Press a key...";
@@ -153,12 +157,13 @@ impl Default for State {
             addons: addons::State::default(),
             disk: disk::State::default(),
             snapshot: snapshot::State::default(),
+            source: source::State::default(),
         }
     }
 }
 
 impl State {
-    pub fn update(&mut self, message: Message, core_settings: &mut CoreSettings) -> Task<Message> {
+    pub fn update(&mut self, message: Message, core_settings: &mut CoreSettings, app_state: &mut AppState) -> Task<Message> {
         match message {
             Message::KeyCapture(bind) => {
                 self.capturing = (self.capturing != Some(bind)).then_some(bind);
@@ -281,6 +286,7 @@ impl State {
                 Task::none()
             }
             Message::Pem(msg) => self.pem.update(msg).map(Message::Pem),
+            Message::Source(msg) => self.source.update(msg, core_settings, &mut app_state.source).map(Message::Source),
 
             Message::ToggleKeyValidation(val) => {
                 core_settings.game_data.enforce_key_validation = val;
@@ -297,7 +303,13 @@ impl State {
             Message::Keys(msg) => self.keys.update(msg).map(Message::Keys),
             Message::OpenKeysPopup => self.keys.update(keys::Message::Open).map(Message::Keys),
             Message::Exceptions(msg) => self.exceptions.update(msg).map(Message::Exceptions),
-            Message::Disk(msg) => self.disk.update(msg).map(Message::Disk),
+            Message::Disk(msg) => {
+                if matches!(msg, disk::Message::DeleteFinished(disk::Target::Game)) {
+                    core_settings.files.source_stamp = None;
+                }
+
+                self.disk.update(msg).map(Message::Disk)
+            }
             Message::Snapshot(msg) => self.snapshot.update(msg).map(Message::Snapshot),
 
             Message::Addons(msg) => self.addons.update(msg).map(Message::Addons),
@@ -362,6 +374,18 @@ impl State {
         self.pem.is_open
     }
 
+    pub fn source_popup_open(&self) -> bool {
+        self.source.popup_open()
+    }
+
+    pub fn provider_popup_open(&self) -> bool {
+        self.source.terms_open()
+    }
+
+    pub fn take_source_refresh(&mut self) -> bool {
+        self.source.take_refresh()
+    }
+
     pub fn keys_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
         self.keys.is_open.then(|| self.keys.view(window).map(Message::Keys))
     }
@@ -372,6 +396,14 @@ impl State {
 
     pub fn pem_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
         self.pem.is_open.then(|| self.pem.view(window).map(Message::Pem))
+    }
+
+    pub fn source_popup_view(&self, window: Size) -> Option<Element<'_, Message>> {
+        self.source.popup_view(window).map(|view| view.map(Message::Source))
+    }
+
+    pub fn provider_popup_view(&self, window: Size, ui_theme: Theme) -> Option<Element<'_, Message>> {
+        self.source.terms_view(window, ui_theme).map(|view| view.map(Message::Source))
     }
 
     pub fn view<'a>(&'a self, core_settings: &'a CoreSettings, updater_status: &'a UpdateStatus, catalog: &'a Catalog) -> Element<'a, Message> {
@@ -727,6 +759,7 @@ impl State {
 
         column![
             header_section(text("Disk").size(24), self.disk.view().map(Message::Disk)),
+            header_section(text("Source").size(24), self.source.view(&core_settings.files).map(Message::Source)),
             header_section(text("Viewer").size(24), utf8_mode_row),
             header_section(text("Editor").size(24), column![scope_row, editor_mode_row, mount_row].spacing(10)),
         ].spacing(SECTION_SPACING).into()

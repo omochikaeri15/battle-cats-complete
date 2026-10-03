@@ -2,6 +2,7 @@ pub mod desktop;
 pub mod lang;
 pub mod nightly;
 pub mod pem;
+pub mod source;
 
 use std::fs;
 use std::path::Path;
@@ -157,6 +158,9 @@ pub struct FilesSettings {
     pub utf8_mode: Utf8Mode,
     pub context_scope: ContextScope,
     pub editor_mode: EditorMode,
+    pub source_link: String,
+    pub source_mode: UpdateMode,
+    pub source_stamp: Option<source::Stamp>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]

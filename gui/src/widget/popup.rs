@@ -128,9 +128,11 @@ pub enum Kind {
     Diagnostics,
     SandboxAnimationExport,
     ReplayAnimationExport,
+    Source,
+    Provider,
 }
 
-pub(crate) const KIND_COUNT: usize = 53;
+pub(crate) const KIND_COUNT: usize = 55;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -186,6 +188,8 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::Diagnostics,
     Kind::SandboxAnimationExport,
     Kind::ReplayAnimationExport,
+    Kind::Source,
+    Kind::Provider,
 ];
 
 impl Kind {
@@ -244,6 +248,8 @@ impl Kind {
             Self::Diagnostics => "diagnostics",
             Self::SandboxAnimationExport => "sandbox_animation_export",
             Self::ReplayAnimationExport => "replay_animation_export",
+            Self::Source => "source",
+            Self::Provider => "provider",
         }
     }
 

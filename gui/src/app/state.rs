@@ -27,6 +27,7 @@ pub struct AppState {
     pub(crate) notice: NoticeState,
     pub(crate) help: HelpState,
     pub(crate) sandbox: SandboxState,
+    pub(crate) source: SourceState,
     pub(crate) popups: BTreeMap<String, StoredSize>,
 }
 
@@ -43,6 +44,12 @@ pub(crate) struct StudioState {
     pub atlas: bool,
     #[serde(alias = "clip")]
     pub motion: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
+pub(crate) struct SourceState {
+    pub agreement: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
