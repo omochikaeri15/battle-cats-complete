@@ -9,6 +9,7 @@ use iced::{Border, Color, Element, Length, Size, Theme};
 
 use kore::common::context::GlobalContext;
 use kore::domains::cat::combo::{self, CatCombo};
+use kore::domains::cat::scanner::CatEntry;
 use kore::domains::sandbox::rules::Rules;
 use kore::domains::sandbox::Lineup;
 
@@ -129,12 +130,12 @@ impl State {
         self.fits.borrow_mut().clear();
     }
 
-    pub fn ensure(&mut self, ctx: GlobalContext<'_>, lineup: Option<&Lineup>) {
+    pub fn ensure(&mut self, ctx: GlobalContext<'_>, cats: &[CatEntry], lineup: Option<&Lineup>) {
         if self.built {
             return;
         }
 
-        self.cards = combo::every(ctx)
+        self.cards = combo::every(ctx, cats)
             .into_iter()
             .map(|combo| Card { folded: combo.name.to_lowercase(), combo, active: false, banned: false })
             .collect();

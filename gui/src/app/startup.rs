@@ -1,15 +1,18 @@
 use std::borrow::Cow;
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use iced::futures::channel::mpsc;
 use iced::{Size, Task};
 use serde::{Deserialize, Serialize};
 use smol::Timer;
 use tracing::{debug, error, info, warn};
+#[cfg(windows)]
+use windows_sys::Win32::System::Threading::{GetCurrentThread, SetThreadPriority, THREAD_MODE_BACKGROUND_BEGIN};
 
 use kore::common::architecture;
 use kore::common::dirs;
@@ -53,6 +56,10 @@ pub(crate) fn saved_window() -> (Size, bool) {
 fn opening_size(window: &WindowSettings) -> Size {
     Size::new(window.width.max(800.0), window.height.max(600.0))
 }
+
+const WALK_THREADS: usize = 2;
+const SETTLE_PATIENCE: Duration = Duration::from_secs(60);
+const SETTLE_POLL: Duration = Duration::from_millis(50);
 
 fn split(phase: &mut Instant) -> u128 {
     let elapsed = phase.elapsed().as_millis();
@@ -176,7 +183,11 @@ impl BattleCatsApp {
         self.enemy_state.set_indexing();
         self.stage_state.set_indexing();
 
+        let settled = Arc::clone(&self.settled);
+
         thread::spawn(move || {
+            let started = Instant::now();
+
             let stored = hydrate.then(|| {
                 let mut cached = Vault::with_priority(&config.language_priority);
                 let stored = hydrate_vault(&mut cached);
@@ -184,7 +195,19 @@ impl BattleCatsApp {
                 stored
             });
 
+            if stored.flatten().is_some() {
+                info!(ms = started.elapsed().as_millis(), "Cached file index hydrated");
+                await_settled(&settled);
+            }
+
+            let walking = Instant::now();
             let rebuilt = secluded(|| walk_vault(&config));
+            info!(
+                ms = walking.elapsed().as_millis(),
+                files = rebuilt.vfs.count(architecture::GAME),
+                "File index walk finished"
+            );
+
             let index = rebuilt.hash(config.active_mod.as_deref());
             let key = Some(Vault::key_for(index, &config));
 
@@ -234,8 +257,36 @@ impl BattleCatsApp {
     }
 }
 
+fn await_settled(settled: &AtomicBool) {
+    let waiting = Instant::now();
+
+    while !settled.load(Ordering::Relaxed) && waiting.elapsed() < SETTLE_PATIENCE {
+        thread::sleep(SETTLE_POLL);
+    }
+
+    info!(ms = waiting.elapsed().as_millis(), "File index walk held back until the lists were loaded");
+}
+
+#[cfg(windows)]
+fn ease(_worker: usize) {
+    let eased = unsafe { SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN) };
+
+    if eased == 0 {
+        warn!("Could not lower the file index walk to background priority");
+    }
+}
+
+#[cfg(not(windows))]
+fn ease(_worker: usize) {}
+
 fn secluded<T: Send>(job: impl FnOnce() -> T + Send) -> T {
-    match rayon::ThreadPoolBuilder::new().thread_name(|worker| format!("vault_walk_{worker}")).build() {
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(WALK_THREADS)
+        .thread_name(|worker| format!("vault_walk_{worker}"))
+        .start_handler(ease)
+        .build();
+
+    match pool {
         Ok(pool) => pool.install(job),
         Err(err) => {
             warn!("Could not give the file index walk its own thread pool, sharing the global one: {}", err);

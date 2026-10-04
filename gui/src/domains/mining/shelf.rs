@@ -87,7 +87,7 @@ pub(super) fn shelve(ore: &Diff, vfs: &Vfs) -> Shelves {
 
     let resolved: Vec<Option<PathBuf>> = ore
         .touched
-        .par_iter()
+        .iter()
         .map(|held| pictured(&held.file).then(|| vfs.pristine(&held.file)).flatten())
         .collect();
 

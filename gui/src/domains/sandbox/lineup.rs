@@ -6,6 +6,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, mouse_area, row, scrollable, sensor, stack, text, text_input, Column, Row, Space};
 use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Theme};
+use tracing::debug;
 
 use kore::common::context::GlobalContext;
 use kore::systems::combat::NameBook;
@@ -260,13 +261,18 @@ impl State {
     }
 
     pub fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
+        let started = Instant::now();
         let adopted = self.inspector.adopt_cats(cats, ctx.vault).map(Message::Cat);
+        let inspector_ms = started.elapsed().as_millis();
         let orbs = self.orbs.load(ctx.vault, ctx.names).map(Message::Orbs);
+        let orbs_ms = started.elapsed().as_millis() - inspector_ms;
 
         self.combos.invalidate();
         self.decoded.borrow_mut().clear();
         self.coin = None;
         self.settle(app_state, ctx);
+
+        debug!(inspector_ms, orbs_ms, total_ms = started.elapsed().as_millis(), "Sandbox lineup adopted the cat list");
 
         Task::batch([adopted, orbs])
     }
@@ -420,7 +426,7 @@ impl State {
             .map(|(index, _)| index)
             .collect();
 
-        self.combos.ensure(ctx, lineup);
+        self.combos.ensure(ctx, &self.inspector.data.cats, lineup);
         self.combos.refresh(ctx, lineup);
     }
 

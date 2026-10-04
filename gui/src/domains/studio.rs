@@ -3,7 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::io::Read;
+use std::time::{Duration, Instant, SystemTime};
 
 use iced::alignment::{Horizontal, Vertical};
 use iced::mouse;
@@ -21,7 +22,7 @@ use kore::systems::animation::posing::{self, Gizmo, Probe};
 use kore::systems::animation::authoring::{self as authoring, bound, Beat, Cadence, Imgcut, CUT_FIELDS, CUT_NAME_FIELD, ease_label, ease_takes_power, ease_value, key_label, kind_label, loop_label, nameable, Maanim, Mamodel, EASES, FIELDS, NAME_FIELD};
 use image::RgbaImage;
 use nyanko::graphics::rig::{Keyframe, Model, ModelPart, Opaque, Rig, SpriteCut, SpriteSheet};
-use nyanko::graphics::tools::crash::Side;
+use nyanko::graphics::tools::crash::{self, Side, Sited};
 use nyanko::graphics::tools::timeline as curve;
 
 use crate::app::state::{AnimState, StudioState};
@@ -190,6 +191,7 @@ const ROOT_FIELD_HINT: &str = "The root ignores this column; key an X or Y chann
 const PINNED_NOTICE: &str = "The offset row is pinned to this part\nMoving it cancels out and the game draws it unmoved";
 const PLACE_X_FIELD: usize = 4;
 const PLACE_Y_FIELD: usize = 5;
+const SHEET_HEAD: usize = 12;
 const ENTITY_FAULT: &str = "This entity may cause a game crash\nPlease find the issue and resolve it";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -756,6 +758,7 @@ struct Session {
     entity: Scope,
     placed: Vec<viewer::Posed>,
     blame: Blame,
+    sheet_check: Option<(PathBuf, Option<SystemTime>, Vec<Sited>)>,
     alarms: Vec<usize>,
     unaudited: bool,
     auditing: u64,
@@ -895,6 +898,7 @@ impl State {
             entity: Scope::default(),
             placed: Vec::new(),
             blame: Blame::default(),
+            sheet_check: None,
             alarms: Vec::new(),
             unaudited: false,
             auditing: 0,
@@ -2919,6 +2923,7 @@ impl Session {
         }
 
         self.seed();
+        self.check_sheet();
 
         let tracks = match self.mode {
             Mode::Entity => self.draft.as_ref().map(|draft| &draft.doc),
@@ -2926,6 +2931,7 @@ impl Session {
         };
 
         let model = self.viewer.rig().map(|rig| &rig.model);
+        let sheet = self.sheet_check.as_ref().map_or(&[][..], |(_, _, found)| found.as_slice());
 
         self.blame = match (model, self.faulting.side()) {
             (Some(model), Some(side)) => {
@@ -2933,7 +2939,7 @@ impl Session {
                 let slotted = self.slotted();
                 let forced = self.faulting.attacking() && !slotted;
 
-                Blame::of(model, anim.as_deref(), self.unit(), side, slotted || forced, forced)
+                Blame::of(model, anim.as_deref(), self.unit(), side, slotted || forced, forced, sheet)
             }
             _ => Blame::default(),
         };
@@ -2945,6 +2951,32 @@ impl Session {
         self.listed = self.viewer.loaded_rig().to_owned();
         self.widest = listed.iter().map(TreeRow::span).fold(0.0, f32::max);
         self.rows = listed;
+    }
+
+    fn check_sheet(&mut self) {
+        let Some(path) = self.plan.set.sheet.clone() else {
+            self.sheet_check = None;
+            return;
+        };
+
+        let stamp = fs::metadata(&path).and_then(|meta| meta.modified()).ok();
+
+        if self.sheet_check.as_ref().is_some_and(|(held, at, _)| *held == path && *at == stamp) {
+            return;
+        }
+
+        let mut head = Vec::with_capacity(SHEET_HEAD);
+        let read = fs::File::open(&path).and_then(|file| file.take(SHEET_HEAD as u64).read_to_end(&mut head));
+
+        let found = match read {
+            Ok(_) => crash::image_faults(&head),
+            Err(err) => {
+                warn!(path = %path.display(), "Studio could not read the sprite sheet to check its format: {}", err);
+                Vec::new()
+            }
+        };
+
+        self.sheet_check = Some((path, stamp, found));
     }
 
     fn seed(&mut self) {

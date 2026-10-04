@@ -160,7 +160,7 @@ cipher, directories, ecb, gif, hex, iced, image, imageproc, indexmap,
 md-5, notify, open, postcard, pulseaudio, rasn, rasn-pkix, rayon, regex,
 reqwest, resand, rfd, rodio, rsa, rustc-hash, self_update, serde,
 serde_ignored, serde_json, sha2, smol, tar, thiserror, tracing,
-tracing-subscriber, webp-animation, winres, zip, zstd.
+tracing-subscriber, webp-animation, windows-sys, winres, zip, zstd.
 
 ------------------------------------------------------------------------
 The MIT License (MIT)

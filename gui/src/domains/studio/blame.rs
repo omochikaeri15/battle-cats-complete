@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use nyanko::graphics::rig::{Animation, Model};
-use nyanko::graphics::tools::crash::{self, Fault, Side};
+use nyanko::graphics::tools::crash::{self, Encoding, Fault, Side, Sited};
 
 use super::*;
 
@@ -31,8 +31,11 @@ impl Blame {
         side: Side,
         attacking: bool,
         forced: bool,
+        sheet: &[Sited],
     ) -> Self {
         let mut found = crash::model_faults(model);
+
+        found.extend_from_slice(sheet);
 
         if let Some(unit) = unit.or_else(|| majority(model)) {
             found.extend(crash::sheet_faults(model, unit));
@@ -238,7 +241,20 @@ fn detail(fault: &Fault) -> String {
         Fault::StrayAlignment { row, part } => {
             format!("Offset row {} names part {} which the model doesnt hold\nThe game reads past its part list", row, part)
         }
+        Fault::ForeignImage { found } => {
+            format!("The sprite sheet is {} saved with a .png name\nThe game only decodes PNG and draws from a null sheet", encoding(*found))
+        }
         _ => UNKNOWN_DETAIL.to_owned(),
+    }
+}
+
+fn encoding(found: Encoding) -> &'static str {
+    match found {
+        Encoding::Webp => "a WebP image",
+        Encoding::Jpeg => "a JPEG image",
+        Encoding::Gif => "a GIF image",
+        Encoding::Bmp => "a bitmap image",
+        _ => "not a PNG image",
     }
 }
 
@@ -259,7 +275,7 @@ mod tests {
     const ALIGNED: i32 = 3;
 
     fn aligned(model: &Model, unit: Option<i32>) -> Blame {
-        Blame::of(model, None, unit, Side::Either, false, false)
+        Blame::of(model, None, unit, Side::Either, false, false, &[])
     }
 
     fn chain(ids: &[i32]) -> Model {
@@ -316,7 +332,7 @@ mod tests {
             }],
         };
 
-        let held = Blame::of(&chain(&[609, 609]), Some(&tie), Some(609), Side::Either, false, false);
+        let held = Blame::of(&chain(&[609, 609]), Some(&tie), Some(609), Side::Either, false, false, &[]);
 
         assert!(!held.quiet(), "the animation does fault");
         assert!(!held.rigged(), "but the rig itself does not");

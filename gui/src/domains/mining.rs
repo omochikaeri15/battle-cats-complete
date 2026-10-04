@@ -5,9 +5,10 @@ use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::slice;
+use std::sync::Arc;
 use std::fmt;
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use iced::alignment::{Horizontal, Vertical};
 use iced::font;
@@ -16,8 +17,8 @@ use iced::widget::{image as iced_image, operation, scrollable, tooltip, Id};
 use iced::futures::channel::mpsc::unbounded;
 use iced::{Color, ContentFit, Element, Length, Size, Task, Theme};
 use nyanko::cat::unit::{LevelCurve, TalentCost};
-use rayon::prelude::*;
 use rustc_hash::FxHasher;
+use tracing::debug;
 use nyanko::combat::{Entity, REGISTRY};
 
 use kore::common::formats::SpriteSheet as CoreSpriteSheet;
@@ -36,8 +37,7 @@ use kore::domains::settings::{ScannerConfig, Settings};
 use kore::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
 use kore::systems::treasure::Bonus;
 use kore::common::context::GlobalContext;
-use kore::Vfs;
-use kore::Source;
+use kore::{Source, Vault, Vfs};
 
 use crate::app::theme;
 
@@ -221,6 +221,7 @@ pub enum Message {
     OpenMap(GlobalMapId),
     OpenStage(GlobalStageId, Option<u8>),
     Img015Loaded(u64, usize, Option<CoreSpriteSheet>),
+    Vetted(u64, Vec<u32>, Vec<u32>),
 }
 
 impl fmt::Debug for Message {
@@ -246,6 +247,7 @@ impl fmt::Debug for Message {
             Self::OpenMap(map) => write!(f, "OpenMap({:?})", map),
             Self::OpenStage(stage, crown) => write!(f, "OpenStage({:?}, {:?})", stage, crown),
             Self::Img015Loaded(generation, index, _) => write!(f, "Img015Loaded({}, {})", generation, index),
+            Self::Vetted(ticket, listed, sighted) => write!(f, "Vetted({}, {}, {})", ticket, listed.len(), sighted.len()),
         }
     }
 }
@@ -285,6 +287,10 @@ pub struct State {
     debuts: HashSet<u32>,
     listed: Vec<u32>,
     spotted: Vec<u32>,
+    vetted: Option<(u64, Sifted)>,
+    wanted: Option<u64>,
+    vetting: Option<u64>,
+    revet: bool,
     levels: HashMap<u32, String>,
     img015_sheets: Vec<SpriteSheet>,
     sheet_generation: u64,
@@ -332,6 +338,10 @@ impl Default for State {
             debuts: HashSet::new(),
             listed: Vec::new(),
             spotted: Vec::new(),
+            vetted: None,
+            wanted: None,
+            vetting: None,
+            revet: false,
             levels: HashMap::new(),
             img015_sheets: Vec::new(),
             sheet_generation: 0,
@@ -344,6 +354,7 @@ impl Default for State {
     }
 }
 
+#[derive(Clone, Default)]
 struct Sifted {
     listed: Vec<u32>,
     sighted: Vec<u32>,
@@ -354,22 +365,31 @@ struct Vetted {
     foes: HashSet<u32>,
 }
 
-fn sift(cats: &[CatEntry], foes: &[EnemyEntry], vfs: &Vfs, settings: &Settings) -> Sifted {
+fn ticket(vfs: &Vfs, cats: &[CatEntry], foes: &[EnemyEntry], strict: &ScannerConfig) -> u64 {
+    let mut hasher = FxHasher::default();
+
+    vfs.fingerprint().hash(&mut hasher);
+    strict.hash(&mut hasher);
+    cats.len().hash(&mut hasher);
+
+    for entry in cats {
+        entry.id.hash(&mut hasher);
+    }
+
+    for entry in foes {
+        entry.id.hash(&mut hasher);
+    }
+
+    hasher.finish()
+}
+
+pub(crate) fn vet(ticket: u64, vault: Arc<Vault>, cats: Vec<CatEntry>, foes: Vec<EnemyEntry>, settings: &Settings) -> Task<Message> {
     let strict = strict_config(settings);
 
-    let listed = cats
-        .par_iter()
-        .filter(|entry| cat_scanner::listable(vfs, entry, &strict))
-        .map(|entry| entry.id)
-        .collect();
-
-    let sighted = foes
-        .par_iter()
-        .filter(|entry| enemy_scanner::listable(vfs, entry.id, &strict))
-        .map(|entry| entry.id)
-        .collect();
-
-    Sifted { listed, sighted }
+    Task::perform(
+        smol::unblock(move || mining::vet(&vault.vfs, &cats, &foes, &strict)),
+        move |(listed, sighted)| Message::Vetted(ticket, listed, sighted),
+    )
 }
 
 impl State {
@@ -508,8 +528,45 @@ impl State {
         hasher.finish()
     }
 
+    fn sift(&mut self, cats: &[CatEntry], foes: &[EnemyEntry], vfs: &Vfs, settings: &Settings) -> Sifted {
+        let strict = strict_config(settings);
+        let ticket = ticket(vfs, cats, foes, &strict);
+
+        if let Some((held, sifted)) = &self.vetted
+            && *held == ticket
+        {
+            return sifted.clone();
+        }
+
+        let Some((listed, sighted)) = mining::recall(vfs, cats, foes, &strict) else {
+            if self.vetting != Some(ticket) {
+                self.wanted = Some(ticket);
+            }
+
+            return Sifted::default();
+        };
+
+        let sifted = Sifted { listed, sighted };
+        self.vetted = Some((ticket, sifted.clone()));
+
+        sifted
+    }
+
+    pub(crate) fn take_wanted(&mut self) -> Option<u64> {
+        let ticket = self.wanted.take()?;
+        self.vetting = Some(ticket);
+
+        Some(ticket)
+    }
+
+    pub(crate) fn take_revet(&mut self) -> bool {
+        std::mem::take(&mut self.revet)
+    }
+
     pub(crate) fn restock(&mut self, scope: Scope<'_>) {
-        let sifted = sift(scope.cats, scope.foes, &scope.global.vault.vfs, scope.settings);
+        let started = Instant::now();
+        let sifted = self.sift(scope.cats, scope.foes, &scope.global.vault.vfs, scope.settings);
+        let sifted_ms = started.elapsed().as_millis();
         let vetted = Vetted {
             cats: sifted.listed.iter().copied().collect(),
             foes: sifted.sighted.iter().copied().collect(),
@@ -524,6 +581,8 @@ impl State {
         self.terrain = self.survey(scope.registry, &scope.global.vault.vfs);
         self.snapped = mining::has_snapshot();
         self.diggable = mining::capturable();
+
+        debug!(sifted_ms, total_ms = started.elapsed().as_millis(), "Mining restocked");
 
         if !self.enabled(self.tab) {
             self.tab = Tab::Meta;
@@ -916,6 +975,11 @@ impl State {
                     self.icons.clear();
                 }
             }
+            Message::Vetted(ticket, listed, sighted) => {
+                self.vetted = Some((ticket, Sifted { listed, sighted }));
+                self.vetting = None;
+                self.revet = true;
+            }
         }
 
         Task::none()
@@ -1023,22 +1087,5 @@ impl State {
         self.portraits.borrow_mut().insert(key, handle.clone());
 
         handle
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // The scan feeds mining::reconcile, which compares it against the stored roster as a
-    // slice; a reordered scan would read as the whole roster arriving at once.
-    #[test]
-    fn the_parallel_scan_keeps_entry_order() {
-        let ids: Vec<u32> = (0..5_000).collect();
-
-        let scanned: Vec<u32> = ids.par_iter().filter(|id| **id % 3 != 0).copied().collect();
-        let expected: Vec<u32> = ids.iter().filter(|id| **id % 3 != 0).copied().collect();
-
-        assert_eq!(scanned, expected);
     }
 }

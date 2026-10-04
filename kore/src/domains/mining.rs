@@ -21,10 +21,14 @@ use tracing::warn;
 
 use crate::common::architecture;
 use crate::common::dirs;
-use crate::common::io::json;
+use crate::common::io::{cache, json};
 use crate::domains::cat::files as cat_files;
+use crate::domains::cat::scanner::{self as cat_scanner, CatEntry};
 use crate::domains::enemy::files as enemy_files;
+use crate::domains::enemy::scanner::{self as enemy_scanner, EnemyEntry};
 use crate::domains::import::engine::manifest;
+use crate::domains::settings::ScannerConfig;
+use crate::Vfs;
 
 
 const HOME: &str = "mining";
@@ -350,6 +354,85 @@ pub fn stamp() -> Option<u64> {
     data.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_nanos().hash(&mut hasher);
 
     Some(hasher.finish())
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct Vetting {
+    listed_for: u64,
+    listed: Vec<u32>,
+    sighted_for: u64,
+    sighted: Vec<u32>,
+}
+
+struct VettingCache;
+
+impl cache::CacheSpec for VettingCache {
+    type Data = Vetting;
+    const FILE: &'static str = "mining_vetting.bin";
+}
+
+fn held_vetting(stamp: u64) -> Vetting {
+    cache::read::<VettingCache>()
+        .filter(|(hash, _)| *hash == stamp)
+        .map_or_else(Vetting::default, |(_, held)| held)
+}
+
+pub fn recall(vfs: &Vfs, cats: &[CatEntry], foes: &[EnemyEntry], strict: &ScannerConfig) -> Option<(Vec<u32>, Vec<u32>)> {
+    let held = held_vetting(cache::content_hash(vfs.fingerprint(), strict));
+
+    let listed_known = cats.is_empty() || held.listed_for == roll(cats.iter().map(|entry| entry.id));
+    let sighted_known = foes.is_empty() || held.sighted_for == roll(foes.iter().map(|entry| entry.id));
+
+    if !listed_known || !sighted_known {
+        return None;
+    }
+
+    let listed = if cats.is_empty() { Vec::new() } else { held.listed };
+    let sighted = if foes.is_empty() { Vec::new() } else { held.sighted };
+
+    Some((listed, sighted))
+}
+
+pub fn vet(vfs: &Vfs, cats: &[CatEntry], foes: &[EnemyEntry], strict: &ScannerConfig) -> (Vec<u32>, Vec<u32>) {
+    let stamp = cache::content_hash(vfs.fingerprint(), strict);
+    let mut held = held_vetting(stamp);
+
+    let listed_for = roll(cats.iter().map(|entry| entry.id));
+    let sighted_for = roll(foes.iter().map(|entry| entry.id));
+    let mut moved = false;
+
+    if !cats.is_empty() && held.listed_for != listed_for {
+        held.listed = cats.iter().filter(|entry| cat_scanner::listable(vfs, entry, strict)).map(|entry| entry.id).collect();
+        held.listed_for = listed_for;
+        moved = true;
+    }
+
+    if !foes.is_empty() && held.sighted_for != sighted_for {
+        held.sighted = foes.iter().filter(|entry| enemy_scanner::listable(vfs, entry.id, strict)).map(|entry| entry.id).collect();
+        held.sighted_for = sighted_for;
+        moved = true;
+    }
+
+    if moved {
+        cache::write::<VettingCache>(stamp, &held);
+    }
+
+    let listed = if cats.is_empty() { Vec::new() } else { held.listed };
+    let sighted = if foes.is_empty() { Vec::new() } else { held.sighted };
+
+    (listed, sighted)
+}
+
+fn roll(ids: impl ExactSizeIterator<Item = u32>) -> u64 {
+    let mut hasher = FxHasher::default();
+
+    ids.len().hash(&mut hasher);
+
+    for id in ids {
+        id.hash(&mut hasher);
+    }
+
+    hasher.finish()
 }
 
 pub fn has_snapshot() -> bool {

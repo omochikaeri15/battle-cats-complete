@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use nyanko::cat::unit::{ComboSlot, NyancomboData, UnitBuy, UnitExplanation};
+use nyanko::cat::unit::{ComboSlot, NyancomboData, UnitBuy};
 use tracing::trace;
 
 use crate::common::context::GlobalContext;
 use crate::domains::cat::files;
+use crate::domains::cat::scanner::CatEntry;
 use crate::domains::cat::waiter::unitexplanation;
 use crate::{Source, Vault, Vfs};
 
@@ -59,16 +60,16 @@ pub fn combo_lines(vault: &Vault, cat_id: u32, form: usize) -> Vec<usize> {
 pub fn combos(ctx: GlobalContext<'_>, cat_id: u32, form: usize) -> Vec<CatCombo> {
     trace!(cat_id = cat_id, form = form, "resolving the combos a cat takes part in");
 
-    resolve(ctx, |row| joins(row, cat_id, form))
+    resolve(ctx, &[], |row| joins(row, cat_id, form))
 }
 
-pub fn every(ctx: GlobalContext<'_>) -> Vec<CatCombo> {
+pub fn every(ctx: GlobalContext<'_>, cats: &[CatEntry]) -> Vec<CatCombo> {
     trace!("resolving every combo the game declares");
 
-    resolve(ctx, NyancomboData::is_active)
+    resolve(ctx, cats, NyancomboData::is_active)
 }
 
-fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> Vec<CatCombo> {
+fn resolve(ctx: GlobalContext<'_>, cats: &[CatEntry], wanted: impl Fn(&NyancomboData) -> bool) -> Vec<CatCombo> {
     let vfs = &ctx.vault.vfs;
     let vds = &ctx.vault.vds;
 
@@ -90,7 +91,8 @@ fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> V
     }
 
     let empty_icon = vfs.find(files::EMPTY_ICON).map(|path| vfs.source(&path));
-    let mut explanations: HashMap<u32, UnitExplanation> = HashMap::new();
+    let known: HashMap<u32, &CatEntry> = cats.iter().map(|entry| (entry.id, entry)).collect();
+    let mut read: HashMap<u32, [Option<String>; 4]> = HashMap::new();
 
     joined
         .into_iter()
@@ -111,7 +113,7 @@ fn resolve(ctx: GlobalContext<'_>, wanted: impl Fn(&NyancomboData) -> bool) -> V
                 .map(|key| ctx.localizable.lookup(key).unwrap_or(key).to_string());
 
             let members = row.slots().map(|slot| {
-                member(vfs, &unitbuy, &mut explanations, slot, empty_icon.as_ref())
+                member(vfs, &unitbuy, &known, &mut read, slot, empty_icon.as_ref())
             });
 
             CatCombo {
@@ -136,7 +138,8 @@ fn text_at(table: &[Option<String>], index: i32) -> Option<&str> {
 fn member(
     vfs: &Vfs,
     unitbuy: &HashMap<u32, UnitBuy>,
-    explanations: &mut HashMap<u32, UnitExplanation>,
+    known: &HashMap<u32, &CatEntry>,
+    read: &mut HashMap<u32, [Option<String>; 4]>,
     slot: ComboSlot,
     empty_icon: Option<&Source>,
 ) -> ComboMember {
@@ -158,12 +161,13 @@ fn member(
     let icon = vfs.find(&files::icon_file(id, form, egg_ids)).map(|path| vfs.source(&path));
     let unresolved = icon.is_none();
 
-    let explanation = explanations.entry(id).or_insert_with(|| unitexplanation(vfs, id));
-    let name = explanation
-        .names
+    let names = known
+        .get(&id)
+        .map_or_else(|| &*read.entry(id).or_insert_with(|| unitexplanation(vfs, id).names), |entry| &entry.names);
+    let name = names
         .get(form)
         .and_then(Option::as_ref)
-        .or_else(|| explanation.names.iter().flatten().next())
+        .or_else(|| names.iter().flatten().next())
         .filter(|name| !name.is_empty())
         .cloned();
 

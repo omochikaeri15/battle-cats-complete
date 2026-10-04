@@ -11,8 +11,10 @@
 //! block does not reach the row asked for and the engine dereferences that row
 //! regardless, and nothing here advances an entity's frame counter at all where
 //! the engine takes the next frame modulo an animation length it never checks.
-//! Nothing here changes how a frame resolves; it reports where the two
-//! disagree.
+//! The last sits before any of them: the engine decodes a sprite sheet as PNG
+//! whatever its bytes hold, so a sheet in another image format loads as nothing
+//! and the draw pass dereferences it. Nothing here changes how a frame
+//! resolves; it reports where the two disagree.
 //!
 //! Only the states the decompilation settles are reported. A shape the engine
 //! guards is not a fault however malformed it looks: a modification whose first
@@ -31,6 +33,25 @@ const NOT_DRAWN: i32 = -1;
 
 /// The length the engine reports for an animation that never ends.
 const ENDLESS: i32 = -1;
+
+/// The eight bytes every PNG file opens with.
+const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
+
+/// The image format a sprite sheet's bytes hold where they do not hold a PNG.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Encoding {
+    /// A WebP image, which opens with a RIFF header naming WEBP.
+    Webp,
+    /// A JPEG image, which opens with a start-of-image marker.
+    Jpeg,
+    /// A GIF image, which opens with GIF87a or GIF89a.
+    Gif,
+    /// A Windows bitmap, which opens with BM.
+    Bmp,
+    /// Bytes that open as none of the formats above.
+    Unknown,
+}
 
 /// The entity map a rig is installed into.
 ///
@@ -96,6 +117,11 @@ pub enum Fault {
         row: usize,
         /// The part index the row's first column names.
         part: i32,
+    },
+    /// The sprite sheet holds an image in a format other than PNG, which the engine fails to decode and the draw pass dereferences as a null sheet.
+    ForeignImage {
+        /// The format the sheet's bytes hold instead.
+        found: Encoding,
     },
 }
 
@@ -280,6 +306,36 @@ pub fn attack_faults(attack: &Animation, side: Side) -> Vec<Sited> {
         (_, 0) => whole_file(Fault::AttackLength),
         _ => Vec::new(),
     }
+}
+
+/// Reports the fault a sprite sheet's bytes carry.
+///
+/// The engine hands a sheet's bytes to a PNG decoder whatever the file holds, so
+/// a sheet saved in another format under its `.png` name loads as nothing, and
+/// the first part drawn from it dereferences that null sheet. Only the signature
+/// is checked; a PNG that opens correctly and is damaged further in is not
+/// reported.
+///
+/// # Arguments
+/// * `bytes` - The sheet file's contents, of which only the first twelve bytes are read.
+///
+/// # Returns
+/// A `Vec<Sited>` holding the one fault the sheet carries, sited on neither a
+/// part nor a modification, and empty for a sheet that opens as a PNG.
+pub fn image_faults(bytes: &[u8]) -> Vec<Sited> {
+    if bytes.starts_with(&PNG_SIGNATURE) {
+        return Vec::new();
+    }
+
+    let found = match bytes {
+        [b'R', b'I', b'F', b'F', _, _, _, _, b'W', b'E', b'B', b'P', ..] => Encoding::Webp,
+        [0xff, 0xd8, 0xff, ..] => Encoding::Jpeg,
+        [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => Encoding::Gif,
+        [b'B', b'M', ..] => Encoding::Bmp,
+        _ => Encoding::Unknown,
+    };
+
+    vec![Sited { fault: Fault::ForeignImage { found }, part: None, track: None }]
 }
 
 /// Collects the keyframe pairs a reachable polynomial run divides a zero gap by.
@@ -637,5 +693,17 @@ mod tests {
         for frame in 0..20 {
             assert!(timeline::value(&held.modifications[0], frame).is_some(), "frame {frame}");
         }
+    }
+
+    #[test]
+    fn only_a_png_signature_passes_as_a_sheet() {
+        let fault = |found| vec![Sited { fault: Fault::ForeignImage { found }, part: None, track: None }];
+
+        assert_eq!(image_faults(&[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n', 0, 0, 0, 13]), Vec::new());
+        assert_eq!(image_faults(b"RIFF\x10\0\0\0WEBPVP8 "), fault(Encoding::Webp));
+        assert_eq!(image_faults(&[0xff, 0xd8, 0xff, 0xe0]), fault(Encoding::Jpeg));
+        assert_eq!(image_faults(b"GIF89a"), fault(Encoding::Gif));
+        assert_eq!(image_faults(b"BM6"), fault(Encoding::Bmp));
+        assert_eq!(image_faults(b""), fault(Encoding::Unknown));
     }
 }

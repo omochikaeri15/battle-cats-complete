@@ -454,7 +454,7 @@ impl Driver {
             return false;
         };
 
-        if !scripted || entry.site != site.to_string() {
+        if !scripted || entry.site.replace("::", ":") != site.to_string().replace("::", ":") {
             return false;
         }
 
@@ -1021,20 +1021,20 @@ impl Driver {
         self.keep_assets();
 
         let notice = emu::engine::notice_popup_update(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("notice_popup_update:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("notice_popup_update::{fault}")))?;
 
-        if emu::engine::ad_is_showing(&mut self.ctx).map_err(|fault| (fault.site(), format!("ad_is_showing:{fault}")))? {
+        if emu::engine::ad_is_showing(&mut self.ctx).map_err(|fault| (fault.site(), format!("ad_is_showing::{fault}")))? {
             return Ok(());
         }
 
         emu::engine::dialog_manager_process(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("dialog_manager_process:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("dialog_manager_process::{fault}")))?;
         emu::engine::button_bank_process(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("button_bank_process:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("button_bank_process::{fault}")))?;
         emu::engine::medal_popup_update(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("medal_popup_update:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("medal_popup_update::{fault}")))?;
         emu::engine::mission_popup_update(&mut self.ctx)
-            .map_err(|fault| (fault.site(), format!("mission_popup_update:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("mission_popup_update::{fault}")))?;
 
         let shop_open = self.ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN).unwrap_or(0) != 0;
         let tutorial_open = self.ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN).unwrap_or(0) != 0;
@@ -1043,11 +1043,11 @@ impl Driver {
 
         if !(notice || shop_open || tutorial_open) {
             continued = emu::engine::main_battle_loop(&mut self.ctx)
-                .map_err(|fault| (fault.site(), format!("main_battle_loop:{fault}")))?;
+                .map_err(|fault| (fault.site(), format!("main_battle_loop::{fault}")))?;
         }
 
         pump_stage_return(&mut self.ctx, &self.returning)
-            .map_err(|fault| (fault.site(), format!("pump_stage_return:{fault}")))?;
+            .map_err(|fault| (fault.site(), format!("pump_stage_return::{fault}")))?;
         self.sync_options();
 
         if !continued {
@@ -1056,15 +1056,15 @@ impl Driver {
 
         if tutorial_open {
             emu::engine::tutorial_popup_update(&mut self.ctx)
-                .map_err(|fault| (fault.site(), format!("tutorial_popup_update:{fault}")))?;
+                .map_err(|fault| (fault.site(), format!("tutorial_popup_update::{fault}")))?;
         } else {
             emu::engine::cat_food_shop_update(&mut self.ctx)
-                .map_err(|fault| (fault.site(), format!("cat_food_shop_update:{fault}")))?;
+                .map_err(|fault| (fault.site(), format!("cat_food_shop_update::{fault}")))?;
 
             if self.ctx.i32_at(AppContext::SHOP_UPDATE_CONSUMED).unwrap_or(0) != 0 {
                 self.ctx
                     .set_i32_at(AppContext::SHOP_UPDATE_CONSUMED, 0)
-                    .map_err(|fault| (fault.site(), format!("app_on_process:{fault}")))?;
+                    .map_err(|fault| (fault.site(), format!("app_on_process::{fault}")))?;
             }
         }
 
@@ -1073,7 +1073,7 @@ impl Driver {
         }
 
         self.frame.borrow_mut().clear();
-        emu::engine::app_on_draw(&mut self.ctx).map_err(|fault| (fault.site(), format!("app_on_draw:{fault}")))?;
+        emu::engine::app_on_draw(&mut self.ctx).map_err(|fault| (fault.site(), format!("app_on_draw::{fault}")))?;
         self.stamp_frame();
 
         Ok(())

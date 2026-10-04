@@ -1,7 +1,9 @@
 use std::collections::HashSet;
+use std::fmt::{self, Write};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -11,7 +13,7 @@ use iced::widget::{button, column, container, markdown, opaque, operation, row, 
 use iced::{task, window, Element, Length, Size, Subscription, Task, Theme};
 use nyanko::files::{Localizable, Param};
 use rustc_hash::FxHasher;
-use tracing::{info, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 use kore::common::context::GlobalContext;
 use kore::systems::combat::NameBook;
@@ -111,6 +113,37 @@ fn undo_key(event: iced::keyboard::Event) -> Option<Message> {
 pub(crate) const WINDOW_SHOW_FALLBACK: Duration = Duration::from_millis(400);
 
 const FRAMES_BEFORE_SHOW: u8 = 2;
+const SLOW_PASS: Duration = Duration::from_millis(250);
+const LABEL_ROOM: usize = 64;
+const LISTED_CATS: u8 = 1;
+const LISTED_ENEMIES: u8 = 2;
+const LISTED_STAGES: u8 = 4;
+const LISTED_ALL: u8 = LISTED_CATS | LISTED_ENEMIES | LISTED_STAGES;
+
+struct Clipped(String);
+
+impl Write for Clipped {
+    fn write_str(&mut self, part: &str) -> fmt::Result {
+        for glyph in part.chars() {
+            let named = glyph.is_ascii_alphabetic() || matches!(glyph, '(' | '_');
+
+            if !named || self.0.len() >= LABEL_ROOM {
+                return Err(fmt::Error);
+            }
+
+            self.0.push(glyph);
+        }
+
+        Ok(())
+    }
+}
+
+fn label(message: &Message) -> String {
+    let mut clipped = Clipped(String::new());
+    let _ = write!(clipped, "{:?}", message);
+
+    clipped.0
+}
 
 const INDEX_PERSIST_COOLDOWN: Duration = Duration::from_secs(10);
 
@@ -365,6 +398,8 @@ pub struct BattleCatsApp {
     validated_key: Option<u64>,
     frames_painted: u8,
     window_shown: bool,
+    settled: Arc<AtomicBool>,
+    listed: u8,
     pub(crate) boot: Option<Instant>,
 
     pub home_state: home::State,
@@ -431,6 +466,8 @@ impl Default for BattleCatsApp {
             validated_key: None,
             frames_painted: 0,
             window_shown: false,
+            settled: Arc::default(),
+            listed: 0,
             boot: None,
             home_state: home::State::default(),
             cat_state: cat::State::default(),
@@ -1034,6 +1071,44 @@ impl BattleCatsApp {
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
+        let label = label(&message);
+        let listed = match &message {
+            Message::Cat(cat::Message::Loaded(..)) => LISTED_CATS,
+            Message::Enemy(enemy::Message::Loaded(..)) => LISTED_ENEMIES,
+            Message::Stage(stage::Message::Loaded(..)) => LISTED_STAGES,
+            _ => 0,
+        };
+
+        let started = Instant::now();
+        let task = self.handle(message);
+        let spent = started.elapsed();
+
+        if spent >= SLOW_PASS {
+            warn!(ms = spent.as_millis(), "Slow update: {}", label);
+        }
+
+        self.listed |= listed;
+
+        if self.listed == LISTED_ALL {
+            self.settled.store(true, Ordering::Relaxed);
+        }
+
+        let Some(ticket) = self.mining_state.take_wanted() else {
+            return task;
+        };
+
+        let vetting = mining::vet(
+            ticket,
+            Arc::clone(&self.vault),
+            self.cat_state.data.cats.clone(),
+            self.enemy_state.data.enemies.clone(),
+            &self.settings,
+        );
+
+        Task::batch([task, vetting.map(Message::Mining)])
+    }
+
+    fn handle(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::WindowResized(size) => {
                 self.window_size = size;
@@ -1065,6 +1140,11 @@ impl BattleCatsApp {
                 }
 
                 self.frames_painted = self.frames_painted.saturating_add(1);
+
+                if self.frames_painted == 1 && let Some(boot) = self.boot {
+                    info!(ms = boot.elapsed().as_millis(), "First frame painted");
+                }
+
                 if self.frames_painted < FRAMES_BEFORE_SHOW {
                     return Task::none();
                 }
@@ -1216,7 +1296,18 @@ impl BattleCatsApp {
                 self.sync_popup(ActivePopup::InitErrors, self.init_errors.is_open());
                 Task::none()
             }
-            Message::VaultHydrated(vault) => self.adopt_vault(vault, true),
+            Message::VaultHydrated(vault) => {
+                let started = Instant::now();
+                let task = self.adopt_vault(vault, true);
+
+                info!(
+                    ms = started.elapsed().as_millis(),
+                    since_boot_ms = self.boot.map_or(0, |boot| boot.elapsed().as_millis()),
+                    "Cached file index adopted"
+                );
+
+                task
+            }
             Message::TablesLoaded(tables) => {
                 let (param, localizable) = *tables;
                 info!("Core tables loaded");
@@ -1282,10 +1373,16 @@ impl BattleCatsApp {
                 self.sync_popup(ActivePopup::CatFilter, self.cat_state.filter_popup_open());
 
                 if loaded {
+                    let started = Instant::now();
                     let mined = self.restock_mining();
+                    let mined_ms = started.elapsed().as_millis();
                     let adopted = self.adopt_sandbox_cats();
+                    let adopted_ms = started.elapsed().as_millis() - mined_ms;
+                    let reconciled = self.reconcile_caches();
 
-                    return Task::batch([task, mined, adopted, self.reconcile_caches()]);
+                    debug!(mined_ms, adopted_ms, total_ms = started.elapsed().as_millis(), "Cat list handed to mining and sandbox");
+
+                    return Task::batch([task, mined, adopted, reconciled]);
                 }
 
                 if retabbed {
@@ -1481,7 +1578,15 @@ impl BattleCatsApp {
 
                 Task::batch([jump, self.navigate(Page::Files)])
             }
-            Message::Mining(msg) => self.mining_state.update(msg, self.window_size).map(Message::Mining),
+            Message::Mining(msg) => {
+                let task = self.mining_state.update(msg, self.window_size).map(Message::Mining);
+
+                if !self.mining_state.take_revet() {
+                    return task;
+                }
+
+                Task::batch([task, self.restock_mining()])
+            }
             Message::Files(msg) => {
                 let task = self.files_state.update(msg, &self.vault.vfs, &self.settings.files).map(Message::Files);
                 self.files_state.sync_state(&mut self.app_state.files);
@@ -1660,6 +1765,18 @@ impl BattleCatsApp {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
+        let started = Instant::now();
+        let composed = self.compose();
+        let spent = started.elapsed();
+
+        if spent >= SLOW_PASS {
+            warn!(ms = spent.as_millis(), page = ?self.current_page, "Slow view");
+        }
+
+        composed
+    }
+
+    fn compose(&self) -> Element<'_, Message> {
         popup::begin_view();
 
         let content = match self.current_page {
