@@ -1597,17 +1597,12 @@ fn drop_chara_targets(app: &BattleCatsApp) -> Vec<LevelTarget> {
 }
 
 fn drop_ids(stage: &kore::domains::stage::Stage) -> impl Iterator<Item = u32> + '_ {
-    let treasure = match &stage.rewards {
-        RewardStructure::Treasure { drops, .. } => Some(drops.iter().map(|drop| drop.item_id)),
-        _ => None,
-    };
-
     let timed = match &stage.rewards {
-        RewardStructure::Timed(scores) => Some(scores.iter().map(|score| score.item_id)),
+        RewardStructure::Timed { scores, .. } => Some(scores.iter().map(|score| score.item_id)),
         _ => None,
     };
 
-    treasure.into_iter().flatten().chain(timed.into_iter().flatten())
+    stage.rewards.drops().iter().map(|drop| drop.item_id).chain(timed.into_iter().flatten())
 }
 
 fn material_names(app: &BattleCatsApp) -> Vec<String> {

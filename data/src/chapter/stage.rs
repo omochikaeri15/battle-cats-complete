@@ -29,7 +29,7 @@ pub use cost::{resolve_energy, CataminGrade, CostType, ResolvedCost};
 pub use difficulty_level::{DifficultyLevel, DifficultyLevelError};
 pub use drop_chara::{DropChara, DropCharaError};
 pub use fixed_formation::{FixedFormation, FixedFormationEntry, FixedFormationError};
-pub use mapstagedata::{DropReward, MapStageData, MapStageDataEntry, MapStageDataError, MapStageDataHeader, RewardStructure, TimedScore};
+pub use mapstagedata::{DropOdds, DropReward, MapStageData, MapStageDataEntry, MapStageDataError, MapStageDataHeader, RewardStructure, TimedScore};
 pub use scatcpusetting::{ScatCpuSetting, ScatCpuSettingError};
 pub use stage_option::{StageOption, StageOptionEntry, StageOptionError};
 pub use stagename::{StageName, StageNameEntry, StageNameError};

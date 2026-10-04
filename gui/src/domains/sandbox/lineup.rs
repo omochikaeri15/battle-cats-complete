@@ -6,7 +6,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, mouse_area, row, scrollable, sensor, stack, text, text_input, Column, Row, Space};
 use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Theme};
-use tracing::debug;
+use tracing::{debug, info};
 
 use kore::common::context::GlobalContext;
 use kore::systems::combat::NameBook;
@@ -260,8 +260,15 @@ impl State {
         self.inspector.icon_stream().map(Message::Cat)
     }
 
-    pub fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
+    pub fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         let started = Instant::now();
+        let forms: HashMap<u32, [bool; 4]> = cats.iter().map(|cat| (cat.id, cat.forms)).collect();
+        let moved = app_state.sandbox.roster.settle_forms(&forms);
+
+        if moved > 0 {
+            info!(moved, "Sandbox members on a form the current data lacks fell back to their highest form");
+        }
+
         let adopted = self.inspector.adopt_cats(cats, ctx.vault).map(Message::Cat);
         let inspector_ms = started.elapsed().as_millis();
         let orbs = self.orbs.load(ctx.vault, ctx.names).map(Message::Orbs);

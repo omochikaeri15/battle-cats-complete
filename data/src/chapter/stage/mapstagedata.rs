@@ -128,10 +128,16 @@ pub struct TimedScore {
     pub amount: u32,
 }
 
+/// The chance of one reward being granted on a single clear.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct DropOdds {
+    /// The percentage chance while the stage's once-only reward is unclaimed.
+    pub first: f64,
+    /// The percentage chance after the once-only reward has been claimed.
+    pub repeat: f64,
+}
+
 /// The reward scheme a stage uses on completion.
-///
-/// The two schemes are mutually exclusive and select on different criteria, so a
-/// variant each keeps the inapplicable fields unrepresentable.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum RewardStructure {
     /// The stage grants no completion reward.
@@ -139,13 +145,98 @@ pub enum RewardStructure {
     None,
     /// The stage draws from a treasure pool.
     Treasure {
-        /// The rule governing how many entries of the pool may be drawn and whether draws repeat.
+        /// The rule governing how the pool is rolled and whether its rewards repeat.
         drop_rule: i32,
         /// The candidate rewards in the pool.
         drops: Vec<DropReward>,
     },
-    /// The stage grants rewards according to the score achieved.
-    Timed(Vec<TimedScore>),
+    /// The stage grants rewards according to the score achieved, alongside a single rolled reward.
+    Timed {
+        /// The reward rolled for on every clear, independent of the score.
+        drop: DropReward,
+        /// The rewards granted at each score threshold.
+        scores: Vec<TimedScore>,
+    },
+}
+
+impl RewardStructure {
+    /// Returns the rewards rolled for on a clear, in the order the row declares them.
+    ///
+    /// # Returns
+    /// A slice of `DropReward` holding the treasure pool, the lone rolled reward of
+    /// a score ladder, or nothing for a stage without a reward.
+    pub fn drops(&self) -> &[DropReward] {
+        match self {
+            Self::None => &[],
+            Self::Treasure { drops, .. } => drops,
+            Self::Timed { drop, .. } => std::slice::from_ref(drop),
+        }
+    }
+
+    /// Returns the chance of each reward in [`RewardStructure::drops`] being granted on a clear.
+    ///
+    /// A rule of negative three or four draws exactly one reward weighted by its
+    /// chance, the former only until the stage's reward is claimed, and draws
+    /// nothing from a pool of eleven or more. A rule of zero, one or two rolls the
+    /// first three rewards in turn against their percentage and grants the first
+    /// that succeeds; one and two grant the first reward once, after which its roll
+    /// is skipped on maps that track event rewards. Any other rule, and a score
+    /// ladder, rolls the first reward alone.
+    ///
+    /// # Returns
+    /// A `Vec` of `DropOdds` parallel to [`RewardStructure::drops`].
+    pub fn odds(&self) -> Vec<DropOdds> {
+        let drops = self.drops();
+        let rule = match self {
+            Self::Treasure { drop_rule, .. } => *drop_rule,
+            _ => -2,
+        };
+
+        if rule == -3 || rule == -4 {
+            return weighted_odds(drops, rule == -4);
+        }
+
+        let tiers = if rule >= 0 { drops.len().min(3) } else { drops.len().min(1) };
+        let once = rule == 1 || rule == 2;
+        let mut first_miss = 1.0;
+        let mut repeat_miss = 1.0;
+
+        drops
+            .iter()
+            .enumerate()
+            .map(|(tier, drop)| {
+                if tier >= tiers {
+                    return DropOdds::default();
+                }
+
+                let rate = f64::from(drop.chance.min(100)) / 100.0;
+                let repeat_rate = if once && tier == 0 { 0.0 } else { rate };
+                let odds = DropOdds { first: first_miss * rate * 100.0, repeat: repeat_miss * repeat_rate * 100.0 };
+
+                first_miss *= 1.0 - rate;
+                repeat_miss *= 1.0 - repeat_rate;
+
+                odds
+            })
+            .collect()
+    }
+}
+
+fn weighted_odds(drops: &[DropReward], repeats: bool) -> Vec<DropOdds> {
+    let total: u64 = drops.iter().map(|drop| u64::from(drop.chance)).sum();
+
+    if total == 0 || drops.len() >= 11 {
+        return vec![DropOdds::default(); drops.len()];
+    }
+
+    drops
+        .iter()
+        .map(|drop| {
+            let first = f64::from(drop.chance) * 100.0 / total as f64;
+
+            DropOdds { first, repeat: if repeats { first } else { 0.0 } }
+        })
+        .collect()
 }
 
 /// The metadata describing a single stage's cost, music, and rewards.
@@ -318,6 +409,11 @@ fn extract_header(
 }
 
 fn extract_timed_scores(parts: &[&str]) -> RewardStructure {
+    let drop = DropReward {
+        chance: parse_cell(parts, 5),
+        item_id: parse_cell(parts, 6),
+        amount: parse_cell(parts, 7),
+    };
     let mut scores = Vec::new();
     let score_block_count = parts.len().saturating_sub(17) / 3;
 
@@ -343,7 +439,11 @@ fn extract_timed_scores(parts: &[&str]) -> RewardStructure {
         scores.push(TimedScore { score, item_id, amount });
     }
 
-    RewardStructure::Timed(scores)
+    RewardStructure::Timed { drop, scores }
+}
+
+fn parse_cell(parts: &[&str], index: usize) -> u32 {
+    parts.get(index).and_then(|part| part.trim().parse().ok()).unwrap_or(0)
 }
 
 fn extract_treasure_drops(parts: &[&str]) -> RewardStructure {
@@ -539,10 +639,13 @@ mod tests {
         assert_eq!(data.entries[0].boss_track, 33);
         assert_eq!(
             data.entries[0].rewards,
-            RewardStructure::Timed(vec![
-                TimedScore { score: 8500, item_id: 13, amount: 10 },
-                TimedScore { score: 5000, item_id: 3, amount: 1 },
-            ]),
+            RewardStructure::Timed {
+                drop: DropReward { chance: 0, item_id: 1, amount: 1 },
+                scores: vec![
+                    TimedScore { score: 8500, item_id: 13, amount: 10 },
+                    TimedScore { score: 5000, item_id: 3, amount: 1 },
+                ],
+            },
         );
         assert_eq!(data.entries[1].init_track, 3);
     }
@@ -563,5 +666,32 @@ mod tests {
             MapStageData::parse(format!("{HEADERS}-1,\n"), None).unwrap_err(),
             MapStageDataError::EmptyFile,
         );
+    }
+
+    fn odds_of(row: &str) -> Vec<(f64, f64)> {
+        let data = MapStageData::parse(format!("{HEADERS}{row}\n"), None).unwrap();
+
+        data.entries[0].rewards.odds().iter().map(|odds| (odds.first, odds.repeat)).collect()
+    }
+
+    // A guaranteed pool picks one entry by weight, it doesn't hand out every entry at 100%.
+    #[test]
+    fn a_guaranteed_pool_splits_one_drop_by_weight() {
+        assert_eq!(odds_of("30,0,1,1,1,25,10,1,-4,75,11,1,-1"), vec![(25.0, 25.0), (75.0, 75.0)]);
+        assert_eq!(odds_of("30,0,1,1,1,25,10,1,-3,75,11,1,-1"), vec![(25.0, 0.0), (75.0, 0.0)]);
+    }
+
+    // Rules 0-2 roll each slot in turn and stop at the first hit; 1 skips slot one once it's claimed.
+    #[test]
+    fn a_chained_pool_rolls_each_slot_after_the_last_misses() {
+        assert_eq!(odds_of("30,0,1,1,1,50,10,1,0,50,11,1,100,12,1,-1"), vec![(50.0, 50.0), (25.0, 25.0), (25.0, 25.0)]);
+        assert_eq!(odds_of("30,0,1,1,1,50,10,1,1,50,11,1,-1"), vec![(50.0, 0.0), (25.0, 50.0)]);
+    }
+
+    #[test]
+    fn a_score_ladder_keeps_the_drop_beside_it() {
+        let row = "30,0,1,1,1,5,1028,1,-2,-2,-2,-2,-2,-2,-2,1,7000,6,50000,-1";
+
+        assert_eq!(odds_of(row), vec![(5.0, 5.0)]);
     }
 }

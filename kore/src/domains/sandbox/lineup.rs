@@ -357,6 +357,27 @@ impl Roster {
         });
     }
 
+    pub fn settle_forms(&mut self, forms: &HashMap<u32, [bool; 4]>) -> usize {
+        let mut moved = 0;
+
+        for lineup in &mut self.lineups {
+            for member in lineup.slots.iter_mut().chain(lineup.bench.iter_mut().flatten()) {
+                let Some(held) = forms.get(&member.id) else {
+                    continue;
+                };
+
+                if held.get(member.form).copied().unwrap_or(false) {
+                    continue;
+                }
+
+                member.form = held.iter().rposition(|exists| *exists).unwrap_or(0);
+                moved += 1;
+            }
+        }
+
+        moved
+    }
+
     pub fn recall(&self, id: u32, mount: &str) -> Option<&Loadout> {
         self.history(mount)?.units.get(&id)
     }
@@ -409,6 +430,25 @@ mod tests {
 
     fn unit(id: u32) -> Member {
         Member { id, level: "30".to_owned(), ..Member::default() }
+    }
+
+    // A form that only a mod supplied falls back once that mod is gone.
+    #[test]
+    fn a_form_the_data_no_longer_has_falls_back_to_the_highest_one_left() {
+        let mut roster = Roster::default();
+        let lineup = roster.current_mut();
+
+        lineup.slots = vec![Member { form: 2, ..unit(269) }, Member { form: 1, ..unit(10) }, Member { form: 3, ..unit(999) }];
+        lineup.bench[0] = Some(Member { form: 2, ..unit(269) });
+
+        let forms = HashMap::from([(269, [true, true, false, false]), (10, [true, true, false, false])]);
+
+        assert_eq!(roster.settle_forms(&forms), 2);
+
+        let lineup = roster.current_mut();
+
+        assert_eq!(lineup.slots.iter().map(|member| member.form).collect::<Vec<_>>(), [1, 1, 3]);
+        assert_eq!(lineup.bench[0].as_ref().map(|member| member.form), Some(1));
     }
 
     #[test]

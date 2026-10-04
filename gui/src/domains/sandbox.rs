@@ -268,7 +268,7 @@ impl State {
         self.lineup.icon_stream().map(Message::Lineup)
     }
 
-    pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &AppState, ctx: GlobalContext<'_>) -> Task<Message> {
+    pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         self.config.reload(&ctx.vault.vfs, ctx.names);
         self.lineup.adopt_cats(cats, app_state, ctx).map(Message::Lineup)
     }

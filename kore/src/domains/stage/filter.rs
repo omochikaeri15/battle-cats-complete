@@ -461,15 +461,17 @@ impl CompiledStageFilter {
 
         if !self.treasures.is_empty() {
             for treasure_filter in &self.treasures {
-                let found = match &stage.rewards {
-                    RewardStructure::Treasure { drops, .. } => {
-                        drops.iter().any(|drop| treasure_filter.matches_drop(drop.item_id, drop.amount, drop.chance, ctx.items, ctx.vfs, ctx.drop_chara_registry, ctx.unit_buy_registry, ctx.cat_name_registry))
-                    }
-                    RewardStructure::Timed(scores) => {
+                let rolled = stage.rewards.drops().iter().zip(stage.rewards.odds()).any(|(drop, odds)| {
+                    let chance = odds.first.max(odds.repeat);
+                    chance > 0.0 && treasure_filter.matches_drop(drop.item_id, drop.amount, chance.round() as u32, ctx.items, ctx.vfs, ctx.drop_chara_registry, ctx.unit_buy_registry, ctx.cat_name_registry)
+                });
+                let scored = match &stage.rewards {
+                    RewardStructure::Timed { scores, .. } => {
                         scores.iter().any(|score| treasure_filter.matches_drop(score.item_id, score.amount, 100, ctx.items, ctx.vfs, ctx.drop_chara_registry, ctx.unit_buy_registry, ctx.cat_name_registry))
                     }
                     _ => false,
                 };
+                let found = rolled || scored;
                 if treasure_filter.is_exclude { if found { return false; } } else if !found { return false; }
             }
         }

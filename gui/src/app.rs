@@ -1945,7 +1945,7 @@ impl BattleCatsApp {
     fn adopt_sandbox_cats(&mut self) -> Task<Message> {
         let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure, names: &self.names };
 
-        self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &self.app_state, global_ctx).map(Message::Sandbox)
+        self.sandbox_state.adopt_cats(&self.cat_state.data.cats, &mut self.app_state, global_ctx).map(Message::Sandbox)
     }
 
     fn reload_game_data(&mut self) -> Task<Message> {

@@ -7,7 +7,7 @@ use iced::widget::image::Handle;
 use iced::widget::{column, container, image as iced_image, row, space, text, tooltip, Column};
 use iced::{Alignment, Element, Length, Theme};
 use nyanko::cat::unit::UnitBuy;
-use nyanko::chapter::stage::RewardStructure;
+use nyanko::chapter::stage::{DropOdds, RewardStructure};
 
 use kore::domains::stage::treasure;
 use kore::domains::stage::Stage;
@@ -24,19 +24,30 @@ const MAX_ICON_SIZE: f32 = 32.0;
 const HEADER_TEXT_SIZE: f32 = 13.0;
 const CELL_PADDING: [u16; 2] = [4, 8];
 const COLUMN_SPACING: f32 = 8.0;
+const TABLE_GAP: f32 = 15.0;
 
-fn format_drop_chance(raw_chance: u32, drop_rule: i32) -> String {
-    if drop_rule == -3 || drop_rule == -4 {
-        return "100%".to_string();
+fn format_percent(value: f64) -> String {
+    let rounded = format!("{value:.2}");
+
+    format!("{}%", rounded.trim_end_matches('0').trim_end_matches('.'))
+}
+
+fn format_odds(odds: DropOdds) -> String {
+    let first = format_percent(odds.first);
+
+    if odds.repeat <= 0.0 {
+        return first;
     }
-    format!("{}%", raw_chance)
+
+    let repeat = format_percent(odds.repeat);
+
+    if first == repeat { first } else { format!("{first} -> {repeat}") }
 }
 
 fn format_treasure_rule(drop_rule: i32) -> &'static str {
     match drop_rule {
-        1 => "Once, Then Unlimited",
-        0 => "Unlimited",
-        -1 => "Unlimited (%)",
+        1 | 2 => "First Drop Once",
+        -2..=0 => "Unlimited",
         -3 => "Guaranteed (Once)",
         -4 => "Guaranteed (Unlimited)",
         _ => "Unknown Rule",
@@ -110,36 +121,20 @@ impl State {
         vfs: &'a Vfs,
     ) -> Element<'a, super::Message> {
         match &stage.rewards {
-            RewardStructure::Treasure { drop_rule, drops } => {
-                let valid_drops: Vec<_> = drops.iter().filter(|drop| drop.chance > 0).collect();
-                if valid_drops.is_empty() {
-                    return space().into();
-                }
-
-                let mut grid = column![header_row("Chance")];
-
-                for (index, drop) in valid_drops.into_iter().enumerate() {
-                    let resolved = treasure::resolve_drop(vfs, drop.item_id, drop.amount, items, drop_charas, unit_buys);
-                    grid = grid.push(self.item_row(
-                        index,
-                        drop.item_id,
-                        format_drop_chance(drop.chance, *drop_rule),
-                        resolved.amount_display.clone(),
-                        resolved.image_path.as_deref(),
-                        resolved.name.clone(),
-                    ));
-                }
-
-                table(format!("Treasure | {}", format_treasure_rule(*drop_rule)), grid)
+            RewardStructure::Treasure { drop_rule, .. } => {
+                self.drop_table(&stage.rewards, format_treasure_rule(*drop_rule), items, drop_charas, unit_buys, vfs)
+                    .unwrap_or_else(|| space().into())
             }
-            RewardStructure::Timed(timed_scores) => {
-                if timed_scores.is_empty() {
-                    return space().into();
+            RewardStructure::Timed { scores, .. } => {
+                let drops = self.drop_table(&stage.rewards, format_treasure_rule(-2), items, drop_charas, unit_buys, vfs);
+
+                if scores.is_empty() {
+                    return drops.unwrap_or_else(|| space().into());
                 }
 
                 let mut grid = column![header_row("Score")];
 
-                for (index, score) in timed_scores.iter().enumerate() {
+                for (index, score) in scores.iter().enumerate() {
                     let resolved = treasure::resolve_drop(vfs, score.item_id, score.amount, items, drop_charas, unit_buys);
                     grid = grid.push(self.item_row(
                         index,
@@ -151,10 +146,51 @@ impl State {
                     ));
                 }
 
-                table("Timed Score Rewards", grid)
+                column![]
+                    .push(drops)
+                    .push(table("Timed Score Rewards", grid))
+                    .spacing(TABLE_GAP)
+                    .into()
             }
             RewardStructure::None => space().into(),
         }
+    }
+
+    fn drop_table<'a>(
+        &'a self,
+        rewards: &RewardStructure,
+        rule: &str,
+        items: &ItemStore,
+        drop_charas: &'a HashMap<u32, u32>,
+        unit_buys: &'a HashMap<u32, UnitBuy>,
+        vfs: &'a Vfs,
+    ) -> Option<Element<'a, super::Message>> {
+        let rolled: Vec<_> = rewards
+            .drops()
+            .iter()
+            .zip(rewards.odds())
+            .filter(|(_, odds)| odds.first > 0.0 || odds.repeat > 0.0)
+            .collect();
+
+        if rolled.is_empty() {
+            return None;
+        }
+
+        let mut grid = column![header_row("Chance")];
+
+        for (index, (drop, odds)) in rolled.into_iter().enumerate() {
+            let resolved = treasure::resolve_drop(vfs, drop.item_id, drop.amount, items, drop_charas, unit_buys);
+            grid = grid.push(self.item_row(
+                index,
+                drop.item_id,
+                format_odds(odds),
+                resolved.amount_display.clone(),
+                resolved.image_path.as_deref(),
+                resolved.name.clone(),
+            ));
+        }
+
+        Some(table(format!("Treasure | {rule}"), grid))
     }
 }
 

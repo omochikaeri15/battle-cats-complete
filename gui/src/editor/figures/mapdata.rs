@@ -267,7 +267,7 @@ mod tests {
         ];
         let named = probe(&row);
 
-        let RewardStructure::Timed(scores) = parsed(&row) else {
+        let RewardStructure::Timed { scores, .. } = parsed(&row) else {
             panic!("nyanko no longer reads this row as a score ladder");
         };
 
