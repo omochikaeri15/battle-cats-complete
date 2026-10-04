@@ -145,6 +145,7 @@ const REGIONS: &[(&str, &str)] = &[
 ];
 const META_TEXT_SIZE: f32 = 14.0;
 const NOTICE_TEXT_SIZE: f32 = 15.0;
+const VETTING_LABEL: &str = "Checking Roster...";
 const STRUCK_LABEL: &str = "Diff Created!";
 const BARREN_LABEL: &str = "No Diffs!";
 const RAISED_LABEL: &str = "Updated Snapshot!";
@@ -559,6 +560,10 @@ impl State {
         Some(ticket)
     }
 
+    fn vetting(&self) -> bool {
+        self.vetting.is_some() || self.wanted.is_some()
+    }
+
     pub(crate) fn take_revet(&mut self) -> bool {
         std::mem::take(&mut self.revet)
     }
@@ -881,7 +886,7 @@ impl State {
     }
 
     pub(crate) fn begin(&mut self, chore: Chore) -> Task<Message> {
-        if self.chore.is_some() {
+        if self.chore.is_some() || self.vetting() {
             return Task::none();
         }
 

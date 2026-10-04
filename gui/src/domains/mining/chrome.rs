@@ -259,6 +259,14 @@ impl State {
         let busy = self.chore == Some(chore);
         let done = self.outcome.get().copied().filter(|(held, _)| *held == chore).map(|(_, kept)| kept);
 
+        if !busy && self.vetting() {
+            return button(theme::centered_text(VETTING_LABEL).size(TAB_TEXT_SIZE))
+                .padding([6, 16])
+                .width(Length::Fixed(theme::ACTION_BUTTON_WIDTH))
+                .style(theme::warning_status)
+                .into();
+        }
+
         let (label, style): (&str, theme::ButtonStyleFn) = match (busy, done) {
             (true, _) => (self.busy_label(chore), theme::warning_button),
             (false, Some(true)) => (self.struck_label(chore), theme::success_button),
