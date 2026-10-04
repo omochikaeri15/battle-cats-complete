@@ -1,8 +1,6 @@
 # Editor
 You can invoke the Editor using the **Context Menu**, allowing you to modify and create modded files for a currently enabled Mod. Mods are created through `Mods > Add Mod`, and are enabled through `Mods > YourModHere > Enable Mod`, where `YourModHere` is the name of the mod you'd like to enable.
 
-**Disclaimer:** The Editor is currently an opt-in **Nightly** feature enabled through `Settings > General > Behavior > Enable Nightly Features`. This means it is potentially unstable and may be buggy. The Editor handles the creation, deletion, and writing of files. It is recommended you back-up your Mod's files before using the Editor while it is in this state.
-
 ## Context Menu
 To select files you want to work with, you must right-click to open the Context Menu. You can select a specific file to handle, and select an action to take with it. There are two different options driving Context Menu file access under `Settings > Files > Context Scope`: `Broad` and `Specific`.
 
