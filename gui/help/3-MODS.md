@@ -33,5 +33,5 @@ If you are looking to modify data such as Entity Spritesheets, Models, as well a
 ## Export
 You can export a mod under the `Mods` page by selecting your mod and clicking "Export Mod," in which you are given 3 options:
 - **APK**: Export directly into a `.apk` file, or optionally, if you have the APKEditor add-on, `.xapk` files as well. Requires Keys & IV.
-- **BCM**: Export into a `.bcm` archive, which is just a renamed zip file made to signify "this is a battle cats mod."
+- **BCM**: Export into a `.bcm` archive, which is an archive format optimized for low file sizes.
 - **Pack**: Export into the games proprietary `.pack` and `.list` format for pack-specific injection. Requires Keys & IV.
