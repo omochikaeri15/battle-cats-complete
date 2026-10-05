@@ -320,8 +320,20 @@ impl State {
 
         let mut level_col = column![level_row].spacing(4);
 
-        if let Some(stats) = ctx.current_stats
-            && let Some(display_text) = talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level, ctx.treasure, ctx.traits.as_ref().unwrap_or(stats)) {
+        let shown = ctx.current_stats.and_then(|stats| {
+            let traits = ctx.traits.as_ref().unwrap_or(stats);
+
+            ctx.talent_levels.map_or_else(
+                || talent_logic::calculate_talent_display(group, stats, current_level, ctx.curve, ctx.unit_level, ctx.treasure, traits),
+                |levels| {
+                    let scaling = talent_logic::Scaling { curve: ctx.curve, level: ctx.unit_level, treasure: ctx.treasure };
+
+                    talent_logic::calculate_linked_display(ctx.talent_data, levels, usize::from(index), stats, scaling, traits)
+                },
+            )
+        });
+
+        if let Some(display_text) = shown {
             level_col = level_col.push(strong_superscript(&display_text, 15.0, Some(Color::WHITE)));
         }
 

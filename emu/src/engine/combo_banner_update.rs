@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, combo_banner_pending, combo_banner_skip_all, get_drawable_width,
+    AppContext, Rect, combo_banner_pending, combo_banner_skip_all, get_drawable_width,
     get_nyancombo_text, get_text_texture, hit_test_rect, set_combo_banner_pending,
     text_texture_cache, touch_released,
 };
@@ -15,7 +15,7 @@ pub fn combo_banner_update(ctx: &mut AppContext) -> Result<(), Fault> {
     {
         ctx.set_block_at::<16>(AppContext::COMBO_BANNER_STATE, [0; 16])?;
         ctx.set_block_at::<16>(AppContext::COMBO_BANNER_UNITS, [0xff; 16])?;
-        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(0x10), -1)?;
+        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(4 * 4), -1)?;
 
         ctx.combo_banner_texts[0] = None;
         ctx.combo_banner_texts[1] = None;
@@ -68,7 +68,7 @@ pub fn combo_banner_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let build = if phase == 1 {
         ctx.set_block_at::<16>(AppContext::COMBO_BANNER_UNITS, [0xff; 16])?;
-        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(0x10), -1)?;
+        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(4 * 4), -1)?;
 
         match ctx
             .combo_store
@@ -150,7 +150,7 @@ pub fn combo_banner_update(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_block_at::<8>(AppContext::COMBO_BANNER_PHASE, [0; 8])?;
         ctx.set_i32_at(AppContext::COMBO_BANNER_SUB, 0)?;
         ctx.set_block_at::<16>(AppContext::COMBO_BANNER_UNITS, [0xff; 16])?;
-        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(0x10), -1)?;
+        ctx.set_i32_at(AppContext::COMBO_BANNER_UNITS.wrapping_add(4 * 4), -1)?;
 
         if let Some(record) = ctx
             .combo_store
@@ -175,10 +175,10 @@ pub fn combo_banner_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let x = ctx.i32_at(AppContext::COMBO_SKIP_RECT)?;
     let y = ctx
-        .i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(4))?
+        .i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(Rect::Y))?
         .wrapping_add(shift);
-    let w = ctx.i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(8))?;
-    let h = ctx.i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(0xc))?;
+    let w = ctx.i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(Rect::WIDTH))?;
+    let h = ctx.i32_at(AppContext::COMBO_SKIP_RECT.wrapping_add(Rect::HEIGHT))?;
 
     if hit_test_rect(ctx, x, y, w, h)? {
         combo_banner_skip_all(ctx)?;

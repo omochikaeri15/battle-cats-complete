@@ -23,9 +23,10 @@ pub fn labyrinth_unit_count(ctx: &mut AppContext, rarity: i32) -> Result<i32, Fa
 
     let mut count = 0i32;
 
-    for unit in 0..0x36cusize {
+    for unit in 0..ctx.limits.units as usize {
         let row = ctx.bytes_from(AppContext::UNITS_OWNED)?;
-        let owned = ops::xor_row_decode(row, 0x36c, unit).ok_or(Fault::index_out_of_range(unit as i64, 0x36c))?;
+        let owned = ops::xor_row_decode(row, ctx.limits.units as usize, unit)
+            .ok_or(Fault::index_out_of_range(unit as i64, ctx.limits.units as i64))?;
 
         if owned == 0 {
             continue;

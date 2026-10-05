@@ -148,7 +148,7 @@ There are a few keybinds that introduce unique behavior or shortcuts.
 
 If your set is studio-native, which includes any sets within the `studio/` folder, you can undo up to 500 changes back **or** 64 MB worth of data back. Per-set, so there is no set limit.
 
-If your set is write-in-place, which includes editing an unlocked mounted animation set, you can undo up to 25 changes back. History is kept for the last three sets you loaded; loading a fourth drops the oldest.
+If your set is write-in-place, which includes editing a mounted animation set, you can undo up to 25 changes back. History is kept for the last three sets you loaded; loading a fourth drops the oldest.
 
 ### Delete
-`Backspace` when a part or its channel is selected removes the entire part, or the part's selected channel. Shortcut for `Context Menu > Delete "Part N"` and `Context Menu > Remove channel from "Part N"`.
+`Backspace` when a part or its channel are selected removes the entire part, or the part's selected channel. Shortcut for `Context Menu > Delete "Part N"` and `Context Menu > Remove channel from "Part N"`.

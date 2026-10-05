@@ -55,7 +55,7 @@ pub fn get_stage_record(
                 .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
         0x01 => Ok(ctx.u8_at(AppContext::MAP_NEG25_CLEARED)? as i32),
-        0x05 => Ok((get_cleared_count(ctx, 0xad0)? > stage) as i32),
+        0x05 => Ok((get_cleared_count(ctx, AppContext::LABYRINTH)? > stage) as i32),
         0x07 => {
             let maps = &ctx.stage_record_neg19;
 

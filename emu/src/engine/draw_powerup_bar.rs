@@ -1,10 +1,10 @@
 use crate::Fault;
 
 use super::{
-    AppContext, BUTTON_PRESS_BOUNCE, Surface, draw_context, draw_cut_scaled, draw_surface_aligned,
-    fill_polygon, fill_rect_f, find_item_index, get_battle_status, get_drawable_width,
-    get_item_description, get_powerup_available, get_right_inset_logical, powerup_available,
-    set_draw_origin, set_tint, text_block_draw, touch_is_down,
+    AppContext, BUTTON_PRESS_BOUNCE, Quad, Surface, draw_context, draw_cut_scaled,
+    draw_surface_aligned, fill_polygon, fill_rect_f, find_item_index, get_battle_status,
+    get_drawable_width, get_item_description, get_powerup_available, get_right_inset_logical,
+    powerup_available, set_draw_origin, set_tint, text_block_draw, touch_is_down,
 };
 
 const BLANK_LINE: &[u8] = "\u{ff20}".as_bytes();
@@ -142,28 +142,28 @@ pub fn draw_powerup_bar(ctx: &mut AppContext) -> Result<(), Fault> {
             .wrapping_add(offset)
             .wrapping_add(-0x1d5);
 
-        ctx.set_i32_at(AppContext::POLYGON_XS + 4, right)?;
+        ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_1, right)?;
 
         let left = get_drawable_width(ctx)?
             .wrapping_add(offset)
             .wrapping_add(-0x1f3);
 
-        ctx.set_i32_at(AppContext::POLYGON_XS + 8, left)?;
+        ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_2, left)?;
         ctx.set_i32_at(AppContext::POLYGON_YS, 0x76)?;
-        ctx.set_i32_at(AppContext::POLYGON_YS + 4, 0x86)?;
-        ctx.set_i32_at(AppContext::POLYGON_YS + 8, 0x86)?;
+        ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_1, 0x86)?;
+        ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_2, 0x86)?;
 
         set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xd8);
 
         let xs = [
             ctx.i32_at(AppContext::POLYGON_XS)?,
-            ctx.i32_at(AppContext::POLYGON_XS + 4)?,
-            ctx.i32_at(AppContext::POLYGON_XS + 8)?,
+            ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_1)?,
+            ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_2)?,
         ];
         let ys = [
             ctx.i32_at(AppContext::POLYGON_YS)?,
-            ctx.i32_at(AppContext::POLYGON_YS + 4)?,
-            ctx.i32_at(AppContext::POLYGON_YS + 8)?,
+            ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_1)?,
+            ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_2)?,
         ];
 
         fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);

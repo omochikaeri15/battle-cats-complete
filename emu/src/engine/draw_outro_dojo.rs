@@ -1,9 +1,11 @@
 use crate::{Fault, ops};
 
 use super::{
-    button_bank_find, dialog_draw, dialog_top, draw_context, draw_cut, draw_cut_scaled, draw_number_plain, draw_panel, draw_percent_number, entry_find_by_id,
-    fill_rect, get_bottom_inset_logical, get_design_height2, get_drawable_width, get_map_type, glow_set, hit_test_rect, imgcut_get_sprite_cut, min_i32,
-    new_button_draw, ranking_rank_by_id, set_tint, touch_is_down, AppContext, BUTTON_PRESS_BOUNCE, OUTRO_SLIDE_TABLE,
+    AppContext, BUTTON_PRESS_BOUNCE, OUTRO_SLIDE_TABLE, Rect, button_bank_find, dialog_draw,
+    dialog_top, draw_context, draw_cut, draw_cut_scaled, draw_number_plain, draw_panel,
+    draw_percent_number, entry_find_by_id, fill_rect, get_bottom_inset_logical, get_design_height2,
+    get_drawable_width, get_map_type, glow_set, hit_test_rect, imgcut_get_sprite_cut, min_i32,
+    new_button_draw, ranking_rank_by_id, set_tint, touch_is_down,
 };
 
 pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
@@ -170,9 +172,9 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
             let rect = [
                 ctx.i32_at(AppContext::OUTRO_OK_RECT)?,
-                ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?,
-                ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?,
-                ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?,
+                ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?,
+                ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?,
+                ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?,
             ];
 
             if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {

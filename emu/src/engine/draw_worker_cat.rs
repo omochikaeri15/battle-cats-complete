@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, draw_context, draw_cut, draw_cut_scaled, draw_number_scaled,
+    AppContext, Rect, draw_context, draw_cut, draw_cut_scaled, draw_number_scaled,
     get_left_inset_logical, get_money, get_stage_record, get_top_inset_offset, get_worker_level,
     get_worker_upgrade_cost,
 };
@@ -17,7 +17,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = ctx.i32_at(AppContext::WORKER_RECT)?;
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + 4)?);
+            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?);
 
         draw_cut(
             draw_context(&mut ctx.draw)?,
@@ -32,7 +32,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = get_left_inset_logical(ctx).wrapping_add(4);
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + 4)?)
+            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?)
             .wrapping_add(0x5c);
 
         draw_cut(
@@ -90,7 +90,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = ctx.i32_at(AppContext::WORKER_RECT)?;
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + 4)?);
+            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?);
 
         draw_cut(
             draw_context(&mut ctx.draw)?,
@@ -106,7 +106,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
     } else {
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + 4)?);
+            .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?);
         let cut = if ctx.i32_at(AppContext::BLINK_ON)? == 0 {
             6
         } else {
@@ -131,7 +131,7 @@ pub fn draw_worker_cat(ctx: &mut AppContext) -> Result<(), Fault> {
     let left = get_left_inset_logical(ctx).wrapping_add(4);
     let y = ctx
         .i32_at(AppContext::DECK_BAR_SLIDE)?
-        .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + 4)?)
+        .wrapping_add(ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?)
         .wrapping_add(0x5c);
     let area = draw_number_scaled(
         draw_context(&mut ctx.draw)?,

@@ -3,11 +3,11 @@ use std::rc::Rc;
 use crate::Fault;
 
 use super::{
-    AppContext, format_localized, get_button_unit_row, get_sheet_table, get_unit_alt_art,
-    get_unit_file_base, maanim_initialize, maanim_load, mamodel_get_part, mamodel_get_part_count,
-    mamodel_load, mamodel_set_sheet_table, query_localizable, read_flag, stat_spawn_animation_flag,
-    stat_use_gudetama_soul, std_map_int_maanim_subscript, string_format_text_int,
-    texture_cache_load, trait_zombie,
+    AppContext, MamodelPart, format_localized, get_button_unit_row, get_sheet_table,
+    get_unit_alt_art, get_unit_file_base, maanim_initialize, maanim_load, mamodel_get_part,
+    mamodel_get_part_count, mamodel_load, mamodel_set_sheet_table, query_localizable, read_flag,
+    stat_spawn_animation_flag, stat_use_gudetama_soul, std_map_int_maanim_subscript,
+    string_format_text_int, texture_cache_load, trait_zombie,
 };
 
 pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
@@ -141,8 +141,8 @@ pub fn load_unit_rig(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         .get_mut(first + part as usize)
                         .ok_or(Fault::index_out_of_range(part as i64, limit))?;
 
-                if target.i32_at(0x24) != -1 {
-                    target.set_i32_at(0x24, unit);
+                if target.i32_at(MamodelPart::SHEET) != -1 {
+                    target.set_i32_at(MamodelPart::SHEET, unit);
                 }
 
                 part += 1;

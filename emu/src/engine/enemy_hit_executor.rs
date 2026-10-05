@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, Entity, ExplosionEvent, SurgeEvent, WaveRecord, abs_i32, call_rng,
+    AppContext, Entity, ExplosionEvent, ProcRolls, SurgeEvent, WaveRecord, abs_i32, call_rng,
     enemy_attack_dispatch, get_explosion_anchor, get_explosion_chance, get_explosion_span,
     get_mini_surge, get_pos_x, get_surge_anchor, get_surge_chance, get_surge_level, get_surge_span,
     get_wave_chance, get_wave_level, get_wave_mini, has_attack_abilities, is_attack_long_range,
@@ -17,17 +17,17 @@ pub fn enemy_hit_executor(
     roll_procs(ctx, 1, slot, attack)?;
 
     let crit = ctx.i32_at(AppContext::PROC_ROLLS)?;
-    let p_knockback = ctx.i32_at(AppContext::PROC_ROLLS + 0x4)? != 0;
-    let p_freeze = ctx.i32_at(AppContext::PROC_ROLLS + 0x8)? != 0;
-    let p_slow = ctx.i32_at(AppContext::PROC_ROLLS + 0xc)? != 0;
-    let p_weaken = ctx.i32_at(AppContext::PROC_ROLLS + 0x10)? != 0;
-    let savage = ctx.i32_at(AppContext::PROC_ROLLS + 0x14)? != 0;
-    let p_warp = ctx.i32_at(AppContext::PROC_ROLLS + 0x18)? != 0;
-    let barrier_broke = ctx.i32_at(AppContext::PROC_ROLLS + 0x1c)? != 0;
-    let p_curse = ctx.i32_at(AppContext::PROC_ROLLS + 0x20)? != 0;
-    let p_toxic = ctx.i32_at(AppContext::PROC_ROLLS + 0x24)? != 0;
-    let shield_pierced = ctx.i32_at(AppContext::PROC_ROLLS + 0x28)?;
-    let p_drain = ctx.i32_at(AppContext::PROC_ROLLS + 0x2c)? != 0;
+    let p_knockback = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::KNOCKBACK)? != 0;
+    let p_freeze = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::FREEZE)? != 0;
+    let p_slow = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SLOW)? != 0;
+    let p_weaken = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::WEAKEN)? != 0;
+    let savage = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SAVAGE_BLOW)? != 0;
+    let p_warp = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::WARP)? != 0;
+    let barrier_broke = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::BARRIER_BREAKER)? != 0;
+    let p_curse = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::CURSE)? != 0;
+    let p_toxic = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::TOXIC)? != 0;
+    let shield_pierced = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SHIELD_PIERCE)?;
+    let p_drain = ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::DRAIN)? != 0;
     let mut index = 0usize;
 
     while index < targets.len() {

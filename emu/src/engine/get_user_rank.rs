@@ -6,13 +6,13 @@ pub fn get_user_rank(ctx: &AppContext) -> Result<i32, Fault> {
     let mut rank = 0i32;
     let mut unit = 0usize;
 
-    while unit != 0x36c {
+    while unit != ctx.limits.units as usize {
         let mut pair = [0u8; 8];
 
         pair[..4].copy_from_slice(
             &ctx.block_at::<4>(AppContext::UNITS_OWNED.wrapping_add(unit.wrapping_mul(4)))?,
         );
-        pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
+        pair[4..].copy_from_slice(&ctx.block_at::<4>(ctx.units_owned_key())?);
 
         if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
             > 0

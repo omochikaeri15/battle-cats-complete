@@ -4,11 +4,9 @@ use super::{
     AppContext, AssetStream, UNIT_BUY, UNIT_BUY_STRIDE, UnitBuy, read_csv_cell, read_csv_row,
 };
 
-const BUY_ROWS: usize = 0x36c;
 const BUY_COLUMNS: i32 = 0x3f;
 
 const GROWTH_STRIDE: usize = 0x50;
-const GROWTH_SPAN: usize = 0x111c0;
 const GROWTH_COLUMNS: i32 = 0x14;
 
 pub fn load_cat_data_files(
@@ -19,7 +17,7 @@ pub fn load_cat_data_files(
 ) -> Result<(), Fault> {
     let mut buy = UNIT_BUY;
 
-    for row in 0..BUY_ROWS {
+    for row in 0..ctx.limits.units as usize {
         read_csv_row(unitbuy);
 
         let mut column = 0;
@@ -38,7 +36,7 @@ pub fn load_cat_data_files(
 
     let mut growth_at = 0;
 
-    while growth_at != GROWTH_SPAN {
+    while growth_at != (ctx.limits.units as usize).wrapping_mul(GROWTH_STRIDE) {
         read_csv_row(unitlevel);
 
         let mut column = 0;
@@ -56,7 +54,7 @@ pub fn load_cat_data_files(
 
     let mut growth_at = 0;
 
-    while growth_at != GROWTH_SPAN {
+    while growth_at != (ctx.limits.units as usize).wrapping_mul(GROWTH_STRIDE) {
         read_csv_row(unitexp);
 
         let mut column = 0;

@@ -255,14 +255,14 @@ impl std::error::Error for DictionaryIndexError {}
 /// One row of the Cat dictionary's ability table, column for column.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DictionaryRow {
-    /// The row's own number.
+    /// The engine's identifier for the ability, which is also its zero-based glossary entry counted from after the trait lines.
     pub row: i32,
-    /// The engine's identifier for the ability.
-    pub ability: i32,
-    /// The kind of entry: 0 for an innate ability, 1 for a talent, 2 for a talent that only buffs.
+    /// The position the entry is listed at, which later versions renumber as entries are inserted.
+    pub order: i32,
+    /// The group the entry is drawn in: 0 for an effect, 1 for an ability, 2 for a talent that only buffs.
     pub kind: i32,
-    /// The one-based glossary entry describing the ability, counted from after the trait lines, or 0 when it has none.
-    pub entry: i32,
+    /// The talent identifier that upgrades the ability, or 0 when none does.
+    pub talent: i32,
     /// The icon drawn for the entry.
     pub icon: i32,
     /// The icon drawn for the entry when the ability is inactive.
@@ -296,18 +296,20 @@ impl DictionaryIndex {
 
     /// Returns the glossary line describing an ability.
     ///
+    /// The glossary lists one entry per row of this table in row order, after
+    /// one line per trait.
+    ///
     /// # Arguments
     /// * `ability` - The engine's identifier for the ability, as an ability's registry entry records it.
     /// * `traits` - The trait table the same dictionary ships, whose rows the glossary opens with.
     ///
     /// # Returns
     /// An `Option` holding the one-based line of `nyankoPictureBook2`, or `None`
-    /// when the table does not list the ability or lists it without an entry.
+    /// when the table does not list the ability.
     pub fn glossary_line(&self, ability: u8, traits: &AttributeIndex) -> Option<u8> {
-        let row = self.rows.iter().find(|row| row.ability == i32::from(ability))?;
-        let entry = u8::try_from(row.entry).ok().filter(|entry| *entry > 0)?;
+        self.rows.iter().find(|row| row.row == i32::from(ability))?;
 
-        entry.checked_add(traits.trait_lines())
+        ability.checked_add(1)?.checked_add(traits.trait_lines())
     }
 }
 
@@ -325,9 +327,9 @@ fn parse_index(bytes: &[u8]) -> Result<DictionaryIndex, DictionaryIndexError> {
 
         rows.push(DictionaryRow {
             row: value(0),
-            ability: value(1),
+            order: value(1),
             kind: value(2),
-            entry: value(3),
+            talent: value(3),
             icon: value(4),
             inactive_icon: value(5),
             category: value(6),
@@ -458,9 +460,9 @@ mod tests {
 
         assert_eq!(index.rows.len(), 3);
         assert_eq!(index.glossary_line(0, &sixteen), Some(17));
-        assert_eq!(index.glossary_line(15, &sixteen), Some(26));
+        assert_eq!(index.glossary_line(14, &sixteen), Some(31), "the row number picks the line, wherever the row is listed");
         assert_eq!(index.glossary_line(0, &fifteen), Some(16), "an older dictionary with one trait fewer starts a line earlier");
-        assert_eq!(index.glossary_line(28, &sixteen), None, "an icon-only row names no glossary entry");
+        assert_eq!(index.glossary_line(28, &sixteen), None, "a listing position is not a row number");
         assert_eq!(index.glossary_line(99, &sixteen), None, "rows after the end marker are never read");
         assert_eq!(DictionaryIndex::parse("-1\n"), Err(DictionaryIndexError::EmptyFile));
         assert_eq!(AttributeIndex::parse("-1\n"), Err(AttributeIndexError::EmptyFile));

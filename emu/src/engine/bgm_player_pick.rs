@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, MapStageRow};
 
 pub fn bgm_player_pick(ctx: &mut AppContext) -> Result<i32, Fault> {
     if ctx.i32_at(AppContext::BGM_SWITCH_FRAME)? != ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)? {
@@ -12,9 +12,9 @@ pub fn bgm_player_pick(ctx: &mut AppContext) -> Result<i32, Fault> {
         .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE as i64) as usize;
     let row = AppContext::MAP_STAGE_ROWS.wrapping_add(row);
 
-    let key = ctx.block_at::<4>(row.wrapping_add(0xb8))?;
-    let music = ctx.block_at::<4>(row.wrapping_add(8))?;
-    let boss_music = ctx.block_at::<4>(row.wrapping_add(0x10))?;
+    let key = ctx.block_at::<4>(row.wrapping_add(MapStageRow::KEY))?;
+    let music = ctx.block_at::<4>(row.wrapping_add(MapStageRow::MUSIC))?;
+    let boss_music = ctx.block_at::<4>(row.wrapping_add(MapStageRow::BOSS_MUSIC))?;
 
     let normal = (music[0] ^ key[0]) as u32
         | ((music[1] ^ key[1]) as u32) << 8

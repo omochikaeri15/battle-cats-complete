@@ -30,7 +30,7 @@ pub fn record_stage_lineup(ctx: &mut AppContext) -> Result<(), Fault> {
     let cannon = get_cannon_part_id(ctx)? as u8;
     let style = get_style_part_id(ctx)? as u8;
     let foundation = get_foundation_part_id(ctx)? as u8;
-    let key = ctx.block_at::<2>(AppContext::BATTLE_DECK + 0x28)?;
+    let key = ctx.block_at::<2>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?;
     let mut lineup = LineupRecord {
         cannon,
         style,

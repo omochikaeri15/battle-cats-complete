@@ -3,7 +3,7 @@ use crate::{Fault, ops};
 use super::{AppContext, UNIT_BUY, UnitBuy};
 
 pub fn get_unit_alt_art(ctx: &AppContext, unit_id: i32, form: i32) -> Result<i32, Fault> {
-    if unit_id as u32 > 0x36b || form as u32 > 1 {
+    if unit_id as u32 >= ctx.limits.units as u32 || form as u32 > 1 {
         return Ok(-1);
     }
 

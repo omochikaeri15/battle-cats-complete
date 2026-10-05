@@ -1,6 +1,6 @@
 use crate::{Fault, ops};
 
-use super::{DrawSink, Mamodel, draw_sprite_cut};
+use super::{DrawSink, Mamodel, MamodelPart, draw_sprite_cut};
 
 pub fn draw_model_scaled(
     dc: &mut dyn DrawSink,
@@ -33,18 +33,18 @@ pub fn draw_model_scaled(
                 .ok_or(Fault::index_out_of_range(index as i64, model.parts.len() as i64))?;
 
             'part: {
-                if part.i32_at(0x28).wrapping_add(part.i32_at(0x24)) == -1 {
+                if part.i32_at(MamodelPart::SHEET_ANIM).wrapping_add(part.i32_at(MamodelPart::SHEET)) == -1 {
                     break 'part;
                 }
 
-                let blend = part.i32_at(0x8c);
+                let blend = part.i32_at(MamodelPart::GLOW);
 
                 if blend as u32 <= 3 {
                     dc.glow_set(blend);
                 }
 
                 let faded = ops::idiv(
-                    (part.i32_at(0x80) << 8).wrapping_sub(part.i32_at(0x80)),
+                    (part.i32_at(MamodelPart::LIVE_OPACITY) << 8).wrapping_sub(part.i32_at(MamodelPart::LIVE_OPACITY)),
                     model.opacity_unit,
                 )
                 .ok_or(Fault::divide(model.opacity_unit as i64))?
@@ -57,34 +57,34 @@ pub fn draw_model_scaled(
                 dc.set_alpha(ops::div_255(faded));
 
                 let at = if model.single_sheet == 0 {
-                    (part.i32_at(0x24) as i64).wrapping_add(part.i32_at(0x28) as i64)
+                    (part.i32_at(MamodelPart::SHEET) as i64).wrapping_add(part.i32_at(MamodelPart::SHEET_ANIM) as i64)
                 } else {
                     0
                 };
-                let cut = part.i32_at(0x30).wrapping_add(part.i32_at(0x2c));
+                let cut = part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT));
                 let x0 = ops::cvttss2si(
-                    part.i32_at(0x90).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::QUAD_0_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y0 = ops::cvttss2si(
-                    part.i32_at(0x94).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::QUAD_0_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x1 = ops::cvttss2si(
-                    part.i32_at(0x98).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::QUAD_1_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y1 = ops::cvttss2si(
-                    part.i32_at(0x9c).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::QUAD_1_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x2 = ops::cvttss2si(
-                    part.i32_at(0xa0).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::QUAD_2_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y2 = ops::cvttss2si(
-                    part.i32_at(0xa4).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::QUAD_2_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x3 = ops::cvttss2si(
-                    part.i32_at(0xa8).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::QUAD_3_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y3 = ops::cvttss2si(
-                    part.i32_at(0xac).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::QUAD_3_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let slot = model
                     .sheet_table

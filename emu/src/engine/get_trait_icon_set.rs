@@ -21,11 +21,11 @@ pub fn get_trait_icon_set(
     if faction == 1 {
         enemy_side = true;
 
-        if (unit_id.wrapping_add(2) as u32) >= 0x324 {
+        if (unit_id.wrapping_add(2) as u32) >= ctx.limits.enemy_rows as u32 {
             return Ok(icons);
         }
     } else if faction == 0 {
-        if (unit_id.wrapping_add(2) as u32) > 0x36d {
+        if (unit_id.wrapping_add(2) as u32) > (ctx.limits.units as u32).wrapping_add(1) {
             return Ok(icons);
         }
 
@@ -55,8 +55,8 @@ pub fn get_trait_icon_set(
     }
 
     if with_talents != 0 {
-        for slot in 0..8usize {
-            let abil = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71])[1 + slot * 14];
+        for slot in 0..ctx.limits.talent_groups as usize {
+            let abil = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row())[1 + slot * 14];
 
             if let Some(&(_, icon)) = TALENT_TRAIT_ICONS.iter().find(|(key, _)| *key == abil) {
                 icons.insert(icon, true);

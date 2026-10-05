@@ -24,7 +24,7 @@ pub fn get_talent_trait_set(
 ) -> Result<BTreeMap<i32, bool>, Fault> {
     let mut traits: BTreeMap<i32, bool> = BTreeMap::new();
 
-    if (unit_id.wrapping_add(2) as u32) > 0x36d {
+    if (unit_id.wrapping_add(2) as u32) > (ctx.limits.units as u32).wrapping_add(1) {
         return Ok(traits);
     }
 

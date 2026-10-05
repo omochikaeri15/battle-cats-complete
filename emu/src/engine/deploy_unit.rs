@@ -3,9 +3,10 @@ use crate::{Fault, ops};
 use super::{
     AppContext, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CatStats,
     add_medal_progress, add_money, award_event_points, conjurer_on_field, deck_slot_filled,
+    deploy_count_condition,
     get_altar_level_cap, get_button_unit_form, get_button_unit_id, get_button_unit_row,
     get_castle_enemy_row, get_deck_cooldown, get_effective_deploy_cost, get_global_map_id,
-    get_money, get_orb_value_max, get_pos_x, get_setting, get_slot_unit_id, get_special_rule,
+    get_money, get_orb_value_max, get_pos_x, get_recharge_cut, get_setting, get_slot_unit_id, get_special_rule,
     get_special_rule_params, get_standing_range, get_unit_max_level, get_unit_rarity,
     get_unit_recharge, has_fixed_lineup, is_deploy_blocked, is_score_stage, level_cell_plus,
     level_cell_base, max_i32, min_i32, orb_deploy_condition, play_sound, set_attack_end_mode,
@@ -76,7 +77,7 @@ pub fn deploy_unit(
             plus_cap = 0;
         }
 
-        'spent: {
+        let placed = 'spent: {
             if conjure {
                 if !conjurer_on_field(ctx, faction, slot, 1)? {
                     if get_deck_cooldown(ctx, wallet, slot)? == 0
@@ -204,7 +205,7 @@ pub fn deploy_unit(
                     return Ok(());
                 }
 
-                break 'spent;
+                break 'spent last;
             }
 
             let base = min_i32(
@@ -384,7 +385,9 @@ pub fn deploy_unit(
             let total = ctx.i32_at(AppContext::DEPLOY_LIMIT_TOTAL)?;
 
             ctx.set_i32_at(AppContext::DEPLOY_LIMIT_TOTAL, total.wrapping_add(1))?;
-        }
+
+            spawned
+        };
 
         ctx.set_i32_at(AppContext::CPU_PENDING_ACTION, 0)?;
 
@@ -398,20 +401,26 @@ pub fn deploy_unit(
 
                 let floor = min_i32(recharge, 0x3c);
 
-                if faction == 0
-                    && get_button_unit_form(ctx, 0, slot)? >= 2
-                    && orb_deploy_condition(ctx, wallet, 0, slot)?
-                {
+                if deploy_count_condition(ctx, wallet, faction, slot)? {
                     let map_id = get_global_map_id(ctx, 0)?;
 
                     if !get_special_rule(ctx, &ctx.special_rules, map_id, 1)? {
-                        let unit_id = get_button_unit_id(ctx, 0, slot)?;
-                        let saved = get_orb_value_max(ctx, unit_id, 0x13, 0, 0)?;
+                        let saved = if get_recharge_cut(ctx, faction, placed)? > 0 {
+                            Some(get_recharge_cut(ctx, faction, placed)?)
+                        } else if orb_deploy_condition(ctx, wallet, faction, slot)? {
+                            let unit_id = get_button_unit_id(ctx, faction, slot)?;
 
-                        recharge = max_i32(
-                            ops::div_100(0x64i32.wrapping_sub(saved).wrapping_mul(recharge)),
-                            floor,
-                        );
+                            Some(get_orb_value_max(ctx, unit_id, 0x13, 0, 0)?)
+                        } else {
+                            None
+                        };
+
+                        if let Some(saved) = saved {
+                            recharge = max_i32(
+                                ops::div_100(0x64i32.wrapping_sub(saved).wrapping_mul(recharge)),
+                                floor,
+                            );
+                        }
                     }
                 }
             }

@@ -421,7 +421,10 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                     )?;
                 }
 
-                if is_score_stage(ctx.event_items.as_ref()) && get_battle_status(ctx)? != 4 {
+                if is_score_stage(ctx.event_items.as_ref())
+                    && get_battle_status(ctx)? != 4
+                    && get_battle_status(ctx)? != 7
+                {
                     let occupant = ctx.i32_at(entity.wrapping_add(Entity::OCCUPANT))? as i64;
                     let drop = ctx.i32_at(
                         (occupant * ENEMY_STATS_STRIDE as i64

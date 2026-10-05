@@ -1,11 +1,14 @@
 use crate::{Fault, ops};
 
 use super::{
-    button_bank_find, dialog_draw, dialog_top, digit_count, draw_context, draw_cut, draw_cut_scaled, draw_labyrinth_gauge, draw_number_plain, draw_panel,
-    draw_surface, draw_surface_aligned, fill_rect, get_bottom_inset_logical, get_design_height2, get_drawable_width, get_labyrinth_floor_best,
-    get_labyrinth_floor_reached, get_labyrinth_map_id, get_map_type, get_stage_count, get_stage_score, get_text_width, glow_set, has_point_decay, hit_test_rect,
-    imgcut_get_sprite_cut, is_score_stage, labyrinth_active, labyrinth_result_ready, map_index_of_map_id, max_i32, min_i32, new_button_draw, set_tint,
-    touch_is_down, xor_row46_get, AppContext, Surface, BUTTON_PRESS_BOUNCE, OUTRO_SLIDE_TABLE, POPUP_GROW_TABLE,
+    AppContext, BUTTON_PRESS_BOUNCE, OUTRO_SLIDE_TABLE, POPUP_GROW_TABLE, Rect, Surface,
+    button_bank_find, dialog_draw, dialog_top, digit_count, draw_context, draw_cut, draw_cut_scaled,
+    draw_labyrinth_gauge, draw_number_plain, draw_panel, draw_surface, fill_rect,
+    get_bottom_inset_logical, get_design_height2, get_drawable_width, get_labyrinth_floor_best,
+    get_labyrinth_floor_reached, get_labyrinth_map_id, get_map_type, get_stage_count,
+    get_stage_score, glow_set, has_point_decay, hit_test_rect, imgcut_get_sprite_cut,
+    is_score_stage, labyrinth_active, labyrinth_result_ready, map_index_of_map_id, max_i32, min_i32,
+    new_button_draw, set_tint, text_block_draw, touch_is_down, xor_row46_get,
 };
 
 pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
@@ -232,38 +235,9 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
             draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
 
             if (ctx.i32_at(AppContext::REWARD_POP_COUNTER)? as u32) >= 4 {
-                let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
-                let unlocked = ctx.i32_at(AppContext::NEXT_STAGE_UNLOCKED)?;
-                let name = ctx
-                    .treasure3_texts
-                    .get(chapter as i64 as usize)
-                    .and_then(|rows| rows.get(unlocked as i64 as usize))
-                    .map(|row| row[0].clone())
-                    .ok_or(Fault::index_out_of_range(unlocked as i64, 0))?;
-                let span = get_text_width(ctx, &name, 0x1e)?;
+                let x = ops::div_2(get_drawable_width(ctx)?);
 
-                set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0xff);
-
-                let text = ctx.label_texts.first().copied().flatten().ok_or(Fault::null_pointer())?;
-                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(ops::div_2(span));
-
-                draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1bc, 0);
-
-                let frame = ctx.i32_at(AppContext::OUTRO_FRAME)?;
-                let beat = frame.wrapping_sub(ops::div_4(frame) * 4);
-
-                if (beat as u32) <= 1 {
-                    set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0, 0xff);
-                } else {
-                    set_tint(draw_context(&mut ctx.draw)?, 0xff, 0, 0xff, 0xff);
-                }
-
-                let caption = ctx.treasure2_texts[6].clone();
-                let span = get_text_width(ctx, &caption, 0x1e)?;
-                let text = ctx.label_texts.get(1).copied().flatten().ok_or(Fault::null_pointer())?;
-                let x = ops::div_2(get_drawable_width(ctx)?).wrapping_sub(ops::div_2(span));
-
-                draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), x, 0x1ec, 0);
+                text_block_draw(&mut ctx.draw, &mut ctx.text_blocks, 0x69, x, 0x1e3, 5, 1.0)?;
             }
         }
     } else if phase >= 8 {
@@ -385,9 +359,9 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
 
         let rect = [
             ctx.i32_at(AppContext::OUTRO_OK_RECT)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?,
         ];
 
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {

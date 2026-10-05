@@ -1,10 +1,10 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, app_on_draw, back_pressed, button_bank_busy, button_bank_find, check_medals,
+    AppContext, Rect, app_on_draw, back_pressed, button_bank_busy, button_bank_find, check_medals,
     dialog_set_back_button, dialog_set_on_update, dialog_show, dialog_show_alt, dialog_top,
-    get_auto_camera_mode, get_bottom_inset_logical, get_cat_name, get_drawable_width,
-    get_item_name, handle_battle_swipe_pinch, hit_test_rect, is_score_stage, labyrinth_active,
+    get_auto_camera_mode, get_bottom_inset_logical, get_cat_name, get_drawable_width, get_item_name,
+    handle_battle_swipe_pinch, hit_test_rect, is_score_stage, labyrinth_active,
     labyrinth_result_ready, new_button_set_touchable, play_sound, point_lose_update_lambda_0,
     point_lose_update_lambda_1, point_lose_update_lambda_2, query_localizable, record_stage_played,
     request_save_data, reward_def_lookup, sound_manager, substitute_tokens, touch_is_down,
@@ -267,9 +267,9 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 AppContext::OUTRO_OK_RECT,
                 ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
             )?;
-            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 4, 0x280)?;
-            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
-            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 0xc, 0x58)?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::Y, 0x280)?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH, 0x17d)?;
+            ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT, 0x58)?;
 
             let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
             let mut offset = slide.wrapping_add(0x14);
@@ -286,7 +286,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             let inset = get_bottom_inset_logical(ctx)?;
 
             ctx.set_i32_at(
-                AppContext::OUTRO_OK_RECT + 4,
+                AppContext::OUTRO_OK_RECT + Rect::Y,
                 letterbox
                     .wrapping_sub(inset.wrapping_add(offset))
                     .wrapping_add(0x278),
@@ -332,9 +332,9 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             {
                 let hovered = touch_is_down(ctx)? != 0 && {
                     let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-                    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-                    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-                    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+                    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+                    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+                    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
                     hit_test_rect(ctx, x, y, width, height)?
                 };
@@ -376,9 +376,9 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             if !button_bank_busy(&ctx.buttons)? {
                 let released = touch_released(ctx)? != 0 && {
                     let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-                    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-                    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-                    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+                    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+                    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+                    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
                     hit_test_rect(ctx, x, y, width, height)?
                 };

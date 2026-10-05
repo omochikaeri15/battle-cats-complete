@@ -3,6 +3,7 @@ mod dummy_lineup;
 mod dummy_save;
 mod inert_draw;
 mod keys;
+mod limits;
 mod inert_meta;
 mod inert_platform;
 mod inert_scene;
@@ -23,6 +24,7 @@ pub use keys::{
     queue_spot_move, queue_spot_press, queue_spot_release, spot_center, start_deck_row_swap,
 };
 pub use inert_meta::InertMeta;
+pub use limits::{HostLimits, set_limits};
 pub use inert_platform::{DeviceProfile, InertPlatform};
 pub use inert_scene::{InertScene, pump_stage_return};
 pub use inert_ui::InertUi;

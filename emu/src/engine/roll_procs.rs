@@ -1,13 +1,13 @@
 use crate::Fault;
 
 use super::{
-    AppContext, call_rng, get_barrier_breaker_chance, get_critical_chance, get_curse_chance,
-    get_drain_chance, get_freeze_chance, get_knockback_chance, get_savage_blow_chance,
-    get_shield_pierce_chance, get_slow_chance, get_toxic_chance, get_warp_chance,
-    get_weaken_chance, has_attack_abilities, has_barrier_breaker_chance, has_critical_chance,
-    has_curse_chance, has_drain_chance, has_freeze_chance, has_knockback_chance,
-    has_savage_blow_chance, has_shield_pierce_chance, has_slow_chance, has_toxic_chance,
-    has_warp_chance, has_weaken_chance,
+    AppContext, ProcRolls, call_rng, get_barrier_breaker_chance, get_critical_chance,
+    get_curse_chance, get_drain_chance, get_freeze_chance, get_knockback_chance,
+    get_savage_blow_chance, get_shield_pierce_chance, get_slow_chance, get_toxic_chance,
+    get_warp_chance, get_weaken_chance, has_attack_abilities, has_barrier_breaker_chance,
+    has_critical_chance, has_curse_chance, has_drain_chance, has_freeze_chance,
+    has_knockback_chance, has_savage_blow_chance, has_shield_pierce_chance, has_slow_chance,
+    has_toxic_chance, has_warp_chance, has_weaken_chance,
 };
 
 pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) -> Result<(), Fault> {
@@ -30,7 +30,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_knockback_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x4, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::KNOCKBACK, hit)?;
 
     if has_knockback_chance(ctx, faction, slot)? {
         get_knockback_chance(ctx, faction, slot)?;
@@ -40,7 +40,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_freeze_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x8, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::FREEZE, hit)?;
 
     if has_freeze_chance(ctx, faction, slot)? {
         get_freeze_chance(ctx, faction, slot)?;
@@ -50,7 +50,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_slow_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0xc, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::SLOW, hit)?;
 
     if has_slow_chance(ctx, faction, slot)? {
         get_slow_chance(ctx, faction, slot)?;
@@ -60,7 +60,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_weaken_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x10, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::WEAKEN, hit)?;
 
     if has_weaken_chance(ctx, faction, slot)? {
         get_weaken_chance(ctx, faction, slot)?;
@@ -70,7 +70,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_savage_blow_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x14, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::SAVAGE_BLOW, hit)?;
 
     if has_savage_blow_chance(ctx, faction, slot)? {
         get_savage_blow_chance(ctx, faction, slot)?;
@@ -80,7 +80,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_warp_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x18, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::WARP, hit)?;
 
     if has_warp_chance(ctx, faction, slot)? {
         get_warp_chance(ctx, faction, slot)?;
@@ -90,7 +90,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_barrier_breaker_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x1c, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::BARRIER_BREAKER, hit)?;
 
     if has_barrier_breaker_chance(ctx, faction, slot)? {
         get_barrier_breaker_chance(ctx, faction, slot)?;
@@ -100,7 +100,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_curse_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x20, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::CURSE, hit)?;
 
     if has_curse_chance(ctx, faction, slot)? {
         get_curse_chance(ctx, faction, slot)?;
@@ -110,7 +110,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_toxic_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x24, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::TOXIC, hit)?;
 
     if has_toxic_chance(ctx, faction, slot)? {
         get_toxic_chance(ctx, faction, slot)?;
@@ -120,7 +120,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_shield_pierce_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x28, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::SHIELD_PIERCE, hit)?;
 
     if has_shield_pierce_chance(ctx, faction, slot)? {
         get_shield_pierce_chance(ctx, faction, slot)?;
@@ -130,7 +130,7 @@ pub fn roll_procs(ctx: &mut AppContext, faction: i32, slot: i32, attack: i32) ->
     let roll = call_rng(ctx, 0x64);
     let hit = (get_drain_chance(ctx, faction, slot)? > roll) as i32;
 
-    ctx.set_i32_at(AppContext::PROC_ROLLS + 0x2c, hit)?;
+    ctx.set_i32_at(AppContext::PROC_ROLLS + ProcRolls::DRAIN, hit)?;
 
     if has_drain_chance(ctx, faction, slot)? {
         get_drain_chance(ctx, faction, slot)?;

@@ -4,63 +4,63 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, BUTTON_PRESS_BOUNCE, Base, CatStats, Debris, EffectSprite, EnemyStats, Entity,
-    VfxSlot, add_attacks_remaining, add_barrier_vfx_frame, add_burrow_count, add_death_timer,
-    add_deck_cooldown, add_hp, add_money, add_shield_vfx_frame, add_shockwave_counter,
-    add_stage_record, advance_animation_frame, advance_point_decay, app_on_draw,
-    attack_dmg_dispatch, back_pressed, background_particles, barrier_vfx_tick,
-    base_guard_notice_tick, base_resists_one_shot, base_shake_start, base_shake_tick,
-    battle_create_button, battle_init_win, score_bonus_active, bgm_player_switch,
-    bgm_player_tick, call_rng, camera_vertical_correction, cannon_attack, cannon_fire,
-    cannon_unlocked, cat_cpu_tick, cat_god_menu_input, cat_hit_executor, cat_update,
-    check_collision, clear_barrier_vfx_slot, clear_shield_vfx_slot, clear_zkill_vfx_slot,
-    combo_banner_skip_all, combo_banner_update, counter_surge_update, crit_vfx_tick, debris_tick,
-    deck_row_swap_tick, demon_battle_banner_tick, deploy_limit_reached, deploy_unit,
-    dialog_set_on_draw, dialog_show, dialog_top, does_target, drain_vfx_tick, effect_sprite_init,
-    enemy_hit_executor, enemy_schedule_tick, enemy_update, entry_find_by_id, explosion_update,
-    fade_update, fever_fade_tick, fever_tick, find_item_index, game_lose_update,
-    game_update_lambda_0, game_update_lambda_1, game_update_lambda_2, game_update_lambda_3,
-    game_update_lambda_4, game_update_lambda_5, game_update_lambda_6, game_win_update,
-    get_anim_len, get_area_attack, get_attack_cooldown, get_attack_count, get_attack_foreswing,
-    get_attack_interval, get_attack_only, get_attacks_remaining, get_auto_camera_mode,
-    get_barrier_hp, get_barrier_state, get_barrier_vfx_active, get_barrier_vfx_frame,
-    get_battle_status, get_boss_type, get_boss_wave_immune, get_bottom_inset_logical,
-    get_burrow_count, get_button_unit_form, get_button_unit_id, get_button_unit_row,
-    get_cannon_blast_hit, get_castle_enemy_row, get_cat_name, get_crit_vfx, get_death_timer,
-    get_deck_cooldown, get_deck_cooldown_max, get_drain_pct, get_drawable_width,
-    get_entity_base_idx, get_entity_button, get_entity_frame, get_entity_state, get_frame_damage,
-    get_freeze_timer, get_global_map_id, get_hp, get_item_description, get_item_name,
-    get_item_selected, get_kb_proc_hit, get_knockbacks, get_map_type, get_max_hp, get_max_zoom,
-    get_metal_killer_vfx, get_money, get_money_increment, get_pos_x, get_powerup,
-    get_powerup_available, get_prev_curse_timer, get_prev_freeze_timer, get_prev_slow_timer,
-    get_prev_weaken_timer, get_savage_blow_vfx, get_score_hit_mask, get_score_time_limit,
-    get_setting, get_shield_hp, get_shield_max, get_shield_state, get_shield_vfx,
-    get_shield_vfx_frame, get_shockwave_counter, get_slot_unit_id, get_special_rule,
+    HitEntry, MapStageRow, Matrix, Rect, StrikeSparks, Vector, VfxSlot, add_attacks_remaining,
+    add_barrier_vfx_frame, add_burrow_count, add_death_timer, add_deck_cooldown, add_hp, add_money,
+    add_shield_vfx_frame, add_shockwave_counter, add_stage_record, advance_animation_frame,
+    advance_point_decay, app_on_draw, attack_dmg_dispatch, back_pressed, background_particles,
+    barrier_vfx_tick, base_guard_notice_tick, base_resists_one_shot, base_shake_start,
+    base_shake_tick, battle_create_button, battle_init_win, bgm_player_switch, bgm_player_tick,
+    call_rng, camera_vertical_correction, cannon_attack, cannon_fire, cannon_unlocked, cat_cpu_tick,
+    cat_god_menu_input, cat_hit_executor, cat_update, check_collision, clear_barrier_vfx_slot,
+    clear_shield_vfx_slot, clear_zkill_vfx_slot, combo_banner_skip_all, combo_banner_update,
+    counter_surge_update, crit_vfx_tick, debris_tick, deck_row_swap_tick, demon_battle_banner_tick,
+    deploy_count_condition, deploy_limit_reached, deploy_unit, dialog_set_on_draw, dialog_show,
+    dialog_top, does_target, drain_vfx_tick, effect_sprite_init, enemy_hit_executor,
+    enemy_schedule_tick, enemy_update, entry_find_by_id, explosion_update, fade_update,
+    fever_fade_tick, fever_tick, find_item_index, game_lose_update, game_update_lambda_0,
+    game_update_lambda_1, game_update_lambda_2, game_update_lambda_3, game_update_lambda_4,
+    game_update_lambda_5, game_update_lambda_6, game_win_update, get_anim_len, get_area_attack,
+    get_attack_cooldown, get_attack_count, get_attack_foreswing, get_attack_interval,
+    get_attack_only, get_attacks_remaining, get_auto_camera_mode, get_barrier_hp, get_barrier_state,
+    get_barrier_vfx_active, get_barrier_vfx_frame, get_battle_status, get_boss_type,
+    get_boss_wave_immune, get_bottom_inset_logical, get_burrow_count, get_button_unit_form,
+    get_button_unit_id, get_button_unit_row, get_cannon_blast_hit, get_castle_enemy_row,
+    get_cat_name, get_crit_vfx, get_death_timer, get_deck_cooldown, get_deck_cooldown_max,
+    get_drain_pct, get_drawable_width, get_entity_base_idx, get_entity_button, get_entity_frame,
+    get_entity_state, get_frame_damage, get_freeze_timer, get_global_map_id, get_hp,
+    get_item_description, get_item_name, get_item_selected, get_kb_proc_hit, get_knockbacks,
+    get_map_type, get_max_hp, get_max_zoom, get_metal_killer_vfx, get_money, get_money_increment,
+    get_pos_x, get_powerup, get_powerup_available, get_prev_curse_timer, get_prev_freeze_timer,
+    get_prev_slow_timer, get_prev_weaken_timer, get_savage_blow_vfx, get_score_hit_mask,
+    get_score_time_limit, get_setting, get_shield_hp, get_shield_max, get_shield_state,
+    get_shield_vfx, get_shield_vfx_frame, get_shockwave_counter, get_slot_unit_id, get_special_rule,
     get_special_rule_params, get_speed, get_stage_index, get_stage_record, get_stage_score,
     get_tech_level, get_text_texture, get_took_damage, get_total_damage_taken, get_toxic_vfx,
     get_trait_dojo, get_unit_recharge, get_warp_timer, get_worker_level, get_worker_upgrade_cost,
     get_zkill_hit, handle_battle_swipe_pinch, has_castle_enemy, has_point_decay, hit_test_rect,
     is_boss, is_score_stage, is_scored_stage, is_touchable_thunk, is_zombie, latch_battle_event,
-    load_conjure_desc_textures, log_analytics_event, maanim_get_max_keyframe, max_i32,
-    message_layer_clear, message_layer_set, metal_killer_vfx_tick, mission_progress,
-    no_more_attacks, on_battle_lost, option_menu_open, option_window_update, orb_deploy_condition,
-    pinch_update, play_sound, play_sound_in_battle, point_decay_full, point_lose_update,
-    powerup_available, proc_update, query_localizable, record_stage_lineup, record_stage_played,
-    recount_deploy_rarities, savage_vfx_tick, scored_map_pays_money, set_attack_cooldown,
-    set_auto_camera_mode, set_barrier_hp, set_barrier_state, set_barrier_vfx_active,
-    set_barrier_vfx_frame, set_battle_status, set_bgm_duck, set_burrow_start_x, set_crit_vfx,
-    set_curse_timer, set_deck_cooldown, set_deck_cooldown_max, set_drain_pct, set_entity_frame,
-    set_entity_state, set_frame_damage, set_freeze_timer, set_hit_flash_timer, set_hp, set_max_hp,
-    set_metal_killer_vfx, set_no_revive, set_powerup, set_savage_blow_vfx, set_score_hit_mask,
-    set_shield_hp, set_shield_state, set_shield_vfx, set_shield_vfx_frame, set_shockwave_counter,
-    set_slow_timer, set_stage_record, set_toxic_vfx, set_warp_timer, set_weaken_timer,
-    set_zkill_hit, shield_vfx_tick, slot_desc_wait_elapsed, slot_has_flagged_orb, slot_occupied,
-    sniper_update, sound_manager, spawn_entity, stage_entry_base_trigger, stage_entry_count,
-    stage_entry_is_boss, std_map_int_int_subscript, std_map_int_map_int_subscript,
-    std_shared_ptr_texture_assign, std_shared_ptr_texture_reset, std_string_from_cstr,
-    surge_update, text_texture_cache, touch_began, touch_is_down, touch_released, toxic_vfx_tick,
-    trial_win_update, turn_on_proc_badge, unit_info_select, update_keep_awake, upgrade_worker,
-    validate_map_type, vibration_reset, vibration_tick, wave_apply_hits, wave_update,
-    worker_unlocked, zkill_vfx_tick,
+    load_conjure_desc_textures, log_analytics_event, maanim_get_max_keyframe, map_uses_item_cost,
+    max_i32, message_layer_clear, message_layer_set, metal_killer_vfx_tick, mission_progress,
+    no_more_attacks, on_battle_lost, option_menu_open, option_window_update, pinch_update,
+    play_sound, play_sound_in_battle, point_decay_full, point_lose_update, powerup_available,
+    proc_update, query_localizable, record_stage_lineup, record_stage_played,
+    recount_deploy_rarities, savage_vfx_tick, score_bonus_active, scored_map_pays_money,
+    set_attack_cooldown, set_auto_camera_mode, set_barrier_hp, set_barrier_state,
+    set_barrier_vfx_active, set_barrier_vfx_frame, set_battle_status, set_bgm_duck,
+    set_burrow_start_x, set_crit_vfx, set_curse_timer, set_deck_cooldown, set_deck_cooldown_max,
+    set_drain_pct, set_entity_frame, set_entity_state, set_frame_damage, set_freeze_timer,
+    set_hit_flash_timer, set_hp, set_max_hp, set_metal_killer_vfx, set_no_revive, set_powerup,
+    set_savage_blow_vfx, set_score_hit_mask, set_shield_hp, set_shield_state, set_shield_vfx,
+    set_shield_vfx_frame, set_shockwave_counter, set_slow_timer, set_stage_record, set_toxic_vfx,
+    set_warp_timer, set_weaken_timer, set_zkill_hit, shield_vfx_tick, slot_desc_wait_elapsed,
+    slot_has_flagged_orb, slot_occupied, sniper_update, sound_manager, spawn_entity,
+    stage_entry_base_trigger, stage_entry_count, stage_entry_is_boss, stage_stamina_cost,
+    stat_has_recharge_cut, std_map_int_int_subscript, std_map_int_map_int_subscript,
+    std_shared_ptr_texture_assign, std_shared_ptr_texture_reset, std_string_from_cstr, surge_update,
+    text_texture_cache, touch_began, touch_is_down, touch_released, toxic_vfx_tick,
+    treasure_gauge_add, trial_win_update, turn_on_proc_badge, unit_info_select, update_keep_awake,
+    upgrade_worker, validate_map_type, vibration_reset, vibration_tick, wave_apply_hits,
+    wave_update, worker_unlocked, zkill_vfx_tick,
 };
 
 const BGM_SWITCH_RESET: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff];
@@ -190,7 +190,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 ctx.set_f32_at(AppContext::CAMERA_OFFSET, offset_x)?;
                 ctx.set_f32_at(
-                    AppContext::CAMERA_OFFSET.wrapping_add(4),
+                    AppContext::CAMERA_OFFSET.wrapping_add(Vector::Y),
                     ctx.i32_at(AppContext::BATTLE_ZOOM_Y)? as f32,
                 )?;
 
@@ -198,23 +198,23 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let shear = 0.0f32 * scale;
 
                 ctx.set_f32_at(AppContext::CAMERA_MATRIX, scale)?;
-                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(4), shear)?;
-                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(8), shear)?;
-                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(0xc), scale)?;
+                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::RIGHT_Y), shear)?;
+                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_X), shear)?;
+                ctx.set_f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_Y), scale)?;
 
                 let pan_x = (0x3c0i32.wrapping_sub(get_drawable_width(ctx)?) as f64 * 0.5) as f32;
                 let base_y = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?;
                 let pan_y = camera_vertical_correction(ctx)?.wrapping_sub(base_y) as f32;
                 let m0 = ctx.f32_at(AppContext::CAMERA_MATRIX)?;
-                let m1 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(4))?;
-                let m2 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(8))?;
-                let m3 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(0xc))?;
+                let m1 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::RIGHT_Y))?;
+                let m2 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_X))?;
+                let m3 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_Y))?;
                 let e0 = ctx.f32_at(AppContext::CAMERA_OFFSET)?;
-                let e1 = ctx.f32_at(AppContext::CAMERA_OFFSET.wrapping_add(4))?;
+                let e1 = ctx.f32_at(AppContext::CAMERA_OFFSET.wrapping_add(Vector::Y))?;
 
                 ctx.set_f32_at(AppContext::CAMERA_OFFSET, pan_x * m0 + m2 * pan_y + e0)?;
                 ctx.set_f32_at(
-                    AppContext::CAMERA_OFFSET.wrapping_add(4),
+                    AppContext::CAMERA_OFFSET.wrapping_add(Vector::Y),
                     pan_x * m1 + m3 * pan_y + e1,
                 )?;
 
@@ -781,11 +781,11 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let far_x = x + 131.0;
                         let far_y = 131.0 + y;
                         let m0 = ctx.f32_at(AppContext::CAMERA_MATRIX)?;
-                        let m1 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(4))?;
-                        let m2 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(8))?;
-                        let m3 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(0xc))?;
+                        let m1 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::RIGHT_Y))?;
+                        let m2 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_X))?;
+                        let m3 = ctx.f32_at(AppContext::CAMERA_MATRIX.wrapping_add(Matrix::DOWN_Y))?;
                         let e0 = ctx.f32_at(AppContext::CAMERA_OFFSET)?;
-                        let e1 = ctx.f32_at(AppContext::CAMERA_OFFSET.wrapping_add(4))?;
+                        let e1 = ctx.f32_at(AppContext::CAMERA_OFFSET.wrapping_add(Vector::Y))?;
                         let near = [x * m0 + y * m2 + e0, x * m1 + y * m3 + e1];
                         let far = [far_x * m0 + far_y * m2 + e0, far_x * m1 + far_y * m3 + e1];
 
@@ -794,15 +794,15 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             ops::cvttss2si(near[0]),
                         )?;
                         ctx.set_i32_at(
-                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(4),
+                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::Y),
                             ops::cvttss2si(near[1]),
                         )?;
                         ctx.set_i32_at(
-                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(8),
+                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::WIDTH),
                             ops::cvttss2si(far[0] - near[0]),
                         )?;
                         ctx.set_i32_at(
-                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(0xc),
+                            AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::HEIGHT),
                             ops::cvttss2si(far[1] - near[1]),
                         )?;
 
@@ -828,9 +828,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     AppContext::ITEM_RECTS.wrapping_add(item as usize * 0x10);
                                 let (rx, ry, rw, rh) = (
                                     ctx.i32_at(rect)?,
-                                    ctx.i32_at(rect.wrapping_add(4))?,
-                                    ctx.i32_at(rect.wrapping_add(8))?,
-                                    ctx.i32_at(rect.wrapping_add(0xc))?,
+                                    ctx.i32_at(rect.wrapping_add(Rect::Y))?,
+                                    ctx.i32_at(rect.wrapping_add(Rect::WIDTH))?,
+                                    ctx.i32_at(rect.wrapping_add(Rect::HEIGHT))?,
                                 );
 
                                 if !hit_test_rect(ctx, rx, ry, rw, rh)? {
@@ -931,9 +931,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         if ctx.u8_at(AppContext::CPU_ENABLED)? == 0 {
                             let (rx, ry, rw, rh) = (
                                 ctx.i32_at(AppContext::CANNON_RECT)?,
-                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(4))?,
-                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(8))?,
-                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(0xc))?,
+                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::Y))?,
+                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::WIDTH))?,
+                                ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::HEIGHT))?,
                             );
 
                             if cannon_unlocked(ctx)?
@@ -950,9 +950,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                             let (rx, ry, rw, rh) = (
                                 ctx.i32_at(AppContext::WORKER_RECT)?,
-                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(4))?,
-                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(8))?,
-                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(0xc))?,
+                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::Y))?,
+                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::WIDTH))?,
+                                ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::HEIGHT))?,
                             );
 
                             if worker_unlocked(ctx)?
@@ -970,9 +970,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         let (px, py, pw, ph) = (
                             ctx.i32_at(AppContext::PAUSE_RECT)?,
-                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(4))?,
-                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(8))?,
-                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(0xc))?,
+                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(Rect::Y))?,
+                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(Rect::WIDTH))?,
+                            ctx.i32_at(AppContext::PAUSE_RECT.wrapping_add(Rect::HEIGHT))?,
                         );
 
                         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, px, py, pw, ph)? {
@@ -986,9 +986,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         let (rx, ry, rw, rh) = (
                             ctx.i32_at(AppContext::CANNON_RECT)?,
-                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(4))?,
-                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(8))?,
-                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(0xc))?,
+                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::Y))?,
+                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::WIDTH))?,
+                            ctx.i32_at(AppContext::CANNON_RECT.wrapping_add(Rect::HEIGHT))?,
                         );
 
                         if cannon_unlocked(ctx)?
@@ -1003,9 +1003,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         let (rx, ry, rw, rh) = (
                             ctx.i32_at(AppContext::WORKER_RECT)?,
-                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(4))?,
-                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(8))?,
-                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(0xc))?,
+                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::Y))?,
+                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::WIDTH))?,
+                            ctx.i32_at(AppContext::WORKER_RECT.wrapping_add(Rect::HEIGHT))?,
                         );
 
                         if worker_unlocked(ctx)?
@@ -1062,9 +1062,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let rect = AppContext::ITEM_RECTS.wrapping_add(item * 0x10);
                             let (rx, ry, rw, rh) = (
                                 ctx.i32_at(rect)?,
-                                ctx.i32_at(rect.wrapping_add(4))?,
-                                ctx.i32_at(rect.wrapping_add(8))?,
-                                ctx.i32_at(rect.wrapping_add(0xc))?,
+                                ctx.i32_at(rect.wrapping_add(Rect::Y))?,
+                                ctx.i32_at(rect.wrapping_add(Rect::WIDTH))?,
+                                ctx.i32_at(rect.wrapping_add(Rect::HEIGHT))?,
                             );
 
                             if touch_released(ctx)? == 0 || !hit_test_rect(ctx, rx, ry, rw, rh)? {
@@ -1093,9 +1093,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         let (rx, ry, rw, rh) = (
                             ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT)?,
-                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(4))?,
-                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(8))?,
-                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(0xc))?,
+                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::Y))?,
+                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::WIDTH))?,
+                            ctx.i32_at(AppContext::CAT_GOD_BUTTON_RECT.wrapping_add(Rect::HEIGHT))?,
                         );
 
                         let cat_god_tapped = touch_released(ctx)? != 0
@@ -1651,6 +1651,17 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                     mission_progress(ctx, 0x15, row, total, 0, 0)?;
 
+                                    if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63
+                                        && (map_uses_item_cost(ctx)? || {
+                                            let stage = ctx.i32_at(AppContext::STAGE_INDEX)?;
+                                            let halved = ctx.u8_at(AppContext::STAMINA_HALVED)?;
+
+                                            stage_stamina_cost(ctx, stage, halved)? != 0
+                                        })
+                                    {
+                                        treasure_gauge_add(ctx, 0, 1);
+                                    }
+
                                     if get_map_type(ctx, 0)? == 4 {
                                         let map_index = ctx.i32_at(AppContext::MAP_INDEX)?;
                                         let best =
@@ -2039,7 +2050,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 let count = ctx.i32_at(AppContext::HIT_COUNT)? as i64 as usize;
 
                                 ctx.set_i32_at(
-                                    AppContext::HIT_LIST.wrapping_add(count.wrapping_mul(8)),
+                                    AppContext::HIT_LIST.wrapping_add(count.wrapping_mul(HitEntry::STRIDE)),
                                     0,
                                 )?;
 
@@ -2054,8 +2065,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                 ctx.set_i32_at(
                                     AppContext::HIT_LIST
-                                        .wrapping_add(count.wrapping_mul(8))
-                                        .wrapping_add(4),
+                                        .wrapping_add(count.wrapping_mul(HitEntry::STRIDE))
+                                        .wrapping_add(HitEntry::DISTANCE),
                                     distance,
                                 )?;
                                 ctx.set_i32_at(
@@ -2079,7 +2090,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 let count = ctx.i32_at(AppContext::HIT_COUNT)? as i64 as usize;
 
                                 ctx.set_i32_at(
-                                    AppContext::HIT_LIST.wrapping_add(count.wrapping_mul(8)),
+                                    AppContext::HIT_LIST.wrapping_add(count.wrapping_mul(HitEntry::STRIDE)),
                                     target,
                                 )?;
 
@@ -2094,8 +2105,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                 ctx.set_i32_at(
                                     AppContext::HIT_LIST
-                                        .wrapping_add(count.wrapping_mul(8))
-                                        .wrapping_add(4),
+                                        .wrapping_add(count.wrapping_mul(HitEntry::STRIDE))
+                                        .wrapping_add(HitEntry::DISTANCE),
                                     distance,
                                 )?;
                                 ctx.set_i32_at(
@@ -2116,7 +2127,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     targets.push(
                                         ctx.i32_at(
                                             AppContext::HIT_LIST
-                                                .wrapping_add((index as usize).wrapping_mul(8)),
+                                                .wrapping_add((index as usize).wrapping_mul(HitEntry::STRIDE)),
                                         )?,
                                     );
                                     index += 1;
@@ -2136,16 +2147,16 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                 while first < ctx.i32_at(AppContext::HIT_COUNT)? as i64 - 1 {
                                     let entry = AppContext::HIT_LIST
-                                        .wrapping_add((first as usize).wrapping_mul(8));
+                                        .wrapping_add((first as usize).wrapping_mul(HitEntry::STRIDE));
                                     let mut best = first;
-                                    let mut best_distance = ctx.i32_at(entry.wrapping_add(4))?;
+                                    let mut best_distance = ctx.i32_at(entry.wrapping_add(HitEntry::DISTANCE))?;
                                     let mut other = first + 1;
 
                                     while other < ctx.i32_at(AppContext::HIT_COUNT)? as i64 {
                                         let distance = ctx.i32_at(
                                             AppContext::HIT_LIST
-                                                .wrapping_add((other as usize).wrapping_mul(8))
-                                                .wrapping_add(4),
+                                                .wrapping_add((other as usize).wrapping_mul(HitEntry::STRIDE))
+                                                .wrapping_add(HitEntry::DISTANCE),
                                         )?;
 
                                         if distance > best_distance {
@@ -2162,8 +2173,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                     ctx.set_i32_at(AppContext::HIT_SWAP, ctx.i32_at(entry)?)?;
                                     ctx.set_i32_at(
-                                        AppContext::HIT_SWAP.wrapping_add(4),
-                                        ctx.i32_at(entry.wrapping_add(4))?,
+                                        AppContext::HIT_SWAP.wrapping_add(HitEntry::DISTANCE),
+                                        ctx.i32_at(entry.wrapping_add(HitEntry::DISTANCE))?,
                                     )?;
                                     ctx.set_block_at::<8>(entry, ctx.block_at::<8>(winner)?)?;
                                     ctx.set_block_at::<8>(
@@ -2178,13 +2189,13 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let mut ties = 0i32;
 
                             if count > 0 {
-                                let lead = ctx.i32_at(AppContext::HIT_LIST.wrapping_add(4))?;
+                                let lead = ctx.i32_at(AppContext::HIT_LIST.wrapping_add(HitEntry::DISTANCE))?;
 
                                 while ties < count
                                     && ctx.i32_at(
                                         AppContext::HIT_LIST
-                                            .wrapping_add((ties as usize).wrapping_mul(8))
-                                            .wrapping_add(4),
+                                            .wrapping_add((ties as usize).wrapping_mul(HitEntry::STRIDE))
+                                            .wrapping_add(HitEntry::DISTANCE),
                                     )? == lead
                                 {
                                     ties += 1;
@@ -2194,7 +2205,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let pick = call_rng(ctx, ties);
                             let target = ctx.i32_at(
                                 AppContext::HIT_LIST
-                                    .wrapping_add((pick as i64 as usize).wrapping_mul(8)),
+                                    .wrapping_add((pick as i64 as usize).wrapping_mul(HitEntry::STRIDE)),
                             )?;
 
                             cat_hit_executor(ctx, slot, &[target], attack)?;
@@ -2332,7 +2343,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                         ctx.set_i32_at(
                                             AppContext::HIT_LIST
-                                                .wrapping_add(count.wrapping_mul(8)),
+                                                .wrapping_add(count.wrapping_mul(HitEntry::STRIDE)),
                                             target,
                                         )?;
 
@@ -2352,8 +2363,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                         ctx.set_i32_at(
                                             AppContext::HIT_LIST
-                                                .wrapping_add(count.wrapping_mul(8))
-                                                .wrapping_add(4),
+                                                .wrapping_add(count.wrapping_mul(HitEntry::STRIDE))
+                                                .wrapping_add(HitEntry::DISTANCE),
                                             distance,
                                         )?;
                                         ctx.set_i32_at(
@@ -2373,7 +2384,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         while index < ctx.i32_at(AppContext::HIT_COUNT)? as i64 {
                                             targets.push(
                                                 ctx.i32_at(AppContext::HIT_LIST.wrapping_add(
-                                                    (index as usize).wrapping_mul(8),
+                                                    (index as usize).wrapping_mul(HitEntry::STRIDE),
                                                 ))?,
                                             );
                                             index += 1;
@@ -2394,10 +2405,10 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         while first < ctx.i32_at(AppContext::HIT_COUNT)? as i64 - 1
                                         {
                                             let entry = AppContext::HIT_LIST
-                                                .wrapping_add((first as usize).wrapping_mul(8));
+                                                .wrapping_add((first as usize).wrapping_mul(HitEntry::STRIDE));
                                             let mut best = first;
                                             let mut best_distance =
-                                                ctx.i32_at(entry.wrapping_add(4))?;
+                                                ctx.i32_at(entry.wrapping_add(HitEntry::DISTANCE))?;
                                             let mut other = first + 1;
 
                                             while other < ctx.i32_at(AppContext::HIT_COUNT)? as i64
@@ -2405,9 +2416,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                                 let distance = ctx.i32_at(
                                                     AppContext::HIT_LIST
                                                         .wrapping_add(
-                                                            (other as usize).wrapping_mul(8),
+                                                            (other as usize).wrapping_mul(HitEntry::STRIDE),
                                                         )
-                                                        .wrapping_add(4),
+                                                        .wrapping_add(HitEntry::DISTANCE),
                                                 )?;
 
                                                 if distance < best_distance {
@@ -2427,8 +2438,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                                 ctx.i32_at(entry)?,
                                             )?;
                                             ctx.set_i32_at(
-                                                AppContext::HIT_SWAP.wrapping_add(4),
-                                                ctx.i32_at(entry.wrapping_add(4))?,
+                                                AppContext::HIT_SWAP.wrapping_add(HitEntry::DISTANCE),
+                                                ctx.i32_at(entry.wrapping_add(HitEntry::DISTANCE))?,
                                             )?;
                                             ctx.set_block_at::<8>(
                                                 entry,
@@ -2447,13 +2458,13 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                                     if count > 0 {
                                         let lead =
-                                            ctx.i32_at(AppContext::HIT_LIST.wrapping_add(4))?;
+                                            ctx.i32_at(AppContext::HIT_LIST.wrapping_add(HitEntry::DISTANCE))?;
 
                                         while ties < count
                                             && ctx.i32_at(
                                                 AppContext::HIT_LIST
-                                                    .wrapping_add((ties as usize).wrapping_mul(8))
-                                                    .wrapping_add(4),
+                                                    .wrapping_add((ties as usize).wrapping_mul(HitEntry::STRIDE))
+                                                    .wrapping_add(HitEntry::DISTANCE),
                                             )? == lead
                                         {
                                             ties += 1;
@@ -2463,7 +2474,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     let pick = call_rng(ctx, ties);
                                     let target = ctx
                                         .i32_at(AppContext::HIT_LIST.wrapping_add(
-                                            (pick as i64 as usize).wrapping_mul(8),
+                                            (pick as i64 as usize).wrapping_mul(HitEntry::STRIDE),
                                         ))?;
 
                                     enemy_hit_executor(ctx, slot, &[target], attack)?;
@@ -3506,8 +3517,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     (ctx.i32_at(AppContext::STAGE_MUSIC_ROW)? as i64 as usize)
                                         .wrapping_mul(AppContext::MAP_STAGE_ROW_STRIDE),
                                 );
-                                let key = ctx.block_at::<4>(music_row.wrapping_add(0xb8))?;
-                                let cell = ctx.block_at::<4>(music_row.wrapping_add(0xc))?;
+                                let key = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::KEY))?;
+                                let cell = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::MUSIC_SWITCH))?;
                                 let switch_percent = i32::from_le_bytes([
                                     cell[0] ^ key[0],
                                     cell[1] ^ key[1],
@@ -3520,8 +3531,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 }
 
                                 let max = get_max_hp(ctx, 1, slot)?;
-                                let key = ctx.block_at::<4>(music_row.wrapping_add(0xb8))?;
-                                let cell = ctx.block_at::<4>(music_row.wrapping_add(0xc))?;
+                                let key = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::KEY))?;
+                                let cell = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::MUSIC_SWITCH))?;
                                 let percent = i32::from_le_bytes([
                                     cell[0] ^ key[0],
                                     cell[1] ^ key[1],
@@ -3542,8 +3553,8 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 ctx.set_i32_at(AppContext::BGM_SWITCH_FRAME, 0)?;
                                 ctx.set_i32_at(AppContext::BGM_SWITCH_FRAMES, 0x2d)?;
 
-                                let key = ctx.block_at::<4>(music_row.wrapping_add(0xb8))?;
-                                let cell = ctx.block_at::<4>(music_row.wrapping_add(0x10))?;
+                                let key = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::KEY))?;
+                                let cell = ctx.block_at::<4>(music_row.wrapping_add(MapStageRow::BOSS_MUSIC))?;
 
                                 ctx.set_block_at::<4>(
                                     AppContext::BGM_SWITCH_NEXT,
@@ -3661,9 +3672,15 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     }
 
                                     if check_orb {
-                                        check_orb = get_button_unit_form(ctx, 0, button)? >= 2
-                                            && slot_has_flagged_orb(ctx, 0, button)?
-                                            && get_deck_cooldown(ctx, wallet, button)? == 0;
+                                        check_orb = (get_button_unit_form(ctx, 0, button)? >= 2
+                                            && slot_has_flagged_orb(ctx, 0, button)?)
+                                            || {
+                                                let unit_id = get_button_unit_id(ctx, 0, button)?;
+                                                let form = get_button_unit_form(ctx, 0, button)?;
+
+                                                stat_has_recharge_cut(ctx, 0, unit_id, form)?
+                                            };
+                                        check_orb = check_orb && get_deck_cooldown(ctx, wallet, button)? == 0;
                                     }
 
                                     if check_orb {
@@ -3679,7 +3696,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         if ctx.i32_at(seen)? <= deploys {
                                             ctx.set_i32_at(seen, deploys.wrapping_add(1))?;
 
-                                            if orb_deploy_condition(ctx, wallet, 0, button)? {
+                                            if deploy_count_condition(ctx, wallet, 0, button)? {
                                                 ctx.set_i32_at(
                                                     wallet
                                                         .wrapping_add(AppContext::WALLET_SLOT_FLASH)
@@ -3758,10 +3775,10 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 ctx.set_i32_at(record, first.wrapping_sub(1))?;
                             }
 
-                            let second = ctx.i32_at(record.wrapping_add(0xc))?;
+                            let second = ctx.i32_at(record.wrapping_add(StrikeSparks::SECOND_TIMER))?;
 
                             if second > 0 {
-                                ctx.set_i32_at(record.wrapping_add(0xc), second.wrapping_sub(1))?;
+                                ctx.set_i32_at(record.wrapping_add(StrikeSparks::SECOND_TIMER), second.wrapping_sub(1))?;
                             }
                         }
 

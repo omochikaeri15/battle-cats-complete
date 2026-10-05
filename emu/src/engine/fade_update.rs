@@ -1,14 +1,15 @@
 use crate::Fault;
 
 use super::{
-    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, analytics_stamina_get,
-    app_on_draw, bgm_player_switch, button_bank_remove, calculate_treasure_percentages,
-    clear_cannon_shot, clear_crit_vfx_slot, clear_debris, clear_effect_slot, clear_items_selected,
-    clear_wave_sprite, deploy_limit_reset, fever_clear_state, get_battle_status, get_entity_base_idx, get_entity_state,
+    AppContext, CannonShot, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg,
+    analytics_stamina_get, app_on_draw, apply_event_schedule, bgm_player_switch, button_bank_remove,
+    calculate_treasure_percentages, clear_cannon_shot, clear_crit_vfx_slot, clear_debris,
+    clear_effect_slot, clear_items_selected, clear_wave_sprite, deploy_limit_reset,
+    fever_clear_state, get_battle_status, get_crown_level, get_entity_base_idx, get_entity_state,
     get_global_map_id, get_item_selected, get_max_hp, get_max_money, get_powerup_available,
-    get_scene_id, get_stage_index, get_crown_level, apply_event_schedule, load_map_stage_csv, is_aku_realm_map,
-    map_type_base_id, notification_schedule, record_stage_played, request_save_data,
-    reset_hud_corner_rects, scene_background_setup, scene_transition_tick, set_battle_status, set_cannon_countdown,
+    get_scene_id, get_stage_index, is_aku_realm_map, load_map_stage_csv, map_type_base_id,
+    notification_schedule, record_stage_played, request_save_data, reset_hud_corner_rects,
+    scene_background_setup, scene_transition_tick, set_battle_status, set_cannon_countdown,
     set_deck_cooldown, set_entity_state, set_hp, set_item_selected, set_money,
     set_powerup_available, set_scene, set_worker_level, sound_manager, validate_map_type,
     vibration_clear,
@@ -233,7 +234,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 }
 
                 for slot in 0..0x1eusize {
-                    clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + slot * 0xc)?;
+                    clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + slot * CannonShot::STRIDE)?;
                 }
 
                 for offset in (0..0xc80usize).step_by(0x10) {
@@ -291,7 +292,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
 
                 for offset in (0..0x2580usize).step_by(0x30) {
-                    clear_effect_slot(ctx, AppContext::EFFECT_SLOTS + offset)?;
+                    clear_effect_slot(ctx, AppContext::WAVE_RECORDS + offset)?;
                 }
 
                 for offset in (0..0x2580usize).step_by(0x30) {
@@ -442,7 +443,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         }
 
                         for slot in 0..0x1eusize {
-                            clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + slot * 0xc)?;
+                            clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + slot * CannonShot::STRIDE)?;
                         }
 
                         for offset in (0..0xc80usize).step_by(0x10) {
@@ -500,7 +501,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
 
                         for offset in (0..0x2580usize).step_by(0x30) {
-                            clear_effect_slot(ctx, AppContext::EFFECT_SLOTS + offset)?;
+                            clear_effect_slot(ctx, AppContext::WAVE_RECORDS + offset)?;
                         }
 
                         for offset in (0..0x2580usize).step_by(0x30) {
@@ -633,9 +634,9 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
                         .map_return_flags();
-                    ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING + 6, [0; 8])?;
+                    ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAP_TAIL, [0; 8])?;
                     ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING, [0; 8])?;
-                    ctx.set_block_at::<0x3c>(AppContext::SETUP_FRAMES - 4, [0; 0x3c])?;
+                    ctx.set_block_at::<0x3c>(AppContext::SETUP_BLOCK, [0; 0x3c])?;
 
                     for text in ctx.menu_texts.iter_mut() {
                         *text = None;
@@ -643,12 +644,12 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                     ctx.set_block_at::<2>(AppContext::MENU_TEXTURE_PAGE, [0; 2])?;
                     ctx.set_block_at::<8>(
-                        AppContext::MENU_TEXTURE_PAGE + 0x30,
+                        AppContext::MENU_ANCHOR,
                         0x1ca00000000u64.to_le_bytes(),
                     )?;
                     apply_event_schedule(ctx, 0)?;
                     ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
-                    ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
+                    ctx.set_block_at::<8>(AppContext::MENU_PICKED, [0xff; 8])?;
                     ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
@@ -765,9 +766,9 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
 
                 set_scene(ctx, 0x64)?;
                 scene_transition_tick(ctx)?;
-                ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING + 6, [0; 8])?;
+                ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAP_TAIL, [0; 8])?;
                 ctx.set_block_at::<8>(AppContext::DECK_ROW_SWAPPING, [0; 8])?;
-                ctx.set_block_at::<0x3c>(AppContext::SETUP_FRAMES - 4, [0; 0x3c])?;
+                ctx.set_block_at::<0x3c>(AppContext::SETUP_BLOCK, [0; 0x3c])?;
 
                 let direct = ctx.u8_at(AppContext::OUTRO_EXIT_DIRECT)? as i32;
 
@@ -796,13 +797,13 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<8>(AppContext::SWIPE_VELOCITY, [0; 8])?;
                 ctx.set_block_at::<2>(AppContext::MENU_TEXTURE_PAGE, [0; 2])?;
                 ctx.set_block_at::<8>(
-                    AppContext::MENU_TEXTURE_PAGE + 0x30,
+                    AppContext::MENU_ANCHOR,
                     0x1ca00000000u64.to_le_bytes(),
                 )?;
                 ctx.set_block_at::<0x7c>(AppContext::OUTRO_OK_PRESS, [0; 0x7c])?;
                 apply_event_schedule(ctx, 0)?;
                 ctx.set_block_at::<0x10>(AppContext::MENU_CURSOR, [0xff; 0x10])?;
-                ctx.set_block_at::<8>(AppContext::MENU_CURSOR + 0x10, [0xff; 8])?;
+                ctx.set_block_at::<8>(AppContext::MENU_PICKED, [0xff; 8])?;
                 ctx.set_i32_at(AppContext::MENU_BUILD_MODE, 2)?;
                 ctx.scene_host()
                     .ok_or(Fault::host_missing())?

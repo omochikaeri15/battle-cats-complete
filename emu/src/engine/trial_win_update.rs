@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, app_on_draw, back_pressed, button_bank_busy, button_bank_find,
+    AppContext, Rect, app_on_draw, back_pressed, button_bank_busy, button_bank_find,
     connecting_indicator_show, dialog_close, dialog_show_alt, dialog_top, get_auto_camera_mode,
     get_drawable_width, get_map_type, handle_battle_swipe_pinch, has_inquiry_code, hit_test_rect,
     labyrinth_active, new_button_set_touchable, play_sound, query_localizable, ranking_name_by_id,
@@ -129,9 +129,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         let hovered = touch_is_down(ctx)? != 0 && {
             let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-            let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-            let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-            let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+            let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+            let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+            let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
             hit_test_rect(ctx, x, y, width, height)?
         };
@@ -148,9 +148,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         let released = touch_released(ctx)? != 0
             && {
                 let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             }
@@ -206,9 +206,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             AppContext::OUTRO_OK_RECT,
             ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe),
         )?;
-        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 4, 0x280)?;
-        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
-        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 0xc, 0x58)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::Y, 0x280)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH, 0x17d)?;
+        ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT, 0x58)?;
 
         let mut slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?.wrapping_add(0x14);
 
@@ -223,7 +223,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         }
 
         ctx.set_i32_at(
-            AppContext::OUTRO_OK_RECT + 4,
+            AppContext::OUTRO_OK_RECT + Rect::Y,
             ctx.i32_at(AppContext::LETTERBOX_SHIFT)?
                 .wrapping_sub(slide)
                 .wrapping_add(0x278),
@@ -309,9 +309,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     let hovered = touch_is_down(ctx)? != 0 && {
         let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-        let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-        let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-        let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+        let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+        let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+        let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
         hit_test_rect(ctx, x, y, width, height)?
     };
@@ -330,9 +330,9 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     }
 
     let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+    let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+    let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+    let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
     if !hit_test_rect(ctx, x, y, width, height)? {
         return Ok(true);

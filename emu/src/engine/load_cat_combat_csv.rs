@@ -6,7 +6,7 @@ use super::{
 };
 
 const FORMS: usize = 4;
-const COLUMNS: i32 = 0x76;
+const COLUMNS: i32 = 0x77;
 
 pub fn load_cat_combat_csv(
     ctx: &mut AppContext,

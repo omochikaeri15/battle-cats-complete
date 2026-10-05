@@ -3,12 +3,12 @@ use std::{cell::Cell, rc::Rc};
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Surface, bg_param_resolve_int, cos_deg, draw_context, draw_cut_rotated,
-    draw_cut_scaled, draw_cut_spun, draw_image_rotated, draw_model, draw_surface_scaled,
-    fill_polygon, get_background_id, get_drawable_width, imgcut_get_sprite_cut, maanim_execute,
-    mamodel_get_angle_unit, mamodel_get_opacity_unit, mamodel_get_part, mamodel_get_scale_unit,
-    mamodel_set_sheet, mamodel_set_sheet_table, set_alpha, set_part_angle, set_part_opacity,
-    set_part_scale, set_tint, sin_deg,
+    AppContext, BgDrifter, BgParticle, BgSprite, BgStar, Surface, bg_param_resolve_int, cos_deg,
+    draw_context, draw_cut_rotated, draw_cut_scaled, draw_cut_spun, draw_image_rotated, draw_model,
+    draw_surface_scaled, fill_polygon, get_background_id, get_drawable_width, imgcut_get_sprite_cut,
+    maanim_execute, mamodel_get_angle_unit, mamodel_get_opacity_unit, mamodel_get_part,
+    mamodel_get_scale_unit, mamodel_set_sheet, mamodel_set_sheet_table, set_alpha, set_part_angle,
+    set_part_opacity, set_part_scale, set_tint, sin_deg,
 };
 
 pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -17,8 +17,8 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         || get_background_id(ctx)? == 0x3f0
     {
         for sprite in 0..0x1eusize {
-            let base = AppContext::BG_SPRITES + sprite * 0x40;
-            let fade = ctx.i32_at(base + 0x28)?;
+            let base = AppContext::BG_SPRITES + sprite * BgSprite::STRIDE;
+            let fade = ctx.i32_at(base + BgSprite::HALF + BgSprite::ANGLE)?;
 
             if fade <= 0x1d {
                 set_alpha(
@@ -30,28 +30,28 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
-                .wrapping_add(ops::div_100(ctx.i32_at(base + 0x20)?));
+                .wrapping_add(ops::div_100(ctx.i32_at(base + BgSprite::HALF)?));
             let width = get_drawable_width(ctx)?;
-            let phase = ctx.i32_at(base + 0x28)?;
+            let phase = ctx.i32_at(base + BgSprite::HALF + BgSprite::ANGLE)?;
             let odd =
                 phase.wrapping_sub(phase.wrapping_add((phase as u32 >> 31) as i32) & 0x7ffffffe);
             let x = left
                 .wrapping_sub(width)
                 .wrapping_add(odd.wrapping_mul(2))
                 .wrapping_add(0x3c4);
-            let y = ops::div_100(ctx.i32_at(base + 0x24)?);
-            let cut = ctx.i32_at(base + 0x2c)?;
+            let y = ops::div_100(ctx.i32_at(base + BgSprite::HALF + BgSprite::Y)?);
+            let cut = ctx.i32_at(base + BgSprite::HALF + BgSprite::SIZE)?;
             let span = ops::div_100(
-                ctx.i32_at(base + 0x30)?
+                ctx.i32_at(base + BgSprite::HALF + BgSprite::RATE)?
                     .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]),
             );
-            let cut = ctx.i32_at(base + 0x2c)?;
+            let cut = ctx.i32_at(base + BgSprite::HALF + BgSprite::SIZE)?;
             let height = ops::div_100(
-                ctx.i32_at(base + 0x30)?
+                ctx.i32_at(base + BgSprite::HALF + BgSprite::RATE)?
                     .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]),
             );
-            let cut = ctx.i32_at(base + 0x2c)?;
-            let angle = ctx.i32_at(base + 0x38)? as f32;
+            let cut = ctx.i32_at(base + BgSprite::HALF + BgSprite::SIZE)?;
+            let angle = ctx.i32_at(base + BgSprite::HALF + BgSprite::TURN)? as f32;
 
             draw_cut_rotated(
                 draw_context(&mut ctx.draw)?,
@@ -78,8 +78,8 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(0x3c0);
 
         for flake in 0..100usize {
-            let drifter = AppContext::BG_DRIFTERS + flake * 0x10;
-            let polygon = AppContext::BG_SPRITES + flake * 0x40;
+            let drifter = AppContext::BG_DRIFTERS + flake * BgDrifter::STRIDE;
+            let polygon = AppContext::BG_SPRITES + flake * BgSprite::STRIDE;
 
             for corner in 0..8usize {
                 let turn = (corner * 0x2d) as i32 as f32;
@@ -90,10 +90,10 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 ctx.set_i32_at(polygon + corner * 4, x)?;
 
-                let down = ops::div_100(ctx.i32_at(drifter + 4)?) as f32;
+                let down = ops::div_100(ctx.i32_at(drifter + BgDrifter::Y)?) as f32;
                 let y = ops::cvttss2si(sin_deg(turn) * 12.0 + down);
 
-                ctx.set_i32_at(polygon + 0x20 + corner * 4, y)?;
+                ctx.set_i32_at(polygon + BgSprite::HALF + corner * 4, y)?;
             }
 
             set_tint(draw_context(&mut ctx.draw)?, 0xff, 0xff, 0xff, 0x7f);
@@ -103,7 +103,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             for corner in 0..8usize {
                 xs[corner] = ctx.i32_at(polygon + corner * 4)?;
-                ys[corner] = ctx.i32_at(polygon + 0x20 + corner * 4)?;
+                ys[corner] = ctx.i32_at(polygon + BgSprite::HALF + corner * 4)?;
             }
 
             fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 8);
@@ -112,13 +112,13 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_background_id(ctx)? == 0x21 || get_background_id(ctx)? == 0x3a {
         for star in 0..0x3cusize {
-            let base = AppContext::BG_STARS + star * 0x10;
-            let alpha = ctx.i32_at(base + 8)?;
+            let base = AppContext::BG_STARS + star * BgStar::STRIDE;
+            let alpha = ctx.i32_at(base + BgStar::GLOW)?;
 
             set_alpha(draw_context(&mut ctx.draw)?, alpha);
 
             let x = ctx.i32_at(base)?;
-            let y = ctx.i32_at(base + 4)?;
+            let y = ctx.i32_at(base + BgStar::Y)?;
 
             draw_cut_spun(
                 draw_context(&mut ctx.draw)?,
@@ -144,16 +144,16 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         || get_background_id(ctx)? == 0x48
     {
         for bubble in 0..100usize {
-            let base = AppContext::BG_PARTICLES + bubble * 0x14;
+            let base = AppContext::BG_PARTICLES + bubble * BgParticle::STRIDE;
             let sheet = ctx.bubble_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let across = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
                 .wrapping_add(ctx.i32_at(base)?)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0) as f32;
-            let sway = ctx.i32_at(base + 8)?.wrapping_mul(0x12) as f32;
+            let sway = ctx.i32_at(base + BgParticle::PHASE)?.wrapping_mul(0x12) as f32;
             let x = ops::cvttss2si(cos_deg(sway) * 10.0 + across);
-            let y = ctx.i32_at(base + 4)?;
+            let y = ctx.i32_at(base + BgParticle::Y)?;
 
             draw_surface_scaled(
                 draw_context(&mut ctx.draw)?,
@@ -171,29 +171,29 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         || get_background_id(ctx)? == 0xa9
     {
         for petal in 0..0x32usize {
-            let base = AppContext::BG_PARTICLES + petal * 0x14;
+            let base = AppContext::BG_PARTICLES + petal * BgParticle::STRIDE;
             let sheet = ctx.bg_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let cut = ctx.i32_at(base + 0x10)?.wrapping_add(0x14);
+            let cut = ctx.i32_at(base + BgParticle::KIND)?.wrapping_add(0x14);
             let wide = ctx
-                .i32_at(base + 0xc)?
+                .i32_at(base + BgParticle::SPEED)?
                 .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]);
             let width = ops::div_100(wide);
-            let cut = ctx.i32_at(base + 0x10)?.wrapping_add(0x14);
+            let cut = ctx.i32_at(base + BgParticle::KIND)?.wrapping_add(0x14);
             let tall = ctx
-                .i32_at(base + 0xc)?
+                .i32_at(base + BgParticle::SPEED)?
                 .wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]);
             let height = ops::div_100(tall);
             let across = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?)
                 .wrapping_add(ctx.i32_at(base)?)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0) as f32;
-            let sway = ctx.i32_at(base + 8)?.wrapping_mul(3) as f32;
+            let sway = ctx.i32_at(base + BgParticle::PHASE)?.wrapping_mul(3) as f32;
             let x = ops::cvttss2si(
                 cos_deg(sway) * 10.0 + across - ops::div_200(wide) as f32,
             );
-            let y = ops::div_neg_200(tall).wrapping_add(ctx.i32_at(base + 4)?);
-            let cut = ctx.i32_at(base + 0x10)?.wrapping_add(0x14);
+            let y = ops::div_neg_200(tall).wrapping_add(ctx.i32_at(base + BgParticle::Y)?);
+            let cut = ctx.i32_at(base + BgParticle::KIND)?.wrapping_add(0x14);
 
             draw_cut_scaled(
                 draw_context(&mut ctx.draw)?,
@@ -209,7 +209,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_background_id(ctx)? == 0x28 {
         for pair in 0..100usize {
-            let base = AppContext::BG_SPRITES + pair * 0x40;
+            let base = AppContext::BG_SPRITES + pair * BgSprite::STRIDE;
 
             for half in [0usize, 0x20] {
                 let sheet = ctx.bubble_sheet.clone();
@@ -218,14 +218,14 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_add(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
                     .wrapping_sub(get_drawable_width(ctx)?)
                     .wrapping_add(0x3c0) as f32;
-                let size = (ctx.i32_at(base + half + 0xc)? << 2) as f32;
+                let size = (ctx.i32_at(base + half + BgSprite::SIZE)? << 2) as f32;
                 let sway = ops::div_100(
-                    ctx.i32_at(base + half + 0x10)?
-                        .wrapping_mul(ctx.i32_at(base + half + 8)?),
+                    ctx.i32_at(base + half + BgSprite::RATE)?
+                        .wrapping_mul(ctx.i32_at(base + half + BgSprite::ANGLE)?),
                 ) as f32;
                 let x = ops::cvttss2si(cos_deg(sway) * size / 100.0 + across);
-                let y = ops::div_100(ctx.i32_at(base + half + 4)?);
-                let size = ops::div_5(ctx.i32_at(base + half + 0xc)?);
+                let y = ops::div_100(ctx.i32_at(base + half + BgSprite::Y)?);
+                let size = ops::div_5(ctx.i32_at(base + half + BgSprite::SIZE)?);
 
                 draw_surface_scaled(
                     draw_context(&mut ctx.draw)?,
@@ -241,7 +241,7 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_background_id(ctx)? == 0x2e || get_background_id(ctx)? == 0x2f {
         for pair in 0..100usize {
-            let base = AppContext::BG_SPRITES + pair * 0x40;
+            let base = AppContext::BG_SPRITES + pair * BgSprite::STRIDE;
 
             for half in [0usize, 0x20] {
                 let sheet = ctx.bubble_sheet.clone();
@@ -250,15 +250,15 @@ pub fn draw_foreground_effects(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_add(ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?))
                     .wrapping_sub(get_drawable_width(ctx)?)
                     .wrapping_add(0x3c0) as f32;
-                let size = (ctx.i32_at(base + half + 0xc)? << 2) as f32;
+                let size = (ctx.i32_at(base + half + BgSprite::SIZE)? << 2) as f32;
                 let sway = ops::div_100(
-                    ctx.i32_at(base + half + 0x10)?
-                        .wrapping_mul(ctx.i32_at(base + half + 8)?),
+                    ctx.i32_at(base + half + BgSprite::RATE)?
+                        .wrapping_mul(ctx.i32_at(base + half + BgSprite::ANGLE)?),
                 ) as f32;
                 let x = ops::cvttss2si(cos_deg(sway) * size / 100.0 + across);
-                let y = ops::div_100(ctx.i32_at(base + half + 4)?);
-                let width = ops::div_10(ctx.i32_at(base + half + 0xc)?);
-                let height = ops::div_5(ctx.i32_at(base + half + 0xc)?);
+                let y = ops::div_100(ctx.i32_at(base + half + BgSprite::Y)?);
+                let width = ops::div_10(ctx.i32_at(base + half + BgSprite::SIZE)?);
+                let height = ops::div_5(ctx.i32_at(base + half + BgSprite::SIZE)?);
 
                 draw_image_rotated(
                     draw_context(&mut ctx.draw)?,

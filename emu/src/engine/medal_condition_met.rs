@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{AppContext, Medal, abs_i32, get_medal_progress, medal_stage_condition_met, reward_owned};
+use super::{
+    AppContext, Medal, abs_i32, get_medal_progress, medal_stage_condition_met, reward_owned,
+};
 
 pub fn medal_condition_met(ctx: &mut AppContext, medal: &Medal, kind: i32) -> Result<bool, Fault> {
     let mut allowed = vec![0i32];

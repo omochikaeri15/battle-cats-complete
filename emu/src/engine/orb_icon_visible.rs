@@ -1,8 +1,8 @@
 use crate::Fault;
 
 use super::{
-    AppContext, get_button_unit_id, get_equipped_orb, get_orb_def, orb_ability_flag,
-    orb_deploy_condition,
+    AppContext, deploy_count_condition, get_button_unit_form, get_button_unit_id, get_equipped_orb,
+    get_orb_def, orb_ability_flag,
 };
 
 pub fn orb_icon_visible(
@@ -26,7 +26,11 @@ pub fn orb_icon_visible(
         return Ok(true);
     }
 
-    if !orb_deploy_condition(ctx, wallet, faction, slot)? {
+    if faction != 0 || get_button_unit_form(ctx, 0, slot)? < 2 {
+        return Ok(false);
+    }
+
+    if !deploy_count_condition(ctx, wallet, 0, slot)? {
         return Ok(false);
     }
 

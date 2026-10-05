@@ -3,9 +3,12 @@ use std::{cell::Cell, rc::Rc};
 use crate::{Fault, ops};
 
 use super::{
-    bg_param_resolve_int, draw_context, draw_cut, draw_cut_rotated, draw_cut_scaled, draw_model, fill_rect, get_background_id, get_drawable_width, glow_set,
-    imgcut_get_sprite_cut, maanim_execute, mamodel_get_angle_unit, mamodel_get_opacity_unit, mamodel_get_part, mamodel_get_scale_unit, mamodel_set_sheet,
-    mamodel_set_sheet_table, set_alpha, set_part_angle, set_part_opacity, set_part_scale, set_tint, set_tint_alpha, sin_deg, AppContext,
+    AppContext, BgDrifter, BgParticle, BgSprite, bg_param_resolve_int, draw_context, draw_cut,
+    draw_cut_rotated, draw_cut_scaled, draw_model, fill_rect, get_background_id, get_drawable_width,
+    glow_set, imgcut_get_sprite_cut, maanim_execute, mamodel_get_angle_unit,
+    mamodel_get_opacity_unit, mamodel_get_part, mamodel_get_scale_unit, mamodel_set_sheet,
+    mamodel_set_sheet_table, set_alpha, set_part_angle, set_part_opacity, set_part_scale, set_tint,
+    set_tint_alpha, sin_deg,
 };
 
 const PARTICLE_RED: [i32; 6] = [255, 180, 180, 255, 255, 180];
@@ -23,14 +26,14 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         || get_background_id(ctx)? == 0x432
     {
         for particle in 0..100usize {
-            let record = AppContext::BG_PARTICLES.wrapping_add(particle * 0x14);
-            let depth = ctx.i32_at(record + 8)?;
+            let record = AppContext::BG_PARTICLES.wrapping_add(particle * BgParticle::STRIDE);
+            let depth = ctx.i32_at(record + BgParticle::PHASE)?;
 
             if depth > 0x190 {
                 continue;
             }
 
-            let kind = ctx.i32_at(record + 0x10)?;
+            let kind = ctx.i32_at(record + BgParticle::KIND)?;
             let mut lit = true;
 
             if kind != 0 && get_background_id(ctx)? != 0xe {
@@ -69,7 +72,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let drift = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(ctx.i32_at(record)?);
             let x = drift.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c0);
-            let y = ctx.i32_at(record + 4)?;
+            let y = ctx.i32_at(record + BgParticle::Y)?;
 
             fill_rect(draw_context(&mut ctx.draw)?, x, y, 4, 4);
             set_tint_alpha(draw_context(&mut ctx.draw)?, 0xff);
@@ -80,11 +83,11 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         set_alpha(draw_context(&mut ctx.draw)?, 0x32);
 
         for glint in 0..0x1eusize {
-            let record = AppContext::BG_DRIFTERS.wrapping_add(glint * 0x10);
+            let record = AppContext::BG_DRIFTERS.wrapping_add(glint * BgDrifter::STRIDE);
             let sheet = ctx.effect_a_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let x = ctx.i32_at(record)?;
-            let y = ctx.i32_at(record + 4)?;
+            let y = ctx.i32_at(record + BgDrifter::Y)?;
 
             draw_cut(draw_context(&mut ctx.draw)?, sheet, x, y, 0x1c);
         }
@@ -94,8 +97,8 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_background_id(ctx)? == 0x29 || get_background_id(ctx)? == 0x4b || get_background_id(ctx)? == 0x3f0 {
         for sprite in 0..100usize {
-            let base = AppContext::BG_SPRITES.wrapping_add(sprite * 0x40);
-            let fade = ctx.i32_at(base + 8)?;
+            let base = AppContext::BG_SPRITES.wrapping_add(sprite * BgSprite::STRIDE);
+            let fade = ctx.i32_at(base + BgSprite::ANGLE)?;
 
             if fade <= 0x1d {
                 set_alpha(draw_context(&mut ctx.draw)?, ops::div_30((fade << 8).wrapping_sub(fade)));
@@ -105,13 +108,13 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
             let left = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?).wrapping_add(ops::div_100(ctx.i32_at(base)?));
             let x = left.wrapping_sub(get_drawable_width(ctx)?).wrapping_add(0x3c4);
-            let y = ops::div_100(ctx.i32_at(base + 4)?);
-            let cut = ctx.i32_at(base + 0xc)?;
-            let span = ops::div_100(ctx.i32_at(base + 0x10)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
-            let cut = ctx.i32_at(base + 0xc)?;
-            let height = ops::div_100(ctx.i32_at(base + 0x10)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
-            let cut = ctx.i32_at(base + 0xc)?;
-            let angle = ctx.i32_at(base + 0x18)? as f32;
+            let y = ops::div_100(ctx.i32_at(base + BgSprite::Y)?);
+            let cut = ctx.i32_at(base + BgSprite::SIZE)?;
+            let span = ops::div_100(ctx.i32_at(base + BgSprite::RATE)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[2]));
+            let cut = ctx.i32_at(base + BgSprite::SIZE)?;
+            let height = ops::div_100(ctx.i32_at(base + BgSprite::RATE)?.wrapping_mul(imgcut_get_sprite_cut(sheet, cut)?[3]));
+            let cut = ctx.i32_at(base + BgSprite::SIZE)?;
+            let angle = ctx.i32_at(base + BgSprite::TURN)? as f32;
 
             draw_cut_rotated(draw_context(&mut ctx.draw)?, sheet, x, y, span, height, angle, 5, 0, 0, 5, cut);
             set_alpha(draw_context(&mut ctx.draw)?, 0xff);
@@ -122,7 +125,7 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
         glow_set(draw_context(&mut ctx.draw)?, 1);
 
         for spark in 0..100usize {
-            let record = AppContext::BG_PARTICLES.wrapping_add(spark * 0x14);
+            let record = AppContext::BG_PARTICLES.wrapping_add(spark * BgParticle::STRIDE);
             let life = ctx.i32_at(record)?;
 
             if life < 0 {
@@ -144,11 +147,11 @@ pub fn draw_background_effects(ctx: &mut AppContext) -> Result<(), Fault> {
             let height = ops::div_100(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale));
             let drift = ops::div_neg_10(ctx.i32_at(AppContext::CAMERA_X)?);
             let x = ops::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[2].wrapping_mul(scale))
-                .wrapping_add(ctx.i32_at(record + 4)?)
+                .wrapping_add(ctx.i32_at(record + BgParticle::Y)?)
                 .wrapping_add(drift)
                 .wrapping_sub(get_drawable_width(ctx)?)
                 .wrapping_add(0x3c0);
-            let y = ops::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale)).wrapping_add(ctx.i32_at(record + 8)?);
+            let y = ops::div_neg_200(imgcut_get_sprite_cut(sheet, 0x14)?[3].wrapping_mul(scale)).wrapping_add(ctx.i32_at(record + BgParticle::PHASE)?);
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, y, span, height, 0x14);
         }

@@ -17,7 +17,7 @@ pub fn get_talent_value(
     let mut talent_slot = 0;
 
     loop {
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
         if definition[talent_slot * 0xe + 1] == abil {
             break;
@@ -25,7 +25,7 @@ pub fn get_talent_value(
 
         talent_slot += 1;
 
-        if talent_slot == 8 {
+        if talent_slot == ctx.limits.talent_groups as usize {
             return Ok(0);
         }
     }
@@ -33,10 +33,10 @@ pub fn get_talent_value(
     let min_cell = (talent_slot as i64 * 0xe + 3 + param as i64) as usize;
     let max_cell = (talent_slot as i64 * 0xe + 7 + param as i64) as usize;
 
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
     if definition[talent_slot * 0xe + 2] <= 1 {
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
         return definition
             .get(min_cell)
@@ -45,20 +45,20 @@ pub fn get_talent_value(
     }
 
     let levels = ctx.talent_levels.entry(unit_id).or_default();
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
     let level = *levels.entry(definition[talent_slot * 0xe + 1]).or_default();
 
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
     let min = *definition.get(min_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?;
 
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
     let max = *definition.get(max_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?;
 
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
     let span = max.wrapping_sub(*definition.get(min_cell).ok_or(Fault::index_out_of_range(param as i64, 4))?);
     let scaled = level.wrapping_sub(1).wrapping_mul(span);
 
-    let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
     let steps = definition[talent_slot * 0xe + 2].wrapping_sub(1);
 
     let quotient = (scaled as i64)

@@ -91,7 +91,7 @@ pub fn grant_stage_reward(ctx: &mut AppContext, field: i32, first: u8) -> Result
                             return Ok(0);
                         }
 
-                        for unit in 0..0x36cusize {
+                        for unit in 0..ctx.limits.units as usize {
                             let buy = UNIT_BUY + unit * UNIT_BUY_STRIDE;
 
                             if unit_buy_field(ctx.bytes_from(buy)?, 0x17)? == item {

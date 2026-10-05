@@ -3,8 +3,8 @@ use std::{cell, rc::Rc};
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, Cell, Imgcut, open_asset_stream, read_asset_stream_line,
-    read_csv_cell, read_csv_row,
+    AppContext, AssetStream, Cell, Imgcut, open_asset_stream, read_asset_stream_line, read_csv_cell,
+    read_csv_row,
 };
 
 pub const PART_STRIDE: usize = 0xb0;
@@ -29,6 +29,53 @@ impl Default for MamodelPart {
 }
 
 impl MamodelPart {
+    pub const MATRIX_0: usize = 0x4;
+    pub const MATRIX_1: usize = 0x8;
+    pub const MATRIX_2: usize = 0xc;
+    pub const MATRIX_3: usize = 0x10;
+    pub const MATRIX_4: usize = 0x14;
+    pub const MATRIX_5: usize = 0x18;
+    pub const PARENT: usize = 0x1c;
+    pub const PARENT_ANIM: usize = 0x20;
+    pub const SHEET: usize = 0x24;
+    pub const SHEET_ANIM: usize = 0x28;
+    pub const CUT: usize = 0x2c;
+    pub const CUT_ANIM: usize = 0x30;
+    pub const DEPTH: usize = 0x34;
+    pub const DEPTH_ANIM: usize = 0x38;
+    pub const POS_X: usize = 0x3c;
+    pub const POS_Y: usize = 0x40;
+    pub const POS_X_ANIM: usize = 0x44;
+    pub const POS_Y_ANIM: usize = 0x48;
+    pub const PIVOT_X: usize = 0x4c;
+    pub const PIVOT_Y: usize = 0x50;
+    pub const PIVOT_X_ANIM: usize = 0x54;
+    pub const PIVOT_Y_ANIM: usize = 0x58;
+    pub const SCALE_X: usize = 0x5c;
+    pub const LIVE_SCALE_X: usize = 0x60;
+    pub const SCALE_X_ANIM: usize = 0x64;
+    pub const SCALE_Y: usize = 0x68;
+    pub const LIVE_SCALE_Y: usize = 0x6c;
+    pub const SCALE_Y_ANIM: usize = 0x70;
+    pub const ANGLE: usize = 0x74;
+    pub const ANGLE_ANIM: usize = 0x78;
+    pub const OPACITY: usize = 0x7c;
+    pub const LIVE_OPACITY: usize = 0x80;
+    pub const OPACITY_ANIM: usize = 0x84;
+    pub const FLIP_X: usize = 0x88;
+    pub const LIVE_FLIP_X: usize = 0x89;
+    pub const FLIP_Y: usize = 0x8a;
+    pub const LIVE_FLIP_Y: usize = 0x8b;
+    pub const GLOW: usize = 0x8c;
+    pub const QUAD_0_X: usize = 0x90;
+    pub const QUAD_0_Y: usize = 0x94;
+    pub const QUAD_1_X: usize = 0x98;
+    pub const QUAD_1_Y: usize = 0x9c;
+    pub const QUAD_2_X: usize = 0xa0;
+    pub const QUAD_2_Y: usize = 0xa4;
+    pub const QUAD_3_X: usize = 0xa8;
+    pub const QUAD_3_Y: usize = 0xac;
+
     pub fn from_raw(raw: [u8; PART_STRIDE]) -> Self {
         Self { raw }
     }
@@ -136,18 +183,18 @@ pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> R
 
         let part = &mut model.parts[row];
 
-        part.set_i32_at(0x1c, read_csv_cell(stm, 0) as i32);
-        part.set_i32_at(0x24, read_csv_cell(stm, 1) as i32);
-        part.set_i32_at(0x2c, read_csv_cell(stm, 2) as i32);
-        part.set_i32_at(0x34, read_csv_cell(stm, 3) as i32);
-        part.set_i32_at(0x3c, read_csv_cell(stm, 4) as i32);
-        part.set_i32_at(0x40, read_csv_cell(stm, 5) as i32);
-        part.set_i32_at(0x4c, read_csv_cell(stm, 6) as i32);
-        part.set_i32_at(0x50, read_csv_cell(stm, 7) as i32);
-        part.set_i32_at(0x5c, read_csv_cell(stm, 8) as i32);
-        part.set_i32_at(0x68, read_csv_cell(stm, 9) as i32);
-        part.set_i32_at(0x74, read_csv_cell(stm, 0xa) as i32);
-        part.set_i32_at(0x7c, read_csv_cell(stm, 0xb) as i32);
+        part.set_i32_at(MamodelPart::PARENT, read_csv_cell(stm, 0) as i32);
+        part.set_i32_at(MamodelPart::SHEET, read_csv_cell(stm, 1) as i32);
+        part.set_i32_at(MamodelPart::CUT, read_csv_cell(stm, 2) as i32);
+        part.set_i32_at(MamodelPart::DEPTH, read_csv_cell(stm, 3) as i32);
+        part.set_i32_at(MamodelPart::POS_X, read_csv_cell(stm, 4) as i32);
+        part.set_i32_at(MamodelPart::POS_Y, read_csv_cell(stm, 5) as i32);
+        part.set_i32_at(MamodelPart::PIVOT_X, read_csv_cell(stm, 6) as i32);
+        part.set_i32_at(MamodelPart::PIVOT_Y, read_csv_cell(stm, 7) as i32);
+        part.set_i32_at(MamodelPart::SCALE_X, read_csv_cell(stm, 8) as i32);
+        part.set_i32_at(MamodelPart::SCALE_Y, read_csv_cell(stm, 9) as i32);
+        part.set_i32_at(MamodelPart::ANGLE, read_csv_cell(stm, 0xa) as i32);
+        part.set_i32_at(MamodelPart::OPACITY, read_csv_cell(stm, 0xb) as i32);
 
         let mut glow = 0;
 
@@ -155,7 +202,7 @@ pub fn mamodel_load(ctx: &mut AppContext, model: &mut Mamodel, path: &[u8]) -> R
             glow = read_csv_cell(stm, 0xc) as i32;
         }
 
-        part.set_i32_at(0x8c, glow);
+        part.set_i32_at(MamodelPart::GLOW, glow);
     }
 
     if version <= 0 {

@@ -1,9 +1,9 @@
 use crate::Fault;
 
 use super::{
-    AppContext, Entity, attack_dmg_dispatch, call_rng, get_base_max_hp_div_20, get_dodge_chance,
-    get_dodge_duration, get_dodge_timer, get_unit_name, is_metal, is_touchable, is_touchable_thunk,
-    set_dodge_timer, set_dodge_vfx_frame,
+    AppContext, Entity, StrikeSparks, attack_dmg_dispatch, call_rng, get_base_max_hp_div_20,
+    get_dodge_chance, get_dodge_duration, get_dodge_timer, get_unit_name, is_metal, is_touchable,
+    is_touchable_thunk, set_dodge_timer, set_dodge_vfx_frame,
 };
 
 pub fn pending_strike_hit(
@@ -78,7 +78,7 @@ pub fn pending_strike_hit(
             let scatter = call_rng(ctx, 0x64);
 
             ctx.set_i32_at(
-                sparks + 0x4,
+                sparks + StrikeSparks::FIRST_X,
                 scatter
                     .wrapping_mul(2)
                     .wrapping_mul(5)
@@ -91,17 +91,17 @@ pub fn pending_strike_hit(
             let scatter = call_rng(ctx, 0x3c);
 
             ctx.set_i32_at(
-                sparks + 0x8,
+                sparks + StrikeSparks::FIRST_Y,
                 y.wrapping_add(scatter.wrapping_mul(5).wrapping_mul(2))
                     .wrapping_add(-0x5c3),
             )?;
-            ctx.set_i32_at(sparks + 0xc, 0xc)?;
+            ctx.set_i32_at(sparks + StrikeSparks::SECOND_TIMER, 0xc)?;
 
             let x = ctx.i32_at(entity.wrapping_add(Entity::POS_X))?;
             let scatter = call_rng(ctx, 0x64);
 
             ctx.set_i32_at(
-                sparks + 0x10,
+                sparks + StrikeSparks::SECOND_X,
                 scatter
                     .wrapping_mul(2)
                     .wrapping_mul(5)
@@ -114,7 +114,7 @@ pub fn pending_strike_hit(
             let scatter = call_rng(ctx, 0x3c);
 
             ctx.set_i32_at(
-                sparks + 0x14,
+                sparks + StrikeSparks::SECOND_Y,
                 y.wrapping_add(scatter.wrapping_mul(5).wrapping_mul(2))
                     .wrapping_add(-0x5c3),
             )?;

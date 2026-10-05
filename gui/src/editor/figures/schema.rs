@@ -124,7 +124,7 @@ pub(super) const BRACKET: usize = 10;
 
 pub(super) const TALENT_HEAD: usize = 2;
 pub(super) const TALENT_STRIDE: usize = 14;
-pub(super) const TALENT_SLOTS: usize = 8;
+pub(super) const TALENT_SLOTS: usize = 11;
 
 const TALENT_WIDTH: usize = TALENT_HEAD + TALENT_STRIDE * TALENT_SLOTS;
 

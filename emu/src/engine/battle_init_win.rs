@@ -3,35 +3,37 @@ use std::rc::Rc;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, UNIT_BUY,
-    UNIT_BUY_STRIDE, ad_prepare, add_resource, add_stage_record, add_stage_unlock,
-    add_stages_cleared, is_network_available, aku_timer_set, altar_stage_value, analytics_named,
+    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, StageRecordRow,
+    TreasureRow, UNIT_BUY, UNIT_BUY_STRIDE, ad_prepare, add_resource, add_stage_record,
+    add_stage_unlock, add_stages_cleared, aku_timer_set, altar_stage_value, analytics_named,
     analytics_nekokan_get, battle_init_win_lambda_0, breadcrumb, breadcrumb_with,
     calculate_treasure_percentages, call_rng, check_medals, clear_count_rewards_get,
     clear_ex_replacement_stage, clear_lineup_count, clear_lineup_record, commit_stage_score,
-    compute_stage_xp, config_json_int, dialog_top, enigma_active_at,
-    enigma_active_count, enigma_add_stamina, enigma_group_at, enigma_medal_count, enigma_prune,
-    enigma_roll, event_reward_received, event_reward_set, event_unit_slot, ex_redirect_check_a,
-    feature_enabled, find_item_by_kind, find_item_index, get_aku_stage_list, get_cleared_count,
-    get_drawable_width, get_entity_base_idx, get_global_map_id, get_item_count, get_map_count,
-    get_map_index, get_map_type, get_point_cap, get_point_id, get_point_rewards, get_point_total,
-    get_powerup, get_release_point_cap, get_slot_unit_id, get_stage_best_score, get_stage_count,
-    get_stage_index, get_stage_record, get_stage_score, get_stage_set_size, get_stages_cleared,
-    get_crown_level, get_trait_dojo, grant_stage_reward, has_point_decay, invasion_available,
-    invasion_z_available, is_aku_final_map, is_ex_option_target, is_reward_claimed, is_score_stage,
-    labyrinth_active, labyrinth_result_ready, labyrinth_roll_floor, labyrinth_submit,
-    labyrinth_unit_count, log_analytics_event, map_guerrilla_set, map_index_of_map_id,
-    map_interval, map_one_time, map_type_base_id, map_type_of_map_id, map_xp_ad, max_i32,
-    mission_mark, mission_progress, mission_progress_list, new_button_register,
-    new_button_set_touchable, notification_schedule, now_seconds, obf_value_add, obf_value_read,
-    obf_value_set, orb_def_count, orb_inventory_count, play_sound, point_reward_analytics,
-    record_stage_lineup, record_stage_played, replay_mode, request_save_data, reward_ad_ready,
-    reward_owned, reward_unit_id, roll_drop_item_counts, roll_filibuster_stage, server_config_int,
+    compute_stage_xp, config_json_int, dialog_top, enigma_active_at, enigma_active_count,
+    enigma_add_stamina, enigma_group_at, enigma_medal_count, enigma_prune, enigma_roll,
+    event_reward_received, event_reward_set, event_unit_slot, ex_redirect_check_a,
+    ex_stage_credits_gauge, feature_enabled, find_item_by_kind, find_item_index, get_aku_stage_list,
+    get_cleared_count, get_crown_level, get_drawable_width, get_entity_base_idx, get_global_map_id,
+    get_item_count, get_map_count, get_map_index, get_map_type, get_point_cap, get_point_id,
+    get_point_rewards, get_point_total, get_powerup, get_release_point_cap, get_slot_unit_id,
+    get_stage_best_score, get_stage_count, get_stage_index, get_stage_record, get_stage_score,
+    get_stage_set_size, get_stages_cleared, get_trait_dojo, grant_stage_reward, has_point_decay,
+    invasion_available, invasion_z_available, is_aku_final_map, is_ex_option_target,
+    is_network_available, is_reward_claimed, is_score_stage, labyrinth_active,
+    labyrinth_result_ready, labyrinth_roll_floor, labyrinth_submit, labyrinth_unit_count,
+    log_analytics_event, map_guerrilla_set, map_index_of_map_id, map_interval, map_one_time,
+    map_type_base_id, map_type_of_map_id, map_uses_item_cost, map_xp_ad, max_i32, mission_mark,
+    mission_progress, mission_progress_list, new_button_register, new_button_set_touchable,
+    notification_schedule, now_seconds, obf_value_add, obf_value_read, obf_value_set, orb_def_count,
+    orb_inventory_count, play_sound, point_reward_analytics, record_stage_lineup,
+    record_stage_played, replay_mode, request_save_data, reward_ad_ready, reward_owned,
+    reward_unit_id, roll_drop_item_counts, roll_filibuster_stage, server_config_int,
     set_auto_camera_mode, set_battle_status, set_entity_state, set_fever_fade_out, set_map_open,
     set_reward_claimed, set_stage_record, set_stage_unlock, shop_offer_start, sound_manager,
     stage_pair_progress, stage_pair_progress_set, stage_pair_record, stage_reward_item,
     stage_reward_kind, stage_reward_taken, stage_stamina_cost, string_format_int,
-    treasure_area_match, treasure_festival_active, treasure_group_at, treasure_group_cleared,
+    treasure_area_match, treasure_festival_active, treasure_gauge_add, treasure_gauge_full,
+    treasure_gauge_reset, treasure_gauge_unlocked, treasure_group_at, treasure_group_cleared,
     treasure_group_of_stage, ui_node_add_child, ui_node_set_anchor, ui_node_set_panel,
     ui_node_set_sprite, ui_node_set_zoom, unit_buy_field, validate_map_type, vibration_reset,
     web_popup_request, web_popup_stage_match, xor_row46_get,
@@ -427,7 +429,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, cleared_now)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
-            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, -1)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_UNLOCK, -1)?;
             add_stage_unlock(ctx, map_type, map_index, crown, 1, use_cache)?;
 
             let cleared_now = get_stages_cleared(ctx, map_type, map_index, crown, use_cache)?;
@@ -580,7 +582,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
         let records = ctx.bytes_from(
-            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
+            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * StageRecordRow::STRIDE as i64) as usize,
         )?;
         let record = ops::xor_row_decode(records, 0x33, stage_row as i64 as usize).ok_or(
             Fault::index_out_of_range(stage_row as i64, 0x33),
@@ -645,7 +647,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             ctx.set_i32_at(AppContext::OUTRO_STAGE_CLEARED, progress as i32)?;
             ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR, 0)?;
-            ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, -1)?;
+            ctx.set_i32_at(AppContext::OUTRO_NEW_UNLOCK, -1)?;
 
             let unlocks =
                 ((chapter_now as i64) * 4 + AppContext::STAGE_UNLOCK_CHAPTERS as i64) as usize;
@@ -670,14 +672,14 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
                 let cleared_stage = ctx.i32_at(AppContext::OUTRO_STAGE_CLEARED)?;
 
-                for unit in 0..0x36cusize {
+                for unit in 0..ctx.limits.units as usize {
                     let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
 
                     if unit_buy_field(row, 0xf)? == chapter
                         && unit_buy_field(row, 0)? == cleared_stage
                         && unit_buy_field(row, 1)? == 0
                     {
-                        ctx.set_i32_at(AppContext::OUTRO_NEW_CLEAR + 4, unit as i32)?;
+                        ctx.set_i32_at(AppContext::OUTRO_NEW_UNLOCK, unit as i32)?;
                     }
                 }
             }
@@ -685,8 +687,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
         let record_at =
-            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize;
-        let key = ctx.block_at::<4>(record_at + 0xcc)?;
+            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * StageRecordRow::STRIDE as i64) as usize;
+        let key = ctx.block_at::<4>(record_at + StageRecordRow::KEY)?;
         let raw = ctx.block_at::<4>(record_at + stage_row as i64 as usize * 4)?;
         let next = u32::from_le_bytes([
             raw[0] ^ key[0],
@@ -710,8 +712,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
         let stage_row = ctx.i32_at(AppContext::STAGE_ROW)?;
         let record_at =
-            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize;
-        let key = ctx.block_at::<4>(record_at + 0xcc)?;
+            (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * StageRecordRow::STRIDE as i64) as usize;
+        let key = ctx.block_at::<4>(record_at + StageRecordRow::KEY)?;
         let raw = ctx.block_at::<4>(record_at + stage_row as i64 as usize * 4)?;
 
         if u32::from_le_bytes([
@@ -748,7 +750,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let unlocked = ctx.i32_at(AppContext::OUTRO_STAGE_CLEARED)?;
 
             if unlocked != -1 {
-                for unit in 0..0x36cusize {
+                for unit in 0..ctx.limits.units as usize {
                     let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
 
                     if unit_buy_field(row, 0xf)? != chapter {
@@ -1439,6 +1441,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
     }
 
     let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+    let mut guaranteed = false;
 
     if chapter != 3 && chapter != 0x63 {
         if ctx.i32_at(AppContext::FIRST_STAGE_WON)? | ctx.i32_at(AppContext::STAGE_ROW)? == 0 {
@@ -1504,6 +1507,18 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             ctx.set_i32_at(AppContext::DROP_RATE, 0x64)?;
         }
 
+        if ctx.i32_at(AppContext::GAUGE_TUTORIAL_STEP)? == 4
+            && get_global_map_id(ctx, 0)? == 0xbb8
+            && get_stage_index(ctx)? == 6
+        {
+            ctx.set_i32_at(AppContext::GAUGE_TUTORIAL_STEP, 5)?;
+            ctx.set_i32_at(AppContext::DROP_RATE, 0x64)?;
+        }
+
+        if treasure_gauge_unlocked(ctx) && treasure_gauge_full(&ctx.treasure_gauge) {
+            ctx.set_i32_at(AppContext::DROP_RATE, 0x64)?;
+        }
+
         let roll = call_rng(ctx, 0x64);
 
         ctx.set_i32_at(AppContext::DROP_ROLL, roll)?;
@@ -1547,7 +1562,8 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     Fault::index_out_of_range(castle as i64, 0x31),
                 )?;
                 let tier = if level == 3
-                    || (get_global_map_id(ctx, 0)? == 0xbb8 && get_stage_index(ctx)? <= 2)
+                    || (get_global_map_id(ctx, 0)? == 0xbb8 && get_stage_index(ctx)? < 3)
+                    || (treasure_gauge_unlocked(ctx) && treasure_gauge_full(&ctx.treasure_gauge))
                 {
                     ctx.set_block_at::<1>(AppContext::RANK_POPUP_SHOWN, [1])?;
                     ctx.set_i32_at(AppContext::DROP_FLAG, 1)?;
@@ -1570,6 +1586,24 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let castle = ctx.i32_at(AppContext::CASTLE_ID)?;
+            let levels = ctx.bytes_from(
+                AppContext::TREASURE_LEVELS
+                    + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
+            )?;
+            let level = ops::xor_row_decode(levels, 0x31, castle as i64 as usize)
+                .ok_or(Fault::index_out_of_range(castle as i64, 0x31))?;
+
+            if level != 3
+                && treasure_gauge_unlocked(ctx)
+                && treasure_gauge_full(&ctx.treasure_gauge)
+            {
+                treasure_gauge_reset(&mut ctx.treasure_gauge);
+                ctx.set_i32_at(AppContext::WIN_TREASURE, 3)?;
+                guaranteed = true;
+            }
+
+            let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+            let castle = ctx.i32_at(AppContext::CASTLE_ID)?;
             let levels_at = AppContext::TREASURE_LEVELS
                 + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE;
             let level =
@@ -1578,7 +1612,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             let tier = ctx.i32_at(AppContext::WIN_TREASURE)?;
 
             if level < tier {
-                let key = ctx.block_at::<4>(levels_at + 0xc4)?;
+                let key = ctx.block_at::<4>(levels_at + TreasureRow::KEY)?;
                 let value = tier.to_le_bytes();
 
                 ctx.set_block_at::<4>(
@@ -1667,6 +1701,20 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                 ctx.set_i32_at(AppContext::DROP_ROLL, 0x64)?;
             }
         }
+    }
+
+    let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+
+    if !guaranteed
+        && (chapter != 0x63 || ex_stage_credits_gauge(ctx)?)
+        && (map_uses_item_cost(ctx)? || {
+            let stage = ctx.i32_at(AppContext::STAGE_INDEX)?;
+            let halved = ctx.u8_at(AppContext::STAMINA_HALVED)?;
+
+            stage_stamina_cost(ctx, stage, halved)? != 0
+        })
+    {
+        treasure_gauge_add(ctx, 0, 1);
     }
 
     if get_map_type(ctx, 0)? == -6 {

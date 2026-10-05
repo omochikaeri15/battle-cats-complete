@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, draw_context, draw_cut, get_cannon_countdown, get_cannon_recharge,
+    AppContext, Rect, draw_context, draw_cut, get_cannon_countdown, get_cannon_recharge,
     get_drawable_width, get_right_inset_logical, get_stage_record, get_top_inset_offset,
 };
 
@@ -24,7 +24,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if get_cannon_countdown(ctx, 0)? == 0 {
         let x = ctx.i32_at(AppContext::CANNON_RECT)?;
-        let y = ctx.i32_at(AppContext::CANNON_RECT + 4)?;
+        let y = ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?;
 
         if ctx.i32_at(AppContext::BLINK_ON)? != 0 {
             let y = y.wrapping_add(ctx.i32_at(AppContext::DECK_BAR_SLIDE)?);
@@ -80,7 +80,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
             let x = ctx.i32_at(AppContext::CANNON_RECT)?;
             let y = ctx
                 .i32_at(AppContext::DECK_BAR_SLIDE)?
-                .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + 4)?)
+                .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?)
                 .wrapping_add(*offset);
 
             draw_cut(
@@ -97,7 +97,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = ctx.i32_at(AppContext::CANNON_RECT)?;
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + 4)?);
+            .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?);
 
         draw_cut(
             draw_context(&mut ctx.draw)?,
@@ -135,7 +135,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
     let x = ctx.i32_at(AppContext::CANNON_RECT)?;
     let y = ctx
         .i32_at(AppContext::DECK_BAR_SLIDE)?
-        .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + 4)?);
+        .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?);
 
     draw_cut(
         draw_context(&mut ctx.draw)?,
@@ -164,7 +164,7 @@ pub fn draw_cannon(ctx: &mut AppContext) -> Result<(), Fault> {
         let x = ctx.i32_at(AppContext::CANNON_RECT)?;
         let y = ctx
             .i32_at(AppContext::DECK_BAR_SLIDE)?
-            .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + 4)?)
+            .wrapping_add(ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?)
             .wrapping_add(offset);
 
         draw_cut(

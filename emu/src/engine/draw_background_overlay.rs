@@ -3,8 +3,8 @@ use std::{cell::Cell, rc::Rc};
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, bg_param_resolve_int, draw_context, draw_model, fill_polygon_colored, fill_rect,
-    get_background_id, get_bg_gradient_bottom, get_bg_gradient_top, get_design_height2,
+    AppContext, Quad, bg_param_resolve_int, draw_context, draw_model, fill_polygon_colored,
+    fill_rect, get_background_id, get_bg_gradient_bottom, get_bg_gradient_top, get_design_height2,
     get_drawable_width, has_bg_gradient, maanim_execute, mamodel_get_angle_unit,
     mamodel_get_opacity_unit, mamodel_get_part, mamodel_get_scale_unit, mamodel_set_sheet,
     mamodel_set_sheet_table, set_part_angle, set_part_opacity, set_part_scale, set_tint,
@@ -24,18 +24,18 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_3, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_2, width)?;
 
         let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_3, top)?;
         ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 8, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 4, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_2, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1, width)?;
 
         let pair = if get_background_id(ctx)? == 0xd {
             Some((0x33ffffffu32, 0x3300e2ffu32))
@@ -59,9 +59,9 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
         if let Some((upper, lower)) = pair {
             ctx.set_i32_at(AppContext::BG_TINT_COLORS, upper as i32)?;
-            ctx.set_i32_at(AppContext::BG_TINT_COLORS + 4, lower as i32)?;
-            ctx.set_i32_at(AppContext::BG_TINT_COLORS + 8, lower as i32)?;
-            ctx.set_i32_at(AppContext::BG_TINT_COLORS + 0xc, upper as i32)?;
+            ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_1, lower as i32)?;
+            ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_2, lower as i32)?;
+            ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_3, upper as i32)?;
         }
 
         let mut xs = [0i32; 4];
@@ -80,22 +80,22 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_3, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_2, width)?;
 
         let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_3, top)?;
         ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 8, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 4, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_2, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1, width)?;
         ctx.set_i32_at(AppContext::BG_TINT_COLORS, 0x4cffffffu32 as i32)?;
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 4, 0x33ffffffu32 as i32)?;
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 8, 0x33ffffffu32 as i32)?;
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 0xc, 0x4cffffffu32 as i32)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_1, 0x33ffffffu32 as i32)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_2, 0x33ffffffu32 as i32)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_3, 0x4cffffffu32 as i32)?;
 
         let mut xs = [0i32; 4];
         let mut ys = [0i32; 4];
@@ -285,28 +285,28 @@ pub fn draw_background_overlay(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_3, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_2, width)?;
 
         let top = 0i32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_3, top)?;
         ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
         let width = get_drawable_width(ctx)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 8, width)?;
-        ctx.set_i32_at(AppContext::BG_TINT_YS + 4, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_2, width)?;
+        ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1, width)?;
 
         let upper = get_bg_gradient_top(ctx, AppContext::BG_SETUP)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 0xc, upper)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_3, upper)?;
         ctx.set_i32_at(AppContext::BG_TINT_COLORS, upper)?;
 
         let lower = get_bg_gradient_bottom(ctx, AppContext::BG_SETUP)?;
 
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 8, lower)?;
-        ctx.set_i32_at(AppContext::BG_TINT_COLORS + 4, lower)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_2, lower)?;
+        ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_1, lower)?;
 
         let mut xs = [0i32; 4];
         let mut ys = [0i32; 4];

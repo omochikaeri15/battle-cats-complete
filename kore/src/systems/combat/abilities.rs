@@ -77,8 +77,8 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
             let custom = custom_icon(display_def.icon);
 
             match group.ability_id {
-                25 | 26 | 27 | 31 | 32 | 61 | 82 => {
-                    if let Some(text) = talents::calculate_talent_display(group, ctx.base_stats, level, ctx.level_curve, ctx.current_level, ctx.global.treasure, ctx.final_stats) {
+                25 | 26 | 27 | 31 | 32 | 61 | 70 | 71 | 82 => {
+                    if let Some(text) = talents::calculate_linked_display(talent_data, levels, index, ctx.base_stats, talents::Scaling { curve: ctx.level_curve, level: ctx.current_level, treasure: ctx.global.treasure }, ctx.final_stats) {
                         talent_headline.push(AbilityItem { identity, icon_id, text, custom_icon: custom, border_id });
                     }
                 },

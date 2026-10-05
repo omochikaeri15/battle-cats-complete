@@ -14,8 +14,8 @@ pub fn get_talent_max_level(
 
     let mut slot = 0usize;
 
-    while slot < 8 {
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+    while slot < ctx.limits.talent_groups as usize {
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
         if definition[slot * 0xe + 1] == abil {
             return Ok(definition[slot * 0xe + 2]);

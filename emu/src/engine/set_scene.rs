@@ -1,6 +1,9 @@
 use crate::Fault;
 
-use super::{AppContext, ENTITY_BASE, get_battle_status, prepare_battle_entry, set_keep_awake, stage_initialize};
+use super::{
+    AppContext, ENTITY_BASE, FACTION_STRIDE, get_battle_status, prepare_battle_entry,
+    set_keep_awake, stage_initialize,
+};
 
 pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
     ctx.set_block_at::<0x28>(AppContext::DRAW_TEMP_0, [0; 0x28])?;
@@ -43,9 +46,7 @@ pub fn set_scene(ctx: &mut AppContext, scene: i32) -> Result<(), Fault> {
         0x64 => {
             ctx.set_block_at::<0x13>(AppContext::CANNON_HELD, [0; 0x13])?;
 
-            for offset in (0..0x18e70usize).step_by(0x10) {
-                ctx.set_block_at::<0x10>(ENTITY_BASE + offset, [0; 0x10])?;
-            }
+            ctx.set_block_at::<{ 2 * FACTION_STRIDE }>(ENTITY_BASE, [0; 2 * FACTION_STRIDE])?;
 
             for offset in (0..0x130usize).step_by(0x10) {
                 ctx.set_block_at::<0x10>(AppContext::CANNON_RECT + offset, [0; 0x10])?;

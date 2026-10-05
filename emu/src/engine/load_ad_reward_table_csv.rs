@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{AppContext, AssetStream, get_column_count, open_asset_stream, read_csv_cell, read_csv_row};
+use super::{
+    AppContext, AssetStream, get_column_count, open_asset_stream, read_csv_cell, read_csv_row,
+};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct AdRewardRow {

@@ -12,7 +12,7 @@ use super::{
     stat_freeze_chance, stat_freeze_immune, stat_has_omni_strike, stat_has_shield,
     stat_insane_damage, stat_insanely_tough, stat_is_metal, stat_knockback_chance,
     stat_knockback_immune, stat_massive_damage, stat_metal_killer_percent, stat_mini_surge_flag,
-    stat_mini_wave_flag, stat_resist, stat_sage_slayer, stat_savage_blow_chance,
+    stat_mini_wave_flag, stat_recharge_cut, stat_resist, stat_sage_slayer, stat_savage_blow_chance,
     stat_shield_pierce_chance, stat_slow_chance, stat_slow_immune, stat_soulstrike,
     stat_strengthen_boost, stat_strong_against, stat_surge_chance, stat_surge_immune, stat_survive,
     stat_toxic_chance, stat_toxic_immune, stat_warp_chance, stat_warp_immune, stat_wave_block,
@@ -30,11 +30,11 @@ pub fn get_ability_icon_set(
     let mut icons: BTreeMap<i32, bool> = BTreeMap::new();
 
     if faction == 1 {
-        if (unit_id.wrapping_add(2) as u32) >= 0x324 {
+        if (unit_id.wrapping_add(2) as u32) >= ctx.limits.enemy_rows as u32 {
             return Ok(icons);
         }
     } else if faction == 0 {
-        if (unit_id.wrapping_add(2) as u32) > 0x36d {
+        if (unit_id.wrapping_add(2) as u32) > (ctx.limits.units as u32).wrapping_add(1) {
             return Ok(icons);
         }
 
@@ -300,11 +300,20 @@ pub fn get_ability_icon_set(
             0x46,
             get_talent_icon_state(ctx, 0, unit_id, form, 0x3d)? != 0,
         );
+        icons.insert(
+            0x55,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x46)? != 0,
+        );
+        icons.insert(
+            0x56,
+            get_talent_icon_state(ctx, 0, unit_id, form, 0x47)? != 0,
+        );
+        icons.insert(0x57, stat_recharge_cut(ctx, 0, unit_id, form)? != 0);
     }
 
     if with_talents != 0 {
-        for slot in 0..8usize {
-            let abil = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71])[1 + slot * 14];
+        for slot in 0..ctx.limits.talent_groups as usize {
+            let abil = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row())[1 + slot * 14];
 
             if let Some(&(_, icon)) = TALENT_ABILITY_ICONS.iter().find(|(key, _)| *key == abil) {
                 icons.insert(icon, true);
@@ -313,7 +322,7 @@ pub fn get_ability_icon_set(
     }
 
     if !icons.values().any(|shown| *shown) {
-        icons.insert(0x55, true);
+        icons.insert(0x58, true);
     }
 
     Ok(icons)

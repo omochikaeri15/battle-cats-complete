@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, Cell, cell_is_int, get_column_count, open_asset_stream,
+    AppContext, AssetStream, BgSetup, Cell, cell_is_int, get_column_count, open_asset_stream,
     read_asset_stream_line, read_csv_cell, read_csv_row,
 };
 
@@ -30,9 +30,9 @@ pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault
             )?;
         }
 
-        ctx.set_i32_at(AppContext::BG_SETUP + 0x10, read_csv_cell(&stm, 0xd) as i32)?;
+        ctx.set_i32_at(AppContext::BG_SETUP + BgSetup::MODEL_ID, read_csv_cell(&stm, 0xd) as i32)?;
         ctx.set_block_at::<1>(
-            AppContext::BG_SETUP + 0x14,
+            AppContext::BG_SETUP + BgSetup::HAS_UPPER_LAYER,
             [(read_csv_cell(&stm, 0xe) as i32 != 0) as u8],
         )?;
 
@@ -42,8 +42,8 @@ pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault
             -1
         };
 
-        ctx.set_i32_at(AppContext::BG_SETUP + 0x18, effect)?;
-        ctx.set_block_at::<8>(AppContext::BG_SETUP + 0x1c, [0; 8])?;
+        ctx.set_i32_at(AppContext::BG_SETUP + BgSetup::IMAGE_ID, effect)?;
+        ctx.set_block_at::<8>(AppContext::BG_SETUP + BgSetup::GRADIENT_TOP, [0; 8])?;
 
         if get_column_count(&stm) as i64 >= 0x14 && cell_is_int(&stm, 0x13) {
             let red = read_csv_cell(&stm, 0x10) as i32;
@@ -52,7 +52,7 @@ pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault
             let alpha = read_csv_cell(&stm, 0x13) as i32;
             let top = blue | (alpha << 0x18) | (green << 8) | (red << 0x10);
 
-            ctx.set_i32_at(AppContext::BG_SETUP + 0x1c, top)?;
+            ctx.set_i32_at(AppContext::BG_SETUP + BgSetup::GRADIENT_TOP, top)?;
 
             let bottom = if get_column_count(&stm) as i64 >= 0x18 && cell_is_int(&stm, 0x17) {
                 let red = read_csv_cell(&stm, 0x14) as i32;
@@ -62,10 +62,10 @@ pub fn setup_bg_color(ctx: &mut AppContext, background: i32) -> Result<(), Fault
 
                 blue | (alpha << 0x18) | (green << 8) | (red << 0x10)
             } else {
-                ctx.i32_at(AppContext::BG_SETUP + 0x1c)?
+                ctx.i32_at(AppContext::BG_SETUP + BgSetup::GRADIENT_TOP)?
             };
 
-            ctx.set_i32_at(AppContext::BG_SETUP + 0x20, bottom)?;
+            ctx.set_i32_at(AppContext::BG_SETUP + BgSetup::GRADIENT_BOTTOM, bottom)?;
         }
 
         break;

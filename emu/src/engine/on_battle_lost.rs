@@ -1,16 +1,17 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, ad_prepare, add_resource, add_stage_record,
-    breadcrumb, call_rng, check_medals, commit_stage_score, defeat_counter_bump, entry_find_by_id,
-    event_unit_slot, get_bottom_inset_logical, get_drawable_width, get_global_map_id,
-    get_map_index, get_map_type, get_point_cap, get_point_id, get_point_rewards, get_point_total,
-    get_release_point_cap, get_stage_best_score, get_stage_index, get_stage_record,
+    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, Rect, ad_prepare, add_resource,
+    add_stage_record, breadcrumb, call_rng, check_medals, commit_stage_score, defeat_counter_bump,
+    entry_find_by_id, event_unit_slot, get_bottom_inset_logical, get_drawable_width,
+    get_global_map_id, get_map_index, get_map_type, get_point_cap, get_point_id, get_point_rewards,
+    get_point_total, get_release_point_cap, get_stage_best_score, get_stage_index, get_stage_record,
     get_stage_score, is_reward_claimed, is_score_stage, labyrinth_active, log_analytics_event,
-    map_type_base_id, mission_progress, play_sound, point_reward_analytics, record_stage_played,
-    scored_map_pays_money, set_auto_camera_mode, set_battle_status, set_fever_fade_out,
-    set_reward_claimed, set_stage_record, sound_manager, validate_map_type, vibration_reset,
-    web_popup_request,
+    map_type_base_id, map_uses_item_cost, mission_progress, play_sound, point_reward_analytics,
+    record_stage_played, scored_map_pays_money, set_auto_camera_mode, set_battle_status,
+    set_fever_fade_out, set_reward_claimed, set_stage_record, sound_manager, stage_stamina_cost,
+    treasure_gauge_add, treasure_gauge_full, treasure_gauge_unlocked, validate_map_type,
+    vibration_reset, web_popup_request,
 };
 
 pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -231,6 +232,17 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
 
         mission_progress(ctx, 0x15, row, total, 0, 0)?;
 
+        if ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63
+            && (map_uses_item_cost(ctx)? || {
+                let stage = ctx.i32_at(AppContext::STAGE_INDEX)?;
+                let halved = ctx.u8_at(AppContext::STAMINA_HALVED)?;
+
+                stage_stamina_cost(ctx, stage, halved)? != 0
+            })
+        {
+            treasure_gauge_add(ctx, 0, 1);
+        }
+
         if get_map_type(ctx, 0)? == 4 {
             let row = map_type_base_id(4, ctx.i32_at(AppContext::MAP_INDEX)?)
                 .wrapping_mul(0x64)
@@ -319,6 +331,37 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
 
             point_reward_analytics(ctx, point_id, id, (cap <= total) as i32)?;
         }
+
+        let mut chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+        let castle = ctx.i32_at(AppContext::CASTLE_ID)?;
+        let levels = ctx.bytes_from(
+            AppContext::TREASURE_LEVELS
+                + chapter as i64 as usize * AppContext::TREASURE_LEVELS_STRIDE,
+        )?;
+        let level = ops::xor_row_decode(levels, 0x31, castle as i64 as usize)
+            .ok_or(Fault::index_out_of_range(castle as i64, 0x31))?;
+        let credit = if level == 3 {
+            chapter != 0x63
+        } else if !treasure_gauge_unlocked(ctx) {
+            chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+
+            chapter != 0x63
+        } else if treasure_gauge_full(&ctx.treasure_gauge) {
+            false
+        } else {
+            ctx.i32_at(AppContext::CHAPTER_MODE)? != 0x63
+        };
+
+        if credit
+            && (map_uses_item_cost(ctx)? || {
+                let stage = ctx.i32_at(AppContext::STAGE_INDEX)?;
+                let halved = ctx.u8_at(AppContext::STAMINA_HALVED)?;
+
+                stage_stamina_cost(ctx, stage, halved)? != 0
+            })
+        {
+            treasure_gauge_add(ctx, 0, 1);
+        }
     }
 
     ctx.set_block_at::<1>(
@@ -337,11 +380,11 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     let inset = get_bottom_inset_logical(ctx)?;
 
     ctx.set_i32_at(
-        AppContext::OUTRO_OK_RECT + 4,
+        AppContext::OUTRO_OK_RECT + Rect::Y,
         shift.wrapping_sub(inset).wrapping_add(0x226),
     )?;
-    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 8, 0x17d)?;
-    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH, 0x17d)?;
+    ctx.set_i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT, 0x58)?;
     web_popup_request(ctx, 4);
     check_medals(ctx, 3)?;
     ad_prepare(ctx, 1)?;

@@ -3,30 +3,30 @@ use std::collections::BTreeMap;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, AssetStream, ENTITY_BASE, FormatArg, STAGE_DISPLAY_ORDER, aku_realm_final_redirect,
-    altar_recompute, analytics_stamina_use, background_particles_init, base_shake_reset,
+    AppContext, AssetStream, CannonShot, CatGodButton, ENTITY_BASE, FACTION_STRIDE, FormatArg,
+    MapStageRow, Rect, STAGE_DISPLAY_ORDER, aku_realm_final_redirect, altar_recompute,
+    analytics_stamina_use, apply_event_schedule, background_particles_init, base_shake_reset,
     bg_effect_spawn_all, bgm_player_bind, bgm_player_switch, breadcrumb_with,
     calculate_treasure_percentages, call_rng, cannon_start_countdown, clear_barrier_vfx_slot,
-    clear_base_guard_notice, clear_cannon_shot, clear_crit_vfx_slot, clear_debris, clear_effect_slot,
-    clear_shield_vfx_slot, clear_wave_sprite, clear_zkill_vfx_slot, collect_rule_id_list,
-    combo_banner_pending, compute_base_health, compute_base_level, deploy_limit_reset,
-    evaluate_active_combos, ex_redirect_check_a, ex_redirect_check_b, ex_redirect_check_c,
-    ex_replacement_pending, fever_clear_gauge, fever_clear_state, find_fixed_lineup,
-    get_background_id, get_base_max_hp, get_battle_status, get_bg_model_id,
+    clear_base_guard_notice, clear_cannon_shot, clear_crit_vfx_slot, clear_debris,
+    clear_effect_slot, clear_shield_vfx_slot, clear_wave_sprite, clear_zkill_vfx_slot,
+    collect_rule_id_list, combo_banner_pending, compute_base_health, compute_base_level,
+    deploy_limit_reset, evaluate_active_combos, ex_redirect_check_a, ex_redirect_check_b,
+    ex_redirect_check_c, ex_replacement_pending, fever_clear_gauge, fever_clear_state,
+    find_fixed_lineup, get_background_id, get_base_max_hp, get_battle_status, get_bg_model_id,
     get_bottom_inset_logical, get_built_deck_rows, get_built_deck_stage_key, get_button_unit_id,
     get_button_unit_row, get_cannon_base_damage, get_cannon_charge_frames, get_cannon_decor_id,
     get_cannon_effect, get_cannon_foundation_id, get_cannon_id, get_cannon_part_id,
     get_cannon_part_rec, get_cannon_power, get_cannon_recharge, get_castle_enemy_row,
-    get_cat_combo_bonus, get_drawable_width, get_effect_part_level, get_ex_option_target,
-    get_foundation_part_id, get_global_map_id, get_item_selected, get_left_inset_logical,
-    get_map_index, get_map_rules, get_map_type, get_max_money, get_max_zoom, get_powerup,
-    get_powerup_available, get_right_inset_logical, get_setting, get_special_rule,
-    get_special_rule_params, get_stage_index, get_stage_record, get_crown_level, get_style_part_id,
-    get_text_texture, get_top_inset_offset, get_unit_guide_order, get_unit_recharge,
-    has_built_deck, has_castle_enemy, has_fixed_lineup, invasion_available, invasion_z_available,
-    is_aku_final_map, is_ex_map_68, is_ex_option_target, is_score_stage, item_pass_active,
-    labyrinth_active, labyrinth_roll_floor, load_base_models, load_battle_assets,
-    apply_event_schedule, load_lineup_preset, load_map_stage_csv, load_stage_csv,
+    get_cat_combo_bonus, get_crown_level, get_drawable_width, get_effect_part_level,
+    get_ex_option_target, get_foundation_part_id, get_global_map_id, get_item_selected,
+    get_left_inset_logical, get_map_index, get_map_rules, get_map_type, get_max_money, get_max_zoom,
+    get_powerup, get_powerup_available, get_right_inset_logical, get_setting, get_special_rule,
+    get_special_rule_params, get_stage_index, get_stage_record, get_style_part_id, get_text_texture,
+    get_top_inset_offset, get_unit_guide_order, get_unit_recharge, has_built_deck, has_castle_enemy,
+    has_fixed_lineup, invasion_available, invasion_z_available, is_aku_final_map, is_ex_map_68,
+    is_ex_option_target, is_score_stage, item_pass_active, labyrinth_active, labyrinth_roll_floor,
+    load_base_models, load_battle_assets, load_lineup_preset, load_map_stage_csv, load_stage_csv,
     log_analytics_event, maanim_load, mamodel_load, mamodel_set_single_sheet, map_index_of_map_id,
     map_records_entry, min_i32, obf_value_add, open_asset_stream, option_window_init, play_sound,
     powerup_available, powerup_disabled, powerup_granted, query_localizable, read_csv_cell,
@@ -45,9 +45,9 @@ use super::{
     set_combo_banner_pending, set_deck_cooldown, set_item_selected, set_money, set_point_stage,
     set_powerup, set_stage_unlock, set_worker_level, setup_bg_color, sound_manager,
     sound_set_channel, spawn_entity, spawn_state_init, stage_entry_row, stage_entry_start_frame,
-    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr,
-    string_format_int, string_format_int2, string_format_int2_text, text_texture_cache,
-    validate_map_type, vibration_clear,
+    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr, string_format_int,
+    string_format_int2, string_format_int2_text, text_texture_cache, validate_map_type,
+    vibration_clear,
 };
 
 pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -122,8 +122,8 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     ctx.set_i32_at(AppContext::LOST_MAP_TYPE, -1)?;
-    ctx.set_i32_at(AppContext::LOST_MAP_TYPE + 4, -1)?;
-    ctx.set_i32_at(AppContext::LOST_MAP_TYPE + 8, -1)?;
+    ctx.set_i32_at(AppContext::LOST_MAP_INDEX, -1)?;
+    ctx.set_i32_at(AppContext::LOST_STAGE, -1)?;
     ctx.item_drop_queue.clear();
     ctx.item_possession.clear();
     ctx.attackers_by_serial[0].clear();
@@ -164,7 +164,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let value = read_csv_cell(&stm, col as i32) as i32;
                 let row_at = AppContext::MAP_STAGE_ROWS
                     .wrapping_add((stage as i64 as usize).wrapping_mul(0xbc));
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
             }
@@ -208,20 +208,20 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         continue;
                     }
 
-                    let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+                    let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
                     for col in 0..0x2eusize {
                         let value = read_csv_cell(&stm, col as i32) as i32;
-                        let key = ctx.i32_at(row_at + 0xb8)?;
+                        let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                         ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                             break;
                         }
                     }
 
-                    if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + 0xb8)? == -1 || row >= 0x63 {
+                    if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 || row >= 0x63 {
                         break;
                     }
 
@@ -263,16 +263,16 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         let value = read_csv_cell(&stm, col as i32) as i32;
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
                         let row_at =
-                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
-                        let key = ctx.i32_at(row_at + 0xb8)?;
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
+                        let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                         ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
                         let row_at =
-                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
 
-                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                             break;
                         }
                     }
@@ -358,7 +358,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     for slot in 0..10usize {
         let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
         let row =
-            ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)))?;
+            ctx.bytes_from(AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(AppContext::DECK_STRIDE)))?;
         let unit = ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32;
         let key = string_format_int(ctx, b"Unit%d", slot as i32)?;
         let value = if unit > 0 {
@@ -430,7 +430,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 } else {
                     let preset = ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64 as usize;
                     let row = ctx.bytes_from(
-                        AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(0x2c)),
+                        AppContext::DECK_PRESETS.wrapping_add(preset.wrapping_mul(AppContext::DECK_STRIDE)),
                     )?;
 
                     ops::xor_row_decode(row, 10, slot).ok_or(Fault::index_out_of_range(slot as i64, 10))? as i32
@@ -521,7 +521,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let mut owned: Vec<i32> = Vec::new();
 
-            for unit in 0..0x36c {
+            for unit in 0..ctx.limits.units {
                 if get_unit_guide_order(ctx, unit)? == -1 {
                     continue;
                 }
@@ -531,7 +531,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 pair[..4].copy_from_slice(
                     &ctx.block_at::<4>(AppContext::UNITS_OWNED + unit as usize * 4)?,
                 );
-                pair[4..].copy_from_slice(&ctx.block_at::<4>(AppContext::UNITS_OWNED_KEY)?);
+                pair[4..].copy_from_slice(&ctx.block_at::<4>(ctx.units_owned_key())?);
 
                 if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? == 0
                 {
@@ -684,7 +684,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let mut block = AppContext::WAVE_SPRITES;
 
-        while block != 0x33886c {
+        while block != AppContext::WAVE_SPRITES + 0x2580 {
             for part in 0..6usize {
                 clear_wave_sprite(ctx, block + part * 8)?;
             }
@@ -796,7 +796,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_block_at::<2>(AppContext::CAT_GOD_MENU_IS_OPEN, [0; 2])?;
         ctx.set_block_at::<0x28>(AppContext::CAT_GOD_BUTTON_PRESS, [0; 0x28])?;
         ctx.set_block_at::<0x13>(AppContext::CANNON_HELD, [0; 0x13])?;
-        ctx.set_i32_at(AppContext::CANNON_HELD + 0xf, 0)?;
+        ctx.set_i32_at(AppContext::HELD_FLAGS_TAIL, 0)?;
         ctx.set_block_at::<0x8c>(AppContext::STAGE_ROW, [0; 0x8c])?;
         ctx.set_block_at::<0x20>(AppContext::STAGE_LENGTH, [0; 0x20])?;
         ctx.set_i32_at(AppContext::STAGE_BOSS_GUARD, 0)?;
@@ -1067,7 +1067,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.attackers_by_serial[0].clear();
         ctx.set_i32_at(enemy_wallet + AppContext::WALLET_SPAWN_SERIAL, 0)?;
         ctx.attackers_by_serial[1].clear();
-        ctx.set_block_at::<0x18e70>(ENTITY_BASE, [0; 0x18e70])?;
+        ctx.set_block_at::<{ 2 * FACTION_STRIDE }>(ENTITY_BASE, [0; 2 * FACTION_STRIDE])?;
         set_base_occupant(ctx, 0)?;
         set_base_state(ctx, 0, 0)?;
         set_base_entity_frame(ctx, 0, 0)?;
@@ -1301,7 +1301,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         for shot in 0..0xfusize {
-            clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + shot * 0xc)?;
+            clear_cannon_shot(ctx, AppContext::CANNON_SHOTS + shot * CannonShot::STRIDE)?;
         }
 
         for slot in (0..0xc80usize).step_by(0x10) {
@@ -1562,13 +1562,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     ctx.set_i32_at(
-        AppContext::CANNON_RECT + 4,
+        AppContext::CANNON_RECT + Rect::Y,
         get_top_inset_offset(ctx)
             .wrapping_add(shift)
             .wrapping_add(0x1fe),
     )?;
-    ctx.set_i32_at(AppContext::CANNON_RECT + 8, 0xc2)?;
-    ctx.set_i32_at(AppContext::CANNON_RECT + 0xc, 0x82)?;
+    ctx.set_i32_at(AppContext::CANNON_RECT + Rect::WIDTH, 0xc2)?;
+    ctx.set_i32_at(AppContext::CANNON_RECT + Rect::HEIGHT, 0x82)?;
     ctx.set_i32_at(
         AppContext::WORKER_RECT,
         get_left_inset_logical(ctx).wrapping_add(-0x30),
@@ -1577,27 +1577,27 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     ctx.set_i32_at(
-        AppContext::WORKER_RECT + 4,
+        AppContext::WORKER_RECT + Rect::Y,
         get_top_inset_offset(ctx)
             .wrapping_add(shift)
             .wrapping_add(0x207),
     )?;
-    ctx.set_i32_at(AppContext::WORKER_RECT + 8, 0xc2)?;
-    ctx.set_i32_at(AppContext::WORKER_RECT + 0xc, 0x7d)?;
+    ctx.set_i32_at(AppContext::WORKER_RECT + Rect::WIDTH, 0xc2)?;
+    ctx.set_i32_at(AppContext::WORKER_RECT + Rect::HEIGHT, 0x7d)?;
     ctx.set_i32_at(
         AppContext::COMBO_SKIP_RECT,
         get_drawable_width(ctx)?.wrapping_add(-0x5c),
     )?;
-    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 4, 0xa3)?;
-    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 8, 0x58)?;
-    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + 0xc, 0x4e)?;
+    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + Rect::Y, 0xa3)?;
+    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::COMBO_SKIP_RECT + Rect::HEIGHT, 0x4e)?;
     ctx.set_i32_at(AppContext::PAUSE_RECT, get_left_inset_logical(ctx))?;
     ctx.set_i32_at(
-        AppContext::PAUSE_RECT + 4,
+        AppContext::PAUSE_RECT + Rect::Y,
         ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg(),
     )?;
-    ctx.set_i32_at(AppContext::PAUSE_RECT + 8, 0x58)?;
-    ctx.set_i32_at(AppContext::PAUSE_RECT + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::PAUSE_RECT + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::PAUSE_RECT + Rect::HEIGHT, 0x58)?;
 
     let mut column = 5i32;
 
@@ -1614,11 +1614,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.set_i32_at(rect, x)?;
         ctx.set_i32_at(
-            rect + 4,
+            rect + Rect::Y,
             0x2bi32.wrapping_sub(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?),
         )?;
-        ctx.set_i32_at(rect + 8, 0x58)?;
-        ctx.set_i32_at(rect + 0xc, 0x58)?;
+        ctx.set_i32_at(rect + Rect::WIDTH, 0x58)?;
+        ctx.set_i32_at(rect + Rect::HEIGHT, 0x58)?;
         column -= 1;
     }
 
@@ -1738,12 +1738,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             rect,
             ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(*shift),
         )?;
-        ctx.set_i32_at(rect + 4, rest[0])?;
-        ctx.set_i32_at(rect + 8, rest[1])?;
-        ctx.set_i32_at(rect + 0xc, rest[2])?;
+        ctx.set_i32_at(rect + Rect::Y, rest[0])?;
+        ctx.set_i32_at(rect + Rect::WIDTH, rest[1])?;
+        ctx.set_i32_at(rect + Rect::HEIGHT, rest[2])?;
 
         if index == 0 {
-            ctx.set_block_at::<0x10>(rect + 0x10, [0; 0x10])?;
+            ctx.set_block_at::<0x10>(rect + Rect::STRIDE, [0; 0x10])?;
         }
     }
 
@@ -1752,11 +1752,11 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0xf6),
     )?;
     ctx.set_i32_at(
-        AppContext::CAT_GOD_BUTTON_RECT + 4,
+        AppContext::CAT_GOD_BUTTON_RECT + Rect::Y,
         ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_neg(),
     )?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + 8, 0x83)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + 0xc, 0x6b)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + Rect::WIDTH, 0x83)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BUTTON_RECT + Rect::HEIGHT, 0x6b)?;
 
     let menu: [(usize, i32, [i32; 3]); 3] = [
         (0, 0xf6, [0x159, 0x60, 0x60]),
@@ -1771,43 +1771,43 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             rect,
             ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(shift),
         )?;
-        ctx.set_i32_at(rect + 4, rest[0])?;
-        ctx.set_i32_at(rect + 8, rest[1])?;
-        ctx.set_i32_at(rect + 0xc, rest[2])?;
+        ctx.set_i32_at(rect + Rect::Y, rest[0])?;
+        ctx.set_i32_at(rect + Rect::WIDTH, rest[1])?;
+        ctx.set_i32_at(rect + Rect::HEIGHT, rest[2])?;
     }
 
     ctx.set_i32_at(
-        AppContext::CAT_GOD_MIRACLE_RECTS + 0x30,
+        AppContext::CAT_GOD_MIRACLE_RECTS + CatGodButton::INTRO * Rect::STRIDE,
         ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x312),
     )?;
-    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x34, 0x14f)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x38, 0x60)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + 0x3c, 0x60)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + CatGodButton::INTRO * Rect::STRIDE + Rect::Y, 0x14f)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + CatGodButton::INTRO * Rect::STRIDE + Rect::WIDTH, 0x60)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_MIRACLE_RECTS + CatGodButton::INTRO * Rect::STRIDE + Rect::HEIGHT, 0x60)?;
     ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT, 4)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 4, 0x21d)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 8, 0x5f)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + 0xc, 0x5f)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::Y, 0x21d)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::WIDTH, 0x5f)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::HEIGHT, 0x5f)?;
     ctx.set_i32_at(
         AppContext::CAT_GOD_CONFIRM_RECT,
         ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x1a6),
     )?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 4, 0x139)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 8, 0x17d)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::Y, 0x139)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::WIDTH, 0x17d)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::HEIGHT, 0x58)?;
     ctx.set_i32_at(
         AppContext::CAT_GOD_BACK_RECT,
         ops::div_2(get_drawable_width(ctx)?.wrapping_add(-0x3c0)).wrapping_add(0x323),
     )?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 4, 0xad)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 8, 0x5f)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0xc, 0x5f)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::Y, 0xad)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::WIDTH, 0x5f)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::HEIGHT, 0x5f)?;
     ctx.set_i32_at(
-        AppContext::CAT_GOD_BACK_RECT + 0x10,
+        AppContext::CAT_GOD_BACK_RECT + Rect::STRIDE,
         get_drawable_width(ctx)?.wrapping_add(-0x17c),
     )?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x14, 0x223)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x18, 0x58)?;
-    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + 0x1c, 0x58)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::STRIDE + Rect::Y, 0x223)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::STRIDE + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::STRIDE + Rect::HEIGHT, 0x58)?;
     ctx.set_i32_at(
         AppContext::OPTION_RECTS,
         get_drawable_width(ctx)?.wrapping_add(-0x103),
@@ -1818,13 +1818,13 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     let inset = get_bottom_inset_logical(ctx)?;
 
     ctx.set_i32_at(
-        AppContext::OPTION_RECTS + 4,
+        AppContext::OPTION_RECTS + Rect::Y,
         shift.wrapping_sub(inset).wrapping_add(0x22e),
     )?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 8, 0x58)?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::OPTION_RECTS + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::OPTION_RECTS + Rect::HEIGHT, 0x58)?;
     ctx.set_i32_at(
-        AppContext::OPTION_RECTS + 0x10,
+        AppContext::OPTION_RECTS + Rect::STRIDE,
         get_drawable_width(ctx)?.wrapping_add(-0xa1),
     )?;
 
@@ -1833,22 +1833,22 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     let inset = get_bottom_inset_logical(ctx)?;
 
     ctx.set_i32_at(
-        AppContext::OPTION_RECTS + 0x14,
+        AppContext::OPTION_RECTS + Rect::STRIDE + Rect::Y,
         shift.wrapping_sub(inset).wrapping_add(0x22e),
     )?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 0x18, 0x58)?;
-    ctx.set_i32_at(AppContext::OPTION_RECTS + 0x1c, 0x58)?;
+    ctx.set_i32_at(AppContext::OPTION_RECTS + Rect::STRIDE + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::OPTION_RECTS + Rect::STRIDE + Rect::HEIGHT, 0x58)?;
     ctx.set_i32_at(AppContext::OUTRO_RECTS, 0xc5)?;
-    ctx.set_i32_at(AppContext::OUTRO_RECTS + 4, 0x228)?;
-    ctx.set_i32_at(AppContext::OUTRO_RECTS + 8, 0xd6)?;
-    ctx.set_i32_at(AppContext::OUTRO_RECTS + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + Rect::Y, 0x228)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + Rect::WIDTH, 0xd6)?;
+    ctx.set_i32_at(AppContext::OUTRO_RECTS + Rect::HEIGHT, 0x58)?;
     ctx.set_i32_at(
         AppContext::LOSE_SHOP_RECT,
         get_drawable_width(ctx)?.wrapping_add(-0x118),
     )?;
-    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 4, 0x228)?;
-    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 8, 0x58)?;
-    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + 0xc, 0x58)?;
+    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + Rect::Y, 0x228)?;
+    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + Rect::WIDTH, 0x58)?;
+    ctx.set_i32_at(AppContext::LOSE_SHOP_RECT + Rect::HEIGHT, 0x58)?;
 
     let resumed = ctx.i32_at(AppContext::BATTLE_RESUMED)?;
 

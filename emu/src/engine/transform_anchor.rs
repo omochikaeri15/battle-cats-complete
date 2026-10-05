@@ -12,12 +12,12 @@ pub fn transform_anchor(
     let scale_unit = model.scale_unit;
 
     let spread_x = x
-        .wrapping_sub(part.i32_at(0x4c).wrapping_add(part.i32_at(0x54)))
-        .wrapping_mul(part.i32_at(0x60)) as i64;
+        .wrapping_sub(part.i32_at(MamodelPart::PIVOT_X).wrapping_add(part.i32_at(MamodelPart::PIVOT_X_ANIM)))
+        .wrapping_mul(part.i32_at(MamodelPart::LIVE_SCALE_X)) as i64;
 
     let spread_y = y
-        .wrapping_sub(part.i32_at(0x50).wrapping_add(part.i32_at(0x58)))
-        .wrapping_mul(part.i32_at(0x6c)) as i64;
+        .wrapping_sub(part.i32_at(MamodelPart::PIVOT_Y).wrapping_add(part.i32_at(MamodelPart::PIVOT_Y_ANIM)))
+        .wrapping_mul(part.i32_at(MamodelPart::LIVE_SCALE_Y)) as i64;
 
     if scale_unit == 0 {
         return Err(Fault::divide_by_zero());
@@ -31,12 +31,12 @@ pub fn transform_anchor(
     }
 
     let mat = [
-        part.f32_at(0x04),
-        part.f32_at(0x08),
-        part.f32_at(0x0c),
-        part.f32_at(0x10),
-        part.f32_at(0x14),
-        part.f32_at(0x18),
+        part.f32_at(MamodelPart::MATRIX_0),
+        part.f32_at(MamodelPart::MATRIX_1),
+        part.f32_at(MamodelPart::MATRIX_2),
+        part.f32_at(MamodelPart::MATRIX_3),
+        part.f32_at(MamodelPart::MATRIX_4),
+        part.f32_at(MamodelPart::MATRIX_5),
     ];
 
     transform_point(&mat, scaled_x as i32, scaled_y as i32, out);

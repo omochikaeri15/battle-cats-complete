@@ -2,7 +2,8 @@ use crate::Fault;
 
 use super::{
     AppContext, UNIT_BUY, UNIT_BUY_STRIDE, find_item_index, format_string3, format_string3_int3,
-    format_string3_int4, get_item_name, get_orb_def, level_cell_plus, level_cell_base, orb_name,
+    format_string3_int4, get_item_cap, get_item_name, get_orb_def, level_cell_plus, level_cell_base, min_i32,
+    orb_name,
     query_localizable, reward_unit_id, std_string_from_cstr, substitute_tokens, unit_buy_field,
     xor_row46_get,
 };
@@ -22,12 +23,9 @@ pub fn drop_popup_text(
     if ctx.u8_at(AppContext::RANK_POPUP_SHOWN)? != 0 {
         let pattern = query_localizable(ctx, b"item_possession");
         let held = ctx.item_possession.entry(1).or_insert(0).to_string();
-        let after = ctx
-            .item_possession
-            .entry(1)
-            .or_insert(0)
-            .wrapping_add(1)
-            .to_string();
+        let owned = *ctx.item_possession.entry(1).or_insert(0);
+        let cap = get_item_cap(ctx, 1)?;
+        let after = min_i32(owned.wrapping_add(1), cap).to_string();
         let possession = substitute_tokens(
             ctx,
             &pattern,
@@ -133,7 +131,7 @@ pub fn drop_popup_text(
                 );
             }
 
-            for unit in 0..0x36cusize {
+            for unit in 0..ctx.limits.units as usize {
                 let buy = UNIT_BUY.wrapping_add(unit.wrapping_mul(UNIT_BUY_STRIDE));
                 let key = if unit_buy_field(ctx.bytes_from(buy)?, 0x17)? == item_id {
                     b"drop_popup_chara_third_evolve".as_slice()
@@ -248,6 +246,7 @@ pub fn drop_popup_text(
     if index & !0x10 != 6 {
         let pattern = query_localizable(ctx, b"item_possession");
         let held = *ctx.item_possession.entry(index).or_insert(0);
+        let cap = get_item_cap(ctx, index)?;
         let gained = xor_row46_get(ctx.bytes_from(row)?, next)
             .ok_or(Fault::index_out_of_range(next as i64, 0x2f))? as i32;
 
@@ -258,7 +257,7 @@ pub fn drop_popup_text(
                 (b"itemNum1".as_slice(), held.to_string().as_bytes()),
                 (
                     b"itemNum2".as_slice(),
-                    gained.wrapping_add(held).to_string().as_bytes(),
+                    min_i32(gained.wrapping_add(held), cap).to_string().as_bytes(),
                 ),
             ],
         )?;

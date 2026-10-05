@@ -1,13 +1,13 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, aku_realm_final_redirect, ex_redirect_check_a, ex_redirect_check_b,
-    ex_redirect_check_c, ex_replacement_pending, get_ex_option_target, get_global_map_id,
-    get_map_index, get_map_type, get_stage_count, get_stage_set_size, invasion_available,
-    invasion_z_available, load_enemy_castle_csv, load_ex_map_stage_csv, map_index_of_map_id,
-    map_type_as_index, map_type_base_id, open_asset_stream, pack_entry_text, read_csv_cell,
-    read_csv_row, set_scene, string_format_int, string_format_int2, string_format_int2_text,
-    validate_map_type,
+    AppContext, AssetStream, MapStageRow, aku_realm_final_redirect, ex_redirect_check_a,
+    ex_redirect_check_b, ex_redirect_check_c, ex_replacement_pending, get_ex_option_target,
+    get_global_map_id, get_map_index, get_map_type, get_stage_count, get_stage_set_size,
+    invasion_available, invasion_z_available, load_enemy_castle_csv, load_ex_map_stage_csv,
+    map_index_of_map_id, map_type_as_index, map_type_base_id, open_asset_stream, pack_entry_text,
+    read_csv_cell, read_csv_row, set_scene, string_format_int, string_format_int2,
+    string_format_int2_text, validate_map_type,
 };
 
 const MAP_FILES: [(i32, &[u8]); 16] = [
@@ -123,10 +123,10 @@ pub fn load_map_stage_csv(
         let mut stm = AssetStream::new(&bytes, b'\n');
 
         for row in 0..0x64usize {
-            let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+            let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
             for col in 0..0x2eusize {
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, !key)?;
             }
@@ -138,20 +138,20 @@ pub fn load_map_stage_csv(
         for row in 0..0x64usize {
             read_csv_row(&mut stm);
 
-            let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+            let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
             for col in 0..0x2eusize {
                 let value = read_csv_cell(&stm, col as i32) as i32;
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                     break;
                 }
             }
 
-            if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+            if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                 break;
             }
         }
@@ -186,20 +186,20 @@ pub fn load_map_stage_csv(
                         .or_default();
 
                     if active {
-                        let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+                        let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
                         for col in 0..0x2eusize {
                             let value = read_csv_cell(&stm, col as i32) as i32;
-                            let key = ctx.i32_at(row_at + 0xb8)?;
+                            let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                             ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                                 break;
                             }
                         }
 
-                        if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + 0xb8)? == -1 || row >= 0x63 {
+                        if ctx.i32_at(row_at)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 || row >= 0x63 {
                             break;
                         }
                     } else if row > 0x62 {
@@ -245,16 +245,16 @@ pub fn load_map_stage_csv(
                         let value = read_csv_cell(&stm, col as i32) as i32;
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
                         let row_at =
-                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
-                        let key = ctx.i32_at(row_at + 0xb8)?;
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
+                        let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                         ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
                         let row = ctx.u8_at(AppContext::INVASION_STAGE)? as i8 as isize as usize;
                         let row_at =
-                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+                            AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
 
-                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                        if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                             break;
                         }
                     }
@@ -391,10 +391,10 @@ pub fn load_map_stage_csv(
     }
 
     for row in 0..0x64usize {
-        let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+        let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
         for col in 0..0x2eusize {
-            let key = ctx.i32_at(row_at + 0xb8)?;
+            let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
             ctx.set_i32_at(row_at + col * 4, !key)?;
         }
@@ -413,15 +413,15 @@ pub fn load_map_stage_csv(
 
         read_csv_row(&mut stm);
 
-        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+        let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
 
         for col in 0..0x2eusize {
             let value = read_csv_cell(&stm, col as i32) as i32;
-            let key = ctx.i32_at(row_at + 0xb8)?;
+            let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
             ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                 break;
             }
         }
@@ -448,11 +448,11 @@ pub fn load_map_stage_csv(
 
             for col in 0..0x2eusize {
                 let value = read_csv_cell(&stm, col as i32) as i32;
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                     break;
                 }
             }
@@ -472,11 +472,11 @@ pub fn load_map_stage_csv(
 
             for col in 0..0x2eusize {
                 let value = read_csv_cell(&stm, col as i32) as i32;
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                     break;
                 }
             }
@@ -520,15 +520,15 @@ pub fn load_map_stage_csv(
             continue;
         }
 
-        let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+        let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
         for col in 0..0x2eusize {
             let value = read_csv_cell(&stm, col as i32) as i32;
-            let key = ctx.i32_at(row_at + 0xb8)?;
+            let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
             ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+            if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                 break;
             }
         }

@@ -1,8 +1,9 @@
 use crate::{Fault, ops};
 
 use super::{
-    draw_context, fill_polygon, fill_rect, get_design_height2, get_drawable_width, get_left_inset_logical, scene_ignores_insets, set_draw_scale,
-    set_insets_ignored, set_tint, set_tint_alpha, AppContext,
+    AppContext, Quad, draw_context, fill_polygon, fill_rect, get_design_height2, get_drawable_width,
+    get_left_inset_logical, scene_ignores_insets, set_draw_scale, set_insets_ignored, set_tint,
+    set_tint_alpha,
 };
 
 pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), Fault> {
@@ -62,20 +63,20 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
 
                 ctx.set_i32_at(AppContext::POLYGON_XS, base.wrapping_add(notch))?;
                 ctx.set_i32_at(AppContext::POLYGON_YS, row.wrapping_add(lift))?;
-                ctx.set_i32_at(AppContext::POLYGON_XS + 4, base)?;
-                ctx.set_i32_at(AppContext::POLYGON_YS + 4, row)?;
-                ctx.set_i32_at(AppContext::POLYGON_XS + 8, base)?;
-                ctx.set_i32_at(AppContext::POLYGON_YS + 8, row.wrapping_add(tall))?;
+                ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_1, base)?;
+                ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_1, row)?;
+                ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_2, base)?;
+                ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_2, row.wrapping_add(tall))?;
 
                 let xs = [
                     ctx.i32_at(AppContext::POLYGON_XS)?,
-                    ctx.i32_at(AppContext::POLYGON_XS + 4)?,
-                    ctx.i32_at(AppContext::POLYGON_XS + 8)?,
+                    ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_1)?,
+                    ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_2)?,
                 ];
                 let ys = [
                     ctx.i32_at(AppContext::POLYGON_YS)?,
-                    ctx.i32_at(AppContext::POLYGON_YS + 4)?,
-                    ctx.i32_at(AppContext::POLYGON_YS + 8)?,
+                    ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_1)?,
+                    ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_2)?,
                 ];
 
                 fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);
@@ -125,20 +126,20 @@ pub fn draw_screen_transition(ctx: &mut AppContext, closing: i32) -> Result<(), 
 
             ctx.set_i32_at(AppContext::POLYGON_XS, base.wrapping_add(notch))?;
             ctx.set_i32_at(AppContext::POLYGON_YS, row.wrapping_add(lift))?;
-            ctx.set_i32_at(AppContext::POLYGON_XS + 4, base.wrapping_add(0x6e))?;
-            ctx.set_i32_at(AppContext::POLYGON_YS + 4, row)?;
-            ctx.set_i32_at(AppContext::POLYGON_XS + 8, base.wrapping_add(0x6e))?;
-            ctx.set_i32_at(AppContext::POLYGON_YS + 8, row.wrapping_add(tall))?;
+            ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_1, base.wrapping_add(0x6e))?;
+            ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_1, row)?;
+            ctx.set_i32_at(AppContext::POLYGON_XS + Quad::CORNER_2, base.wrapping_add(0x6e))?;
+            ctx.set_i32_at(AppContext::POLYGON_YS + Quad::CORNER_2, row.wrapping_add(tall))?;
 
             let xs = [
                 ctx.i32_at(AppContext::POLYGON_XS)?,
-                ctx.i32_at(AppContext::POLYGON_XS + 4)?,
-                ctx.i32_at(AppContext::POLYGON_XS + 8)?,
+                ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_1)?,
+                ctx.i32_at(AppContext::POLYGON_XS + Quad::CORNER_2)?,
             ];
             let ys = [
                 ctx.i32_at(AppContext::POLYGON_YS)?,
-                ctx.i32_at(AppContext::POLYGON_YS + 4)?,
-                ctx.i32_at(AppContext::POLYGON_YS + 8)?,
+                ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_1)?,
+                ctx.i32_at(AppContext::POLYGON_YS + Quad::CORNER_2)?,
             ];
 
             fill_polygon(draw_context(&mut ctx.draw)?, &xs, &ys, 3);

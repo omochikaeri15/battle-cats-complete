@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, CANNON_SHOT_SPACING, WaveRecord, draw_context, draw_model, get_anim_len,
+    AppContext, CANNON_SHOT_SPACING, WaveRecord, WaveSprite, draw_context, draw_model, get_anim_len,
     get_drawable_width, maanim_execute,
 };
 
@@ -28,7 +28,7 @@ pub fn wave_draw(ctx: &mut AppContext, depth: i32, slot: i32, side: i32) -> Resu
             }
 
             let pos = ctx
-                .i32_at(cell + 4)?
+                .i32_at(cell + WaveSprite::POS_X)?
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?);
             let shift = if ctx.i32_at(base + WaveRecord::KIND)? != 2 {
                 0

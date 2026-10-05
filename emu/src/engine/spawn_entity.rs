@@ -27,7 +27,7 @@ use super::{
     set_knockback_chance, set_knockback_immune, set_knockback_resist_pct, set_knockbacks,
     set_ld_anchor, set_ld_flag, set_ld_span, set_massive_damage, set_max_hp, set_metal,
     set_metal_killer_pct, set_metal_killer_vfx, set_mini_surge, set_no_revive, set_occupant,
-    set_orb_dodge_chance, set_orb_dodge_duration, set_orb_dodge_timer, set_paid_cost, set_pos_x,
+    set_orb_dodge_chance, set_orb_dodge_duration, set_orb_dodge_timer, set_paid_cost, set_pos_x, set_recharge_cut,
     set_pos_y, set_prev_curse_timer, set_prev_freeze_timer, set_prev_slow_timer,
     set_prev_weaken_timer, set_proc_badge, set_resist, set_revive_count, set_revive_hp,
     set_revive_time, set_revive_timer, set_sage_slayer, set_savage_blow_boost,
@@ -59,7 +59,7 @@ use super::{
     stat_death_surge_span, stat_dodge_chance, stat_dodge_duration, stat_double_bounty,
     stat_drain_chance, stat_drain_immune, stat_drain_percent, stat_eva_killer,
     stat_explosion_chance, stat_explosion_immune, stat_explosion_spawn_anchor,
-    stat_explosion_spawn_span, stat_freeze_chance, stat_freeze_duration, stat_freeze_immune,
+    stat_explosion_spawn_span, stat_freeze_chance, stat_freeze_duration, stat_freeze_immune, stat_recharge_cut,
     stat_hitbox_position, stat_hitbox_width, stat_insane_damage, stat_insanely_tough,
     stat_is_metal, stat_knockback_chance, stat_knockback_immune, stat_knockbacks,
     stat_massive_damage, stat_metal_killer_percent, stat_mini_surge_flag, stat_mini_wave_flag,
@@ -384,6 +384,11 @@ pub fn spawn_entity(
     let conjure_unit_id = stat_conjure_unit_id(ctx, faction, unit_id, form)?;
     set_conjure_unit_id(ctx, faction, slot, conjure_unit_id)?;
     set_conjure_deck_slot(ctx, faction, slot, -1)?;
+
+    let recharge_cut = stat_recharge_cut(ctx, faction, unit_id, form)?;
+
+    set_recharge_cut(ctx, faction, slot, recharge_cut)?;
+
     let freeze_chance = stat_freeze_chance(ctx, faction, unit_id, form)?;
     set_freeze_chance(ctx, faction, slot, freeze_chance)?;
     let freeze_duration = stat_freeze_duration(ctx, faction, unit_id, form)?;

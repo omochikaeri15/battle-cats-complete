@@ -1,8 +1,8 @@
 use crate::Fault;
 
 use super::{
-    AppContext, SurgeEvent, abs_i32, call_rng, get_anim_len, get_metal_killer_pct, get_pos_x,
-    get_setting, play_sound, roll_procs, sound_manager,
+    AppContext, ProcRolls, SurgeEvent, abs_i32, call_rng, get_anim_len, get_metal_killer_pct,
+    get_pos_x, get_setting, play_sound, roll_procs, sound_manager,
 };
 
 pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -56,17 +56,17 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let proc_flags = [
                 (ctx.i32_at(AppContext::PROC_ROLLS)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x4)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x8)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0xc)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x10)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x18)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x20)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x1c)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x14)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x24)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x28)? != 0) as u8,
-                (ctx.i32_at(AppContext::PROC_ROLLS + 0x2c)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::KNOCKBACK)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::FREEZE)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SLOW)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::WEAKEN)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::WARP)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::CURSE)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::BARRIER_BREAKER)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SAVAGE_BLOW)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::TOXIC)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::SHIELD_PIERCE)? != 0) as u8,
+                (ctx.i32_at(AppContext::PROC_ROLLS + ProcRolls::DRAIN)? != 0) as u8,
             ];
 
             ctx.surge_events.push(SurgeEvent::default());

@@ -3,12 +3,12 @@ use std::rc::Rc;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Entity, is_network_available, app_on_draw, back_pressed, battle_check_login_bonus,
-    battle_continue, bc_log_defeated, button_bank_busy, button_bank_find, dialog_show_alt,
-    dialog_top, feature_enabled, game_lose_update_lambda_0, game_lose_update_lambda_1,
-    get_auto_camera_mode, get_design_height2, get_drawable_width, get_global_map_id, get_hp,
-    get_stage_record, get_text_texture, hit_test_rect, imgcut_get_sprite_cut, is_boss,
-    is_aku_realm_map, new_button_register, new_button_set_touchable, now_seconds,
+    AppContext, Entity, Rect, app_on_draw, back_pressed, battle_check_login_bonus, battle_continue,
+    bc_log_defeated, button_bank_busy, button_bank_find, dialog_show_alt, dialog_top,
+    feature_enabled, game_lose_update_lambda_0, game_lose_update_lambda_1, get_auto_camera_mode,
+    get_design_height2, get_drawable_width, get_global_map_id, get_hp, get_stage_record,
+    get_text_texture, hit_test_rect, imgcut_get_sprite_cut, is_aku_realm_map, is_boss,
+    is_network_available, new_button_register, new_button_set_touchable, now_seconds,
     obf_value_read, pick_lose_tip, play_sound, query_localizable, record_stage_played,
     request_save_data, reward_ad_ready, server_config_int, set_bgm_duck, sound_manager,
     std_string_append, string_format_boss_hp, string_format_boss_hp_line, text_texture_cache,
@@ -312,16 +312,16 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 let half = ops::div_2(get_drawable_width(ctx)?);
 
                 ctx.set_i32_at(AppContext::CANNON_RECT, half.wrapping_add(-0xe5))?;
-                ctx.set_i32_at(AppContext::CANNON_RECT + 4, 0x1d8)?;
-                ctx.set_i32_at(AppContext::CANNON_RECT + 8, 0xa8)?;
-                ctx.set_i32_at(AppContext::CANNON_RECT + 0xc, 0x59)?;
+                ctx.set_i32_at(AppContext::CANNON_RECT + Rect::Y, 0x1d8)?;
+                ctx.set_i32_at(AppContext::CANNON_RECT + Rect::WIDTH, 0xa8)?;
+                ctx.set_i32_at(AppContext::CANNON_RECT + Rect::HEIGHT, 0x59)?;
 
                 let half = ops::div_2(get_drawable_width(ctx)?);
 
                 ctx.set_i32_at(AppContext::WORKER_RECT, half.wrapping_add(0x3d))?;
-                ctx.set_i32_at(AppContext::WORKER_RECT + 4, 0x1d8)?;
-                ctx.set_i32_at(AppContext::WORKER_RECT + 8, 0xa8)?;
-                ctx.set_i32_at(AppContext::WORKER_RECT + 0xc, 0x59)?;
+                ctx.set_i32_at(AppContext::WORKER_RECT + Rect::Y, 0x1d8)?;
+                ctx.set_i32_at(AppContext::WORKER_RECT + Rect::WIDTH, 0xa8)?;
+                ctx.set_i32_at(AppContext::WORKER_RECT + Rect::HEIGHT, 0x59)?;
 
                 counter = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             }
@@ -472,9 +472,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let yes_hit = touch_is_down(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::CANNON_RECT)?;
-                let y = ctx.i32_at(AppContext::CANNON_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::CANNON_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::CANNON_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::CANNON_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::CANNON_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -483,9 +483,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::LOSE_CHOICE, 0)?;
             } else if touch_is_down(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::WORKER_RECT)?;
-                let y = ctx.i32_at(AppContext::WORKER_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::WORKER_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::WORKER_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::WORKER_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::WORKER_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             } {
@@ -494,9 +494,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let yes_held = touch_is_down(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::CANNON_RECT)?;
-                let y = ctx.i32_at(AppContext::CANNON_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::CANNON_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::CANNON_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::CANNON_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::CANNON_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -512,9 +512,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let no_held = touch_is_down(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::WORKER_RECT)?;
-                let y = ctx.i32_at(AppContext::WORKER_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::WORKER_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::WORKER_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::WORKER_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::WORKER_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -530,9 +530,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let yes_released = touch_released(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::CANNON_RECT)?;
-                let y = ctx.i32_at(AppContext::CANNON_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::CANNON_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::CANNON_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::CANNON_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::CANNON_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -546,9 +546,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             } else {
                 let no_released = touch_released(ctx)? != 0 && {
                     let x = ctx.i32_at(AppContext::WORKER_RECT)?;
-                    let y = ctx.i32_at(AppContext::WORKER_RECT + 4)?;
-                    let width = ctx.i32_at(AppContext::WORKER_RECT + 8)?;
-                    let height = ctx.i32_at(AppContext::WORKER_RECT + 0xc)?;
+                    let y = ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?;
+                    let width = ctx.i32_at(AppContext::WORKER_RECT + Rect::WIDTH)?;
+                    let height = ctx.i32_at(AppContext::WORKER_RECT + Rect::HEIGHT)?;
 
                     hit_test_rect(ctx, x, y, width, height)?
                 };
@@ -564,9 +564,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let shop_held = touch_is_down(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::LOSE_SHOP_RECT)?;
-                let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
             };
@@ -585,9 +585,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let x = ctx.i32_at(AppContext::LOSE_SHOP_RECT)?;
-            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 4)?;
-            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 8)?;
-            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 0xc)?;
+            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::Y)?;
+            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::WIDTH)?;
+            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::HEIGHT)?;
 
             if !hit_test_rect(ctx, x, y, width, height)? {
                 return Ok(true);
@@ -621,9 +621,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-            let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-            let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-            let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+            let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+            let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+            let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
             let hovered = touch_is_down(ctx)? != 0
                 && hit_test_rect(ctx, x, y, width, height)?
@@ -648,9 +648,9 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             let released = touch_released(ctx)? != 0 && {
                 let x = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+                let y = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+                let width = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+                let height = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
                 hit_test_rect(ctx, x, y, width, height)?
                     || (ctx.i32_at(AppContext::OUTRO_PHASE)? == 4

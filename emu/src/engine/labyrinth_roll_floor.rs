@@ -1,6 +1,6 @@
 use crate::{Fault, ops};
 
-use super::{AppContext, call_rng, get_stage_index, labyrinth_load_floors};
+use super::{AppContext, FloorCell, Labyrinth, call_rng, get_stage_index, labyrinth_load_floors};
 
 #[derive(Clone, Default)]
 pub struct LabyrinthFloor {
@@ -17,12 +17,12 @@ pub fn labyrinth_roll_floor(ctx: &mut AppContext, mode: i32) -> Result<(), Fault
         1 => {
             let stage = get_stage_index(ctx)? as i64;
 
-            ctx.i32_at((stage * 8 + 0x1c + AppContext::LABYRINTH as i64) as usize)?
+            ctx.i32_at((stage * FloorCell::STRIDE as i64 + Labyrinth::FLOORS as i64 + FloorCell::SECOND as i64 + AppContext::LABYRINTH as i64) as usize)?
         }
         0 => {
             let stage = get_stage_index(ctx)? as i64;
 
-            ctx.i32_at((stage * 8 + 0x18 + AppContext::LABYRINTH as i64) as usize)?
+            ctx.i32_at((stage * FloorCell::STRIDE as i64 + Labyrinth::FLOORS as i64 + AppContext::LABYRINTH as i64) as usize)?
         }
         _ => 0,
     };

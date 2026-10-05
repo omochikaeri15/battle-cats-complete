@@ -1,8 +1,8 @@
 use crate::Fault;
 
 use super::{
-    AppContext, get_button_unit_id, get_equipped_orb, get_orb_def, get_orb_slot_count,
-    orb_ability_flag,
+    AppContext, get_button_unit_id, get_equipped_orb, get_global_map_id, get_orb_def,
+    get_orb_slot_count, get_special_rule, orb_ability_flag,
 };
 
 pub fn slot_has_flagged_orb(ctx: &mut AppContext, faction: i32, slot: i32) -> Result<bool, Fault> {
@@ -18,8 +18,11 @@ pub fn slot_has_flagged_orb(ctx: &mut AppContext, faction: i32, slot: i32) -> Re
 
         if orb != -1 {
             let abil = get_orb_def(&ctx.orb_store, orb)?.abil;
+            let map_id = get_global_map_id(ctx, 0)?;
 
-            if orb_ability_flag(&mut ctx.orb_store, abil) {
+            if (!get_special_rule(ctx, &ctx.special_rules, map_id, 1)? || abil != 0x13)
+                && orb_ability_flag(&mut ctx.orb_store, abil)
+            {
                 return Ok(true);
             }
         }

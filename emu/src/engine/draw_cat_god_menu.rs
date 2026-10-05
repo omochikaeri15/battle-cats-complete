@@ -1,9 +1,11 @@
 use crate::{Fault, ops};
 
 use super::{
-    draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_model, draw_number_plain, draw_number_scaled, draw_surface_aligned,
-    fill_rect, get_anim_len, get_design_height2, get_drawable_width, get_miracle_price, hit_test_rect, imgcut_get_sprite_cut, maanim_execute, obf_value_read,
-    set_alpha, set_color, set_tint, sin_deg, touch_is_down, xor_row_get, AppContext, Surface, BUTTON_PRESS_BOUNCE,
+    AppContext, BUTTON_PRESS_BOUNCE, CatGodButton, Cells, Rect, Surface, draw_context,
+    draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_model, draw_number_plain,
+    draw_number_scaled, draw_surface_aligned, fill_rect, get_anim_len, get_design_height2,
+    get_drawable_width, get_miracle_price, hit_test_rect, imgcut_get_sprite_cut, maanim_execute,
+    obf_value_read, set_alpha, set_color, set_tint, sin_deg, touch_is_down, xor_row_get,
 };
 
 pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -87,7 +89,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
             let sheet = ctx.img042_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-            let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0xc)?;
+            let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::INTRO * 4)?;
             let size = *BUTTON_PRESS_BOUNCE
                 .get(step as i64 as usize)
                 .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
@@ -204,7 +206,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             if ctx.i32_at(AppContext::CAT_GOD_STATE)? <= 3 {
                 let sheet = ctx.img006_sheet.clone();
                 let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-                let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?;
+                let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4)?;
                 let size = *BUTTON_PRESS_BOUNCE
                     .get(step as i64 as usize)
                     .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
@@ -215,9 +217,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 let rect = [
                     ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT)?,
-                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + 4)?,
-                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + 8)?,
-                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + 0xc)?,
+                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::Y)?,
+                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::WIDTH)?,
+                    ctx.i32_at(AppContext::CAT_GOD_CLOSE_RECT + Rect::HEIGHT)?,
                 ];
 
                 if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 && touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
@@ -257,7 +259,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let sheet = ctx.img006_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-        let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)?;
+        let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::BACK * 4)?;
         let size = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
@@ -272,9 +274,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let rect = [
             ctx.i32_at(AppContext::CAT_GOD_BACK_RECT)?,
-            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + 4)?,
-            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + 8)?,
-            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + 0xc)?,
+            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::Y)?,
+            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::WIDTH)?,
+            ctx.i32_at(AppContext::CAT_GOD_BACK_RECT + Rect::HEIGHT)?,
         ];
 
         if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 && touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
@@ -295,7 +297,7 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, sheet, x, 0x11c, 0x60, 0x60, selected);
 
-        let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x14)?;
+        let step = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CONFIRM * 4)?;
         let size = *BUTTON_PRESS_BOUNCE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
@@ -336,9 +338,9 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let rect = [
             ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT)?,
-            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 4)?,
-            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 8)?,
-            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + 0xc)?,
+            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::Y)?,
+            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::WIDTH)?,
+            ctx.i32_at(AppContext::CAT_GOD_CONFIRM_RECT + Rect::HEIGHT)?,
         ];
 
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? && ctx.u8_at(AppContext::CAT_FOOD_SHOP_OPEN)? == 0 && ctx.u8_at(AppContext::CURTAIN_ACTIVE)? == 0 {
@@ -459,8 +461,8 @@ pub fn draw_cat_god_menu(ctx: &mut AppContext) -> Result<(), Fault> {
             }
 
             let alpha = ctx
-                .i32_at(AppContext::CAT_GOD_FRAMES + 4)?
-                .wrapping_sub(ctx.i32_at(AppContext::CAT_GOD_FRAMES + 8)?);
+                .i32_at(AppContext::CAT_GOD_FRAMES + Cells::SECOND)?
+                .wrapping_sub(ctx.i32_at(AppContext::CAT_GOD_FRAMES + Cells::THIRD)?);
 
             set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0, alpha);
 

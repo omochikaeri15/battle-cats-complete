@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, map_type_as_index, map_type_base_id};
+use super::{AppContext, StageRecordRow, map_type_as_index, map_type_base_id};
 
 pub fn set_stage_record(
     ctx: &mut AppContext,
@@ -139,7 +139,7 @@ pub fn set_stage_record(
             let row = (chapter as i64 as usize)
                 .wrapping_mul(0xd0)
                 .wrapping_add(AppContext::STAGE_RECORD_CHAPTERS);
-            let key = ctx.i32_at(row.wrapping_add(0xcc))?;
+            let key = ctx.i32_at(row.wrapping_add(StageRecordRow::KEY))?;
 
             ctx.set_i32_at(
                 row.wrapping_add((stage as i64 as usize).wrapping_mul(4)),

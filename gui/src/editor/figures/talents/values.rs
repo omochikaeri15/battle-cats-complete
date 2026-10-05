@@ -69,11 +69,11 @@ pub(super) fn values(ability: i32) -> Option<&'static [Value]> {
         25 => &const { [Value::new("Reduction", Unit::Money)] },
         26 => &const { [Value::new("Reduction", Unit::Frames)] },
         27 | 28 => &const { [Value::new("Increase", Unit::Count)] },
-        31 | 32 => &const { [Value::new("Increase", Unit::Percent)] },
+        31 | 32 | 70 | 71 => &const { [Value::new("Increase", Unit::Percent)] },
         50 => &const { [CHANCE, BOOST] },
         51 => AILMENT,
         56 | 65 => SURGE,
-        61 => &const { [Value::new("Reduction", Unit::Percent)] },
+        61 | 72 => &const { [Value::new("Reduction", Unit::Percent)] },
         64 => &const {
             [Value::new("Dodge Chance", Unit::Percent), Value::new("Dodge Duration", Unit::Frames)]
         },

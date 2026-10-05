@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{AppContext, log_analytics_event, medal_award_set, medal_condition_met, unlock_popup_is_unlocked};
+use super::{
+    AppContext, log_analytics_event, medal_award_set, medal_condition_met, unlock_popup_is_unlocked,
+};
 
 pub fn check_medals(ctx: &mut AppContext, kind: i32) -> Result<(), Fault> {
     if !unlock_popup_is_unlocked(ctx, 0x4c) {

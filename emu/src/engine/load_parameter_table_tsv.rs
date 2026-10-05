@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{get_column_count, open_asset_stream, read_cell_stream, read_tsv_row, AppContext, AssetStream};
+use super::{
+    get_column_count, open_asset_stream, read_cell_stream, read_tsv_row, AppContext, AssetStream,
+};
 
 pub fn load_parameter_table_tsv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.settings.clear();

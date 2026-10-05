@@ -9,11 +9,11 @@ use emu::engine::AppContext;
 use emu::Site;
 use emu::runtime::{
     BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
-    VERSION, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, seed_point_cap, stock_battle_items, unlock_dummy_combos,
+    VERSION, set_limits, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, seed_point_cap, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
 use kore::domains::sandbox::replay::{self as tape, Cue, Forgiven, Recording};
-use tracing::{info, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 use super::assets::{DiskAssets, FileIndex, Ledger, SharedLedger, SheetCache};
 use super::diagnostics::{self, Diagnostics};
@@ -246,11 +246,15 @@ impl Driver {
     fn host(&mut self) {
         let ctx = &mut self.ctx;
 
-        ctx.set_assets(Box::new(DiskAssets::new(
-            Rc::clone(&self.files),
-            Rc::clone(&self.sheets),
-            Rc::clone(&self.ledger),
-        )));
+        let assets = DiskAssets::new(Rc::clone(&self.files), Rc::clone(&self.sheets), Rc::clone(&self.ledger));
+        let wanted = assets.limits();
+        let applied = set_limits(ctx, wanted);
+
+        if applied != wanted {
+            debug!("emu: limits wanted {wanted:?}, applied {applied:?}");
+        }
+
+        ctx.set_assets(Box::new(assets));
         ctx.set_platform(Box::new(InertPlatform {
             profile: Rc::clone(&self.profile),
         }));

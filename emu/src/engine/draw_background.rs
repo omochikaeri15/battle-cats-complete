@@ -1,9 +1,9 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, bg_has_upper_layer, camera_vertical_correction, draw_context, draw_cut_scaled,
-    fill_polygon_colored, fill_rect, get_base_shake_offset, get_bg_ground_bottom,
-    get_bg_ground_top, get_bg_sky_bottom, get_bg_sky_top, get_design_height2, get_drawable_width,
+    AppContext, Quad, bg_has_upper_layer, camera_vertical_correction, draw_context, draw_cut_scaled,
+    fill_polygon_colored, fill_rect, get_base_shake_offset, get_bg_ground_bottom, get_bg_ground_top,
+    get_bg_sky_bottom, get_bg_sky_top, get_design_height2, get_drawable_width,
     imgcut_get_sprite_cut, set_tint, set_transform,
 };
 
@@ -87,15 +87,15 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let width = get_drawable_width(ctx)?;
 
-    ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
-    ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
+    ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_3, width)?;
+    ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_2, width)?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
     let top = get_base_shake_offset(ctx)
         .wrapping_sub(shift)
         .wrapping_add(-0x28);
 
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_3, top)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
     let anchor = ctx
@@ -114,20 +114,20 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let lift = lift - ops::div_10000(span) as f64;
     let bottom = ops::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 8, bottom)?;
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 4, bottom)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_2, bottom)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1, bottom)?;
 
     let color = get_bg_sky_top(ctx, AppContext::BG_SETUP)? | 0xff000000u32 as i32;
 
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 0xc, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_3, color)?;
     ctx.set_i32_at(AppContext::BG_TINT_COLORS, color)?;
 
     let color = get_bg_sky_bottom(ctx, AppContext::BG_SETUP)?;
 
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 8, color)?;
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 4, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_2, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_1, color)?;
 
-    if ctx.i32_at(AppContext::BG_TINT_YS)? < ctx.i32_at(AppContext::BG_TINT_YS + 4)? {
+    if ctx.i32_at(AppContext::BG_TINT_YS)? < ctx.i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1)? {
         let mut xs = [0i32; 4];
         let mut ys = [0i32; 4];
         let mut colors = [0u32; 4];
@@ -145,8 +145,8 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let width = get_drawable_width(ctx)?;
 
-    ctx.set_i32_at(AppContext::BG_TINT_XS + 0xc, width)?;
-    ctx.set_i32_at(AppContext::BG_TINT_XS + 8, width)?;
+    ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_3, width)?;
+    ctx.set_i32_at(AppContext::BG_TINT_XS + Quad::CORNER_2, width)?;
 
     let anchor = ctx
         .i32_at(AppContext::BATTLE_ZOOM_Y)?
@@ -159,7 +159,7 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
     let lift = ops::div_10000(span) as f64 + lift;
     let top = ops::cvttsd2si(get_base_shake_offset(ctx) as f64 + lift);
 
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 0xc, top)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_3, top)?;
     ctx.set_i32_at(AppContext::BG_TINT_YS, top)?;
 
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
@@ -167,18 +167,18 @@ pub fn draw_background(ctx: &mut AppContext) -> Result<(), Fault> {
         .wrapping_add(shift)
         .wrapping_add(0x2a8);
 
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 8, bottom)?;
-    ctx.set_i32_at(AppContext::BG_TINT_YS + 4, bottom)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_2, bottom)?;
+    ctx.set_i32_at(AppContext::BG_TINT_YS + Quad::CORNER_1, bottom)?;
 
     let color = get_bg_ground_top(ctx, AppContext::BG_SETUP)?;
 
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 0xc, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_3, color)?;
     ctx.set_i32_at(AppContext::BG_TINT_COLORS, color)?;
 
     let color = get_bg_ground_bottom(ctx, AppContext::BG_SETUP)? | 0xff000000u32 as i32;
 
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 8, color)?;
-    ctx.set_i32_at(AppContext::BG_TINT_COLORS + 4, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_2, color)?;
+    ctx.set_i32_at(AppContext::BG_TINT_COLORS + Quad::CORNER_1, color)?;
 
     let mut xs = [0i32; 4];
     let mut ys = [0i32; 4];

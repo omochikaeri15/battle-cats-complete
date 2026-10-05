@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{AppContext, AssetStream, get_column_count, open_asset_stream, read_cell_stream, read_tsv_row};
+use super::{
+    AppContext, AssetStream, get_column_count, open_asset_stream, read_cell_stream, read_tsv_row,
+};
 
 pub fn load_orb_text_tsv(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.orb_store.orb_explanations.clear();

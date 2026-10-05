@@ -38,7 +38,7 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.enemy_book_pages.clear();
 
-        while row != 0x322 {
+        while row != ctx.limits.enemy_rows.wrapping_sub(2) {
             read_stream_row(stm, b',');
 
             let mut page: [Vec<u8>; 12] = Default::default();
@@ -94,7 +94,7 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.cat_book_pages.clear();
 
-        while row != 0x36c {
+        while row != ctx.limits.units {
             read_stream_row(stm, b',');
 
             let mut page: [Vec<u8>; 12] = Default::default();
@@ -153,7 +153,7 @@ pub fn load_picture_book_files(ctx: &mut AppContext) -> Result<(), Fault> {
 
         ctx.cat_book_data.clear();
 
-        while row != 0x36c {
+        while row != ctx.limits.units {
             read_csv_row(stm);
 
             ctx.cat_book_data.push([

@@ -1,11 +1,11 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Entity, FormatArg, analytics_nekokan_use, app_on_draw, back_pressed, bgm_player_switch,
-    call_rng, can_push_back, get_anim_len, get_battle_status, get_design_height2,
-    get_drawable_width, get_entity_state, get_global_map_id, get_max_money, get_max_zoom,
-    get_miracle_price, get_stage_index, get_crown_level, get_text_texture, get_worker_level,
-    hit_test_rect, keep_in_bound, log_analytics_event, obf_value_read, play_sound,
+    AppContext, CatGodButton, Cells, Entity, FormatArg, Rect, analytics_nekokan_use, app_on_draw,
+    back_pressed, bgm_player_switch, call_rng, can_push_back, get_anim_len, get_battle_status,
+    get_crown_level, get_design_height2, get_drawable_width, get_entity_state, get_global_map_id,
+    get_max_money, get_max_zoom, get_miracle_price, get_stage_index, get_text_texture,
+    get_worker_level, hit_test_rect, keep_in_bound, log_analytics_event, obf_value_read, play_sound,
     save_battle_snapshot, set_auto_camera_mode, set_bgm_duck, set_money, set_worker_level, sin_deg,
     sound_manager, spend_cat_food, text_texture_cache, touch_is_down, touch_released, xor_row_get,
 };
@@ -286,13 +286,13 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             ))
                         };
                     }
-                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)? > 0 {
-                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?;
+                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4)? > 0 {
+                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4)?;
 
-                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x10, presses.wrapping_add(1))?;
+                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4, presses.wrapping_add(1))?;
 
                     if presses as u32 >= 5 {
-                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x10, 0)?;
+                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4, 0)?;
                         ctx.set_block_at::<2>(AppContext::CAT_GOD_MENU_IS_OPEN, [0; 2])?;
 
                         ctx.set_block_at::<0x144>(AppContext::CAT_GOD_SPIN, [0; 0x144])?;
@@ -355,13 +355,13 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         return Ok(false);
                     }
-                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x14)? > 0 {
-                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x14)?;
+                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CONFIRM * 4)? > 0 {
+                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CONFIRM * 4)?;
 
-                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x14, presses.wrapping_add(1))?;
+                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CONFIRM * 4, presses.wrapping_add(1))?;
 
                     if presses as u32 >= 5 {
-                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x14, 0)?;
+                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CONFIRM * 4, 0)?;
 
                         if (step as u32) < 4 {
                             ctx.label_texts[0] = {
@@ -470,13 +470,13 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         ctx.set_i32_at(AppContext::CAT_GOD_STATE, 4)?;
                         save_battle_snapshot(ctx)?;
                     }
-                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)? > 0 {
-                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x18)?;
+                } else if ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::BACK * 4)? > 0 {
+                    let presses = ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::BACK * 4)?;
 
-                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x18, presses.wrapping_add(1))?;
+                    ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::BACK * 4, presses.wrapping_add(1))?;
 
                     if presses as u32 >= 5 {
-                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + 0x18, 0)?;
+                        ctx.set_i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::BACK * 4, 0)?;
                         ctx.set_block_at::<1>(AppContext::CAT_GOD_CONFIRM_OPEN, [0])?;
 
                         if step as u32 >= 4 {
@@ -565,12 +565,12 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     if ctx.u8_at(AppContext::CAT_GOD_CONFIRM_OPEN)? == 0 {
                         if step as u32 >= 4 {
                             for miracle in 0..3usize {
-                                let rect = AppContext::CAT_GOD_MIRACLE_RECTS + miracle * 0x10;
+                                let rect = AppContext::CAT_GOD_MIRACLE_RECTS + miracle * Rect::STRIDE;
                                 let held = touch_is_down(ctx)? != 0 && {
                                     let x = ctx.i32_at(rect)?;
-                                    let y = ctx.i32_at(rect + 4)?;
-                                    let width = ctx.i32_at(rect + 8)?;
-                                    let height = ctx.i32_at(rect + 0xc)?;
+                                    let y = ctx.i32_at(rect + Rect::Y)?;
+                                    let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                                    let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                                     hit_test_rect(ctx, x, y, width, height)?
                                 };
@@ -594,28 +594,28 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let rect = AppContext::CAT_GOD_MIRACLE_RECTS + 0x30;
                             let held = touch_is_down(ctx)? != 0 && {
                                 let x = ctx.i32_at(rect)?;
-                                let y = ctx.i32_at(rect + 4)?;
-                                let width = ctx.i32_at(rect + 8)?;
-                                let height = ctx.i32_at(rect + 0xc)?;
+                                let y = ctx.i32_at(rect + Rect::Y)?;
+                                let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                                let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                                 hit_test_rect(ctx, x, y, width, height)?
                             };
 
                             if !held {
-                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 3, [0])?;
-                            } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + 3)? == 0 {
+                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO, [0])?;
+                            } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO)? == 0 {
                                 play_sound(sound_manager(ctx)?, 0xa, None);
-                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 3, [1])?;
+                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO, [1])?;
                             }
 
                             if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 {
                                 for miracle in 0..3usize {
-                                    let rect = AppContext::CAT_GOD_MIRACLE_RECTS + miracle * 0x10;
+                                    let rect = AppContext::CAT_GOD_MIRACLE_RECTS + miracle * Rect::STRIDE;
                                     let pressed = touch_released(ctx)? != 0 && {
                                         let x = ctx.i32_at(rect)?;
-                                        let y = ctx.i32_at(rect + 4)?;
-                                        let width = ctx.i32_at(rect + 8)?;
-                                        let height = ctx.i32_at(rect + 0xc)?;
+                                        let y = ctx.i32_at(rect + Rect::Y)?;
+                                        let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                                        let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                                         hit_test_rect(ctx, x, y, width, height)?
                                     };
@@ -635,9 +635,9 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 && touch_released(ctx)? != 0
                                 && {
                                     let x = ctx.i32_at(rect)?;
-                                    let y = ctx.i32_at(rect + 4)?;
-                                    let width = ctx.i32_at(rect + 8)?;
-                                    let height = ctx.i32_at(rect + 0xc)?;
+                                    let y = ctx.i32_at(rect + Rect::Y)?;
+                                    let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                                    let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                                     hit_test_rect(ctx, x, y, width, height)?
                                 }
@@ -650,44 +650,44 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let rect = AppContext::CAT_GOD_CONFIRM_RECT;
                         let held = touch_is_down(ctx)? != 0 && {
                             let x = ctx.i32_at(rect)?;
-                            let y = ctx.i32_at(rect + 4)?;
-                            let width = ctx.i32_at(rect + 8)?;
-                            let height = ctx.i32_at(rect + 0xc)?;
+                            let y = ctx.i32_at(rect + Rect::Y)?;
+                            let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                            let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
 
                         if !held {
-                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 5, [0])?;
-                        } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + 5)? == 0 {
+                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM, [0])?;
+                        } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM)? == 0 {
                             play_sound(sound_manager(ctx)?, 0xa, None);
-                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 5, [1])?;
+                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM, [1])?;
                         }
 
                         if ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 {
                             let rect = AppContext::CAT_GOD_BACK_RECT;
                             let held = touch_is_down(ctx)? != 0 && {
                                 let x = ctx.i32_at(rect)?;
-                                let y = ctx.i32_at(rect + 4)?;
-                                let width = ctx.i32_at(rect + 8)?;
-                                let height = ctx.i32_at(rect + 0xc)?;
+                                let y = ctx.i32_at(rect + Rect::Y)?;
+                                let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                                let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                                 hit_test_rect(ctx, x, y, width, height)?
                             };
 
                             if !held {
-                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 6, [0])?;
-                            } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + 6)? == 0 {
+                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::BACK, [0])?;
+                            } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::BACK)? == 0 {
                                 play_sound(sound_manager(ctx)?, 0xa, None);
-                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 6, [1])?;
+                                ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::BACK, [1])?;
                             }
                         }
 
                         let confirmed = touch_released(ctx)? != 0 && {
                             let x = ctx.i32_at(rect)?;
-                            let y = ctx.i32_at(rect + 4)?;
-                            let width = ctx.i32_at(rect + 8)?;
-                            let height = ctx.i32_at(rect + 0xc)?;
+                            let y = ctx.i32_at(rect + Rect::Y)?;
+                            let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                            let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
@@ -712,9 +712,9 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         } else if touch_released(ctx)? != 0 {
                             let rect = AppContext::CAT_GOD_BACK_RECT;
                             let x = ctx.i32_at(rect)?;
-                            let y = ctx.i32_at(rect + 4)?;
-                            let width = ctx.i32_at(rect + 8)?;
-                            let height = ctx.i32_at(rect + 0xc)?;
+                            let y = ctx.i32_at(rect + Rect::Y)?;
+                            let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                            let height = ctx.i32_at(rect + Rect::HEIGHT)?;
                             let hit = hit_test_rect(ctx, x, y, width, height)?;
 
                             if hit && ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 {
@@ -732,25 +732,25 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let rect = AppContext::CAT_GOD_CLOSE_RECT;
                         let held = touch_is_down(ctx)? != 0 && {
                             let x = ctx.i32_at(rect)?;
-                            let y = ctx.i32_at(rect + 4)?;
-                            let width = ctx.i32_at(rect + 8)?;
-                            let height = ctx.i32_at(rect + 0xc)?;
+                            let y = ctx.i32_at(rect + Rect::Y)?;
+                            let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                            let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
 
                         if !held {
-                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 4, [0])?;
-                        } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + 4)? == 0 {
+                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE, [0])?;
+                        } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE)? == 0 {
                             play_sound(sound_manager(ctx)?, 0xa, None);
-                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + 4, [1])?;
+                            ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE, [1])?;
                         }
 
                         let shop_held = touch_is_down(ctx)? != 0 && {
                             let x = ctx.i32_at(AppContext::LOSE_SHOP_RECT)?;
-                            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 4)?;
-                            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 8)?;
-                            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 0xc)?;
+                            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::Y)?;
+                            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::WIDTH)?;
+                            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
@@ -764,9 +764,9 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         let closed = touch_released(ctx)? != 0 && {
                             let x = ctx.i32_at(rect)?;
-                            let y = ctx.i32_at(rect + 4)?;
-                            let width = ctx.i32_at(rect + 8)?;
-                            let height = ctx.i32_at(rect + 0xc)?;
+                            let y = ctx.i32_at(rect + Rect::Y)?;
+                            let width = ctx.i32_at(rect + Rect::WIDTH)?;
+                            let height = ctx.i32_at(rect + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
@@ -774,17 +774,17 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         if closed || back_pressed(ctx)? != 0 {
                             play_sound(sound_manager(ctx)?, 0xb, None);
                             ctx.set_i32_at(
-                                AppContext::CAT_GOD_PRESSES + 0x10,
-                                ctx.i32_at(AppContext::CAT_GOD_PRESSES + 0x10)?
+                                AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4,
+                                ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4)?
                                     .wrapping_add(1),
                             )?;
                         }
 
                         let shop = touch_released(ctx)? != 0 && {
                             let x = ctx.i32_at(AppContext::LOSE_SHOP_RECT)?;
-                            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 4)?;
-                            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 8)?;
-                            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + 0xc)?;
+                            let y = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::Y)?;
+                            let width = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::WIDTH)?;
+                            let height = ctx.i32_at(AppContext::LOSE_SHOP_RECT + Rect::HEIGHT)?;
 
                             hit_test_rect(ctx, x, y, width, height)?
                         };
@@ -1085,7 +1085,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     if bolt < 2 {
                         if current >= 0x1e {
-                            ctx.set_i32_at(at + 4, ctx.i32_at(at + 4)?.wrapping_add(1))?;
+                            ctx.set_i32_at(at + Cells::SECOND, ctx.i32_at(at + Cells::SECOND)?.wrapping_add(1))?;
 
                             if current >= length {
                                 ctx.set_i32_at(at, length)?;
@@ -1096,7 +1096,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                     }
                 }
 
-                ctx.i32_at(AppContext::CAT_GOD_FRAMES + 8)? >= length
+                ctx.i32_at(AppContext::CAT_GOD_FRAMES + Cells::THIRD)? >= length
             }
             1 => {
                 let old = ctx.i32_at(AppContext::CAT_GOD_FRAMES)?;

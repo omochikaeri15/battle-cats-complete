@@ -1,21 +1,22 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, calculate_treasure_percentages, get_map_count, has_map_data_csv,
-    load_altar_limit_csv, load_autoset_lineup_files, load_base_shake_csv, load_cat_cannon_csv,
-    load_cat_combat_csv, load_cat_data_files, load_cat_drops_csv, load_cat_group_csv,
-    load_catseye_behavior_json, load_change_conditions_csv, load_continue_stages_csv,
-    load_daily_login_grade_json, load_dojo_chest_tsv, load_score_bonus_json, load_enemy_combat_csv,
-    load_event_item_json, load_ex_option_csv, load_gacha_setting_csv, load_gatya_ability_csv,
-    load_gold_cpu_csv, load_hidden_data_csv, load_item_pack_tsv, load_leadership_return_csv,
-    load_lineup_csvs, load_map_layout, load_map_option_csv, load_map_option_json,
-    load_map_stage_next, load_medal_data_file, load_officers_club_csv, load_orb_effect_csv,
-    load_parameter_table_tsv, load_point_event_reward_json, load_point_files,
+    AppContext, AssetStream, StampEntry, calculate_treasure_percentages, get_map_count,
+    has_map_data_csv, load_altar_limit_csv, load_autoset_lineup_files, load_base_shake_csv,
+    load_cat_cannon_csv, load_cat_combat_csv, load_cat_data_files, load_cat_drops_csv,
+    load_cat_group_csv, load_catseye_behavior_json, load_change_conditions_csv,
+    load_continue_stages_csv, load_daily_login_grade_json, load_dojo_chest_tsv,
+    load_enemy_combat_csv, load_event_item_json, load_ex_option_csv, load_gacha_setting_csv,
+    load_gatya_ability_csv, load_gold_cpu_csv, load_hidden_data_csv, load_item_pack_tsv,
+    load_leadership_return_csv, load_lineup_csvs, load_map_layout, load_map_option_csv,
+    load_map_option_json, load_map_stage_next, load_medal_data_file, load_officers_club_csv,
+    load_orb_effect_csv, load_parameter_table_tsv, load_point_event_reward_json, load_point_files,
     load_point_release_json, load_realms_rng_csv, load_reccomended_levelup_csv,
-    load_recommended_powerup_csv, load_slot_unlock_csv, load_sound_settings_tsv,
-    load_special_rules_json, load_stage_filter_csv, load_talent_orb_files, load_talent_type_csv,
-    load_tower_checkpoint_csv, load_treasure_data_csv, load_vibration_csv, map_type_as_index,
-    open_asset_stream, read_csv_cell, read_csv_row, sound_manager, string_format_int,
+    load_recommended_powerup_csv, load_score_bonus_json, load_slot_unlock_csv,
+    load_sound_settings_tsv, load_special_rules_json, load_stage_filter_csv, load_talent_orb_files,
+    load_talent_type_csv, load_tower_checkpoint_csv, load_treasure_data_csv,
+    load_treasure_gauge_json, load_vibration_csv, map_type_as_index, open_asset_stream,
+    read_csv_cell, read_csv_row, sound_manager, string_format_int,
 };
 
 const MAP_TYPES: [i32; 16] = [
@@ -32,8 +33,8 @@ pub fn initialize_game_data(ctx: &mut AppContext) -> Result<bool, Fault> {
             let first = read_csv_cell(stm, 0) as i32;
             let second = read_csv_cell(stm, 1) as i32;
 
-            ctx.set_i32_at(AppContext::STAMP_DATA + slot * 8, first)?;
-            ctx.set_i32_at(AppContext::STAMP_DATA + slot * 8 + 4, second)?;
+            ctx.set_i32_at(AppContext::STAMP_DATA + slot * StampEntry::STRIDE, first)?;
+            ctx.set_i32_at(AppContext::STAMP_DATA + slot * StampEntry::STRIDE + StampEntry::SECOND, second)?;
         }
     }
 
@@ -62,7 +63,7 @@ pub fn initialize_game_data(ctx: &mut AppContext) -> Result<bool, Fault> {
         &mut AssetStream::new(&unitexp, b'\n'),
     )?;
 
-    for unit in 0..0x36ci32 {
+    for unit in 0..ctx.limits.units {
         let name = string_format_int(ctx, b"unit%03d.csv", unit.wrapping_add(1))?;
 
         if let Some(bytes) = open_asset_stream(ctx, &name, 0, 0)? {
@@ -163,6 +164,7 @@ pub fn initialize_game_data(ctx: &mut AppContext) -> Result<bool, Fault> {
     load_daily_login_grade_json(ctx)?;
     load_point_event_reward_json(ctx)?;
     load_point_release_json(ctx)?;
+    load_treasure_gauge_json(ctx)?;
 
     Ok(true)
 }

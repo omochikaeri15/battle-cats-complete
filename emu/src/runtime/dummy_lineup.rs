@@ -12,7 +12,6 @@ const UNIT_OWNED: i32 = 1;
 const TRUE_FORM: i32 = 2;
 const ULTRA_FORM: i32 = 3;
 const FORM_UNLOCKED: i32 = 2;
-const TALENT_SLOTS: usize = 8;
 const SPEED_MODES: usize = 3;
 const SPEED_UP_ITEM: usize = 0;
 const LABYRINTH_TYPE: i32 = -0x15;
@@ -68,16 +67,17 @@ pub fn fill_dummy_talents(ctx: &mut AppContext, setup: &Setup) {
             ctx.equipped_orbs.entry(member.unit).or_default().insert(*slot, *orb);
         }
 
-        let Some(definition) = ctx.talent_definitions.get(&member.unit).copied() else {
+        let groups = ctx.limits.talent_groups as usize;
+        let Some(definition) = ctx.talent_definitions.get(&member.unit) else {
             continue;
         };
         let levels = ctx.talent_levels.entry(member.unit).or_default();
 
         for (ability, level) in &member.talents {
-            let Some(slot) = (0..TALENT_SLOTS).find(|slot| definition[slot * TALENT_STRIDE + TALENT_ABILITY] == *ability) else {
+            let Some(slot) = (0..groups).find(|slot| definition.get(slot * TALENT_STRIDE + TALENT_ABILITY) == Some(ability)) else {
                 continue;
             };
-            let highest = definition[slot * TALENT_STRIDE + TALENT_MAX_LEVEL].max(SINGLE_LEVEL);
+            let highest = definition.get(slot * TALENT_STRIDE + TALENT_MAX_LEVEL).copied().unwrap_or(SINGLE_LEVEL).max(SINGLE_LEVEL);
 
             if *ability == 0 || *level <= 0 {
                 continue;

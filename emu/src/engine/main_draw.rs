@@ -1,6 +1,6 @@
 use crate::{Fault, ops};
 
-use super::*;
+use super::{*, DrawEntry, MamodelPart, Matrix, Rect, Vector};
 
 pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     ctx.zero(AppContext::DRAW_TEMP_0, 0x28)?;
@@ -40,30 +40,30 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     let lift = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?.wrapping_add(get_base_shake_offset(ctx));
 
     ctx.set_f32_at(AppContext::CAMERA_OFFSET, left)?;
-    ctx.set_f32_at(AppContext::CAMERA_OFFSET + 4, lift as f32)?;
+    ctx.set_f32_at(AppContext::CAMERA_OFFSET + Vector::Y, lift as f32)?;
 
     let zoom = ctx.i32_at(AppContext::CAMERA_ZOOM)? as f32 / 10000.0;
     let skew = 0.0f32 * zoom;
 
     ctx.set_f32_at(AppContext::CAMERA_MATRIX, zoom)?;
-    ctx.set_f32_at(AppContext::CAMERA_MATRIX + 4, skew)?;
-    ctx.set_f32_at(AppContext::CAMERA_MATRIX + 8, skew)?;
-    ctx.set_f32_at(AppContext::CAMERA_MATRIX + 0xc, zoom)?;
+    ctx.set_f32_at(AppContext::CAMERA_MATRIX + Matrix::RIGHT_Y, skew)?;
+    ctx.set_f32_at(AppContext::CAMERA_MATRIX + Matrix::DOWN_X, skew)?;
+    ctx.set_f32_at(AppContext::CAMERA_MATRIX + Matrix::DOWN_Y, zoom)?;
 
     let right = ((0x3c0i32.wrapping_sub(get_drawable_width(ctx)?) as f64) * 0.5) as f32;
     let zoom_y = ctx.i32_at(AppContext::BATTLE_ZOOM_Y)?;
     let down = camera_vertical_correction(ctx)?.wrapping_sub(zoom_y) as f32;
     let matrix = [
         ctx.f32_at(AppContext::CAMERA_MATRIX)?,
-        ctx.f32_at(AppContext::CAMERA_MATRIX + 4)?,
-        ctx.f32_at(AppContext::CAMERA_MATRIX + 8)?,
-        ctx.f32_at(AppContext::CAMERA_MATRIX + 0xc)?,
+        ctx.f32_at(AppContext::CAMERA_MATRIX + Matrix::RIGHT_Y)?,
+        ctx.f32_at(AppContext::CAMERA_MATRIX + Matrix::DOWN_X)?,
+        ctx.f32_at(AppContext::CAMERA_MATRIX + Matrix::DOWN_Y)?,
     ];
     let offset_x = right * matrix[0] + matrix[2] * down + ctx.f32_at(AppContext::CAMERA_OFFSET)?;
-    let offset_y = right * matrix[1] + matrix[3] * down + ctx.f32_at(AppContext::CAMERA_OFFSET + 4)?;
+    let offset_y = right * matrix[1] + matrix[3] * down + ctx.f32_at(AppContext::CAMERA_OFFSET + Vector::Y)?;
 
     ctx.set_f32_at(AppContext::CAMERA_OFFSET, offset_x)?;
-    ctx.set_f32_at(AppContext::CAMERA_OFFSET + 4, offset_y)?;
+    ctx.set_f32_at(AppContext::CAMERA_OFFSET + Vector::Y, offset_y)?;
 
     let transform = [matrix[0], matrix[1], matrix[2], matrix[3], offset_x, offset_y];
     let scale = ctx.screen_metrics.scale2;
@@ -80,8 +80,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     draw_background(ctx)?;
     draw_background_effects(ctx)?;
     ctx.set_block_at::<0x10>(AppContext::DRAW_LIST, [0; 0x10])?;
-    ctx.set_i32_at(AppContext::DRAW_LIST + 0x10, 1)?;
-    ctx.set_i32_at(AppContext::DRAW_LIST + 0x14, 0)?;
+    ctx.set_i32_at(AppContext::DRAW_LIST + DrawEntry::STRIDE + DrawEntry::ORDER, 1)?;
+    ctx.set_i32_at(AppContext::DRAW_LIST + DrawEntry::STRIDE + DrawEntry::SLOT, 0)?;
     ctx.set_i32_at(AppContext::DRAW_TEMP_0, 2)?;
 
     let mut slot = 1;
@@ -89,7 +89,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     while slot != 0x33 {
         if slot_occupied(ctx, 1, slot)? != 0 {
             let count = ctx.i32_at(AppContext::DRAW_TEMP_0)? as i64;
-            let record = (AppContext::DRAW_LIST as i64 + count * 0xc) as usize;
+            let record = (AppContext::DRAW_LIST as i64 + count * DrawEntry::STRIDE as i64) as usize;
             let z = ctx.i32_at(AppContext::entity_field(1, slot, Entity::Z_LAYER))?.wrapping_add(1);
 
             ctx.set_i32_at(record, z)?;
@@ -97,17 +97,17 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             let button = get_entity_button(ctx, 1, slot)?;
             let kind = if read_flag(ctx, AppContext::faction_flags(1))? & 2 != 0 { button.wrapping_add(0xa) } else { button.wrapping_add(0x82) };
 
-            ctx.set_i32_at(record + 4, kind)?;
+            ctx.set_i32_at(record + DrawEntry::ORDER, kind)?;
 
             if get_entity_state(ctx, 1, slot)? == 4 || get_entity_state(ctx, 1, slot)? == 0x15 {
                 let count = ctx.i32_at(AppContext::DRAW_TEMP_0)? as i64;
 
-                ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count * 0xc + 4) as usize, button.wrapping_add(0x14))?;
+                ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count * DrawEntry::STRIDE as i64 + DrawEntry::ORDER as i64) as usize, button.wrapping_add(0x14))?;
             }
 
             let count = ctx.i32_at(AppContext::DRAW_TEMP_0)?;
 
-            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count as i64 * 0xc + 8) as usize, slot)?;
+            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count as i64 * DrawEntry::STRIDE as i64 + DrawEntry::SLOT as i64) as usize, slot)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, count.wrapping_add(1))?;
         }
 
@@ -119,24 +119,24 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     while slot != 0x33 {
         if slot_occupied(ctx, 0, slot)? != 0 {
             let count = ctx.i32_at(AppContext::DRAW_TEMP_0)? as i64;
-            let record = (AppContext::DRAW_LIST as i64 + count * 0xc) as usize;
+            let record = (AppContext::DRAW_LIST as i64 + count * DrawEntry::STRIDE as i64) as usize;
             let z = ctx.i32_at(AppContext::entity_field(0, slot, Entity::Z_LAYER))?.wrapping_add(1);
 
             ctx.set_i32_at(record, z)?;
 
             let button = get_entity_button(ctx, 0, slot)?;
 
-            ctx.set_i32_at(record + 4, button.wrapping_add(0x64))?;
+            ctx.set_i32_at(record + DrawEntry::ORDER, button.wrapping_add(0x64))?;
 
             if get_entity_state(ctx, 0, slot)? == 4 || get_entity_state(ctx, 0, slot)? == 0x15 {
                 let count = ctx.i32_at(AppContext::DRAW_TEMP_0)? as i64;
 
-                ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count * 0xc + 4) as usize, button.wrapping_add(0x28))?;
+                ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count * DrawEntry::STRIDE as i64 + DrawEntry::ORDER as i64) as usize, button.wrapping_add(0x28))?;
             }
 
             let count = ctx.i32_at(AppContext::DRAW_TEMP_0)?;
 
-            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count as i64 * 0xc + 8) as usize, slot)?;
+            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + count as i64 * DrawEntry::STRIDE as i64 + DrawEntry::SLOT as i64) as usize, slot)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_0, count.wrapping_add(1))?;
         }
 
@@ -149,7 +149,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let mut first = 0i64;
 
         loop {
-            let record = (AppContext::DRAW_LIST as i64 + first * 0xc) as usize;
+            let record = (AppContext::DRAW_LIST as i64 + first * DrawEntry::STRIDE as i64) as usize;
             let head = ctx.i32_at(record)?;
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, head)?;
@@ -160,7 +160,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             let mut next = first + 1;
 
             while next < count as i64 {
-                let z = ctx.i32_at((AppContext::DRAW_LIST as i64 + next * 0xc) as usize)?;
+                let z = ctx.i32_at((AppContext::DRAW_LIST as i64 + next * DrawEntry::STRIDE as i64) as usize)?;
 
                 if z < lowest {
                     ctx.set_i32_at(AppContext::DRAW_TEMP_1, z)?;
@@ -176,7 +176,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
             ctx.set_block_at::<12>(AppContext::DRAW_SWAP, held)?;
 
-            let chosen = (AppContext::DRAW_LIST as i64 + pick as i64 * 0xc) as usize;
+            let chosen = (AppContext::DRAW_LIST as i64 + pick as i64 * DrawEntry::STRIDE as i64) as usize;
             let moved = ctx.block_at::<8>(chosen)?;
 
             ctx.set_block_at::<8>(record, moved)?;
@@ -185,14 +185,14 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
             ctx.set_block_at::<8>(chosen, swapped)?;
 
-            let slot = ctx.i32_at(chosen + 8)?;
+            let slot = ctx.i32_at(chosen + DrawEntry::SLOT)?;
 
-            ctx.set_i32_at(record + 8, slot)?;
+            ctx.set_i32_at(record + DrawEntry::SLOT, slot)?;
 
-            let held_slot = ctx.i32_at(AppContext::DRAW_SWAP + 8)?;
+            let held_slot = ctx.i32_at(AppContext::DRAW_SWAP + DrawEntry::SLOT)?;
             let target = ctx.i32_at(AppContext::DRAW_TEMP_2)? as i64;
 
-            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + target * 0xc + 8) as usize, held_slot)?;
+            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + target * DrawEntry::STRIDE as i64 + DrawEntry::SLOT as i64) as usize, held_slot)?;
             count = ctx.i32_at(AppContext::DRAW_TEMP_0)?;
             first += 1;
 
@@ -206,13 +206,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let mut first = 0i64;
 
         loop {
-            let record = (AppContext::DRAW_LIST as i64 + first * 0xc) as usize;
+            let record = (AppContext::DRAW_LIST as i64 + first * DrawEntry::STRIDE as i64) as usize;
             let head = ctx.i32_at(record)?;
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, head)?;
             ctx.set_i32_at(AppContext::DRAW_TEMP_2, first as i32)?;
 
-            let mut lowest = ctx.i32_at(record + 8)?;
+            let mut lowest = ctx.i32_at(record + DrawEntry::SLOT)?;
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_3, lowest)?;
 
@@ -221,13 +221,13 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
             if next < count as i64 {
                 while next < count as i64 {
-                    let other = (AppContext::DRAW_LIST as i64 + next * 0xc) as usize;
+                    let other = (AppContext::DRAW_LIST as i64 + next * DrawEntry::STRIDE as i64) as usize;
 
                     if ctx.i32_at(other)? != head {
                         break;
                     }
 
-                    let slot = ctx.i32_at(other + 8)?;
+                    let slot = ctx.i32_at(other + DrawEntry::SLOT)?;
 
                     if slot < lowest {
                         ctx.set_i32_at(AppContext::DRAW_TEMP_3, slot)?;
@@ -239,14 +239,14 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                     next += 1;
                 }
 
-                lowest = ctx.i32_at(record + 8)?;
+                lowest = ctx.i32_at(record + DrawEntry::SLOT)?;
             }
 
             let held = ctx.block_at::<8>(record)?;
 
             ctx.set_block_at::<8>(AppContext::DRAW_SWAP, held)?;
 
-            let chosen = (AppContext::DRAW_LIST as i64 + pick as i64 * 0xc) as usize;
+            let chosen = (AppContext::DRAW_LIST as i64 + pick as i64 * DrawEntry::STRIDE as i64) as usize;
             let moved = ctx.block_at::<8>(chosen)?;
 
             ctx.set_block_at::<8>(record, moved)?;
@@ -254,16 +254,16 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             let swapped = ctx.block_at::<8>(AppContext::DRAW_SWAP)?;
 
             ctx.set_block_at::<8>(chosen, swapped)?;
-            ctx.set_i32_at(AppContext::DRAW_SWAP + 8, lowest)?;
+            ctx.set_i32_at(AppContext::DRAW_SWAP + DrawEntry::SLOT, lowest)?;
 
-            let slot = ctx.i32_at(chosen + 8)?;
+            let slot = ctx.i32_at(chosen + DrawEntry::SLOT)?;
 
-            ctx.set_i32_at(record + 8, slot)?;
+            ctx.set_i32_at(record + DrawEntry::SLOT, slot)?;
 
-            let held_slot = ctx.i32_at(AppContext::DRAW_SWAP + 8)?;
+            let held_slot = ctx.i32_at(AppContext::DRAW_SWAP + DrawEntry::SLOT)?;
             let target = ctx.i32_at(AppContext::DRAW_TEMP_2)? as i64;
 
-            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + target * 0xc + 8) as usize, held_slot)?;
+            ctx.set_i32_at((AppContext::DRAW_LIST as i64 + target * DrawEntry::STRIDE as i64 + DrawEntry::SLOT as i64) as usize, held_slot)?;
             count = ctx.i32_at(AppContext::DRAW_TEMP_0)?;
             first += 1;
 
@@ -277,11 +277,11 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let mut record = 0i64;
 
         loop {
-            let entry = (AppContext::DRAW_LIST as i64 + record * 0xc) as usize;
-            let kind = ctx.i32_at(entry + 4)?;
+            let entry = (AppContext::DRAW_LIST as i64 + record * DrawEntry::STRIDE as i64) as usize;
+            let kind = ctx.i32_at(entry + DrawEntry::ORDER)?;
 
             if kind as u32 <= 0x8c {
-                let slot = ctx.i32_at(entry + 8)?;
+                let slot = ctx.i32_at(entry + DrawEntry::SLOT)?;
 
                 match kind {
                     0 => {
@@ -540,12 +540,12 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let model = &ctx.warp_chara_model;
                             let part = mamodel_get_part(model, 0).ok_or(Fault::null_pointer())?;
                             let body = model.parts.get(part + 1).ok_or(Fault::index_out_of_range((part + 1) as i64, model.parts.len() as i64))?;
-                            let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(pivot_y).wrapping_add(body.i32_at(0x40)).wrapping_add(body.i32_at(0x48));
-                            let scale_x = body.i32_at(0x5c) as f32;
-                            let scale_y = body.i32_at(0x64) as f32;
+                            let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(pivot_y).wrapping_add(body.i32_at(MamodelPart::POS_Y)).wrapping_add(body.i32_at(MamodelPart::POS_Y_ANIM));
+                            let scale_x = body.i32_at(MamodelPart::SCALE_X) as f32;
+                            let scale_y = body.i32_at(MamodelPart::SCALE_X_ANIM) as f32;
                             let unit_x = mamodel_get_scale_unit(model);
                             let unit_y = mamodel_get_scale_unit(model);
-                            let opacity = body.i32_at(0x80);
+                            let opacity = body.i32_at(MamodelPart::LIVE_OPACITY);
                             let alpha = ops::idiv((opacity << 8).wrapping_sub(opacity), model.opacity_unit).ok_or(Fault::divide(model.opacity_unit as i64))?;
 
                             if alpha > 0 {
@@ -590,7 +590,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                                 let origin = flash.wrapping_add(ctx.i32_at(AppContext::DRAW_TEMP_1)?) as f64;
                                 let anchor = ctx.i32_at(AppContext::ANCHOR_OUT)? as f64;
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin - anchor);
-                                let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
+                                let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + Vector::Y)?);
 
                                 draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y)?;
                             } else {
@@ -828,7 +828,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                                 let origin = pos_x.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT)?) as f64;
                                 let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
-                                let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + 4)?);
+                                let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(ctx.i32_at(AppContext::ANCHOR_OUT + Vector::Y)?);
 
                                 draw_model(draw_context(&mut ctx.draw)?, &ctx.unit_models[side][index], x, y)?;
                             }
@@ -946,7 +946,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let opacity = fever_fade_lerp(&ctx.special_rules, ctx.fever_model.opacity_unit);
         let part = mamodel_get_part(&ctx.fever_model, 0).ok_or(Fault::null_pointer())?;
 
-        ctx.fever_model.parts[part].set_i32_at(0x7c, opacity);
+        ctx.fever_model.parts[part].set_i32_at(MamodelPart::OPACITY, opacity);
 
         let x = ops::div_2(get_drawable_width(ctx)?);
         let y = ops::div_2(get_design_height2(ctx));
@@ -985,7 +985,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let width = get_drawable_width(ctx)?;
         let shift_x = get_setting(&ctx.settings, b"battle_castle_x2", 0)?;
         let row = ctx.i32_at(AppContext::DRAW_TEMP_2)?;
-        let lift = ctx.i32_at(AppContext::ANCHOR_OUT + 4)?;
+        let lift = ctx.i32_at(AppContext::ANCHOR_OUT + Vector::Y)?;
         let shift_y = get_setting(&ctx.settings, b"battle_castle_y2", 0)?;
         let x = ops::cvttsd2si(width.wrapping_add(-0x3c0) as f64 * 0.5 + anchor.wrapping_add(pos_x) as f64 + shift_x as f64);
         let y = lift.wrapping_add(row).wrapping_add(shift_y);
@@ -1667,9 +1667,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         && touch_is_down(ctx)? != 0
     {
         let left = ctx.i32_at(AppContext::OUTRO_OK_RECT)?;
-        let top = ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?;
-        let right = ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?;
-        let bottom = ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?;
+        let top = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?;
+        let right = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?;
+        let bottom = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
         if hit_test_rect(ctx, left, top, right, bottom)? && ctx.u8_at(AppContext::OUTRO_BUTTON_LOCK)? == 0 {
             let centre = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);

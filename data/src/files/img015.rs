@@ -195,3 +195,9 @@ pub const ICON_RESIST_EXPLOSION: usize = 386;
 pub const ICON_DRAIN: usize = 389;
 /// The sprite index of the drain immune icon.
 pub const ICON_IMMUNE_DRAIN: usize = 391;
+/// The sprite index of the attack buff plus icon.
+pub const ICON_ATTACK_BUFF_PLUS: usize = 392;
+/// The sprite index of the health buff plus icon.
+pub const ICON_HEALTH_BUFF_PLUS: usize = 393;
+/// The sprite index of the recharge cut icon.
+pub const ICON_RECHARGE_CUT: usize = 396;

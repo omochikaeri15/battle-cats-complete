@@ -555,7 +555,7 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let mut unit = 0i32;
 
-    while unit != 876 {
+    while unit != ctx.limits.units {
         let file = unit.wrapping_add(1);
         let lang = query_localizable(ctx, b"lang");
         let name =
@@ -800,7 +800,7 @@ pub fn load_misc_data_tables(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let mut slot = 0i32;
 
-        while slot != 31 {
+        while slot != 33 {
             read_stream_row(stm, b',');
 
             let mut page: [Vec<u8>; 12] = Default::default();

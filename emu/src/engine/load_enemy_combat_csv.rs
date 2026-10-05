@@ -5,13 +5,12 @@ use super::{
     read_csv_cell, read_csv_row,
 };
 
-const ROWS: usize = 0x324;
 const COLUMNS: i32 = 0x71;
 
 pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) -> Result<(), Fault> {
     let mut stats = ENEMY_STATS;
 
-    for row in 0..ROWS {
+    for row in 0..ctx.limits.enemy_rows as usize {
         read_csv_row(stm);
 
         let row_at = row * ENEMY_STATS_STRIDE;
@@ -72,7 +71,7 @@ pub fn load_enemy_combat_csv(ctx: &mut AppContext, stm: &mut AssetStream<'_>) ->
 
     let mut group = 0;
 
-    while group != ROWS * ENEMY_STATS_STRIDE {
+    while group != (ctx.limits.enemy_rows as usize).wrapping_mul(ENEMY_STATS_STRIDE) {
         let first = ctx.i32_at(group + ENEMY_STATS + EnemyStats::CASH_DROP)?;
         ctx.set_i32_at(
             group + ENEMY_STATS + EnemyStats::CASH_DROP,

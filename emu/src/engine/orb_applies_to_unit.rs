@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, build_trait_mask, get_unit_form, stat_massive_damage, stat_resist,
-    stat_strong_against, stat_surge_immune, trait_aku, trait_alien, trait_angel, trait_dark,
+    stat_recharge_cut, stat_strong_against, stat_surge_immune, trait_aku, trait_alien, trait_angel, trait_dark,
     trait_eva, trait_floating, trait_metal, trait_red, trait_relic, trait_traitless, trait_witch,
     trait_zombie,
 };
@@ -17,6 +17,14 @@ pub fn orb_applies_to_unit(
         let form = get_unit_form(ctx, unit_id)?;
 
         if stat_surge_immune(ctx, 0, unit_id, form)? {
+            return Ok(4);
+        }
+    }
+
+    if abil == 0x13 {
+        let form = get_unit_form(ctx, unit_id)?;
+
+        if stat_recharge_cut(ctx, 0, unit_id, form)? > 0 {
             return Ok(4);
         }
     }

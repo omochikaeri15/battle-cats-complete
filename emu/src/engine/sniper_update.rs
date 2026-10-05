@@ -1,8 +1,8 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, Entity, atan2_deg, cos_deg, get_base_pos_x, get_base_pos_y, get_battle_status,
-    get_design_height2, get_entity_base_idx, get_powerup, is_touchable, sin_deg,
+    AppContext, Entity, SniperCasing, atan2_deg, cos_deg, get_base_pos_x, get_base_pos_y,
+    get_battle_status, get_design_height2, get_entity_base_idx, get_powerup, is_touchable, sin_deg,
 };
 
 pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -258,26 +258,26 @@ pub fn sniper_update(ctx: &mut AppContext) -> Result<(), Fault> {
             let mut casing = 0usize;
 
             while casing != 4 {
-                let record = AppContext::SNIPER_CASINGS.wrapping_add(casing.wrapping_mul(0x14));
-                let drift_x = ctx.i32_at(record.wrapping_add(0xc))?;
-                let drift_y = ctx.i32_at(record.wrapping_add(0x10))?;
+                let record = AppContext::SNIPER_CASINGS.wrapping_add(casing.wrapping_mul(SniperCasing::STRIDE));
+                let drift_x = ctx.i32_at(record.wrapping_add(SniperCasing::DRIFT_X))?;
+                let drift_y = ctx.i32_at(record.wrapping_add(SniperCasing::DRIFT_Y))?;
                 let x = ctx.i32_at(record)?.wrapping_add(drift_x);
-                let y = ctx.i32_at(record.wrapping_add(4))?.wrapping_add(drift_y);
+                let y = ctx.i32_at(record.wrapping_add(SniperCasing::Y))?.wrapping_add(drift_y);
 
                 ctx.set_i32_at(record, x)?;
-                ctx.set_i32_at(record.wrapping_add(4), y)?;
+                ctx.set_i32_at(record.wrapping_add(SniperCasing::Y), y)?;
                 ctx.set_i32_at(
-                    record.wrapping_add(0xc),
+                    record.wrapping_add(SniperCasing::DRIFT_X),
                     ops::cvttsd2si(drift_x as f64 * 0.5),
                 )?;
                 ctx.set_i32_at(
-                    record.wrapping_add(0x10),
+                    record.wrapping_add(SniperCasing::DRIFT_Y),
                     ops::cvttsd2si(drift_y as f64 * 0.5),
                 )?;
 
-                let age = ctx.i32_at(record.wrapping_add(8))?;
+                let age = ctx.i32_at(record.wrapping_add(SniperCasing::AGE))?;
 
-                ctx.set_i32_at(record.wrapping_add(8), age.wrapping_add(1))?;
+                ctx.set_i32_at(record.wrapping_add(SniperCasing::AGE), age.wrapping_add(1))?;
 
                 if age >= 9 {
                     ctx.set_block_at::<1>(AppContext::SNIPER_CASINGS_LIVE, [0])?;

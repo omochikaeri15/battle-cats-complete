@@ -1,4 +1,4 @@
-pub const TALENT_ABILITY_ICONS: [(i32, i32); 57] = [
+pub const TALENT_ABILITY_ICONS: [(i32, i32); 60] = [
     (1, 0),
     (2, 2),
     (3, 3),
@@ -56,4 +56,7 @@ pub const TALENT_ABILITY_ICONS: [(i32, i32); 57] = [
     (67, 81),
     (68, 72),
     (69, 82),
+    (70, 85),
+    (71, 86),
+    (72, 87),
 ];

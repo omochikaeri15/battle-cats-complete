@@ -32,7 +32,8 @@ pub(in crate::editor::figures) fn rule(field: &str) -> Option<Rule> {
         "knockback_chance" | "freeze_chance" | "slow_chance" | "critical_chance" | "wave_chance"
         | "weaken_chance" | "weaken_to" | "strengthen_threshold" | "survive" | "barrier_breaker_chance"
         | "warp_chance" | "savage_blow_chance" | "dodge_chance" | "surge_chance" | "curse_chance"
-        | "shield_pierce_chance" | "behemoth_dodge_chance" | "metal_killer_percent" | "explosion_chance" => Some(Rule::Percent),
+        | "shield_pierce_chance" | "behemoth_dodge_chance" | "metal_killer_percent" | "explosion_chance"
+        | "recharge_cut" => Some(Rule::Percent),
 
         "hitpoints" | "knockbacks" | "speed" | "attack_1_damage" | "attack_cooldown"
         | "time_until_attack_1" | "freeze_duration" | "slow_duration" | "weaken_duration" | "attack_2_damage"
@@ -58,6 +59,9 @@ pub(in crate::editor::figures) fn note(field: &str) -> Option<&'static str> {
             "Legacy, does nothing now\nBack in 1.0.0 this cat dealt half damage to enemies whose \"Legacy Strong Against\" was also set",
         ),
         "cooldown" => Some("The game floors this at 60 frames, so anything lower is the same as 60"),
+        "recharge_cut" => Some(
+            "Takes this percentage off the cooldown every second deploy\nThe shortened cooldown still floors at 60 frames",
+        ),
         "spawn_animation_type" => {
             Some("An animation ID, same idea as the soul one\n-1 means none, 0 means use ID 0")
         }

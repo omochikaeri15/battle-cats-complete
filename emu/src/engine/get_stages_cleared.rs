@@ -55,7 +55,7 @@ pub fn get_stages_cleared(
                 .map(|cleared| *cleared as i32)
                 .ok_or(Fault::index_out_of_range(map_idx as i64, maps.len() as i64))
         }
-        0x03 => get_cleared_count(ctx, 0xad0),
+        0x03 => get_cleared_count(ctx, AppContext::LABYRINTH),
         0x05 => Ok(0x31),
         0x04 | 0x06..=0x08 | 0x0d => {
             let (maps, cell) = match case {

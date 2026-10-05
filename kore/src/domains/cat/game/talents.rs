@@ -16,6 +16,69 @@ pub(crate) fn calculate_talent_value(minimum: u16, maximum: u16, level: u8, max_
     TalentGroup::calculate_value(minimum, maximum, level, max_level)
 }
 
+fn linked_rank(ability_id: u8) -> usize {
+    CAT_STATS_REGISTRY
+        .iter()
+        .find_map(|stat_definition| stat_definition.linked_talents.iter().position(|linked| *linked == ability_id))
+        .unwrap_or(0)
+}
+
+fn staged(leveled_stats: &Entity, own: &TalentGroup, own_level: u8, siblings: &[(&TalentGroup, u8)]) -> Entity {
+    let mut chain: Vec<(&TalentGroup, u8)> = siblings.iter().copied().chain(std::iter::once((own, own_level))).collect();
+    let mut stats = leveled_stats.clone();
+
+    chain.sort_by_key(|(group, _)| linked_rank(group.ability_id));
+
+    for (group, level) in chain {
+        let Some(apply_talent_mutation) = get_talent(group.ability_id).and_then(|pure_definition| pure_definition.apply_talent) else {
+            continue;
+        };
+
+        if level == 0 {
+            continue;
+        }
+
+        let value_one = calculate_talent_value(group.min_1, group.max_1, level, group.max_level);
+        let value_two = calculate_talent_value(group.min_2, group.max_2, level, group.max_level);
+
+        apply_talent_mutation(&mut stats, value_one, value_two, group);
+    }
+
+    stats
+}
+
+#[derive(Clone, Copy)]
+pub struct Scaling<'a> {
+    pub curve: Option<&'a LevelCurve>,
+    pub level: i32,
+    pub treasure: &'a Bonus,
+}
+
+pub fn calculate_linked_display(
+    talent_data: &Talent,
+    talent_levels: &HashMap<u8, u8>,
+    index: usize,
+    base_stats: &Entity,
+    scaling: Scaling<'_>,
+    traits: &Entity,
+) -> Option<String> {
+    let talent_group = talent_data.groups.get(index)?;
+    let talent_level = talent_levels.get(&(index as u8)).copied().unwrap_or(0);
+    let linked = CAT_STATS_REGISTRY
+        .iter()
+        .find(|stat_definition| stat_definition.linked_talents.contains(&talent_group.ability_id))
+        .map_or(&[][..], |stat_definition| stat_definition.linked_talents);
+    let siblings: Vec<(&TalentGroup, u8)> = talent_data
+        .groups
+        .iter()
+        .enumerate()
+        .filter(|(other, group)| *other != index && linked.contains(&group.ability_id))
+        .map(|(other, group)| (group, talent_levels.get(&(other as u8)).copied().unwrap_or(0)))
+        .collect();
+
+    display(talent_group, &siblings, base_stats, talent_level, scaling, traits)
+}
+
 pub fn calculate_talent_display(
     talent_group: &TalentGroup,
     base_stats: &Entity,
@@ -25,30 +88,29 @@ pub fn calculate_talent_display(
     treasure: &Bonus,
     traits: &Entity,
 ) -> Option<String> {
+    display(talent_group, &[], base_stats, talent_level, Scaling { curve: level_curve, level: unit_level, treasure }, traits)
+}
+
+fn display(
+    talent_group: &TalentGroup,
+    siblings: &[(&TalentGroup, u8)],
+    base_stats: &Entity,
+    talent_level: u8,
+    scaling: Scaling<'_>,
+    traits: &Entity,
+) -> Option<String> {
+    let treasure = scaling.treasure;
     let pure_definition = get_talent(talent_group.ability_id)?;
     let display_definition = get_display_def(pure_definition.identity);
 
-    let leveled_base_stats = stats::apply_level(base_stats, level_curve, unit_level, treasure);
-    let mut mutated_stats = leveled_base_stats.clone();
-    let mut dummy_min_stats = leveled_base_stats.clone();
-    let mut dummy_max_stats = leveled_base_stats.clone();
+    let leveled_stats = stats::apply_level(base_stats, scaling.curve, scaling.level, treasure);
+    let leveled_base_stats = staged(&leveled_stats, talent_group, 0, siblings);
+    let mutated_stats = staged(&leveled_stats, talent_group, talent_level, siblings);
+    let dummy_min_stats = staged(&leveled_stats, talent_group, 1, siblings);
+    let dummy_max_stats = staged(&leveled_stats, talent_group, talent_group.max_level.max(1), siblings);
 
     let value_one = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_level, talent_group.max_level);
     let value_two = calculate_talent_value(talent_group.min_2, talent_group.max_2, talent_level, talent_group.max_level);
-
-    if let Some(apply_talent_mutation) = pure_definition.apply_talent {
-        if talent_level > 0 {
-            apply_talent_mutation(&mut mutated_stats, value_one, value_two, talent_group);
-        }
-
-        let value_one_minimum = calculate_talent_value(talent_group.min_1, talent_group.max_1, 1, talent_group.max_level);
-        let value_two_minimum = calculate_talent_value(talent_group.min_2, talent_group.max_2, 1, talent_group.max_level);
-        apply_talent_mutation(&mut dummy_min_stats, value_one_minimum, value_two_minimum, talent_group);
-
-        let value_one_maximum = calculate_talent_value(talent_group.min_1, talent_group.max_1, talent_group.max_level, talent_group.max_level);
-        let value_two_maximum = calculate_talent_value(talent_group.min_2, talent_group.max_2, talent_group.max_level, talent_group.max_level);
-        apply_talent_mutation(&mut dummy_max_stats, value_one_maximum, value_two_maximum, talent_group);
-    }
 
     let maximum_attributes = (pure_definition.attributes)(&dummy_max_stats);
 
@@ -69,7 +131,7 @@ pub fn calculate_talent_display(
         return Some(format!("Resist: 0% (+{}%) {ARROW} {}%", value_one, value_one));
     }
 
-    let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talent_id == Some(talent_group.ability_id));
+    let target_stat_definition = CAT_STATS_REGISTRY.iter().find(|stat_definition| stat_definition.linked_talents.contains(&talent_group.ability_id));
 
     if let Some(stat_definition) = target_stat_definition {
         let old_stat_value = (stat_definition.get_value)(&StatContext::cat(&leveled_base_stats, 0, None, treasure));
@@ -349,7 +411,11 @@ pub fn maxed_levels(talent_data: &Talent) -> HashMap<u8, u8> {
 pub(crate) fn apply_talent_stats(base_stats: &Entity, talent_data: &Talent, talent_levels: &HashMap<u8, u8>) -> Entity {
     let mut mutated_stats = base_stats.clone();
 
-    for (talent_index, talent_group) in talent_data.groups.iter().enumerate() {
+    let mut ordered: Vec<(usize, &TalentGroup)> = talent_data.groups.iter().enumerate().collect();
+
+    ordered.sort_by_key(|(_, talent_group)| linked_rank(talent_group.ability_id));
+
+    for (talent_index, talent_group) in ordered {
         let current_level = *talent_levels.get(&(talent_index as u8)).unwrap_or(&0);
 
         if current_level > 0 && talent_group.name_id != -1 {
@@ -393,4 +459,27 @@ pub fn get_total_np_cost(talent_data: &Talent, talent_levels: &HashMap<u8, u8>, 
             get_talent_np_cost(group.cost_id, current_level, costs_map)
         })
         .sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn boost(ability_id: u8, percent: u16) -> TalentGroup {
+        TalentGroup { ability_id, max_level: 1, min_1: percent, max_1: percent, name_id: -1, ..TalentGroup::default() }
+    }
+
+    #[test]
+    fn linked_stat_talents_stack_the_way_the_game_multiplies_them() {
+        // The game multiplies the basic buff in first, then the plus one, dropping the fraction each time.
+        let talent = Talent { id: 0, type_id: 0, groups: vec![boost(71, 50), boost(32, 15), boost(31, 10)] };
+        let base = Entity { hitpoints: 1003, attack_1_damage: 100, ..Entity::default() };
+        let levels = HashMap::from([(0u8, 1u8), (1, 1), (2, 1)]);
+        let both = apply_talent_stats(&base, &talent, &levels);
+
+        assert_eq!(both.hitpoints, 1729, "1003 -> 1153 -> 1729, not the 1730 the other order gives");
+        assert_eq!(both.attack_1_damage, 110);
+        assert_eq!(staged(&base, &talent.groups[1], 1, &[(&talent.groups[0], 1)]).hitpoints, both.hitpoints, "either row ends on the same total");
+        assert_eq!(staged(&base, &talent.groups[0], 0, &[(&talent.groups[1], 1)]).hitpoints, 1153, "the plus row starts from the basic buff's result");
+    }
 }

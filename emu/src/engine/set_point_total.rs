@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, get_release_point_cap, get_scene_id};
+use super::{AppContext, get_release_point_cap, get_scene_id, max_i32, min_i32};
 
 pub fn set_point_total(ctx: &mut AppContext, point_id: i32, value: i32) -> Result<(), Fault> {
     ctx.event_items
@@ -20,6 +20,16 @@ pub fn set_point_total(ctx: &mut AppContext, point_id: i32, value: i32) -> Resul
     } else {
         get_release_point_cap(ctx, point_id)?
     };
+    let capped = min_i32(value, cap);
+    let current = ctx
+        .event_items
+        .as_ref()
+        .ok_or(Fault::null_pointer())?
+        .records
+        .get(&point_id)
+        .ok_or(Fault::key_not_found(point_id as i64))?
+        .total;
+    let kept = max_i32(capped, current);
     let record = ctx
         .event_items
         .as_mut()
@@ -28,7 +38,7 @@ pub fn set_point_total(ctx: &mut AppContext, point_id: i32, value: i32) -> Resul
         .get_mut(&point_id)
         .ok_or(Fault::key_not_found(point_id as i64))?;
 
-    record.total = if cap >= value { value } else { cap };
+    record.total = kept;
 
     Ok(())
 }

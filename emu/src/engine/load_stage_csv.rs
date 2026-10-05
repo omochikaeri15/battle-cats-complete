@@ -369,7 +369,7 @@ pub fn load_stage_csv(ctx: &mut AppContext, stage: i32, check_pack: i32) -> Resu
                 let replacement = altar_replacement(ctx, enemy);
 
                 if replacement != -1 {
-                    ctx.set_i32_at(AppContext::STAGE_LENGTH + 0x18, replacement.wrapping_add(2))?;
+                    ctx.set_i32_at(AppContext::CASTLE_ENEMY_ROW, replacement.wrapping_add(2))?;
                     set_stage_entry_enemy(&mut ctx.stage_enemies[entry], replacement);
                 }
             }

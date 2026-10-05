@@ -1,8 +1,8 @@
 use crate::Fault;
 
 use super::{
-    AppContext, AssetStream, load_enemy_castle_csv, open_asset_stream, read_csv_cell, read_csv_row,
-    string_format_int,
+    AppContext, AssetStream, MapStageRow, load_enemy_castle_csv, open_asset_stream, read_csv_cell,
+    read_csv_row, string_format_int,
 };
 
 pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fault> {
@@ -31,10 +31,10 @@ pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fau
     let count = read_csv_cell(&stm, 0) as i32;
 
     for row in 0..0x64usize {
-        let row_at = AppContext::MAP_STAGE_ROWS + row * 0xbc;
+        let row_at = AppContext::MAP_STAGE_ROWS + row * MapStageRow::STRIDE;
 
         for col in 0..0x2eusize {
-            let key = ctx.i32_at(row_at + 0xb8)?;
+            let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
             ctx.set_i32_at(row_at + col * 4, !key)?;
         }
@@ -44,15 +44,15 @@ pub fn load_ex_map_stage_csv(ctx: &mut AppContext, map: i32) -> Result<bool, Fau
         for row in 0..count as u32 as usize {
             read_csv_row(&mut stm);
 
-            let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(0xbc));
+            let row_at = AppContext::MAP_STAGE_ROWS.wrapping_add(row.wrapping_mul(MapStageRow::STRIDE));
 
             for col in 0..0x2eusize {
                 let value = read_csv_cell(&stm, col as i32) as i32;
-                let key = ctx.i32_at(row_at + 0xb8)?;
+                let key = ctx.i32_at(row_at + MapStageRow::KEY)?;
 
                 ctx.set_i32_at(row_at + col * 4, value ^ key)?;
 
-                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + 0xb8)? == -1 {
+                if ctx.i32_at(row_at + col * 4)? ^ ctx.i32_at(row_at + MapStageRow::KEY)? == -1 {
                     break;
                 }
             }

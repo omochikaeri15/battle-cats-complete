@@ -25,8 +25,8 @@ pub fn get_map_count(ctx: &AppContext, map_type: i32) -> Result<i32, Fault> {
         0x0f => &ctx.stage_name_variants[10],
         0x10 => &ctx.stage_name_variants[9],
         0x11 => &ctx.stage_name_variants[8],
-        0x12 => return Ok(0x52),
-        0x15 => return Ok(0x10),
+        0x12 => return Ok(ctx.limits.ex_maps),
+        0x15 => return Ok(ctx.limits.neg5_maps),
         0x16 => &ctx.stage_name_variants[3],
         0x1a..=0x1e => {
             return ctx

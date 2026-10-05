@@ -76,6 +76,12 @@ pub fn compute_hp(
             hp = ops::div_100(hp.wrapping_mul(boost.wrapping_add(0x64) as u32 as i64));
         }
 
+        let plus_boost = get_talent_value(ctx, faction, unit_id, form, 0x47, 0)?;
+
+        if plus_boost > 0 {
+            hp = ops::div_100(hp.wrapping_mul(plus_boost.wrapping_add(0x64) as u32 as i64));
+        }
+
         return Ok(hp as i32);
     }
 

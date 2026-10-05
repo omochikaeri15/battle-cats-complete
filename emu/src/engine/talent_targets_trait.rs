@@ -1,8 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, get_scene_id, has_fixed_lineup, has_talent, is_trait_targeted_talent,
-    std_map_int_int_from_list,
+    AppContext, get_scene_id, has_fixed_lineup, has_talent, std_map_int_int_from_list,
 };
 
 pub fn talent_targets_trait(
@@ -50,15 +49,17 @@ pub fn talent_targets_trait(
     let mut talent_slot = 0;
 
     loop {
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
-        if is_trait_targeted_talent(definition[talent_slot * 0xe + 1]) {
+        let abil = definition[talent_slot * 0xe + 1];
+
+        if (abil.wrapping_sub(1) as u32) < 9 || abil == 0x3c || abil == 0x33 {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
-            let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+            let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = levels.entry(definition[talent_slot * 0xe + 1]).or_default();
 
             if *level > 0 {
-                let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+                let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
                 return Ok(definition[0] & trait_bit != 0);
             }
@@ -66,7 +67,7 @@ pub fn talent_targets_trait(
 
         talent_slot += 1;
 
-        if talent_slot == 8 {
+        if talent_slot == ctx.limits.talent_groups as usize {
             return Ok(false);
         }
     }

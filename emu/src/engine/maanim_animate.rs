@@ -1,6 +1,6 @@
 use crate::{Fault, ops};
 
-use super::{Maanim, Mamodel, deploy_part, std_vector_int_assign};
+use super::{Maanim, Mamodel, MamodelPart, deploy_part, std_vector_int_assign};
 
 pub fn maanim_animate(
     model: &mut Mamodel,
@@ -15,20 +15,20 @@ pub fn maanim_animate(
         let opacity_unit = model.opacity_unit;
 
         for part in model.parts.iter_mut() {
-            part.set_i32_at(0x20, 0);
-            part.set_i32_at(0x28, 0);
-            part.set_i32_at(0x30, 0);
-            part.set_i32_at(0x38, 0);
-            part.set_i32_at(0x44, 0);
-            part.set_i32_at(0x48, 0);
-            part.set_i32_at(0x54, 0);
-            part.set_i32_at(0x58, 0);
-            part.set_i32_at(0x70, scale_unit);
-            part.set_i32_at(0x64, scale_unit);
-            part.set_i32_at(0x78, 0);
-            part.set_i32_at(0x84, opacity_unit);
-            part.set_u8_at(0x8a, 0);
-            part.set_u8_at(0x88, 0);
+            part.set_i32_at(MamodelPart::PARENT_ANIM, 0);
+            part.set_i32_at(MamodelPart::SHEET_ANIM, 0);
+            part.set_i32_at(MamodelPart::CUT_ANIM, 0);
+            part.set_i32_at(MamodelPart::DEPTH_ANIM, 0);
+            part.set_i32_at(MamodelPart::POS_X_ANIM, 0);
+            part.set_i32_at(MamodelPart::POS_Y_ANIM, 0);
+            part.set_i32_at(MamodelPart::PIVOT_X_ANIM, 0);
+            part.set_i32_at(MamodelPart::PIVOT_Y_ANIM, 0);
+            part.set_i32_at(MamodelPart::SCALE_Y_ANIM, scale_unit);
+            part.set_i32_at(MamodelPart::SCALE_X_ANIM, scale_unit);
+            part.set_i32_at(MamodelPart::ANGLE_ANIM, 0);
+            part.set_i32_at(MamodelPart::OPACITY_ANIM, opacity_unit);
+            part.set_u8_at(MamodelPart::FLIP_Y, 0);
+            part.set_u8_at(MamodelPart::FLIP_X, 0);
         }
     }
 
@@ -275,24 +275,24 @@ pub fn maanim_animate(
                 .ok_or(Fault::index_out_of_range(target, part_count as i64))?;
 
             match track.header[1] as u32 {
-                0x0 => part.set_i32_at(0x20, value.wrapping_sub(part.i32_at(0x1c))),
-                0x1 => part.set_i32_at(0x28, value.wrapping_sub(part.i32_at(0x24))),
-                0x2 => part.set_i32_at(0x30, value.wrapping_sub(part.i32_at(0x2c))),
-                0x3 => part.set_i32_at(0x38, value.wrapping_sub(part.i32_at(0x34))),
-                0x4 => part.set_i32_at(0x44, value),
-                0x5 => part.set_i32_at(0x48, value),
-                0x6 => part.set_i32_at(0x54, value),
-                0x7 => part.set_i32_at(0x58, value),
+                0x0 => part.set_i32_at(MamodelPart::PARENT_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::PARENT))),
+                0x1 => part.set_i32_at(MamodelPart::SHEET_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::SHEET))),
+                0x2 => part.set_i32_at(MamodelPart::CUT_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::CUT))),
+                0x3 => part.set_i32_at(MamodelPart::DEPTH_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::DEPTH))),
+                0x4 => part.set_i32_at(MamodelPart::POS_X_ANIM, value),
+                0x5 => part.set_i32_at(MamodelPart::POS_Y_ANIM, value),
+                0x6 => part.set_i32_at(MamodelPart::PIVOT_X_ANIM, value),
+                0x7 => part.set_i32_at(MamodelPart::PIVOT_Y_ANIM, value),
                 0x8 => {
-                    part.set_i32_at(0x70, value);
-                    part.set_i32_at(0x64, value);
+                    part.set_i32_at(MamodelPart::SCALE_Y_ANIM, value);
+                    part.set_i32_at(MamodelPart::SCALE_X_ANIM, value);
                 }
-                0x9 => part.set_i32_at(0x64, value),
-                0xa => part.set_i32_at(0x70, value),
-                0xb => part.set_i32_at(0x78, value),
-                0xc => part.set_i32_at(0x84, value),
-                0xd => part.set_u8_at(0x88, (value != 0) as u8),
-                0xe => part.set_u8_at(0x8a, (value != 0) as u8),
+                0x9 => part.set_i32_at(MamodelPart::SCALE_X_ANIM, value),
+                0xa => part.set_i32_at(MamodelPart::SCALE_Y_ANIM, value),
+                0xb => part.set_i32_at(MamodelPart::ANGLE_ANIM, value),
+                0xc => part.set_i32_at(MamodelPart::OPACITY_ANIM, value),
+                0xd => part.set_u8_at(MamodelPart::FLIP_X, (value != 0) as u8),
+                0xe => part.set_u8_at(MamodelPart::FLIP_Y, (value != 0) as u8),
                 _ => {}
             }
         }
@@ -314,7 +314,7 @@ pub fn maanim_animate(
 
         while index < model.parts.len() as u64 {
             let part = &model.parts[index as usize];
-            let parent = part.i32_at(0x20).wrapping_add(part.i32_at(0x1c));
+            let parent = part.i32_at(MamodelPart::PARENT_ANIM).wrapping_add(part.i32_at(MamodelPart::PARENT));
 
             if level.contains(&parent) {
                 next.push(index as i32);
@@ -348,7 +348,7 @@ pub fn maanim_animate(
 
     for index in 0..part_count {
         let part = &model.parts[index];
-        let depth = part.i32_at(0x38).wrapping_add(part.i32_at(0x34));
+        let depth = part.i32_at(MamodelPart::DEPTH_ANIM).wrapping_add(part.i32_at(MamodelPart::DEPTH));
 
         *model
             .draw_order

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, BUTTON_PRESS_BOUNCE, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
+    AppContext, BUTTON_PRESS_BOUNCE, Cells, DECK_SLOT_X_TABLE, conjurer_on_field, cos_deg,
     draw_context, draw_cooldown_bar, draw_cut, draw_cut_scaled, draw_deck_preset_mark,
     draw_deploy_cost, draw_model, draw_panel, fill_rect, get_button_unit_form, get_button_unit_id,
     get_button_unit_row, get_current_stage_id, get_deck_cooldown, get_drawable_width,
@@ -11,7 +11,7 @@ use super::{
     get_orb_slot_count, get_setting, get_special_rule, get_unit_rarity, glow_set,
     imgcut_get_sprite_cut, is_deploy_blocked, maanim_execute, orb_ability_flag, orb_ability_repeat,
     orb_icon_visible, set_alpha, set_color, set_tint, set_tint_alpha, slot_conjure_ready,
-    slot_has_flagged_orb, stage_has_restriction, unit_meets_restriction,
+    slot_has_flagged_orb, stage_has_restriction, stat_recharge_cut, unit_meets_restriction,
 };
 
 pub fn draw_deck_button(
@@ -75,7 +75,7 @@ pub fn draw_deck_button(
             if shown == 1 {
                 if slot <= 4 {
                     bottom =
-                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
+                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + Cells::SECOND)?);
                 } else {
                     bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS)?);
                 }
@@ -84,7 +84,7 @@ pub fn draw_deck_button(
                     bottom = bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS)?);
                 } else {
                     bottom =
-                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + 4)?);
+                        bottom.wrapping_add(ctx.i32_at(AppContext::DECK_ROW_SWAP_OFFSETS + Cells::SECOND)?);
                 }
             }
 
@@ -352,15 +352,42 @@ pub fn draw_deck_button(
         );
     }
 
-    if get_button_unit_form(ctx, 0, slot)? < 2 {
-        return Ok(());
-    }
+    if get_button_unit_form(ctx, 0, slot)? < 2
+        || !slot_has_flagged_orb(ctx, 0, slot)?
+        || get_deck_cooldown(ctx, wallet, slot)? != 0
+    {
+        let unit_id = get_button_unit_id(ctx, 0, slot)?;
+        let form = get_button_unit_form(ctx, 0, slot)?;
 
-    if !slot_has_flagged_orb(ctx, 0, slot)? {
-        return Ok(());
-    }
+        if stat_recharge_cut(ctx, 0, unit_id, form)? <= 0 || overlay != 0 {
+            return Ok(());
+        }
 
-    if get_deck_cooldown(ctx, wallet, slot)? != 0 {
+        let flash = ctx.i32_at(
+            wallet
+                .wrapping_add(AppContext::WALLET_SLOT_FLASH)
+                .wrapping_add(((slot as i64) * 4) as usize),
+        )?;
+
+        if flash < 0 {
+            return Ok(());
+        }
+
+        maanim_execute(
+            &mut ctx.invoke_equipment_model,
+            Some(&ctx.invoke_equipment_anim),
+            flash,
+            0,
+        )?;
+
+        let x = across.wrapping_add(ops::div_2(width));
+        let y = down.wrapping_add(ops::div_2(height));
+        let model = std::mem::take(&mut ctx.invoke_equipment_model);
+
+        draw_model(draw_context(&mut ctx.draw)?, &model, x, y)?;
+
+        ctx.invoke_equipment_model = model;
+
         return Ok(());
     }
 

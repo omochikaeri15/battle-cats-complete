@@ -14,38 +14,90 @@ use super::{
     Mamodel, MapLayout, Medal, MapOption, OfficersClubRow, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
     PointEventReward, RealmsRngTable, RecommendedLevelup, SceneHost, ScreenMetrics, SheetTable, SoundManager, SoundState, SpecialRuleStore,
-    StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureStore,
+    StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureGauge, TreasureStore,
     UiHost, UnlockGroup, VibrationStore, UnlockPopupRow, WebPopupEntry, ZombieLotteryRow,
 };
 
-pub const SIZE: usize = 0x475270;
+const GAME_SIZE: usize = 0x47c170;
+const EXACT_LAYOUT: bool = cfg!(feature = "exact-layout");
 const DROP_MAP_CELLS: usize = 48;
 
-pub const ENTITY_BASE: usize = 0x838f8;
-pub const ENTITY_STRIDE: usize = 0x3e8;
-pub const FACTION_STRIDE: usize = 0xc738;
+pub const UNITS: usize = 0x372;
+pub const ENEMY_ROWS: usize = 0x324;
+pub const TALENT_GROUPS: usize = 0xb;
+pub const EX_MAPS: usize = 0x52;
+pub const NEG5_MAPS: usize = 0x10;
+pub const LABEL_SPARES: usize = 0xc8;
+pub const UNIT_CAPACITY: usize = if EXACT_LAYOUT { UNITS } else { 0x800 };
+pub const ENEMY_ROW_CAPACITY: usize = if EXACT_LAYOUT { ENEMY_ROWS } else { 0x800 };
+
+pub const ENTITY_BASE: usize = 0x84080;
+pub const ENTITY_STRIDE: usize = 0x3ec;
+pub const FACTION_STRIDE: usize = 0xc804;
 pub const SLOTS_PER_FACTION: i32 = 51;
 
 pub const STAGE_ENEMY_COLUMNS: usize = 14;
 
-pub const UNIT_BUY: usize = 0x4af08;
 pub const UNIT_BUY_STRIDE: usize = 0x100;
-
-pub const CAT_STATS: usize = 0x9e568;
-pub const CAT_STATS_UNIT_STRIDE: usize = 0x760;
-pub const CAT_STATS_FORM_STRIDE: usize = 0x1d8;
-pub const ENEMY_STATS: usize = 0x233108;
+pub const CAT_STATS_UNIT_STRIDE: usize = 0x770;
+pub const CAT_STATS_FORM_STRIDE: usize = 0x1dc;
 pub const ENEMY_STATS_STRIDE: usize = 0x1c4;
 
-const FACTION_FLAGS: usize = 0x2648;
+const TAIL_UNIT_BUY: usize = GAME_SIZE;
+const TAIL_CAT_STATS: usize = TAIL_UNIT_BUY + UNIT_CAPACITY * UNIT_BUY_STRIDE;
+const TAIL_ENEMY_STATS: usize = TAIL_CAT_STATS + (UNIT_CAPACITY + 2) * CAT_STATS_UNIT_STRIDE;
+const TAIL_UNITS_OWNED: usize = TAIL_ENEMY_STATS + ENEMY_ROW_CAPACITY * ENEMY_STATS_STRIDE;
+const TAIL_UNIT_LEVELS: usize = TAIL_UNITS_OWNED + UNIT_CAPACITY * 4 + 4;
+const TAIL_UNIT_FORMS: usize = TAIL_UNIT_LEVELS + UNIT_CAPACITY * 8;
+const TAIL_REWARD_UNITS_OWNED: usize = TAIL_UNIT_FORMS + UNIT_CAPACITY * 4;
+const TAIL_REWARD_FORMS_OWNED: usize = TAIL_REWARD_UNITS_OWNED + UNIT_CAPACITY * 4;
+const TAIL_UNIT_FORM_COUNTS: usize = TAIL_REWARD_FORMS_OWNED + UNIT_CAPACITY * 4;
+const TAIL_UNIT_LEVEL_CURVE: usize = TAIL_UNIT_FORM_COUNTS + UNIT_CAPACITY * 0x20;
+const TAIL_UNIT_EXP_CURVE: usize = TAIL_UNIT_LEVEL_CURVE + UNIT_CAPACITY * 0x50;
+const TAIL_SEEN_ENEMIES: usize = TAIL_UNIT_EXP_CURVE + UNIT_CAPACITY * 0x50;
+const TAIL_END: usize = TAIL_SEEN_ENEMIES + ENEMY_ROW_CAPACITY * 4;
+
+pub const SIZE: usize = if EXACT_LAYOUT { GAME_SIZE } else { TAIL_END };
+
+const fn moved(game: usize, tail: usize) -> usize {
+    if EXACT_LAYOUT { game } else { tail }
+}
+
+pub const UNIT_BUY: usize = moved(0x4b060, TAIL_UNIT_BUY);
+pub const CAT_STATS: usize = moved(0x9ee88, TAIL_CAT_STATS);
+pub const ENEMY_STATS: usize = moved(0x239da8, TAIL_ENEMY_STATS);
+
+const FACTION_FLAGS: usize = 0x2678;
 const FACTION_FLAGS_STRIDE: usize = 0x1f0;
 
-const RNG_STATE: usize = 0x46f790;
+const _: () = assert!(ENTITY_BASE + 2 * FACTION_STRIDE <= 0x9ee88);
+const _: () = assert!(UNITS <= UNIT_CAPACITY && ENEMY_ROWS <= ENEMY_ROW_CAPACITY);
 
-const _: () = assert!(RNG_STATE + 4 <= SIZE);
-const _: () = assert!(UNIT_BUY + UNIT_BUY_STRIDE <= CAT_STATS);
-const _: () = assert!(CAT_STATS < ENEMY_STATS);
-const _: () = assert!(ENTITY_BASE + 2 * FACTION_STRIDE <= CAT_STATS);
+pub struct Limits {
+    pub units: i32,
+    pub enemy_rows: i32,
+    pub talent_groups: i32,
+    pub ex_maps: i32,
+    pub neg5_maps: i32,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            units: UNITS as i32,
+            enemy_rows: ENEMY_ROWS as i32,
+            talent_groups: TALENT_GROUPS as i32,
+            ex_maps: EX_MAPS as i32,
+            neg5_maps: NEG5_MAPS as i32,
+        }
+    }
+}
+
+impl Limits {
+    pub fn talent_row(&self) -> Vec<i32> {
+        vec![0; (self.talent_groups as usize).wrapping_mul(0xe).wrapping_add(1)]
+    }
+}
 
 pub struct UnitBuy;
 
@@ -56,8 +108,10 @@ impl UnitBuy {
     pub const MAX_LEVEL: usize = 0xc8;
     pub const MAX_PLUS_LEVEL: usize = 0xcc;
     pub const AVAILABLE: usize = 0xe4;
+    pub const AVAILABLE_SIGN: usize = 0xe7;
     pub const ALT_ART: usize = 0xf4;
     pub const KEY: usize = 0xfc;
+    pub const KEY_SIGN: usize = 0xff;
 }
 
 pub struct PageList;
@@ -145,6 +199,7 @@ impl WaveRecord {
     pub const ATTACK: usize = 0x18;
     pub const PROC_FLAGS: usize = 0x1c;
     pub const METAL_KILLER_PCT: usize = 0x28;
+    pub const PROC_EXTRA: usize = 0x24;
     pub const MINI: usize = 0x2c;
 }
 
@@ -189,6 +244,7 @@ impl WaveSprite {
 pub struct CannonShot;
 
 impl CannonShot {
+    pub const STRIDE: usize = 0xc;
     pub const TIMER: usize = 0x0;
     pub const POS_X: usize = 0x4;
     pub const SHOT_ID: usize = 0x8;
@@ -211,6 +267,241 @@ impl Debris {
     pub const POS_X: usize = 0x4;
     pub const POS_Y: usize = 0x8;
     pub const VARIANT: usize = 0xc;
+}
+
+pub struct Rect;
+
+impl Rect {
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const WIDTH: usize = 0x8;
+    pub const HEIGHT: usize = 0xc;
+    pub const STRIDE: usize = 0x10;
+}
+
+pub struct Vector;
+
+impl Vector {
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+}
+
+pub struct Matrix;
+
+impl Matrix {
+    pub const RIGHT_X: usize = 0x0;
+    pub const RIGHT_Y: usize = 0x4;
+    pub const DOWN_X: usize = 0x8;
+    pub const DOWN_Y: usize = 0xc;
+}
+
+pub struct Quad;
+
+impl Quad {
+    pub const CORNER_0: usize = 0x0;
+    pub const CORNER_1: usize = 0x4;
+    pub const CORNER_2: usize = 0x8;
+    pub const CORNER_3: usize = 0xc;
+}
+
+pub struct Cells;
+
+impl Cells {
+    pub const FIRST: usize = 0x0;
+    pub const SECOND: usize = 0x4;
+    pub const THIRD: usize = 0x8;
+}
+
+pub struct ProcRolls;
+
+impl ProcRolls {
+    pub const CRITICAL: usize = 0x0;
+    pub const KNOCKBACK: usize = 0x4;
+    pub const FREEZE: usize = 0x8;
+    pub const SLOW: usize = 0xc;
+    pub const WEAKEN: usize = 0x10;
+    pub const SAVAGE_BLOW: usize = 0x14;
+    pub const WARP: usize = 0x18;
+    pub const BARRIER_BREAKER: usize = 0x1c;
+    pub const CURSE: usize = 0x20;
+    pub const TOXIC: usize = 0x24;
+    pub const SHIELD_PIERCE: usize = 0x28;
+    pub const DRAIN: usize = 0x2c;
+    pub const SIZE: usize = 0x30;
+}
+
+pub struct BgSetup;
+
+impl BgSetup {
+    pub const SKY_TOP: usize = 0x0;
+    pub const SKY_BOTTOM: usize = 0x4;
+    pub const GROUND_TOP: usize = 0x8;
+    pub const GROUND_BOTTOM: usize = 0xc;
+    pub const MODEL_ID: usize = 0x10;
+    pub const HAS_UPPER_LAYER: usize = 0x14;
+    pub const IMAGE_ID: usize = 0x18;
+    pub const GRADIENT_TOP: usize = 0x1c;
+    pub const GRADIENT_BOTTOM: usize = 0x20;
+}
+
+pub struct BgParticle;
+
+impl BgParticle {
+    pub const STRIDE: usize = 0x14;
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const PHASE: usize = 0x8;
+    pub const SPEED: usize = 0xc;
+    pub const KIND: usize = 0x10;
+}
+
+pub struct BgDrifter;
+
+impl BgDrifter {
+    pub const STRIDE: usize = 0x10;
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const ANGLE: usize = 0x8;
+    pub const RADIUS: usize = 0xc;
+}
+
+pub struct BgStar;
+
+impl BgStar {
+    pub const STRIDE: usize = 0x10;
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const GLOW: usize = 0x8;
+}
+
+pub struct BgSprite;
+
+impl BgSprite {
+    pub const STRIDE: usize = 0x40;
+    pub const HALF: usize = 0x20;
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const ANGLE: usize = 0x8;
+    pub const SIZE: usize = 0xc;
+    pub const RATE: usize = 0x10;
+    pub const LIFE: usize = 0x14;
+    pub const TURN: usize = 0x18;
+}
+
+pub struct SniperCasing;
+
+impl SniperCasing {
+    pub const STRIDE: usize = 0x14;
+    pub const X: usize = 0x0;
+    pub const Y: usize = 0x4;
+    pub const AGE: usize = 0x8;
+    pub const DRIFT_X: usize = 0xc;
+    pub const DRIFT_Y: usize = 0x10;
+}
+
+pub struct StrikeSparks;
+
+impl StrikeSparks {
+    pub const FIRST_TIMER: usize = 0x0;
+    pub const FIRST_X: usize = 0x4;
+    pub const FIRST_Y: usize = 0x8;
+    pub const SECOND_TIMER: usize = 0xc;
+    pub const SECOND_X: usize = 0x10;
+    pub const SECOND_Y: usize = 0x14;
+}
+
+pub struct DrawEntry;
+
+impl DrawEntry {
+    pub const STRIDE: usize = 0xc;
+    pub const Z: usize = 0x0;
+    pub const ORDER: usize = 0x4;
+    pub const SLOT: usize = 0x8;
+}
+
+pub struct HitEntry;
+
+impl HitEntry {
+    pub const STRIDE: usize = 0x8;
+    pub const SLOT: usize = 0x0;
+    pub const DISTANCE: usize = 0x4;
+}
+
+pub struct MapStageRow;
+
+impl MapStageRow {
+    pub const STRIDE: usize = 0xbc;
+    pub const MUSIC: usize = 0x8;
+    pub const MUSIC_SWITCH: usize = 0xc;
+    pub const BOSS_MUSIC: usize = 0x10;
+    pub const KEY: usize = 0xb8;
+}
+
+pub struct StageRecordRow;
+
+impl StageRecordRow {
+    pub const STRIDE: usize = 0xd0;
+    pub const KEY: usize = 0xcc;
+}
+
+pub struct TreasureRow;
+
+impl TreasureRow {
+    pub const KEY: usize = 0xc4;
+}
+
+pub struct TechMax;
+
+impl TechMax {
+    pub const LEVEL: usize = 0x0;
+    pub const PLUS: usize = 0x4;
+}
+
+pub struct StampEntry;
+
+impl StampEntry {
+    pub const STRIDE: usize = 0x8;
+    pub const FIRST: usize = 0x0;
+    pub const SECOND: usize = 0x4;
+}
+
+pub struct PowerupGrant;
+
+impl PowerupGrant {
+    pub const STRIDE: usize = 0x18;
+    pub const GRANTED: usize = 0x1;
+}
+
+pub struct Labyrinth;
+
+impl Labyrinth {
+    pub const FLOORS: usize = 0x18;
+    pub const CLEARED_COUNT: usize = 0x338;
+    pub const MAP_ID: usize = 0x550;
+}
+
+pub struct FloorCell;
+
+impl FloorCell {
+    pub const STRIDE: usize = 0x8;
+    pub const FIRST: usize = 0x0;
+    pub const SECOND: usize = 0x4;
+}
+
+pub struct BaseGuardNotice;
+
+impl BaseGuardNotice {
+    pub const STATE: usize = 0x0;
+    pub const FRAME: usize = 0x4;
+}
+
+pub struct CatGodButton;
+
+impl CatGodButton {
+    pub const INTRO: usize = 0x3;
+    pub const CLOSE: usize = 0x4;
+    pub const CONFIRM: usize = 0x5;
+    pub const BACK: usize = 0x6;
 }
 
 pub struct Entity;
@@ -441,6 +732,7 @@ impl Entity {
     pub const DRAIN_PERCENT: usize = 0x3dc;
     pub const DRAIN_PCT: usize = 0x3e0;
     pub const DRAIN_IMMUNE: usize = 0x3e4;
+    pub const RECHARGE_CUT: usize = 0x3e8;
 }
 
 pub struct CatStats;
@@ -564,6 +856,7 @@ impl CatStats {
     pub const EXPLOSION_SPAWN_SPAN: usize = 0x1cc;
     pub const EXPLOSION_IMMUNE: usize = 0x1d0;
     pub const DRAIN_IMMUNE: usize = 0x1d4;
+    pub const RECHARGE_CUT: usize = 0x1d8;
 }
 
 pub struct EnemyStats;
@@ -706,6 +999,9 @@ pub struct StageNameTable {
 
 pub struct AppContext {
     raw: Box<[u8]>,
+    rng_state: u32,
+    pub limits: Limits,
+    pub treasure_gauge: TreasureGauge,
     pub stage_enemies: Vec<[i32; STAGE_ENEMY_COLUMNS]>,
     pub spawn_states: Vec<[i32; 3]>,
     pub unit_models: [Vec<Mamodel>; 2],
@@ -870,7 +1166,7 @@ pub struct AppContext {
     pub equipped_orbs: BTreeMap<i32, BTreeMap<i32, i32>>,
     pub map_data_ids: BTreeMap<i32, Vec<i32>>,
     pub map_stage_sets: BTreeMap<i32, Vec<i32>>,
-    pub talent_definitions: BTreeMap<i32, [i32; 0x71]>,
+    pub talent_definitions: BTreeMap<i32, Vec<i32>>,
     pub talent_levels: BTreeMap<i32, BTreeMap<i32, i32>>,
     pub gamatoto_logs: [Vec<Vec<u8>>; 3],
     pub gamatoto_log_counts: [i32; 3],
@@ -1241,51 +1537,51 @@ impl Default for AppContext {
 impl AppContext {
     pub const DECK_KEY: usize = 0x28;
     pub const DECK_STRIDE: usize = 0x2c;
-    pub const ITEM_COUNTS_KIND_D: usize = 0x188;
-    pub const ITEM_CF_COUNT: usize = 0x450;
-    pub const ITEM_COUNTS_KIND_B: usize = 0x1084;
-    pub const DECK_BUTTON_HELD: usize = 0x13dc;
-    pub const DECK_TWO_LINES: usize = 0x13dd;
-    pub const ITEM_COUNTS_KIND_9: usize = 0x13e2;
+    pub const ITEM_COUNTS_KIND_D: usize = 0x1b0;
+    pub const ITEM_CF_COUNT: usize = 0x478;
+    pub const ITEM_COUNTS_KIND_B: usize = 0x10ac;
+    pub const DECK_BUTTON_HELD: usize = 0x1404;
+    pub const DECK_TWO_LINES: usize = 0x1405;
+    pub const ITEM_COUNTS_KIND_9: usize = 0x140a;
     pub const ITEM_COUNTS_KIND_9_STRIDE: usize = 0x18;
-    pub const ITEM_7B_COUNT: usize = 0x1cc5;
-    pub const ITEM_69_COUNT: usize = 0x1ec2;
-    pub const ITEM_1D_COUNT: usize = 0x2628;
-    pub const ITEM_91_COUNT: usize = 0x2630;
-    pub const ITEM_9D_COUNT: usize = 0x2638;
-    pub const ITEM_D4_COUNT: usize = 0x2640;
-    pub const BATTLE_ZOOM_Y: usize = 0x3474;
-    pub const ITEM_COUNTS_KIND_8: usize = 0x3478;
-    pub const ITEM_COUNTS_KIND_A: usize = 0x3630;
-    pub const ITEM_COUNTS_KIND_C: usize = 0x3640;
-    pub const ITEM_16_COUNT: usize = 0xc158;
-    pub const ITEM_6_COUNT: usize = 0xc2c8;
-    pub const ITEM_7_COUNT: usize = 0xc2d0;
-    pub const ITEM_COUNTS_KIND_3: usize = 0x4a460;
-    pub const ITEM_14_COUNT: usize = 0x32cc64;
-    pub const ITEM_15_COUNT: usize = 0x32cc6c;
-    pub const ITEM_COUNTS_KIND_1: usize = 0x32cc74;
-    pub const DEPLOY_NOTICE_TIMER: usize = 0x290550;
-    pub const DEPLOY_NOTICE_KIND: usize = 0x290554;
-    pub const BABY_BOOM_ACTIVE: usize = 0x32b6b4;
-    pub const MEDAL_MONEY_0: usize = 0x19d0;
-    pub const MEDAL_MONEY_1: usize = 0x19d4;
-    pub const MEDAL_MONEY_4: usize = 0x19d8;
-    pub const DEPLOY_LIMIT_RARITY_COUNTS: usize = 0x33b7f0;
-    pub const DEPLOY_LIMIT_TOTAL: usize = 0x33b808;
-    pub const GATYA_ITEM_ROWS: usize = 0x38a9b0;
-    pub const ITEM_DEFINITIONS: usize = 0x38a9d4;
-    pub const ITEM_REDIRECT_SCALES: usize = 0x38a9c8;
-    pub const MISSION_CANNON_FIRED: usize = 0x3bb700;
+    pub const ITEM_7B_COUNT: usize = 0x1ced;
+    pub const ITEM_69_COUNT: usize = 0x1eea;
+    pub const ITEM_1D_COUNT: usize = 0x2658;
+    pub const ITEM_91_COUNT: usize = 0x2660;
+    pub const ITEM_9D_COUNT: usize = 0x2668;
+    pub const ITEM_D4_COUNT: usize = 0x2670;
+    pub const BATTLE_ZOOM_Y: usize = 0x34a4;
+    pub const ITEM_COUNTS_KIND_8: usize = 0x34a8;
+    pub const ITEM_COUNTS_KIND_A: usize = 0x3660;
+    pub const ITEM_COUNTS_KIND_C: usize = 0x3670;
+    pub const ITEM_16_COUNT: usize = 0xc248;
+    pub const ITEM_6_COUNT: usize = 0xc3b8;
+    pub const ITEM_7_COUNT: usize = 0xc3c0;
+    pub const ITEM_COUNTS_KIND_3: usize = 0x4a5b0;
+    pub const ITEM_14_COUNT: usize = 0x3346e4;
+    pub const ITEM_15_COUNT: usize = 0x3346ec;
+    pub const ITEM_COUNTS_KIND_1: usize = 0x3346f4;
+    pub const DEPLOY_NOTICE_TIMER: usize = 0x2971f0;
+    pub const DEPLOY_NOTICE_KIND: usize = 0x2971f4;
+    pub const BABY_BOOM_ACTIVE: usize = 0x333134;
+    pub const MEDAL_MONEY_0: usize = 0x19f8;
+    pub const MEDAL_MONEY_1: usize = 0x19fc;
+    pub const MEDAL_MONEY_4: usize = 0x1a00;
+    pub const DEPLOY_LIMIT_RARITY_COUNTS: usize = 0x3432a0;
+    pub const DEPLOY_LIMIT_TOTAL: usize = 0x3432b8;
+    pub const GATYA_ITEM_ROWS: usize = 0x392460;
+    pub const ITEM_DEFINITIONS: usize = 0x392484;
+    pub const ITEM_REDIRECT_SCALES: usize = 0x392478;
+    pub const MISSION_CANNON_FIRED: usize = 0x3c3330;
     pub const ITEM_DEFINITION_STRIDE: usize = 0x40;
-    pub const ITEM_5C_COUNT: usize = 0x427a58;
-    pub const ITEM_COUNTS_KIND_5: usize = 0x440314;
-    pub const ITEM_COUNTS_KIND_6: usize = 0x440344;
-    pub const ITEM_COUNTS_KIND_7: usize = 0x44035c;
-    pub const UNITS_OWNED: usize = 0x46ce8;
-    pub const UNITS_OWNED_KEY: usize = 0x47a98;
-    pub const UNIT_LEVELS: usize = 0x47a9c;
-    pub const TECH_LEVELS: usize = 0x4a3ac;
+    pub const ITEM_5C_COUNT: usize = 0x430168;
+    pub const ITEM_5C_CAP: usize = 0x431288;
+    pub const ITEM_COUNTS_KIND_5: usize = 0x448a2c;
+    pub const ITEM_COUNTS_KIND_6: usize = 0x448a5c;
+    pub const ITEM_COUNTS_KIND_7: usize = 0x448a74;
+    pub const UNITS_OWNED: usize = moved(0x46dd8, TAIL_UNITS_OWNED);
+    pub const UNIT_LEVELS: usize = moved(0x47ba4, TAIL_UNIT_LEVELS);
+    pub const TECH_LEVELS: usize = 0x4a4fc;
     pub const WALLET_MONEY: usize = 0x4;
     pub const WALLET_WORKER_LEVEL: usize = 0xc;
     pub const WALLET_COOLDOWNS: usize = 0x14;
@@ -1301,519 +1597,525 @@ impl AppContext {
     pub const WALLET_SLOT_FLASH: usize = 0x180;
     pub const WALLET_CANNON_FIRED: usize = 0x1d0;
     pub const WALLET_SPAWN_SERIAL: usize = 0x1d4;
-    pub const INPUT_BLOCKED: usize = 0x3265fc;
-    pub const OPTION_MENU_IS_OPEN: usize = 0x326624;
-    pub const SWIPE_DY: usize = 0x326640;
-    pub const SWIPE_ANGLE: usize = 0x32664c;
-    pub const SWIPE_VELOCITY: usize = 0x326650;
-    pub const DECK_ROW_SWAP_DIRECTION: usize = 0x32665c;
-    pub const CAMERA_KICK: usize = 0x326660;
-    pub const SNIPER_TARGET: usize = 0x326680;
-    pub const SNIPER_BOB_ANGLE: usize = 0x326684;
-    pub const SNIPER_AIM_ANGLE: usize = 0x326688;
-    pub const SNIPER_AIM_GOAL: usize = 0x32668c;
-    pub const PENDING_STRIKE_TRIGGER_X: usize = 0x326690;
-    pub const PENDING_STRIKE_Y: usize = 0x326758;
-    pub const PENDING_STRIKE_TARGET: usize = 0x326820;
-    pub const PENDING_STRIKE_ACTIVE: usize = 0x3268e8;
-    pub const PENDING_STRIKE_SPEED: usize = 0x32691c;
-    pub const PENDING_STRIKE_ANGLE: usize = 0x3269e4;
-    pub const SNIPER_CHARGE: usize = 0x326aac;
-    pub const SNIPER_FIRING: usize = 0x326ab0;
-    pub const SNIPER_FIRE_FRAME: usize = 0x326ab4;
-    pub const SNIPER_RECOIL: usize = 0x326ab8;
-    pub const SNIPER_CASINGS: usize = 0x326abc;
-    pub const SNIPER_CASINGS_LIVE: usize = 0x326fbc;
-    pub const DECK_ROW_SHOWN: usize = 0x326fc0;
-    pub const DECK_ROW_SWAP_OFFSETS: usize = 0x326fc4;
-    pub const DECK_ROW_SWAP_FRAME: usize = 0x326fd4;
-    pub const DECK_ROW_SWAP_TARGET: usize = 0x326fd8;
-    pub const DECK_ROW_SWAPPING: usize = 0x326fdc;
-    pub const DECK_SWIPE_LATCHED: usize = 0x326fde;
-    pub const PINCH_ZOOMED: usize = 0x326fdf;
-    pub const CAMERA_DRAGGING: usize = 0x326fe0;
-    pub const PENDING_STRIKE_SPARKS: usize = 0x326b0c;
+    pub const INPUT_BLOCKED: usize = 0x32e01c;
+    pub const OPTION_MENU_IS_OPEN: usize = 0x32e044;
+    pub const SWIPE_DY: usize = 0x32e060;
+    pub const SWIPE_ANGLE: usize = 0x32e06c;
+    pub const SWIPE_VELOCITY: usize = 0x32e070;
+    pub const DECK_ROW_SWAP_DIRECTION: usize = 0x32e07c;
+    pub const CAMERA_KICK: usize = 0x32e080;
+    pub const SNIPER_TARGET: usize = 0x32e0a0;
+    pub const SNIPER_BOB_ANGLE: usize = 0x32e0a4;
+    pub const SNIPER_AIM_ANGLE: usize = 0x32e0a8;
+    pub const SNIPER_AIM_GOAL: usize = 0x32e0ac;
+    pub const PENDING_STRIKE_TRIGGER_X: usize = 0x32e0b0;
+    pub const PENDING_STRIKE_Y: usize = 0x32e178;
+    pub const PENDING_STRIKE_TARGET: usize = 0x32e240;
+    pub const PENDING_STRIKE_ACTIVE: usize = 0x32e308;
+    pub const PENDING_STRIKE_SPEED: usize = 0x32e33c;
+    pub const PENDING_STRIKE_ANGLE: usize = 0x32e404;
+    pub const SNIPER_CHARGE: usize = 0x32e4cc;
+    pub const SNIPER_FIRING: usize = 0x32e4d0;
+    pub const SNIPER_FIRE_FRAME: usize = 0x32e4d4;
+    pub const SNIPER_RECOIL: usize = 0x32e4d8;
+    pub const SNIPER_CASINGS: usize = 0x32e4dc;
+    pub const SNIPER_CASINGS_LIVE: usize = 0x32e9dc;
+    pub const DECK_ROW_SHOWN: usize = 0x32e9e0;
+    pub const DECK_ROW_SWAP_OFFSETS: usize = 0x32e9e4;
+    pub const DECK_ROW_SWAP_FRAME: usize = 0x32e9f4;
+    pub const DECK_ROW_SWAP_TARGET: usize = 0x32e9f8;
+    pub const DECK_ROW_SWAPPING: usize = 0x32e9fc;
+    pub const DECK_ROW_SWAP_TAIL: usize = 0x32ea02;
+    pub const DECK_SWIPE_LATCHED: usize = 0x32e9fe;
+    pub const PINCH_ZOOMED: usize = 0x32e9ff;
+    pub const CAMERA_DRAGGING: usize = 0x32ea00;
+    pub const PENDING_STRIKE_SPARKS: usize = 0x32e52c;
     pub const PENDING_STRIKE_SPARKS_STRIDE: usize = 0x18;
-    pub const DRAW_TEMP_0: usize = 0x327da4;
-    pub const DRAW_TEMP_1: usize = 0x327da8;
-    pub const DRAW_TEMP_2: usize = 0x327dac;
-    pub const DRAW_TEMP_3: usize = 0x327db0;
-    pub const DRAW_TEMP_4: usize = 0x327db4;
-    pub const DRAW_TEMP_5: usize = 0x327db8;
-    pub const DRAW_TEMP_6: usize = 0x327dbc;
-    pub const DRAW_TEMP_7: usize = 0x327dc0;
-    pub const ANCHOR_OUT: usize = 0x33d0;
-    pub const DRAW_LIST: usize = 0x4a598;
-    pub const DRAW_SWAP: usize = 0x4aef8;
-    pub const DECK_BAR_SLIDE: usize = 0x327dcc;
-    pub const LETTERBOX_SHIFT: usize = 0x327f70;
-    pub const OUTRO_EXIT_DIRECT: usize = 0x1ec0;
-    pub const OUTRO_EXIT_EVENT: usize = 0x1ec1;
-    pub const OUTRO_MAP_LOCKED: usize = 0x836c8;
-    pub const OUTRO_VIDEO_BUTTON: usize = 0x858;
-    pub const OUTRO_VIDEO_WATCHED: usize = 0x859;
-    pub const LAST_VIDEO_TIME: usize = 0x860;
-    pub const LEADERSHIP_REFUND: usize = 0x3f8;
-    pub const LOSE_BANNER_Y: usize = 0x326648;
-    pub const LOSE_CHOICE: usize = 0x327f78;
-    pub const LOSE_NO_PRESS: usize = 0x328338;
-    pub const LOSE_SHOP_PRESS: usize = 0x32836c;
-    pub const LOSE_SHOP_X: usize = 0x326634;
-    pub const LOSE_SHOP_RECT: usize = 0x3282e4;
-    pub const LOSE_SHOP_HELD: usize = 0x32a412;
-    pub const LOSE_RECORDED: usize = 0xc2dc;
-    pub const LOSE_TIP: usize = 0x327f08;
-    pub const EX_OFFERED: usize = 0x402160;
-    pub const CAT_FOOD_SHOP_ENABLED: usize = 0xc2fc;
-    pub const CAT_FOOD_SHOP_OPEN: usize = 0x32a442;
-    pub const CAT_FOOD_SHOP_MODE: usize = 0x32a45c;
-    pub const SHOP_TUTORIAL_SEEN: usize = 0x4a4b0;
-    pub const PENDING_SCENE: usize = 0x3358;
-    pub const PENDING_SCENE_ARMED: usize = 0x335c;
-    pub const SCENE_CHANGE_REQUESTED: usize = 0x3360;
-    pub const REVIVE_REQUESTED: usize = 0x327f04;
-    pub const FIRST_STAGE_WON: usize = 0xc2e4;
-    pub const NEXT_STAGE_UNLOCKED: usize = 0x836c0;
-    pub const WIN_TREASURE: usize = 0x836bc;
-    pub const RANK_POPUP_SHOWN: usize = 0x38f58c;
-    pub const RANK_REWARD_BASE: usize = 0x3bb708;
-    pub const EX_ROLLED: usize = 0x402161;
-    pub const EX_ACCEPTED: usize = 0x402162;
-    pub const EX_MAP: usize = 0x402164;
-    pub const EX_STAGE: usize = 0x40216c;
-    pub const OUTRO_FRAME: usize = 0x836b4;
-    pub const OUTRO_TICKS: usize = 0x3bb73c;
-    pub const BATTLE_RESUMED: usize = 0x3880d8;
-    pub const BATTLE_CONTINUED: usize = 0x32c970;
-    pub const POINT_LIMIT_PENDING: usize = 0x220;
-    pub const OUTRO_OK_PRESS: usize = 0x328334;
-    pub const OUTRO_OK_RECT: usize = 0x328244;
-    pub const OUTRO_OK_SLIDE: usize = 0x327dd0;
-    pub const OUTRO_BUTTON_LOCK: usize = 0x401f1c;
-    pub const REWARD_POP_HOLD: usize = 0x328538;
-    pub const LABYRINTH_RESULT_READY: usize = 0x1068;
-    pub const LABYRINTH_RANK: usize = 0x1044;
-    pub const LABYRINTH: usize = 0xad0;
-    pub const LABYRINTH_MAP_ID: usize = 0x1020;
-    pub const LABYRINTH_FLOOR_REACHED: usize = 0x103c;
-    pub const LABYRINTH_FLOOR_BEST: usize = 0x1040;
-    pub const LABYRINTH_STAGE_IDS: usize = 0xe30;
+    pub const DRAW_TEMP_0: usize = 0x32f7dc;
+    pub const DRAW_TEMP_1: usize = 0x32f7e0;
+    pub const DRAW_TEMP_2: usize = 0x32f7e4;
+    pub const DRAW_TEMP_3: usize = 0x32f7e8;
+    pub const DRAW_TEMP_4: usize = 0x32f7ec;
+    pub const DRAW_TEMP_5: usize = 0x32f7f0;
+    pub const DRAW_TEMP_6: usize = 0x32f7f4;
+    pub const DRAW_TEMP_7: usize = 0x32f7f8;
+    pub const ANCHOR_OUT: usize = 0x3400;
+    pub const DRAW_LIST: usize = 0x4a6f0;
+    pub const DRAW_SWAP: usize = 0x4b050;
+    pub const DECK_BAR_SLIDE: usize = 0x32f804;
+    pub const LETTERBOX_SHIFT: usize = 0x32f9a8;
+    pub const OUTRO_EXIT_DIRECT: usize = 0x1ee8;
+    pub const OUTRO_EXIT_EVENT: usize = 0x1ee9;
+    pub const OUTRO_MAP_LOCKED: usize = 0x83e50;
+    pub const OUTRO_VIDEO_BUTTON: usize = 0x880;
+    pub const OUTRO_VIDEO_WATCHED: usize = 0x881;
+    pub const LAST_VIDEO_TIME: usize = 0x888;
+    pub const LEADERSHIP_REFUND: usize = 0x420;
+    pub const LOSE_BANNER_Y: usize = 0x32e068;
+    pub const LOSE_CHOICE: usize = 0x32f9b0;
+    pub const LOSE_NO_PRESS: usize = 0x32fd70;
+    pub const LOSE_SHOP_PRESS: usize = 0x32fda4;
+    pub const LOSE_SHOP_X: usize = 0x32e054;
+    pub const LOSE_SHOP_RECT: usize = 0x32fd1c;
+    pub const LOSE_SHOP_HELD: usize = 0x331e7a;
+    pub const LOSE_RECORDED: usize = 0xc3cc;
+    pub const LOSE_TIP: usize = 0x32f940;
+    pub const EX_OFFERED: usize = 0x40a510;
+    pub const CAT_FOOD_SHOP_ENABLED: usize = 0xc3ec;
+    pub const CAT_FOOD_SHOP_OPEN: usize = 0x331eaa;
+    pub const CAT_FOOD_SHOP_MODE: usize = 0x331ec4;
+    pub const SHOP_TUTORIAL_SEEN: usize = 0x4a600;
+    pub const PENDING_SCENE: usize = 0x3388;
+    pub const PENDING_SCENE_ARMED: usize = 0x338c;
+    pub const SCENE_CHANGE_REQUESTED: usize = 0x3390;
+    pub const REVIVE_REQUESTED: usize = 0x32f93c;
+    pub const FIRST_STAGE_WON: usize = 0xc3d4;
+    pub const NEXT_STAGE_UNLOCKED: usize = 0x83e48;
+    pub const WIN_TREASURE: usize = 0x83e44;
+    pub const RANK_POPUP_SHOWN: usize = 0x39703c;
+    pub const RANK_REWARD_BASE: usize = 0x3c3338;
+    pub const EX_ROLLED: usize = 0x40a511;
+    pub const EX_ACCEPTED: usize = 0x40a512;
+    pub const EX_MAP: usize = 0x40a514;
+    pub const EX_STAGE: usize = 0x40a51c;
+    pub const OUTRO_FRAME: usize = 0x83e3c;
+    pub const OUTRO_TICKS: usize = 0x3c336c;
+    pub const BATTLE_RESUMED: usize = 0x38fb88;
+    pub const BATTLE_CONTINUED: usize = 0x3343f0;
+    pub const POINT_LIMIT_PENDING: usize = 0x248;
+    pub const OUTRO_OK_PRESS: usize = 0x32fd6c;
+    pub const OUTRO_OK_RECT: usize = 0x32fc7c;
+    pub const OUTRO_OK_SLIDE: usize = 0x32f808;
+    pub const OUTRO_BUTTON_LOCK: usize = 0x40a2cc;
+    pub const REWARD_POP_HOLD: usize = 0x32ff70;
+    pub const LABYRINTH_RESULT_READY: usize = 0x1090;
+    pub const LABYRINTH_RANK: usize = 0x106c;
+    pub const LABYRINTH: usize = 0xaf8;
+    pub const LABYRINTH_MAP_ID: usize = 0x1048;
+    pub const LABYRINTH_FLOOR_REACHED: usize = 0x1064;
+    pub const LABYRINTH_FLOOR_BEST: usize = 0x1068;
+    pub const LABYRINTH_STAGE_IDS: usize = 0xe58;
     pub const LABYRINTH_SLOTS: usize = 0x64;
-    pub const DECK_BACK_ROW_ENABLED: usize = 0x32b392;
-    pub const DRAG_LATCHED: usize = 0x32c8e4;
-    pub const CPU_ENABLED: usize = 0x328560;
-    pub const CPU_PENDING_ACTION: usize = 0x328564;
-    pub const CPU_PICK: usize = 0x32856c;
-    pub const CPU_USABLE: usize = 0x328574;
+    pub const DECK_BACK_ROW_ENABLED: usize = 0x332e12;
+    pub const DRAG_LATCHED: usize = 0x334364;
+    pub const CPU_ENABLED: usize = 0x32ff98;
+    pub const CPU_PENDING_ACTION: usize = 0x32ff9c;
+    pub const CPU_PICK: usize = 0x32ffa4;
+    pub const CPU_USABLE: usize = 0x32ffac;
     pub const CPU_FACTION_STRIDE: usize = 0x28;
-    pub const CPU_SAVING_FOR: usize = 0x3285c4;
-    pub const CPU_CANNON_STATE: usize = 0x3285cc;
-    pub const CPU_CANNON_WAIT: usize = 0x3285d4;
-    pub const CPU_CANDIDATES: usize = 0x3285e4;
-    pub const SCENE_0X64_PAGE: usize = 0x3284d4;
-    pub const UI_TAP_LOCKOUT: usize = 0x32a474;
-    pub const CAT_GOD_MENU_IS_OPEN: usize = 0x32b494;
-    pub const CANNON_BLAST_ACTIVE: usize = 0x32b6ac;
-    pub const BASE_GUARD_NOTICE: usize = 0x870;
-    pub const KILLS_SINCE_SPAWN_TICK: usize = 0x10f8;
-    pub const LABYRINTH_ACTIVE: usize = 0xff4;
-    pub const SCORE_MODE_FLAG: usize = 0x32b9;
-    pub const SCORE_TOTAL: usize = 0x32bc;
-    pub const SCORE_ELAPSED: usize = 0x32c0;
-    pub const SCORE_CHANGED: usize = 0x32e0;
-    pub const SCORE_ANIM_TICK: usize = 0x32e4;
-    pub const SCORE_SHOWN: usize = 0x32e8;
-    pub const SCORE_FROM: usize = 0x32ec;
-    pub const SCORE_ZOOM: usize = 0x32f0;
-    pub const LINEUP_CANNON_TYPE: usize = 0x4b0;
-    pub const LINEUP_CANNON_LEVEL: usize = 0x4b4;
-    pub const EX_REDIRECT_A_BLOCKED: usize = 0x1490;
-    pub const BUILT_DECK_EX_STAGE_KEY: usize = 0x3280;
-    pub const USE_BUILT_DECK: usize = 0x3284;
-    pub const STORY_MAP_COUNTS: usize = 0x3364;
-    pub const UNIT_INFO_OVERLAY_OPEN: usize = 0x910;
-    pub const ITF_PROGRESS: usize = 0xc95c;
-    pub const COTC_PROGRESS: usize = 0xc968;
-    pub const STAGES_CLEARED_CHAPTERS_KEY: usize = 0xc974;
-    pub const PINCH: usize = 0x33d8;
-    pub const CAMERA_ZOOM: usize = 0x340c;
-    pub const TOUCH_X: usize = 0x3428;
-    pub const TOUCH_START_X: usize = 0x3430;
-    pub const TOUCH_PREV_X: usize = 0x3434;
-    pub const TOUCH_Y: usize = 0x3438;
-    pub const TOUCH_START_Y: usize = 0x3440;
-    pub const TOUCH_PREV_Y: usize = 0x3444;
-    pub const TOUCH_PENDING_X: usize = 0x342c;
-    pub const TOUCH_PENDING_Y: usize = 0x343c;
-    pub const TOUCH_PENDING_BEGAN: usize = 0x3449;
-    pub const TOUCH_PENDING_RELEASED: usize = 0x344c;
-    pub const TOUCH_DOWN_LATCH: usize = 0x344d;
-    pub const TOUCH_BEGAN: usize = 0x3448;
-    pub const TOUCH_IS_DOWN: usize = 0x344a;
-    pub const TOUCH_RELEASED: usize = 0x344b;
-    pub const BACK_PRESSED: usize = 0x344e;
-    pub const SCENE_ID: usize = 0x3450;
-    pub const DECK_PRESETS: usize = 0xc310;
+    pub const CPU_SAVING_FOR: usize = 0x32fffc;
+    pub const CPU_CANNON_STATE: usize = 0x330004;
+    pub const CPU_CANNON_WAIT: usize = 0x33000c;
+    pub const CPU_CANDIDATES: usize = 0x33001c;
+    pub const SCENE_0X64_PAGE: usize = 0x32ff0c;
+    pub const UI_TAP_LOCKOUT: usize = 0x331edc;
+    pub const CAT_GOD_MENU_IS_OPEN: usize = 0x332f14;
+    pub const CANNON_BLAST_ACTIVE: usize = 0x33312c;
+    pub const BASE_GUARD_NOTICE: usize = 0x898;
+    pub const KILLS_SINCE_SPAWN_TICK: usize = 0x1120;
+    pub const LABYRINTH_ACTIVE: usize = 0x101c;
+    pub const SCORE_MODE_FLAG: usize = 0x32e9;
+    pub const SCORE_TOTAL: usize = 0x32ec;
+    pub const SCORE_ELAPSED: usize = 0x32f0;
+    pub const SCORE_CHANGED: usize = 0x3310;
+    pub const SCORE_ANIM_TICK: usize = 0x3314;
+    pub const SCORE_SHOWN: usize = 0x3318;
+    pub const SCORE_FROM: usize = 0x331c;
+    pub const SCORE_ZOOM: usize = 0x3320;
+    pub const LINEUP_CANNON_TYPE: usize = 0x4d8;
+    pub const LINEUP_CANNON_LEVEL: usize = 0x4dc;
+    pub const EX_REDIRECT_A_BLOCKED: usize = 0x14b8;
+    pub const BUILT_DECK_EX_STAGE_KEY: usize = 0x32b0;
+    pub const USE_BUILT_DECK: usize = 0x32b4;
+    pub const STORY_MAP_COUNTS: usize = 0x3394;
+    pub const UNIT_INFO_OVERLAY_OPEN: usize = 0x938;
+    pub const ITF_PROGRESS: usize = 0xca4c;
+    pub const COTC_PROGRESS: usize = 0xca58;
+    pub const STAGES_CLEARED_CHAPTERS_KEY: usize = 0xca64;
+    pub const PINCH: usize = 0x3408;
+    pub const CAMERA_ZOOM: usize = 0x343c;
+    pub const TOUCH_X: usize = 0x3458;
+    pub const TOUCH_START_X: usize = 0x3460;
+    pub const TOUCH_PREV_X: usize = 0x3464;
+    pub const TOUCH_Y: usize = 0x3468;
+    pub const TOUCH_START_Y: usize = 0x3470;
+    pub const TOUCH_PREV_Y: usize = 0x3474;
+    pub const TOUCH_PENDING_X: usize = 0x345c;
+    pub const TOUCH_PENDING_Y: usize = 0x346c;
+    pub const TOUCH_PENDING_BEGAN: usize = 0x3479;
+    pub const TOUCH_PENDING_RELEASED: usize = 0x347c;
+    pub const TOUCH_DOWN_LATCH: usize = 0x347d;
+    pub const TOUCH_BEGAN: usize = 0x3478;
+    pub const TOUCH_IS_DOWN: usize = 0x347a;
+    pub const TOUCH_RELEASED: usize = 0x347b;
+    pub const BACK_PRESSED: usize = 0x347e;
+    pub const SCENE_ID: usize = 0x3480;
+    pub const DECK_PRESETS: usize = 0xc400;
     pub const DECK_PRESET_STRIDE: usize = 0x2c;
-    pub const DECK_PRESET_KEY: usize = 0xc338;
-    pub const FACTION_1_DECK: usize = 0xc33c;
-    pub const BATTLE_DECK: usize = 0xc6ac;
-    pub const STAGES_CLEARED_CHAPTERS: usize = 0xc94c;
-    pub const STAGE_RECORD_CHAPTERS: usize = 0xc978;
-    pub const SEEN_ENEMIES: usize = 0xd968;
-    pub const FACTION_1_UNIT_FORMS: usize = 0x495f4;
-    pub const UNIT_FORMS: usize = 0x495fc;
-    pub const BATTLE_FRAME_COUNTER: usize = 0x83678;
-    pub const CAMERA_X: usize = 0x83688;
-    pub const AUTO_CAMERA_MODE: usize = 0x836a4;
-    pub const BATTLE_STATUS: usize = 0x836ac;
-    pub const WORKER_UPGRADE_VFX: usize = 0x836d8;
-    pub const CAMERA_MIN_ZOOM: usize = 0x836e4;
-    pub const CASTLE_ID: usize = 0x836c4;
-    pub const STAGE_CASTLE_ID: usize = 0x836fc;
-    pub const TREASURE_PROGRESS: usize = 0x83708;
-    pub const SPAWN_COUNTDOWN: usize = 0x838c0;
-    pub const CAT_DEBRIS: usize = 0x9c768;
+    pub const DECK_PRESET_KEY: usize = 0xc428;
+    pub const FACTION_1_DECK: usize = 0xc42c;
+    pub const BATTLE_DECK: usize = 0xc79c;
+    pub const STAGES_CLEARED_CHAPTERS: usize = 0xca3c;
+    pub const STAGE_RECORD_CHAPTERS: usize = 0xca68;
+    pub const SEEN_ENEMIES: usize = moved(0xda58, TAIL_SEEN_ENEMIES);
+    pub const FACTION_1_UNIT_FORMS: usize = Self::UNIT_FORMS - 8;
+    pub const UNIT_FORMS: usize = moved(0x49734, TAIL_UNIT_FORMS);
+    pub const BATTLE_FRAME_COUNTER: usize = 0x83e00;
+    pub const CAMERA_X: usize = 0x83e10;
+    pub const AUTO_CAMERA_MODE: usize = 0x83e2c;
+    pub const BATTLE_STATUS: usize = 0x83e34;
+    pub const WORKER_UPGRADE_VFX: usize = 0x83e60;
+    pub const CAMERA_MIN_ZOOM: usize = 0x83e6c;
+    pub const CASTLE_ID: usize = 0x83e4c;
+    pub const STAGE_CASTLE_ID: usize = 0x83e84;
+    pub const TREASURE_PROGRESS: usize = 0x83e90;
+    pub const SPAWN_COUNTDOWN: usize = 0x84048;
+    pub const CAT_DEBRIS: usize = 0x9d088;
     pub const DEBRIS_STRIDE: usize = 0x10;
-    pub const ENEMY_DEBRIS: usize = 0x9cae8;
-    pub const CANNON_SHOTS: usize = 0x9ce68;
+    pub const ENEMY_DEBRIS: usize = 0x9d408;
+    pub const CANNON_SHOTS: usize = 0x9d788;
     pub const CANNON_SHOTS_FACTION_STRIDE: usize = 0xb4;
     pub const CANNON_SHOT_STRIDE: usize = 0xc;
-    pub const STAGE_LENGTH: usize = 0x9e528;
-    pub const STAGE_SPAWN_MIN: usize = 0x9e530;
-    pub const STAGE_SPAWN_MAX: usize = 0x9e534;
-    pub const STAGE_BACKGROUND_ID: usize = 0x9e538;
-    pub const STAGE_MAX_ENEMIES: usize = 0x9e53c;
-    pub const CASTLE_ENEMY_ROW: usize = 0x9e540;
-    pub const STAGE_SCORE_TIME_LIMIT: usize = 0x9e544;
-    pub const STAGE_BOSS_GUARD: usize = 0x9e548;
-    pub const SCENE_0X63_STATE: usize = 0x325c2c;
-    pub const INSETS_IGNORED: usize = 0x20d8;
-    pub const STAGE_INDEX: usize = 0x325c48;
-    pub const CHAPTER_MODE: usize = 0x327efc;
-    pub const FACTION_1_BUTTON_ROWS: usize = 0x327f18;
-    pub const POWERUPS: usize = 0x327eb0;
-    pub const POWERUP_AVAILABLE: usize = 0x327eec;
-    pub const SPEED_UP_LATCH: usize = 0x327eef;
-    pub const BUTTON_UNIT_FORMS: usize = 0x327f40;
-    pub const BATTLE_IS_OUTBREAK: usize = 0x32c5c8;
-    pub const OUTBREAKS_ENABLED: usize = 0x32c5c9;
-    pub const BATTLE_IS_INVASION: usize = 0x32c5d6;
-    pub const BATTLE_IS_Z_INVASION: usize = 0x32c5d7;
-    pub const INVASION_STAGE: usize = 0x32c5d8;
-    pub const MAP_NEG15_CLEARED: usize = 0x32c5d9;
-    pub const MAP_NEG25_CLEARED: usize = 0x32c5da;
-    pub const WAVE_RECORDS: usize = 0x333d6c;
+    pub const STAGE_LENGTH: usize = 0x9ee48;
+    pub const STAGE_SPAWN_MIN: usize = 0x9ee50;
+    pub const STAGE_SPAWN_MAX: usize = 0x9ee54;
+    pub const STAGE_BACKGROUND_ID: usize = 0x9ee58;
+    pub const STAGE_MAX_ENEMIES: usize = 0x9ee5c;
+    pub const CASTLE_ENEMY_ROW: usize = 0x9ee60;
+    pub const STAGE_SCORE_TIME_LIMIT: usize = 0x9ee64;
+    pub const STAGE_BOSS_GUARD: usize = 0x9ee68;
+    pub const SCENE_0X63_STATE: usize = 0x32d64c;
+    pub const INSETS_IGNORED: usize = 0x2100;
+    pub const STAGE_INDEX: usize = 0x32d668;
+    pub const CHAPTER_MODE: usize = 0x32f934;
+    pub const FACTION_1_BUTTON_ROWS: usize = 0x32f950;
+    pub const POWERUPS: usize = 0x32f8e8;
+    pub const POWERUP_AVAILABLE: usize = 0x32f924;
+    pub const SPEED_UP_LATCH: usize = 0x32f927;
+    pub const BUTTON_UNIT_FORMS: usize = 0x32f978;
+    pub const BATTLE_IS_OUTBREAK: usize = 0x334048;
+    pub const OUTBREAKS_ENABLED: usize = 0x334049;
+    pub const BATTLE_IS_INVASION: usize = 0x334056;
+    pub const BATTLE_IS_Z_INVASION: usize = 0x334057;
+    pub const INVASION_STAGE: usize = 0x334058;
+    pub const MAP_NEG15_CLEARED: usize = 0x334059;
+    pub const MAP_NEG25_CLEARED: usize = 0x33405a;
+    pub const WAVE_RECORDS: usize = 0x33b81c;
     pub const WAVE_RECORD_STRIDE: usize = 0x30;
-    pub const WAVE_SPRITES: usize = 0x3362ec;
-    pub const MAP_INDEX: usize = 0x3388b8;
-    pub const STAGES_CLEARED_STORY: usize = 0x33e020;
-    pub const STAGES_CLEARED_NEG6: usize = 0x340748;
-    pub const STAGE_RECORD_STORY: usize = 0x340818;
-    pub const STAGE_RECORD_NEG6: usize = 0x37b1b0;
-    pub const STAMP_DATA: usize = 0x32b6b8;
-    pub const SAVED_MAP_TYPE: usize = 0x3836b4;
-    pub const CHAPTER_COST_TIER: usize = 0x388028;
-    pub const PROC_ROLLS: usize = 0x3880dc;
-    pub const WAVE_HITS: usize = 0x388110;
-    pub const SELECTED_DECK_PRESET: usize = 0x38fd6c;
-    pub const PRESET_STYLE_PARTS: usize = 0x427259;
-    pub const PRESET_FOUNDATION_PARTS: usize = 0x42725a;
-    pub const CROWN_LEVEL: usize = 0x38fecc;
-    pub const EX_MAP_INDEX: usize = 0x402168;
-    pub const EX_STAGE_INDEX: usize = 0x402170;
-    pub const UNIT_LEVEL_CURVE: usize = 0x4475a4;
-    pub const UNIT_EXP_CURVE: usize = 0x458764;
-    pub const STAGE_NO_CONTINUES: usize = 0x46a9b4;
-    pub const STAGE_EX_CHANCE: usize = 0x46a9b8;
-    pub const STAGE_EX_MAP: usize = 0x46a9bc;
-    pub const STAGE_EX_STAGE_MIN: usize = 0x46a9c0;
-    pub const STAGE_EX_STAGE_MAX: usize = 0x46a9c4;
-    pub const STAGE_RECORD_NEG8: usize = 0x46a9c8;
-    pub const ITEM_DEFINITION_IDS: usize = 0x38a9c0;
-    pub const DECK_HOLD_FRAMES: usize = 0x13d0;
-    pub const DECK_HOLD_SLOT: usize = 0x13d4;
-    pub const DECK_HOLD_RELEASE: usize = 0x13d8;
-    pub const VIBRATION_ENABLED: usize = 0x221;
-    pub const MAP_STAGE_ROWS: usize = 0x3836b8;
+    pub const WAVE_SPRITES: usize = 0x33dd9c;
+    pub const MAP_INDEX: usize = 0x340368;
+    pub const STAGES_CLEARED_STORY: usize = 0x345ad0;
+    pub const STAGES_CLEARED_NEG6: usize = 0x3481f8;
+    pub const STAGE_RECORD_STORY: usize = 0x3482c8;
+    pub const STAGE_RECORD_NEG6: usize = 0x382c60;
+    pub const STAMP_DATA: usize = 0x333138;
+    pub const SAVED_MAP_TYPE: usize = 0x38b164;
+    pub const CHAPTER_COST_TIER: usize = 0x38fad8;
+    pub const PROC_ROLLS: usize = 0x38fb8c;
+    pub const WAVE_HITS: usize = 0x38fbc0;
+    pub const SELECTED_DECK_PRESET: usize = 0x39781c;
+    pub const PRESET_STYLE_PARTS: usize = 0x42f969;
+    pub const PRESET_FOUNDATION_PARTS: usize = 0x42f96a;
+    pub const CROWN_LEVEL: usize = 0x39797c;
+    pub const EX_MAP_INDEX: usize = 0x40a518;
+    pub const EX_STAGE_INDEX: usize = 0x40a520;
+    pub const UNIT_LEVEL_CURVE: usize = moved(0x44fcc4, TAIL_UNIT_LEVEL_CURVE);
+    pub const UNIT_EXP_CURVE: usize = moved(0x461064, TAIL_UNIT_EXP_CURVE);
+    pub const STAGE_NO_CONTINUES: usize = 0x473494;
+    pub const STAGE_EX_CHANCE: usize = 0x473498;
+    pub const STAGE_EX_MAP: usize = 0x47349c;
+    pub const STAGE_EX_STAGE_MIN: usize = 0x4734a0;
+    pub const STAGE_EX_STAGE_MAX: usize = 0x4734a4;
+    pub const STAGE_RECORD_NEG8: usize = 0x4734a8;
+    pub const ITEM_DEFINITION_IDS: usize = 0x392470;
+    pub const DECK_HOLD_FRAMES: usize = 0x13f8;
+    pub const DECK_HOLD_SLOT: usize = 0x13fc;
+    pub const DECK_HOLD_RELEASE: usize = 0x1400;
+    pub const VIBRATION_ENABLED: usize = 0x249;
+    pub const MAP_STAGE_ROWS: usize = 0x38b168;
     pub const MAP_STAGE_ROW_STRIDE: usize = 0xbc;
-    pub const STAGE_ROW: usize = 0x83674;
-    pub const STAGE_MUSIC_ROW: usize = 0x3bbd58;
-    pub const BGM_SWITCH_STATE: usize = 0x29023c;
-    pub const BGM_SWITCH_FRAME: usize = 0x290240;
-    pub const BGM_SWITCH_FRAMES: usize = 0x290244;
-    pub const BGM_SWITCH_NEXT: usize = 0x290248;
-    pub const BGM_BOSS_PHASE: usize = 0x29024c;
-    pub const BGM_PENDING: usize = 0x46b958;
-    pub const BGM_DELAY_FRAME: usize = 0x46b95c;
-    pub const BGM_DELAY: usize = 0x46b960;
-    pub const ITEMS_SELECTED: usize = 0x327ed8;
-    pub const ITEMS_SELECTED_LABYRINTH: usize = 0x2374;
-    pub const ITEMS_SELECTED_SCORE_MODE: usize = 0x2367;
-    pub const DEMON_BANNER_FRAME: usize = 0x12b8;
-    pub const COMBO_BANNER_STEP_FRAMES: usize = 0x440be8;
-    pub const COMBO_BANNER_LIFETIME: usize = 0x440bec;
-    pub const COMBO_BANNER_SPEED: usize = 0x440bf0;
-    pub const COMBO_BANNER_TEXT_STEP: usize = 0x440bf4;
-    pub const COMBO_BANNER_STATE: usize = 0x440bf8;
-    pub const COMBO_BANNER_PHASE: usize = 0x440bfc;
-    pub const COMBO_BANNER_X: usize = 0x440c00;
-    pub const COMBO_BANNER_SUB: usize = 0x440c04;
-    pub const COMBO_BANNER_TICKS: usize = 0x440c08;
-    pub const COMBO_SKIP_RECT: usize = 0x328224;
-    pub const COMBO_BANNER_UNITS: usize = 0x440c0c;
-    pub const CRIT_VFX: usize = 0x9cfd0;
+    pub const STAGE_ROW: usize = 0x83dfc;
+    pub const STAGE_MUSIC_ROW: usize = 0x3c3988;
+    pub const BGM_SWITCH_STATE: usize = 0x296edc;
+    pub const BGM_SWITCH_FRAME: usize = 0x296ee0;
+    pub const BGM_SWITCH_FRAMES: usize = 0x296ee4;
+    pub const BGM_SWITCH_NEXT: usize = 0x296ee8;
+    pub const BGM_BOSS_PHASE: usize = 0x296eec;
+    pub const BGM_PENDING: usize = 0x474438;
+    pub const BGM_DELAY_FRAME: usize = 0x47443c;
+    pub const BGM_DELAY: usize = 0x474440;
+    pub const ITEMS_SELECTED: usize = 0x32f910;
+    pub const ITEMS_SELECTED_LABYRINTH: usize = 0x23a4;
+    pub const ITEMS_SELECTED_SCORE_MODE: usize = 0x2397;
+    pub const DEMON_BANNER_FRAME: usize = 0x12e0;
+    pub const COMBO_BANNER_STEP_FRAMES: usize = 0x449300;
+    pub const COMBO_BANNER_LIFETIME: usize = 0x449304;
+    pub const COMBO_BANNER_SPEED: usize = 0x449308;
+    pub const COMBO_BANNER_TEXT_STEP: usize = 0x44930c;
+    pub const COMBO_BANNER_STATE: usize = 0x449310;
+    pub const COMBO_BANNER_PHASE: usize = 0x449314;
+    pub const COMBO_BANNER_X: usize = 0x449318;
+    pub const COMBO_BANNER_SUB: usize = 0x44931c;
+    pub const COMBO_BANNER_TICKS: usize = 0x449320;
+    pub const COMBO_SKIP_RECT: usize = 0x32fc5c;
+    pub const COMBO_BANNER_UNITS: usize = 0x449324;
+    pub const CRIT_VFX: usize = 0x9d8f0;
     pub const CRIT_VFX_STRIDE: usize = 0x10;
-    pub const ZKILL_VFX: usize = 0x9dc50;
+    pub const ZKILL_VFX: usize = 0x9e570;
     pub const ZKILL_VFX_STRIDE: usize = 0x10;
-    pub const BARRIER_VFX: usize = 0x9de30;
+    pub const BARRIER_VFX: usize = 0x9e750;
     pub const BARRIER_VFX_STRIDE: usize = 0x1c;
-    pub const SHIELD_VFX: usize = 0x9e178;
+    pub const SHIELD_VFX: usize = 0x9ea98;
     pub const SHIELD_VFX_STRIDE: usize = 0x1c;
-    pub const BASE_GUARD_NOTICE_FRAME: usize = 0x874;
-    pub const TUTORIAL_POPUP_OPEN: usize = 0x32b44c;
-    pub const OPTION_WINDOW: usize = 0x469928;
-    pub const OPTION_WINDOW_PAGE: usize = 0x469940;
-    pub const RETURN_CONFIRM_OPEN: usize = 0x326625;
-    pub const UNIT_INFO_SAVED_TWO_LINES: usize = 0x911;
-    pub const UNIT_INFO_SLOT: usize = 0x914;
-    pub const BATTLE_ENTRY_RESET: usize = 0x32cbac;
-    pub const CURTAIN_ACTIVE: usize = 0x326618;
-    pub const CURTAIN_STYLE: usize = 0x326620;
-    pub const BATTLE_TICKS: usize = 0x328524;
-    pub const BATTLE_INTRO_FRAME: usize = 0x32c798;
-    pub const CAMERA_MATRIX: usize = 0x3410;
-    pub const CAMERA_OFFSET: usize = 0x3420;
-    pub const BASE_KILL_BLOCKED: usize = 0x392778;
-    pub const AUTO_CAMERA_ARRIVED: usize = 0x327f68;
-    pub const SETUP_FRAMES: usize = 0x328510;
-    pub const REWARD_POP_COUNTER: usize = 0x327ef8;
-    pub const SPEED: usize = 0x327da0;
-    pub const CAT_GOD_HEAL_PENDING: usize = 0x32b6a8;
-    pub const BABY_BOOM_FRAMES: usize = 0x327ef4;
-    pub const DEPLOY_FULL_FLASH: usize = 0x1ce0;
-    pub const HIT_COUNT: usize = 0x28be38;
-    pub const HIT_LIST: usize = 0x28bc98;
-    pub const HIT_SWAP: usize = 0x28be30;
-    pub const OUTRO_PHASE: usize = 0x836b0;
-    pub const LOSE_TIP_SHOWN: usize = 0x836d4;
-    pub const LOST_MAP_TYPE: usize = 0x327f0c;
-    pub const LOST_MAP_INDEX: usize = 0x327f10;
-    pub const LOST_STAGE: usize = 0x327f14;
-    pub const DEFEAT_COUNTER: usize = 0x2f14;
-    pub const EVENT_UNIT_OWNED: usize = 0x38ef44;
-    pub const NEW_BEST_SCORE: usize = 0x836d0;
-    pub const PLAY_FRAMES: usize = 0x836ec;
-    pub const OPTION_WINDOW_KIND: usize = 0x46992c;
-    pub const BG_IMAGE_ID: usize = 0x32b7e4;
-    pub const BG_MODEL_ID: usize = 0x32b7dc;
-    pub const TECH_MAX_LEVELS: usize = 0x38a8f0;
-    pub const UNIT_FORM_COUNTS: usize = 0x3fb178;
-    pub const COMBO_PAGE_LIST: usize = 0x32c270;
-    pub const COMBO_UNLOCK_NOTICE: usize = 0x440c94;
-    pub const COMBO_TAB: usize = 0x440b8c;
-    pub const LEGEND_STAGE_ENERGY: usize = 0x46a824;
-    pub const LEGEND_STAGE_INFO: usize = 0x46a054;
-    pub const BG_SETUP: usize = 0x32b7cc;
-    pub const BG_TINT_XS: usize = 0x328670;
-    pub const BG_TINT_YS: usize = 0x328680;
-    pub const BG_TINT_COLORS: usize = 0x328690;
-    pub const OUTRO_RECTS: usize = 0x3282d4;
-    pub const OPTION_RECTS: usize = 0x3282a4;
-    pub const DECK_SWAP_BLOCK: usize = 0x328650;
-    pub const UI_STATE_TAIL: usize = 0x32b7c8;
-    pub const HUD_RECTS: usize = 0x3283d0;
-    pub const TUTORIAL_PAGE: usize = 0x32b460;
-    pub const DRAW_SCENE_ID: usize = 0x3454;
-    pub const INSET_STRIPS_DUE: usize = 0x20d9;
-    pub const TOUCH_ID: usize = 0x327f6c;
-    pub const MAIN_DRAW_HIDDEN: usize = 0x33cc;
-    pub const MAP_STAMINA_HUD_STATE: usize = 0x1cee;
-    pub const TUTORIAL_POPUP_FRAME: usize = 0x32b454;
-    pub const TUTORIAL_BOB_PHASE: usize = 0x32b458;
-    pub const TUTORIAL_PRESS_TICKS: usize = 0x32b45c;
-    pub const TUTORIAL_BUTTON_X: usize = 0x32b464;
-    pub const TUTORIAL_BUTTON_Y: usize = 0x32b468;
-    pub const TUTORIAL_BUTTON_W: usize = 0x32b46c;
-    pub const TUTORIAL_BUTTON_H: usize = 0x32b470;
-    pub const TUTORIAL_BUTTON_HELD: usize = 0x32a437;
-    pub const TUTORIAL_FORMATION_SEEN: usize = 0x4a4a8;
-    pub const TUTORIAL_ROW12_SEEN: usize = 0x4a4c0;
-    pub const TUTORIAL_ROW10_SEEN: usize = 0x4a4c8;
-    pub const TUTORIAL_SCENE_JUMP_SEEN: usize = 0x4a4d8;
-    pub const TUTORIAL_MISSION_SEEN: usize = 0x4a4e8;
-    pub const TUTORIAL_EXIT_STATE: usize = 0x38f5a4;
-    pub const CAT_GOD_INTRO_BUTTON_PRESS: usize = 0x32b68c;
-    pub const SHOP_UPDATE_CONSUMED: usize = 0x32cbc8;
-    pub const RESTRICTION_WARNING_TEXTS: usize = 0xb800;
-    pub const STAGE_RECORD_CHAPTERS_KEY: usize = 0xca44;
-    pub const STAGE_CLEAR_FLAG: usize = 0xc2e0;
-    pub const POWERUP_USED: usize = 0x3bb701;
-    pub const STAGE_BASE_HP: usize = 0x9e52c;
-    pub const BATTLE_CLOCK: usize = 0x9e520;
-    pub const CAT_GOD_GLOW_TIMER: usize = 0x32b48c;
-    pub const LINEUP_BASE_LEVEL: usize = 0x4b8;
-    pub const POWERUP_FREE: usize = 0x327ee2;
-    pub const POWERUP_GRANTS: usize = 0x13e0;
-    pub const RESUMED_MONEY: usize = 0x8369c;
-    pub const BATTLE_DECK_KEY: usize = 0xc6d4;
-    pub const EX_REDIRECT_ENABLED: usize = 0x3bc491;
-    pub const SCENE_4_PAGE: usize = 0x32f4;
-    pub const ALL_MAPS_OPEN: usize = 0x38fc10;
-    pub const MAP_COORDS: usize = 0x290250;
-    pub const POLYGON_YS: usize = 0x3286ac;
-    pub const POLYGON_XS: usize = 0x3286a0;
-    pub const LETTERBOX_PAD: usize = 0x327f74;
-    pub const MIRACLE_PRICES: usize = 0x46b970;
-    pub const CAT_GOD_TICKS: usize = 0x32b4ac;
-    pub const CAT_GOD_DROP_SPEED: usize = 0x32b534;
-    pub const CAT_GOD_FLASH_X: usize = 0x32b518;
-    pub const CAT_GOD_RETURN_STEP: usize = 0x32b508;
-    pub const CAT_GOD_RETURN_TICKS: usize = 0x32b504;
-    pub const CAT_GOD_SAVED_CAMERA_X: usize = 0x32b500;
-    pub const CAT_GOD_SAVED_ZOOM: usize = 0x32b4fc;
-    pub const CAT_GOD_ZOOM_DELTA: usize = 0x32b4f4;
-    pub const CAT_GOD_ZOOM_TICKS: usize = 0x32b4f8;
-    pub const CAT_GOD_ZOOM_DONE: usize = 0x32b50c;
-    pub const CAT_GOD_FADE: usize = 0x32b4a4;
-    pub const CAT_GOD_PUSHING: usize = 0x32b6b0;
-    pub const CAT_GOD_SHAKE_Y: usize = 0x32b58c;
-    pub const CAT_GOD_SHAKE_X: usize = 0x32b53c;
-    pub const CAT_GOD_FRAMES: usize = 0x32b4c0;
-    pub const CAT_GOD_ANIM_FRAME: usize = 0x32b4bc;
-    pub const CAT_GOD_HOVER: usize = 0x32a427;
-    pub const CAT_GOD_BACK_RECT: usize = 0x32b64c;
-    pub const CAT_GOD_CONFIRM_RECT: usize = 0x32b63c;
-    pub const CAT_GOD_CLOSE_RECT: usize = 0x32b62c;
-    pub const CAT_GOD_MIRACLE_RECTS: usize = 0x32b5ec;
-    pub const CAT_GOD_CONFIRM_OPEN: usize = 0x32b495;
-    pub const CAT_GOD_SELECTED: usize = 0x32b6a4;
-    pub const CAT_GOD_PRESSES: usize = 0x32b680;
-    pub const CAT_GOD_OPEN_TICKS: usize = 0x32b514;
-    pub const CAT_GOD_IDLE_FRAMES: usize = 0x32b510;
-    pub const CAT_GOD_BOB: usize = 0x32b528;
-    pub const CAT_GOD_VELOCITY: usize = 0x32b538;
-    pub const CAT_GOD_OFFSET: usize = 0x32b524;
-    pub const CAT_GOD_SETTLE_FRAME: usize = 0x32b4b8;
-    pub const CAT_GOD_CHATTER_TIMER: usize = 0x32b4b0;
-    pub const CAT_GOD_SPIN_SPEED: usize = 0x32b49c;
-    pub const CAT_GOD_STATE: usize = 0x32b4a8;
-    pub const DECK_COOLDOWN_VFX: usize = 0x2778;
-    pub const EFFECT_SLOTS: usize = 0x33356c;
-    pub const BGM_PLAYER: usize = 0x46b948;
-    pub const LEADERSHIP_TOTAL: usize = 0x3f4;
-    pub const OUTRO_EXIT_TARGET: usize = 0xc30c;
-    pub const LOSE_ENTRY_CHAPTER: usize = 0xc300;
-    pub const MENU_BUILD_MODE: usize = 0x32e794;
-    pub const MENU_CURSOR: usize = 0x440da0;
-    pub const MENU_TEXTURE_PAGE: usize = 0x440d88;
-    pub const MAP_RETURN_FLAG: usize = 0x3388c0;
-    pub const HUD_STATE: usize = 0x3284a0;
-    pub const SWIPE_STATE: usize = 0x326658;
-    pub const SCROLL_STATE: usize = 0x32662c;
-    pub const FADE_MENU_STATE: usize = 0x326628;
-    pub const SCENE_0X64_PAGE_NEXT: usize = 0x3284dc;
-    pub const FADE_STARTED: usize = 0x2228;
-    pub const FADE_FRAME: usize = 0x32661c;
-    pub const SCENE_LATCHES: usize = 0x32c730;
-    pub const ITEM_HOLD_SCORE_MODE: usize = 0x2360;
-    pub const ITEM_HOLD_LABYRINTH: usize = 0x236d;
-    pub const ITEM_HOLD_NORMAL: usize = 0x32c644;
-    pub const POWERUP_CLEARED: usize = 0x327ef0;
-    pub const LABYRINTH_RANKING: usize = 0x1070;
-    pub const LEADERSHIP_NOTICE: usize = 0x3259;
-    pub const STAMINA_HALVED: usize = 0x32c8eb;
-    pub const DROP_MAP_STAGES: usize = 0x381e60;
-    pub const SPECIAL_BEST_SCORES: usize = 0x3824a0;
-    pub const FESTIVAL_STAGES: usize = 0x32c708;
-    pub const TREASURE_FESTIVAL_ENABLED: usize = 0x32c8e5;
-    pub const STAGE_SCORE: usize = 0x836cc;
-    pub const CHAPTER_BEST_SCORES: usize = 0x3bbaf0;
-    pub const RANKING_BEST_SCORES: usize = 0x3afa50;
-    pub const RANKING_ID: usize = 0x3bb704;
-    pub const SCORE_RANK_STATUSES: usize = 0x3bb710;
-    pub const MAP_STAGE_SET: usize = 0x38eea4;
-    pub const MAP_DATA_ID: usize = 0x38eea0;
-    pub const TUTORIAL_STAGE_SIX: usize = 0x447508;
-    pub const FIRST_WIN_PENDING: usize = 0x222;
-    pub const FIRST_WIN_GATE_B: usize = 0xc8a4;
-    pub const FIRST_WIN_GATE_A: usize = 0x4a560;
-    pub const EVENT_REWARD_ID: usize = 0x3bb698;
-    pub const REWARD_STATUS: usize = 0x3bb70c;
-    pub const DROP_FLAG: usize = 0x32c96c;
-    pub const DROP_ROLL: usize = 0x32c968;
-    pub const DROP_RATE: usize = 0x32c964;
-    pub const UNIT_UNLOCKED_BY_CLEAR: usize = 0x32c958;
-    pub const UNIT_UNLOCK_NOTICE: usize = 0x4af04;
-    pub const OUTRO_NEW_CLEAR: usize = 0x32c95c;
-    pub const OUTRO_STAGE_CLEARED: usize = 0x836f0;
-    pub const OUTRO_ENTRY_STAGE: usize = 0x325c3c;
-    pub const OUTRO_CHAPTER_MODE: usize = 0x327f00;
-    pub const AD_CONFIRM_DECLINED: usize = 0x8d8;
-    pub const WIN_XP: usize = 0x836b8;
-    pub const PRESET_CANNON_PARTS: usize = 0x427258;
-    pub const BATTLE_LINEUP: usize = 0xc680;
-    pub const LABYRINTH_UNIT_COUNT: usize = 0xe10;
-    pub const LABYRINTH_FLOOR_RESULT: usize = 0xe0c;
-    pub const EVENT_REWARDS_NEG2: usize = 0x3bb5d0;
-    pub const EVENT_REWARDS: usize = 0x3aaf38;
-    pub const CLEAR_LINEUP: usize = 0xc654;
+    pub const BASE_GUARD_NOTICE_FRAME: usize = 0x89c;
+    pub const TUTORIAL_POPUP_OPEN: usize = 0x332ecc;
+    pub const OPTION_WINDOW: usize = 0x472408;
+    pub const OPTION_WINDOW_PAGE: usize = 0x472420;
+    pub const RETURN_CONFIRM_OPEN: usize = 0x32e045;
+    pub const UNIT_INFO_SAVED_TWO_LINES: usize = 0x939;
+    pub const UNIT_INFO_SLOT: usize = 0x93c;
+    pub const BATTLE_ENTRY_RESET: usize = 0x33462c;
+    pub const CURTAIN_ACTIVE: usize = 0x32e038;
+    pub const CURTAIN_STYLE: usize = 0x32e040;
+    pub const BATTLE_TICKS: usize = 0x32ff5c;
+    pub const BATTLE_INTRO_FRAME: usize = 0x334218;
+    pub const CAMERA_MATRIX: usize = 0x3440;
+    pub const CAMERA_OFFSET: usize = 0x3450;
+    pub const BASE_KILL_BLOCKED: usize = 0x39a228;
+    pub const AUTO_CAMERA_ARRIVED: usize = 0x32f9a0;
+    pub const SETUP_FRAMES: usize = 0x32ff48;
+    pub const SETUP_BLOCK: usize = 0x32ff44;
+    pub const REWARD_POP_COUNTER: usize = 0x32f930;
+    pub const SPEED: usize = 0x32f7d8;
+    pub const CAT_GOD_HEAL_PENDING: usize = 0x333128;
+    pub const BABY_BOOM_FRAMES: usize = 0x32f92c;
+    pub const DEPLOY_FULL_FLASH: usize = 0x1d08;
+    pub const HIT_COUNT: usize = 0x292ad8;
+    pub const HIT_LIST: usize = 0x292938;
+    pub const HIT_SWAP: usize = 0x292ad0;
+    pub const OUTRO_PHASE: usize = 0x83e38;
+    pub const LOSE_TIP_SHOWN: usize = 0x83e5c;
+    pub const LOST_MAP_TYPE: usize = 0x32f944;
+    pub const LOST_MAP_INDEX: usize = 0x32f948;
+    pub const LOST_STAGE: usize = 0x32f94c;
+    pub const DEFEAT_COUNTER: usize = 0x2f44;
+    pub const EVENT_UNIT_OWNED: usize = 0x3969f4;
+    pub const NEW_BEST_SCORE: usize = 0x83e58;
+    pub const PLAY_FRAMES: usize = 0x83e74;
+    pub const OPTION_WINDOW_KIND: usize = 0x47240c;
+    pub const BG_IMAGE_ID: usize = 0x333264;
+    pub const BG_MODEL_ID: usize = 0x33325c;
+    pub const TECH_MAX_LEVELS: usize = 0x3923a0;
+    pub const UNIT_FORM_COUNTS: usize = moved(0x403470, TAIL_UNIT_FORM_COUNTS);
+    pub const COMBO_PAGE_LIST: usize = 0x333cf0;
+    pub const COMBO_UNLOCK_NOTICE: usize = 0x4493ac;
+    pub const COMBO_TAB: usize = 0x4492a4;
+    pub const LEGEND_STAGE_ENERGY: usize = 0x473304;
+    pub const LEGEND_STAGE_INFO: usize = 0x472b34;
+    pub const BG_SETUP: usize = 0x33324c;
+    pub const BG_TINT_XS: usize = 0x3300a8;
+    pub const BG_TINT_YS: usize = 0x3300b8;
+    pub const BG_TINT_COLORS: usize = 0x3300c8;
+    pub const OUTRO_RECTS: usize = 0x32fd0c;
+    pub const OPTION_RECTS: usize = 0x32fcdc;
+    pub const DECK_SWAP_BLOCK: usize = 0x330088;
+    pub const UI_STATE_TAIL: usize = 0x333248;
+    pub const HUD_RECTS: usize = 0x32fe08;
+    pub const TUTORIAL_PAGE: usize = 0x332ee0;
+    pub const DRAW_SCENE_ID: usize = 0x3484;
+    pub const INSET_STRIPS_DUE: usize = 0x2101;
+    pub const TOUCH_ID: usize = 0x32f9a4;
+    pub const MAIN_DRAW_HIDDEN: usize = 0x33fc;
+    pub const MAP_STAMINA_HUD_STATE: usize = 0x1d16;
+    pub const TUTORIAL_POPUP_FRAME: usize = 0x332ed4;
+    pub const TUTORIAL_BOB_PHASE: usize = 0x332ed8;
+    pub const TUTORIAL_PRESS_TICKS: usize = 0x332edc;
+    pub const TUTORIAL_BUTTON_X: usize = 0x332ee4;
+    pub const TUTORIAL_BUTTON_Y: usize = 0x332ee8;
+    pub const TUTORIAL_BUTTON_W: usize = 0x332eec;
+    pub const TUTORIAL_BUTTON_H: usize = 0x332ef0;
+    pub const TUTORIAL_BUTTON_HELD: usize = 0x331e9f;
+    pub const TUTORIAL_FORMATION_SEEN: usize = 0x4a5f8;
+    pub const TUTORIAL_ROW12_SEEN: usize = 0x4a610;
+    pub const TUTORIAL_ROW10_SEEN: usize = 0x4a618;
+    pub const TUTORIAL_SCENE_JUMP_SEEN: usize = 0x4a628;
+    pub const TUTORIAL_MISSION_SEEN: usize = 0x4a638;
+    pub const TUTORIAL_EXIT_STATE: usize = 0x397054;
+    pub const CAT_GOD_INTRO_BUTTON_PRESS: usize = 0x33310c;
+    pub const SHOP_UPDATE_CONSUMED: usize = 0x334648;
+    pub const RESTRICTION_WARNING_TEXTS: usize = 0xb8f0;
+    pub const STAGE_RECORD_CHAPTERS_KEY: usize = 0xcb34;
+    pub const STAGE_CLEAR_FLAG: usize = 0xc3d0;
+    pub const POWERUP_USED: usize = 0x3c3331;
+    pub const STAGE_BASE_HP: usize = 0x9ee4c;
+    pub const BATTLE_CLOCK: usize = 0x9ee40;
+    pub const CAT_GOD_GLOW_TIMER: usize = 0x332f0c;
+    pub const LINEUP_BASE_LEVEL: usize = 0x4e0;
+    pub const POWERUP_FREE: usize = 0x32f91a;
+    pub const POWERUP_GRANTS: usize = 0x1408;
+    pub const RESUMED_MONEY: usize = 0x83e24;
+    pub const BATTLE_DECK_KEY: usize = 0xc7c4;
+    pub const EX_REDIRECT_ENABLED: usize = 0x3c40c1;
+    pub const SCENE_4_PAGE: usize = 0x3324;
+    pub const ALL_MAPS_OPEN: usize = 0x3976c0;
+    pub const MAP_COORDS: usize = 0x296ef0;
+    pub const POLYGON_YS: usize = 0x3300e4;
+    pub const POLYGON_XS: usize = 0x3300d8;
+    pub const LETTERBOX_PAD: usize = 0x32f9ac;
+    pub const MIRACLE_PRICES: usize = 0x474450;
+    pub const CAT_GOD_TICKS: usize = 0x332f2c;
+    pub const CAT_GOD_DROP_SPEED: usize = 0x332fb4;
+    pub const CAT_GOD_FLASH_X: usize = 0x332f98;
+    pub const CAT_GOD_RETURN_STEP: usize = 0x332f88;
+    pub const CAT_GOD_RETURN_TICKS: usize = 0x332f84;
+    pub const CAT_GOD_SAVED_CAMERA_X: usize = 0x332f80;
+    pub const CAT_GOD_SAVED_ZOOM: usize = 0x332f7c;
+    pub const CAT_GOD_ZOOM_DELTA: usize = 0x332f74;
+    pub const CAT_GOD_ZOOM_TICKS: usize = 0x332f78;
+    pub const CAT_GOD_ZOOM_DONE: usize = 0x332f8c;
+    pub const CAT_GOD_FADE: usize = 0x332f24;
+    pub const CAT_GOD_PUSHING: usize = 0x333130;
+    pub const CAT_GOD_SHAKE_Y: usize = 0x33300c;
+    pub const CAT_GOD_SHAKE_X: usize = 0x332fbc;
+    pub const CAT_GOD_FRAMES: usize = 0x332f40;
+    pub const CAT_GOD_ANIM_FRAME: usize = 0x332f3c;
+    pub const CAT_GOD_HOVER: usize = 0x331e8f;
+    pub const CAT_GOD_BACK_RECT: usize = 0x3330cc;
+    pub const CAT_GOD_CONFIRM_RECT: usize = 0x3330bc;
+    pub const CAT_GOD_CLOSE_RECT: usize = 0x3330ac;
+    pub const CAT_GOD_MIRACLE_RECTS: usize = 0x33306c;
+    pub const CAT_GOD_CONFIRM_OPEN: usize = 0x332f15;
+    pub const CAT_GOD_SELECTED: usize = 0x333124;
+    pub const CAT_GOD_PRESSES: usize = 0x333100;
+    pub const CAT_GOD_OPEN_TICKS: usize = 0x332f94;
+    pub const CAT_GOD_IDLE_FRAMES: usize = 0x332f90;
+    pub const CAT_GOD_BOB: usize = 0x332fa8;
+    pub const CAT_GOD_VELOCITY: usize = 0x332fb8;
+    pub const CAT_GOD_OFFSET: usize = 0x332fa4;
+    pub const CAT_GOD_SETTLE_FRAME: usize = 0x332f38;
+    pub const CAT_GOD_CHATTER_TIMER: usize = 0x332f30;
+    pub const CAT_GOD_SPIN_SPEED: usize = 0x332f1c;
+    pub const CAT_GOD_STATE: usize = 0x332f28;
+    pub const DECK_COOLDOWN_VFX: usize = 0x27a8;
+    pub const BGM_PLAYER: usize = 0x474428;
+    pub const LEADERSHIP_TOTAL: usize = 0x41c;
+    pub const OUTRO_EXIT_TARGET: usize = 0xc3fc;
+    pub const LOSE_ENTRY_CHAPTER: usize = 0xc3f0;
+    pub const MENU_BUILD_MODE: usize = 0x33622c;
+    pub const MENU_CURSOR: usize = 0x4494b8;
+    pub const MENU_PICKED: usize = 0x4494c8;
+    pub const MENU_TEXTURE_PAGE: usize = 0x4494a0;
+    pub const MENU_ANCHOR: usize = 0x4494d0;
+    pub const MAP_RETURN_FLAG: usize = 0x340370;
+    pub const HUD_STATE: usize = 0x32fed8;
+    pub const SWIPE_STATE: usize = 0x32e078;
+    pub const SCROLL_STATE: usize = 0x32e04c;
+    pub const FADE_MENU_STATE: usize = 0x32e048;
+    pub const SCENE_0X64_PAGE_NEXT: usize = 0x32ff14;
+    pub const FADE_STARTED: usize = 0x2258;
+    pub const FADE_FRAME: usize = 0x32e03c;
+    pub const SCENE_LATCHES: usize = 0x3341b0;
+    pub const ITEM_HOLD_SCORE_MODE: usize = 0x2390;
+    pub const ITEM_HOLD_LABYRINTH: usize = 0x239d;
+    pub const ITEM_HOLD_NORMAL: usize = 0x3340c4;
+    pub const POWERUP_CLEARED: usize = 0x32f928;
+    pub const LABYRINTH_RANKING: usize = 0x1098;
+    pub const LEADERSHIP_NOTICE: usize = 0x3289;
+    pub const STAMINA_HALVED: usize = 0x33436b;
+    pub const DROP_MAP_STAGES: usize = 0x389910;
+    pub const SPECIAL_BEST_SCORES: usize = 0x389f50;
+    pub const FESTIVAL_STAGES: usize = 0x334188;
+    pub const TREASURE_FESTIVAL_ENABLED: usize = 0x334365;
+    pub const STAGE_SCORE: usize = 0x83e54;
+    pub const CHAPTER_BEST_SCORES: usize = 0x3c3720;
+    pub const RANKING_BEST_SCORES: usize = 0x3b7680;
+    pub const RANKING_ID: usize = 0x3c3334;
+    pub const SCORE_RANK_STATUSES: usize = 0x3c3340;
+    pub const MAP_STAGE_SET: usize = 0x396954;
+    pub const MAP_DATA_ID: usize = 0x396950;
+    pub const TUTORIAL_STAGE_SIX: usize = 0x44fc20;
+    pub const FIRST_WIN_PENDING: usize = 0x24a;
+    pub const FIRST_WIN_GATE_B: usize = 0xc994;
+    pub const FIRST_WIN_GATE_A: usize = 0x4a6b8;
+    pub const EVENT_REWARD_ID: usize = 0x3c32c8;
+    pub const REWARD_STATUS: usize = 0x3c333c;
+    pub const DROP_FLAG: usize = 0x3343ec;
+    pub const DROP_ROLL: usize = 0x3343e8;
+    pub const DROP_RATE: usize = 0x3343e4;
+    pub const UNIT_UNLOCKED_BY_CLEAR: usize = 0x3343d8;
+    pub const UNIT_UNLOCK_NOTICE: usize = 0x4b05c;
+    pub const OUTRO_NEW_CLEAR: usize = 0x3343dc;
+    pub const OUTRO_NEW_UNLOCK: usize = 0x3343e0;
+    pub const OUTRO_STAGE_CLEARED: usize = 0x83e78;
+    pub const OUTRO_ENTRY_STAGE: usize = 0x32d65c;
+    pub const OUTRO_CHAPTER_MODE: usize = 0x32f938;
+    pub const AD_CONFIRM_DECLINED: usize = 0x900;
+    pub const WIN_XP: usize = 0x83e40;
+    pub const PRESET_CANNON_PARTS: usize = 0x42f968;
+    pub const BATTLE_LINEUP: usize = 0xc770;
+    pub const LABYRINTH_UNIT_COUNT: usize = 0xe38;
+    pub const LABYRINTH_FLOOR_RESULT: usize = 0xe34;
+    pub const EVENT_REWARDS_NEG2: usize = 0x3c3200;
+    pub const EVENT_REWARDS: usize = 0x3b2b68;
+    pub const CLEAR_LINEUP: usize = 0xc744;
     pub const TREASURE_LEVELS_STRIDE: usize = 0xc8;
-    pub const TREASURE_LEVELS: usize = 0xd198;
-    pub const REPLAY_MODE: usize = 0x38fed0;
-    pub const FESTIVAL_COTC: usize = 0x32c814;
-    pub const FESTIVAL_ITF: usize = 0x32c808;
-    pub const FESTIVAL_EOC: usize = 0x32c7fc;
-    pub const MAP_OPEN_NEG6: usize = 0x37dce8;
-    pub const MAP_OPEN_STORY: usize = 0x37b5c0;
-    pub const REWARD_FORMS_OWNED: usize = 0x3aa158;
-    pub const REWARD_UNITS_OWNED: usize = 0x3a93a8;
-    pub const UNITS_UNLOCKED_FLAG: usize = 0x4a408;
-    pub const REWARD_1002_OWNED: usize = 0x32cbc4;
-    pub const STAGE_UNLOCK_CHAPTERS: usize = 0xc924;
-    pub const STAGE_UNLOCK_NEG3: usize = 0xc934;
-    pub const STAGE_UNLOCK_NEG7: usize = 0xc940;
-    pub const STAGE_UNLOCK_NEG6: usize = 0x33df38;
-    pub const STAGE_UNLOCK_STORY: usize = 0x33b810;
+    pub const TREASURE_LEVELS: usize = 0xd288;
+    pub const REPLAY_MODE: usize = 0x397980;
+    pub const FESTIVAL_COTC: usize = 0x334294;
+    pub const FESTIVAL_ITF: usize = 0x334288;
+    pub const FESTIVAL_EOC: usize = 0x33427c;
+    pub const MAP_OPEN_NEG6: usize = 0x385798;
+    pub const MAP_OPEN_STORY: usize = 0x383070;
+    pub const REWARD_FORMS_OWNED: usize = moved(0x3b1d70, TAIL_REWARD_FORMS_OWNED);
+    pub const REWARD_UNITS_OWNED: usize = moved(0x3b0fa8, TAIL_REWARD_UNITS_OWNED);
+    pub const UNITS_UNLOCKED_FLAG: usize = 0x4a558;
+    pub const REWARD_1002_OWNED: usize = 0x334644;
+    pub const STAGE_UNLOCK_CHAPTERS: usize = 0xca14;
+    pub const STAGE_UNLOCK_NEG3: usize = 0xca24;
+    pub const STAGE_UNLOCK_NEG7: usize = 0xca30;
+    pub const STAGE_UNLOCK_NEG6: usize = 0x3459e8;
+    pub const STAGE_UNLOCK_STORY: usize = 0x3432c0;
     pub const WALLET_RED_GAUGE_FRAMES: usize = 0x1a8;
     pub const WALLET_ORB_DEPLOYS_SEEN: usize = 0x158;
-    pub const DRAW_FRAMES: usize = 0x327f84;
-    pub const BLINK_COUNTER: usize = 0x327f7c;
-    pub const BLINK_ON: usize = 0x327f80;
-    pub const CAT_GOD_SPIN: usize = 0x32b498;
-    pub const CAT_GOD_GLOW: usize = 0x32b4a0;
-    pub const TUTORIAL_CLEARED: usize = 0xc2d8;
-    pub const TUTORIAL_STEP: usize = 0x224;
-    pub const TUTORIAL_DECK_SEEN: usize = 0x4a49c;
-    pub const TUTORIAL_TWO_ROWS_SEEN: usize = 0x4a4f0;
-    pub const TUTORIAL_TIMER: usize = 0x32b450;
-    pub const TUTORIAL_CAT_GOD_SEEN: usize = 0x4a4a0;
-    pub const CAT_GOD_AVAILABLE: usize = 0xc2f4;
-    pub const ENTRY_STAGE: usize = 0x325c38;
-    pub const CAT_GOD_BUTTON_PRESS: usize = 0x32b67c;
-    pub const CAT_GOD_INTRO_STEP: usize = 0x4a4b4;
-    pub const PAUSE_PRESS: usize = 0x328340;
-    pub const SPEED_UP_PRESS: usize = 0x327e84;
-    pub const CPU_PRESS: usize = 0x327e90;
-    pub const SNIPER_PRESS: usize = 0x327e98;
-    pub const DECK_PRESS: usize = 0x328380;
-    pub const CAT_GOD_BUTTON_SINK: usize = 0x32b520;
-    pub const CAT_GOD_BUTTON_RECT: usize = 0x32b5dc;
-    pub const TOUCH_CAPTURED: usize = 0x326fdd;
-    pub const ITEM_RECTS: usize = 0x327dd4;
-    pub const TOOLTIP_ITEM: usize = 0x326600;
-    pub const TOOLTIP_PAGE: usize = 0x32a470;
-    pub const CANNON_RECT: usize = 0x328204;
-    pub const WORKER_RECT: usize = 0x328214;
-    pub const PAUSE_RECT: usize = 0x328234;
-    pub const CANNON_HELD: usize = 0x32a404;
-    pub const WORKER_HELD: usize = 0x32a405;
-    pub const PAUSE_HELD: usize = 0x32a407;
-    pub const DECK_BUTTON_PRESSED: usize = 0x32a408;
-    pub const BG_PARTICLES: usize = 0x28be44;
-    pub const BG_DRIFTERS: usize = 0x28c6dc;
-    pub const BG_STARS: usize = 0x28c8bc;
-    pub const BG_SPRITES: usize = 0x28cd1c;
+    pub const DRAW_FRAMES: usize = 0x32f9bc;
+    pub const BLINK_COUNTER: usize = 0x32f9b4;
+    pub const BLINK_ON: usize = 0x32f9b8;
+    pub const CAT_GOD_SPIN: usize = 0x332f18;
+    pub const CAT_GOD_GLOW: usize = 0x332f20;
+    pub const TUTORIAL_CLEARED: usize = 0xc3c8;
+    pub const TUTORIAL_STEP: usize = 0x24c;
+    pub const TUTORIAL_DECK_SEEN: usize = 0x4a5ec;
+    pub const TUTORIAL_TWO_ROWS_SEEN: usize = 0x4a640;
+    pub const GAUGE_TUTORIAL_STEP: usize = 0x4a65c;
+    pub const TUTORIAL_TIMER: usize = 0x332ed0;
+    pub const TUTORIAL_CAT_GOD_SEEN: usize = 0x4a5f0;
+    pub const CAT_GOD_AVAILABLE: usize = 0xc3e4;
+    pub const ENTRY_STAGE: usize = 0x32d658;
+    pub const CAT_GOD_BUTTON_PRESS: usize = 0x3330fc;
+    pub const CAT_GOD_INTRO_STEP: usize = 0x4a604;
+    pub const PAUSE_PRESS: usize = 0x32fd78;
+    pub const SPEED_UP_PRESS: usize = 0x32f8bc;
+    pub const CPU_PRESS: usize = 0x32f8c8;
+    pub const SNIPER_PRESS: usize = 0x32f8d0;
+    pub const DECK_PRESS: usize = 0x32fdb8;
+    pub const CAT_GOD_BUTTON_SINK: usize = 0x332fa0;
+    pub const CAT_GOD_BUTTON_RECT: usize = 0x33305c;
+    pub const TOUCH_CAPTURED: usize = 0x32e9fd;
+    pub const ITEM_RECTS: usize = 0x32f80c;
+    pub const TOOLTIP_ITEM: usize = 0x32e020;
+    pub const TOOLTIP_PAGE: usize = 0x331ed8;
+    pub const CANNON_RECT: usize = 0x32fc3c;
+    pub const WORKER_RECT: usize = 0x32fc4c;
+    pub const PAUSE_RECT: usize = 0x32fc6c;
+    pub const CANNON_HELD: usize = 0x331e6c;
+    pub const HELD_FLAGS_TAIL: usize = 0x331e7b;
+    pub const WORKER_HELD: usize = 0x331e6d;
+    pub const PAUSE_HELD: usize = 0x331e6f;
+    pub const DECK_BUTTON_PRESSED: usize = 0x331e70;
+    pub const BG_PARTICLES: usize = 0x292ae4;
+    pub const BG_DRIFTERS: usize = 0x29337c;
+    pub const BG_STARS: usize = 0x29355c;
+    pub const BG_SPRITES: usize = 0x2939bc;
 
     pub fn new() -> Self {
         let mut raw = vec![0u8; SIZE].into_boxed_slice();
@@ -1835,6 +2137,9 @@ impl AppContext {
 
         Self {
             raw,
+            rng_state: 0,
+            limits: Default::default(),
+            treasure_gauge: Default::default(),
             stage_enemies: Vec::new(),
             spawn_states: Vec::new(),
             unit_models: [Vec::new(), Vec::new()],
@@ -1897,7 +2202,7 @@ impl AppContext {
             stage_pair_records: BTreeMap::new(),
             altar_enemy_ids: Default::default(),
             altar_rewards: BTreeMap::new(),
-            label_texts: vec![None; 0x434],
+            label_texts: vec![None; UNITS + LABEL_SPARES],
             map_names: Default::default(),
             drop_item_rows: Default::default(),
             filter_stage_maps: Default::default(),
@@ -2388,6 +2693,10 @@ impl AppContext {
             + column as i64) as usize
     }
 
+    pub fn units_owned_key(&self) -> usize {
+        Self::UNITS_OWNED.wrapping_add((self.limits.units as usize).wrapping_mul(4))
+    }
+
     pub fn faction_flags(faction: i32) -> usize {
         (faction as usize)
             .wrapping_mul(FACTION_FLAGS_STRIDE)
@@ -2451,14 +2760,11 @@ impl AppContext {
     }
 
     pub fn rng_state(&self) -> u32 {
-        let mut word = [0u8; 4];
-        word.copy_from_slice(&self.raw[RNG_STATE..RNG_STATE + 4]);
-
-        u32::from_le_bytes(word)
+        self.rng_state
     }
 
     pub fn set_rng_state(&mut self, state: u32) {
-        self.raw[RNG_STATE..RNG_STATE + 4].copy_from_slice(&state.to_le_bytes());
+        self.rng_state = state;
     }
 
     pub fn zero(&mut self, off: usize, len: usize) -> Result<(), Fault> {

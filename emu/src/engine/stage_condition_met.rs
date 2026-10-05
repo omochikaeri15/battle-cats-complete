@@ -12,7 +12,7 @@ pub fn stage_condition_met(
     stage: i32,
 ) -> Result<bool, Fault> {
     match map_type {
-        -21 => Ok(get_cleared_count(ctx, 0xad0)? <= stage),
+        -21 => Ok(get_cleared_count(ctx, AppContext::LABYRINTH)? <= stage),
         -19 => {
             let listed = get_aku_stage_list(ctx, aku_list_key());
 

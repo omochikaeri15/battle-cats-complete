@@ -59,8 +59,13 @@ mod cat_food_shop_update;
 mod dc_begin_frame;
 mod dc_end_frame;
 mod dc_set_viewport;
+mod deploy_count_condition;
+mod ex_stage_credits_gauge;
+mod get_item_cap;
+mod get_recharge_cut;
 mod gl_surface_ready;
 mod inquiry_button_draw;
+mod load_treasure_gauge_json;
 mod medal_award_set;
 mod medal_condition_met;
 mod medal_popup_draw;
@@ -70,9 +75,16 @@ mod mission_popup_draw;
 mod mission_popup_update;
 mod notice_popup_draw;
 mod notice_popup_update;
+mod set_recharge_cut;
+mod stat_has_recharge_cut;
+mod stat_recharge_cut;
 mod surface_height;
 mod surface_width;
 mod touch_table_update;
+mod treasure_gauge_add;
+mod treasure_gauge_full;
+mod treasure_gauge_reset;
+mod treasure_gauge_unlocked;
 mod tutorial_popup_draw;
 mod tutorial_popup_update;
 mod ui_sheet_cached;
@@ -854,7 +866,6 @@ mod is_stage_cleared_session;
 mod is_tablet;
 mod is_touchable;
 mod is_touchable_thunk;
-mod is_trait_targeted_talent;
 mod is_traitless;
 mod is_unit_available;
 mod is_witch;
@@ -1923,8 +1934,11 @@ pub use app_context::{
     ScoreBonusMap, StageNameTable,
     AppContext, Base, CAT_STATS, CAT_STATS_FORM_STRIDE, CAT_STATS_UNIT_STRIDE, CannonShot,
     CatStats, Debris, ENEMY_STATS, ENEMY_STATS_STRIDE, ENTITY_BASE, ENTITY_STRIDE, EnemyStats,
-    Entity, FACTION_STRIDE, GatyaItem, ItemDefinition, OptionPage, PageList, Pinch, SIZE, SLOTS_PER_FACTION,
-    STAGE_ENEMY_COLUMNS, UNIT_BUY, UNIT_BUY_STRIDE, UnitBuy, VfxSlot, WaveRecord, WaveSprite,
+    ENEMY_ROW_CAPACITY, ENEMY_ROWS, EX_MAPS, Entity, FACTION_STRIDE, GatyaItem, ItemDefinition, LABEL_SPARES, Limits, NEG5_MAPS, OptionPage, PageList, Pinch, SIZE,
+    SLOTS_PER_FACTION, STAGE_ENEMY_COLUMNS, TALENT_GROUPS, UNIT_BUY, UNIT_BUY_STRIDE, UNIT_CAPACITY, UNITS, UnitBuy, VfxSlot, WaveRecord,
+    WaveSprite, BaseGuardNotice, BgDrifter, BgParticle, BgSetup, BgSprite, BgStar, CatGodButton, Cells, DrawEntry, HitEntry,
+    Labyrinth, FloorCell, MapStageRow, Matrix, PowerupGrant, ProcRolls, Quad, Rect, SniperCasing, StageRecordRow,
+    StampEntry, StrikeSparks, TechMax, TreasureRow, Vector,
 };
 pub use app_on_draw::app_on_draw;
 pub use ad_is_showing::ad_is_showing;
@@ -1935,8 +1949,13 @@ pub use cat_food_shop_update::cat_food_shop_update;
 pub use dc_begin_frame::dc_begin_frame;
 pub use dc_end_frame::dc_end_frame;
 pub use dc_set_viewport::dc_set_viewport;
+pub use deploy_count_condition::deploy_count_condition;
+pub use ex_stage_credits_gauge::ex_stage_credits_gauge;
+pub use get_item_cap::get_item_cap;
+pub use get_recharge_cut::get_recharge_cut;
 pub use gl_surface_ready::gl_surface_ready;
 pub use inquiry_button_draw::inquiry_button_draw;
+pub use load_treasure_gauge_json::load_treasure_gauge_json;
 pub use medal_award_set::medal_award_set;
 pub use medal_condition_met::medal_condition_met;
 pub use medal_popup_draw::medal_popup_draw;
@@ -1946,9 +1965,16 @@ pub use mission_popup_draw::mission_popup_draw;
 pub use mission_popup_update::mission_popup_update;
 pub use notice_popup_draw::notice_popup_draw;
 pub use notice_popup_update::notice_popup_update;
+pub use set_recharge_cut::set_recharge_cut;
+pub use stat_has_recharge_cut::stat_has_recharge_cut;
+pub use stat_recharge_cut::stat_recharge_cut;
 pub use surface_height::surface_height;
 pub use surface_width::surface_width;
 pub use touch_table_update::touch_table_update;
+pub use treasure_gauge_add::{TreasureGauge, treasure_gauge_add};
+pub use treasure_gauge_full::treasure_gauge_full;
+pub use treasure_gauge_reset::treasure_gauge_reset;
+pub use treasure_gauge_unlocked::treasure_gauge_unlocked;
 pub use tutorial_popup_draw::tutorial_popup_draw;
 pub use tutorial_popup_update::tutorial_popup_update;
 pub use ui_sheet_cached::ui_sheet_cached;
@@ -2737,7 +2763,6 @@ pub use is_stage_cleared_session::is_stage_cleared_session;
 pub use is_tablet::is_tablet;
 pub use is_touchable::is_touchable;
 pub use is_touchable_thunk::is_touchable_thunk;
-pub use is_trait_targeted_talent::is_trait_targeted_talent;
 pub use is_traitless::is_traitless;
 pub use is_unit_available::is_unit_available;
 pub use is_witch::is_witch;

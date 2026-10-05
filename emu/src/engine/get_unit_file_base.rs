@@ -9,7 +9,7 @@ pub fn get_unit_file_base(ctx: &mut AppContext, unit_id: i32, form: i32) -> Resu
         return string_format_int(ctx, b"%03d_e", unit_id);
     }
 
-    if unit_id as u32 <= 0x36b && form as u32 <= 1 {
+    if (unit_id as u32) < ctx.limits.units as u32 && form as u32 <= 1 {
         let row = (unit_id as u32 as i64) << 8;
         let mut pair = [0u8; 8];
 

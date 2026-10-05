@@ -1,6 +1,8 @@
 use crate::{Fault, ops};
 
-use super::{AppContext, Medal, get_stage_count, get_stage_record, map_index_of_map_id, map_type_of_map_id};
+use super::{
+    AppContext, Medal, get_stage_count, get_stage_record, map_index_of_map_id, map_type_of_map_id,
+};
 
 pub fn medal_stage_condition_met(ctx: &mut AppContext, medal: &Medal, map_id: i32) -> Result<bool, Fault> {
     let map_type = map_type_of_map_id(map_id);

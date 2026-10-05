@@ -21,7 +21,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
     let mut wide = 0i32;
     let mut narrow = 0i32;
 
-    for icon in 0..0x55 {
+    for icon in 0..0x58 {
         let Some(row) = ctx.picture_book_abilities.iter().position(|columns| columns[0] == icon) else {
             continue;
         };
@@ -111,7 +111,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         let mut column = 0i32;
 
-        for icon in 0..0x55 {
+        for icon in 0..0x58 {
             let Some(row) = ctx.picture_book_abilities.iter().position(|columns| columns[0] == icon) else {
                 continue;
             };
@@ -167,7 +167,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
         let mut column = 0i32;
 
-        for icon in 0..0x55 {
+        for icon in 0..0x58 {
             let Some(row) = ctx.picture_book_abilities.iter().position(|columns| columns[0] == icon) else {
                 continue;
             };
@@ -317,7 +317,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
     let mut column = 0i32;
 
-    for icon in 0..0x55 {
+    for icon in 0..0x58 {
         let Some(row) = ctx.picture_book_abilities.iter().position(|columns| columns[0] == icon) else {
             continue;
         };

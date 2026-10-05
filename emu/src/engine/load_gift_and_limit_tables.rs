@@ -1,6 +1,8 @@
 use crate::Fault;
 
-use super::{AppContext, AssetStream, get_column_count, open_asset_stream, read_csv_cell, read_csv_row};
+use super::{
+    AppContext, AssetStream, get_column_count, open_asset_stream, read_csv_cell, read_csv_row,
+};
 
 pub fn load_gift_and_limit_tables(ctx: &mut AppContext) -> Result<(), Fault> {
     let gift = open_asset_stream(ctx, b"rankGift.csv", 0, 0)?;
@@ -42,13 +44,13 @@ pub fn load_gift_and_limit_tables(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let limit = open_asset_stream(ctx, b"unitlimit.csv", 0, 0)?;
 
-    ctx.unit_limit_rows = vec![[-1i32; 10]; 876];
+    ctx.unit_limit_rows = vec![[-1i32; 10]; ctx.limits.units as usize];
 
     if let Some(bytes) = limit {
         let stm = &mut AssetStream::new(&bytes, b'\n');
         let mut row = 0usize;
 
-        while row != 876 {
+        while row != ctx.limits.units as usize {
             if read_csv_row(stm) {
                 get_column_count(stm);
             }

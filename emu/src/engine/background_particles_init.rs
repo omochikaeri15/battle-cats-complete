@@ -1,6 +1,8 @@
 use crate::{Fault, ops};
 
-use super::{AppContext, call_rng, get_background_id, get_drawable_width};
+use super::{
+    AppContext, BgDrifter, BgParticle, BgSprite, call_rng, get_background_id, get_drawable_width,
+};
 
 pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
     if get_background_id(ctx)? == 2
@@ -13,7 +15,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut particle = 0usize;
 
         while particle != 100 {
-            let record = AppContext::BG_PARTICLES.wrapping_add(particle * 0x14);
+            let record = AppContext::BG_PARTICLES.wrapping_add(particle * BgParticle::STRIDE);
             let roll = call_rng(ctx, 0xc0).wrapping_add((particle * 0xc0) as i32);
             let span = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
                 .wrapping_add(get_drawable_width(ctx)?.wrapping_mul(4))
@@ -37,7 +39,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
                     .wrapping_mul(20);
 
-                ctx.set_i32_at(record + 4, roll.wrapping_sub(depth))?;
+                ctx.set_i32_at(record + BgParticle::Y, roll.wrapping_sub(depth))?;
             } else if get_background_id(ctx)? == 0xe {
                 let depth = 100i32
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
@@ -47,7 +49,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
                     .wrapping_mul(20);
 
-                ctx.set_i32_at(record + 4, roll.wrapping_sub(depth).wrapping_add(-0x3c))?;
+                ctx.set_i32_at(record + BgParticle::Y, roll.wrapping_sub(depth).wrapping_add(-0x3c))?;
             } else if get_background_id(ctx)? == 0x22 {
                 let depth = 100i32
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
@@ -57,18 +59,18 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
                     .wrapping_mul(20);
 
-                ctx.set_i32_at(record + 4, roll.wrapping_sub(depth).wrapping_add(-0xc8))?;
+                ctx.set_i32_at(record + BgParticle::Y, roll.wrapping_sub(depth).wrapping_add(-0xc8))?;
             }
 
-            ctx.set_i32_at(record + 8, 0)?;
+            ctx.set_i32_at(record + BgParticle::PHASE, 0)?;
 
             let speed = call_rng(ctx, 0x14).wrapping_add(5);
 
-            ctx.set_i32_at(record + 0xc, speed)?;
+            ctx.set_i32_at(record + BgParticle::SPEED, speed)?;
 
             let kind = call_rng(ctx, 7);
 
-            ctx.set_i32_at(record + 0x10, kind)?;
+            ctx.set_i32_at(record + BgParticle::KIND, kind)?;
             particle += 1;
         }
     }
@@ -80,7 +82,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut drifter = 0usize;
 
         while drifter != 100 {
-            let record = AppContext::BG_DRIFTERS.wrapping_add(drifter * 0x10);
+            let record = AppContext::BG_DRIFTERS.wrapping_add(drifter * BgDrifter::STRIDE);
             let roll = call_rng(ctx, 0x38).wrapping_add((drifter * 0x38) as i32);
             let length = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?);
             let x = ops::irem(roll, length).ok_or(Fault::divide(length as i64))?;
@@ -99,15 +101,15 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                 .wrapping_sub(ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?)
                 .wrapping_mul(20);
 
-            ctx.set_i32_at(record + 4, roll.wrapping_sub(depth).wrapping_mul(100))?;
+            ctx.set_i32_at(record + BgDrifter::Y, roll.wrapping_sub(depth).wrapping_mul(100))?;
 
             let angle = 0xafi32.wrapping_sub(call_rng(ctx, 0x55));
 
-            ctx.set_i32_at(record + 8, angle)?;
+            ctx.set_i32_at(record + BgDrifter::ANGLE, angle)?;
 
             let speed = call_rng(ctx, 0x258).wrapping_add(0xc8);
 
-            ctx.set_i32_at(record + 0xc, speed)?;
+            ctx.set_i32_at(record + BgDrifter::RADIUS, speed)?;
             drifter += 1;
         }
     }
@@ -124,7 +126,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut particle = 0usize;
 
         while particle != 100 {
-            let record = AppContext::BG_PARTICLES.wrapping_add(particle * 0x14);
+            let record = AppContext::BG_PARTICLES.wrapping_add(particle * BgParticle::STRIDE);
             let rising = call_rng(ctx, 5);
             let roll = call_rng(ctx, 0xc0).wrapping_add((particle * 0xc0) as i32);
             let span = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
@@ -154,11 +156,11 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                 }
             };
 
-            ctx.set_i32_at(record + 4, y)?;
+            ctx.set_i32_at(record + BgParticle::Y, y)?;
 
             let timer = call_rng(ctx, 0x168);
 
-            ctx.set_i32_at(record + 8, timer)?;
+            ctx.set_i32_at(record + BgParticle::PHASE, timer)?;
 
             if get_background_id(ctx)? == 0x51
                 || get_background_id(ctx)? == 0x65
@@ -168,11 +170,11 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             {
                 let speed = call_rng(ctx, 0x28).wrapping_add(100);
 
-                ctx.set_i32_at(record + 0xc, speed)?;
+                ctx.set_i32_at(record + BgParticle::SPEED, speed)?;
 
                 let kind = call_rng(ctx, 2);
 
-                ctx.set_i32_at(record + 0x10, kind)?;
+                ctx.set_i32_at(record + BgParticle::KIND, kind)?;
             }
 
             particle += 1;
@@ -185,7 +187,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut pair = 0usize;
 
         while pair != 100 {
-            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * 0x40);
+            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * BgSprite::STRIDE);
 
             for half in [0usize, 0x20] {
                 let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
@@ -204,25 +206,25 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_mul(20);
 
                 ctx.set_i32_at(
-                    sprite + half + 4,
+                    sprite + half + BgSprite::Y,
                     roll.wrapping_sub(depth).wrapping_mul(100),
                 )?;
 
                 let angle = call_rng(ctx, 0x168);
 
-                ctx.set_i32_at(sprite + half + 8, angle)?;
+                ctx.set_i32_at(sprite + half + BgSprite::ANGLE, angle)?;
 
                 let scale = call_rng(ctx, 100).wrapping_add(0x32);
 
-                ctx.set_i32_at(sprite + half + 0xc, scale)?;
+                ctx.set_i32_at(sprite + half + BgSprite::SIZE, scale)?;
 
                 let spin = call_rng(ctx, 0x96);
 
-                ctx.set_i32_at(sprite + half + 0x10, spin)?;
+                ctx.set_i32_at(sprite + half + BgSprite::RATE, spin)?;
 
                 let phase = call_rng(ctx, 100);
 
-                ctx.set_i32_at(sprite + half + 0x14, phase)?;
+                ctx.set_i32_at(sprite + half + BgSprite::LIFE, phase)?;
             }
 
             pair += 1;
@@ -238,7 +240,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut pair = 0usize;
 
         while pair != 100 {
-            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * 0x40);
+            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * BgSprite::STRIDE);
             let mut first = true;
             let mut half = 0usize;
 
@@ -251,12 +253,12 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                         .wrapping_mul(100)
                         .wrapping_add(0x7148);
 
-                    ctx.set_i32_at(sprite + 4, y)?;
+                    ctx.set_i32_at(sprite + BgSprite::Y, y)?;
 
                     let pick = call_rng(ctx, 10);
 
                     ctx.set_i32_at(
-                        sprite + 0xc,
+                        sprite + BgSprite::SIZE,
                         0x14i32.wrapping_add(((pick as u32) < 1) as i32),
                     )?;
 
@@ -273,15 +275,15 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                         .wrapping_add(0x1e0)
                         .wrapping_mul(100);
 
-                    ctx.set_i32_at(sprite + half * 0x20 + 4, y)?;
-                    ctx.set_i32_at(sprite + 0xc + 0x20 * half, 0x14)?;
+                    ctx.set_i32_at(sprite + half * BgSprite::HALF + BgSprite::Y, y)?;
+                    ctx.set_i32_at(sprite + BgSprite::SIZE + 0x20 * half, 0x14)?;
 
                     (0x64, 0xc8)
                 };
 
                 let size = call_rng(ctx, bound).wrapping_add(base);
 
-                ctx.set_i32_at(sprite + half * 0x20 + 0x10, size)?;
+                ctx.set_i32_at(sprite + half * BgSprite::HALF + BgSprite::RATE, size)?;
 
                 if get_background_id(ctx)? == 0x4b || get_background_id(ctx)? == 0x3f0 {
                     let field = sprite + half * 0x20 + 0xc;
@@ -294,16 +296,16 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_add(-0xf00);
                 let x = call_rng(ctx, width).wrapping_mul(100);
 
-                ctx.set_i32_at(sprite + half * 0x20, x)?;
-                ctx.set_i32_at(sprite + half * 0x20 + 8, 0x1e)?;
+                ctx.set_i32_at(sprite + half * BgSprite::HALF, x)?;
+                ctx.set_i32_at(sprite + half * BgSprite::HALF + BgSprite::ANGLE, 0x1e)?;
 
                 let life = call_rng(ctx, 0x3c).wrapping_add(0x46);
 
-                ctx.set_i32_at(sprite + half * 0x20 + 0x14, life)?;
+                ctx.set_i32_at(sprite + half * BgSprite::HALF + BgSprite::LIFE, life)?;
 
                 let angle = call_rng(ctx, 0x168);
 
-                ctx.set_i32_at(sprite + half * 0x20 + 0x18, angle)?;
+                ctx.set_i32_at(sprite + half * BgSprite::HALF + BgSprite::TURN, angle)?;
                 half = 1;
 
                 if !first {
@@ -323,7 +325,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut pair = 0usize;
 
         while pair != 100 {
-            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * 0x40);
+            let sprite = AppContext::BG_SPRITES.wrapping_add(pair * BgSprite::STRIDE);
 
             for half in [0usize, 0x20] {
                 let width = ops::div_10(ctx.i32_at(AppContext::STAGE_LENGTH)?)
@@ -342,26 +344,26 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
                     .wrapping_mul(20);
 
                 ctx.set_i32_at(
-                    sprite + half + 4,
+                    sprite + half + BgSprite::Y,
                     roll.wrapping_sub(depth).wrapping_mul(100),
                 )?;
 
                 let angle = call_rng(ctx, 0x168);
 
-                ctx.set_i32_at(sprite + half + 8, angle)?;
+                ctx.set_i32_at(sprite + half + BgSprite::ANGLE, angle)?;
 
                 let scale = call_rng(ctx, 100).wrapping_add(0x32);
 
-                ctx.set_i32_at(sprite + half + 0xc, scale)?;
+                ctx.set_i32_at(sprite + half + BgSprite::SIZE, scale)?;
 
                 let spin = call_rng(ctx, 0x96);
 
-                ctx.set_i32_at(sprite + half + 0x10, spin)?;
+                ctx.set_i32_at(sprite + half + BgSprite::RATE, spin)?;
 
                 let life = call_rng(ctx, 0xbb8).wrapping_add(0x3e8);
 
-                ctx.set_i32_at(sprite + half + 0x14, life)?;
-                ctx.set_i32_at(sprite + half + 0x18, 0x7d0)?;
+                ctx.set_i32_at(sprite + half + BgSprite::LIFE, life)?;
+                ctx.set_i32_at(sprite + half + BgSprite::TURN, 0x7d0)?;
             }
 
             pair += 1;
@@ -377,7 +379,7 @@ pub fn background_particles_init(ctx: &mut AppContext) -> Result<(), Fault> {
             let spark = !call_rng(ctx, 0x3c);
 
             ctx.set_i32_at(
-                AppContext::BG_PARTICLES.wrapping_add(particle * 0x14),
+                AppContext::BG_PARTICLES.wrapping_add(particle * BgParticle::STRIDE),
                 spark,
             )?;
             particle += 1;

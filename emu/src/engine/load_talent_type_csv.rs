@@ -25,7 +25,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let unit_id = read_csv_cell(stm, 0) as i32;
         let type_id = read_csv_cell(stm, 1) as i32;
-        let row = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let row = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
         let Some(slot) = row.first_mut() else {
             return Err(Fault::null_pointer());
         };
@@ -34,9 +34,9 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let mut group = 0i32;
 
-        while group != 8 {
+        while group != ctx.limits.talent_groups {
             let base = group.wrapping_mul(14);
-            let row = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+            let row = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
             if base.wrapping_add(0xe) >= get_column_count(stm) as i32
                 || !cell_is_int(stm, base.wrapping_add(2))
@@ -105,12 +105,12 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
         let mut kept: BTreeMap<i32, i32> = BTreeMap::new();
         let mut group = 0i32;
 
-        while group != 8 {
+        while group != ctx.limits.talent_groups {
             let index = 1i32.wrapping_add(group.wrapping_mul(14)) as usize;
             let abil = ctx
                 .talent_definitions
                 .entry(unit_id)
-                .or_insert([0; 0x71])
+                .or_insert_with(|| ctx.limits.talent_row())
                 .get(index)
                 .copied()
                 .unwrap_or(0);

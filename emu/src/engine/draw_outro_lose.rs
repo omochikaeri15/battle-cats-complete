@@ -1,9 +1,11 @@
 use crate::{Fault, ops};
 
 use super::{
-    button_bank_find, draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled, draw_number_plain, draw_surface_aligned, fill_rect,
-    get_bottom_inset_logical, get_design_height2, get_drawable_width, glow_set, hit_test_rect, imgcut_get_sprite_cut, new_button_draw, obf_value_read, set_tint,
-    set_tint_alpha, touch_is_down, AppContext, Surface, BUTTON_PRESS_BOUNCE, LOSE_BANNER_SLIDE_TABLE, POPUP_GROW_TABLE,
+    AppContext, BUTTON_PRESS_BOUNCE, LOSE_BANNER_SLIDE_TABLE, POPUP_GROW_TABLE, Rect, Surface,
+    button_bank_find, draw_context, draw_continue_button, draw_cut, draw_cut_f, draw_cut_scaled,
+    draw_number_plain, draw_surface_aligned, fill_rect, get_bottom_inset_logical,
+    get_design_height2, get_drawable_width, glow_set, hit_test_rect, imgcut_get_sprite_cut,
+    new_button_draw, obf_value_read, set_tint, set_tint_alpha, touch_is_down,
 };
 
 const BLANK_LINE: &[u8] = "\u{ff20}".as_bytes();
@@ -148,9 +150,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let rect = [
             ctx.i32_at(AppContext::OUTRO_OK_RECT)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 4)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 8)?,
-            ctx.i32_at(AppContext::OUTRO_OK_RECT + 0xc)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::Y)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::WIDTH)?,
+            ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?,
         ];
 
         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
@@ -280,9 +282,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         if touch_is_down(ctx)? != 0 {
             let rect = [
                 ctx.i32_at(AppContext::CANNON_RECT)?,
-                ctx.i32_at(AppContext::CANNON_RECT + 4)?,
-                ctx.i32_at(AppContext::CANNON_RECT + 8)?,
-                ctx.i32_at(AppContext::CANNON_RECT + 0xc)?,
+                ctx.i32_at(AppContext::CANNON_RECT + Rect::Y)?,
+                ctx.i32_at(AppContext::CANNON_RECT + Rect::WIDTH)?,
+                ctx.i32_at(AppContext::CANNON_RECT + Rect::HEIGHT)?,
             ];
 
             if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
@@ -293,9 +295,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         if shift.is_none() && ctx.u8_at(AppContext::TUTORIAL_POPUP_OPEN)? == 0 && touch_is_down(ctx)? != 0 {
             let rect = [
                 ctx.i32_at(AppContext::WORKER_RECT)?,
-                ctx.i32_at(AppContext::WORKER_RECT + 4)?,
-                ctx.i32_at(AppContext::WORKER_RECT + 8)?,
-                ctx.i32_at(AppContext::WORKER_RECT + 0xc)?,
+                ctx.i32_at(AppContext::WORKER_RECT + Rect::Y)?,
+                ctx.i32_at(AppContext::WORKER_RECT + Rect::WIDTH)?,
+                ctx.i32_at(AppContext::WORKER_RECT + Rect::HEIGHT)?,
             ];
 
             if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {

@@ -1,8 +1,8 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, get_base_upgrade, get_cat_combo_bonus, get_powerup, get_stage_record,
-    get_treasure_value, min_i32, validate_map_type, xor_row46_get,
+    AppContext, StageRecordRow, get_base_upgrade, get_cat_combo_bonus, get_powerup,
+    get_stage_record, get_treasure_value, min_i32, validate_map_type, xor_row46_get,
 };
 
 pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
@@ -36,7 +36,7 @@ pub fn compute_stage_xp(ctx: &mut AppContext) -> Result<i32, Fault> {
             let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)?;
             let stage = ctx.i32_at(AppContext::STAGE_ROW)?;
             let records = ctx.bytes_from(
-                (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * 0xd0) as usize,
+                (AppContext::STAGE_RECORD_CHAPTERS as i64 + (chapter as i64) * StageRecordRow::STRIDE as i64) as usize,
             )?;
             let cleared = ops::xor_row_decode(records, 0x33, stage as i64 as usize).ok_or(
                 Fault::index_out_of_range(stage as i64, 0x33),

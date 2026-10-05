@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::AppContext;
+use super::{AppContext, BaseGuardNotice};
 
 pub fn set_base_guard_notice(ctx: &mut AppContext, notice: usize, state: i32) -> Result<(), Fault> {
     if state == 1 && ctx.i32_at(notice)? == 1 {
@@ -8,5 +8,5 @@ pub fn set_base_guard_notice(ctx: &mut AppContext, notice: usize, state: i32) ->
     }
 
     ctx.set_i32_at(notice, state)?;
-    ctx.set_i32_at(notice.wrapping_add(4), 0)
+    ctx.set_i32_at(notice.wrapping_add(BaseGuardNotice::FRAME), 0)
 }

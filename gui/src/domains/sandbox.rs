@@ -50,7 +50,7 @@ You can accept the agreement by clicking the "Agree" button below. Selecting "Di
 const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
 const FAULT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Fault, Size::new(460.0, 260.0));
 const DIAGNOSTICS_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Diagnostics, Size::new(520.0, 360.0));
-const VERSION_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayVersion, Size::new(460.0, 320.0));
+const VERSION_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayVersion, Size::new(460.0, 372.0));
 const BODY_SIZE: f32 = 14.0;
 const READOUT_SIZE: f32 = 13.0;
 const READOUT_VALUE_WIDTH: f32 = 90.0;

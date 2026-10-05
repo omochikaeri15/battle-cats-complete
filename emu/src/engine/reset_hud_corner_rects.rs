@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, get_drawable_width, get_left_inset_logical, get_right_inset_logical,
+    AppContext, Rect, get_drawable_width, get_left_inset_logical, get_right_inset_logical,
     get_top_inset_offset,
 };
 
@@ -17,13 +17,13 @@ pub fn reset_hud_corner_rects(ctx: &mut AppContext) -> Result<(), Fault> {
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     ctx.set_i32_at(
-        AppContext::CANNON_RECT + 4,
+        AppContext::CANNON_RECT + Rect::Y,
         get_top_inset_offset(ctx)
             .wrapping_add(shift)
             .wrapping_add(0x1fe),
     )?;
-    ctx.set_i32_at(AppContext::CANNON_RECT + 8, 0xc2)?;
-    ctx.set_i32_at(AppContext::CANNON_RECT + 0xc, 0x82)?;
+    ctx.set_i32_at(AppContext::CANNON_RECT + Rect::WIDTH, 0xc2)?;
+    ctx.set_i32_at(AppContext::CANNON_RECT + Rect::HEIGHT, 0x82)?;
     ctx.set_i32_at(
         AppContext::WORKER_RECT,
         get_left_inset_logical(ctx).wrapping_add(-0x30),
@@ -32,11 +32,11 @@ pub fn reset_hud_corner_rects(ctx: &mut AppContext) -> Result<(), Fault> {
     let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
 
     ctx.set_i32_at(
-        AppContext::WORKER_RECT + 4,
+        AppContext::WORKER_RECT + Rect::Y,
         get_top_inset_offset(ctx)
             .wrapping_add(shift)
             .wrapping_add(0x207),
     )?;
-    ctx.set_i32_at(AppContext::WORKER_RECT + 8, 0xc2)?;
-    ctx.set_i32_at(AppContext::WORKER_RECT + 0xc, 0x7d)
+    ctx.set_i32_at(AppContext::WORKER_RECT + Rect::WIDTH, 0xc2)?;
+    ctx.set_i32_at(AppContext::WORKER_RECT + Rect::HEIGHT, 0x7d)
 }

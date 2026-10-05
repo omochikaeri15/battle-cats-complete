@@ -20,7 +20,7 @@ pub fn reward_unit_id(ctx: &AppContext, id: i32) -> Result<i32, Fault> {
         return Ok(-1);
     }
 
-    for unit in 0..0x36cusize {
+    for unit in 0..ctx.limits.units as usize {
         let row = ctx.bytes_from(UNIT_BUY + unit * UNIT_BUY_STRIDE)?;
         let slots = UnitBuy::KEY / 4;
 

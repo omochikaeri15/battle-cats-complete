@@ -1,9 +1,9 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, cos_deg, draw_context, draw_cut_f, draw_cut_rotated, draw_cut_rotated_f,
-    draw_cut_scaled, get_base_pos_x, get_base_pos_y, get_drawable_width, get_powerup, set_flip,
-    set_tint, sin_deg,
+    AppContext, SniperCasing, StrikeSparks, cos_deg, draw_context, draw_cut_f, draw_cut_rotated,
+    draw_cut_rotated_f, draw_cut_scaled, get_base_pos_x, get_base_pos_y, get_drawable_width,
+    get_powerup, set_flip, set_tint, sin_deg,
 };
 
 pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -239,7 +239,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
     if ctx.u8_at(AppContext::SNIPER_CASINGS_LIVE)? != 0 {
         for casing in 0..4usize {
-            let base = AppContext::SNIPER_CASINGS + casing * 0x14;
+            let base = AppContext::SNIPER_CASINGS + casing * SniperCasing::STRIDE;
             let origin = ctx
                 .i32_at(AppContext::DRAW_TEMP_1)?
                 .wrapping_add(ctx.i32_at(AppContext::CAMERA_KICK)?)
@@ -252,9 +252,9 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             let y = ctx
                 .i32_at(AppContext::DRAW_TEMP_2)?
                 .wrapping_sub(ctx.i32_at(AppContext::DRAW_TEMP_4)?)
-                .wrapping_add(ctx.i32_at(base + 4)?)
+                .wrapping_add(ctx.i32_at(base + SniperCasing::Y)?)
                 .wrapping_add(0x100);
-            let cut = ops::div_2(ctx.i32_at(base + 8)?).wrapping_add(8);
+            let cut = ops::div_2(ctx.i32_at(base + SniperCasing::AGE)?).wrapping_add(8);
 
             draw_cut_scaled(
                 draw_context(&mut ctx.draw)?,
@@ -340,7 +340,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
 
         if timer > 0 {
             let pos_x = ops::div_10(
-                ctx.i32_at(base + 4)?
+                ctx.i32_at(base + StrikeSparks::FIRST_X)?
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             );
 
@@ -350,7 +350,7 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
                 let x = ops::cvttsd2si(
                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + pos_x as f64,
                 );
-                let y = ops::div_10(ctx.i32_at(base + 8)?);
+                let y = ops::div_10(ctx.i32_at(base + StrikeSparks::FIRST_Y)?);
                 let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base)?));
 
                 draw_cut_scaled(
@@ -367,20 +367,20 @@ pub fn sniper_draw(ctx: &mut AppContext) -> Result<(), Fault> {
             }
         }
 
-        if ctx.i32_at(base + 0xc)? > 0 {
+        if ctx.i32_at(base + StrikeSparks::SECOND_TIMER)? > 0 {
             let pos_x = ops::div_10(
-                ctx.i32_at(base + 0x10)?
+                ctx.i32_at(base + StrikeSparks::SECOND_X)?
                     .wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?),
             );
 
             ctx.set_i32_at(AppContext::DRAW_TEMP_1, pos_x)?;
 
-            if ctx.i32_at(base + 0xc)? >= 2 {
+            if ctx.i32_at(base + StrikeSparks::SECOND_TIMER)? >= 2 {
                 let x = ops::cvttsd2si(
                     get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + pos_x as f64,
                 );
-                let y = ops::div_10(ctx.i32_at(base + 0x14)?);
-                let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base + 0xc)?));
+                let y = ops::div_10(ctx.i32_at(base + StrikeSparks::SECOND_Y)?);
+                let cut = 0xdi32.wrapping_sub(ops::div_2(ctx.i32_at(base + StrikeSparks::SECOND_TIMER)?));
 
                 draw_cut_scaled(
                     draw_context(&mut ctx.draw)?,

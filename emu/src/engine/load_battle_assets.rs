@@ -3,16 +3,15 @@ use std::{cell, collections::BTreeMap, rc::Rc};
 use crate::Fault;
 
 use super::{
-    AppContext, Imgcut, Maanim, Mamodel, deck_slot_filled, format_localized, get_altar_level_cap,
-    get_background_id, get_bg_image_id, get_bg_model_id, get_button_unit_form, get_button_unit_id,
-    get_castle_enemy_row, get_map_type, get_text_texture, imgcut_get_width, is_scored_stage,
-    is_space_map, maanim_initialize, maanim_load, mamodel_get_part, mamodel_load,
+    AppContext, Imgcut, Maanim, Mamodel, MamodelPart, deck_slot_filled, format_localized,
+    get_altar_level_cap, get_background_id, get_bg_image_id, get_bg_model_id, get_button_unit_form,
+    get_button_unit_id, get_castle_enemy_row, get_map_type, get_text_texture, imgcut_get_width,
+    is_scored_stage, is_space_map, maanim_initialize, maanim_load, mamodel_get_part, mamodel_load,
     mamodel_set_sheet, mamodel_set_sheet_table, mamodel_set_single_sheet, map_type_code,
     query_localizable, stat_soul_animation_type, stat_spawn_animation_type,
-    std_map_int_maanim_subscript, string_format_int, string_format_int2,
-    string_format_int2_text_copy, string_format_int2_text2, string_format_int3,
-    string_format_rank_comment, string_split, text_texture_cache, texture_cache_load,
-    texture_context_init, validate_map_type,
+    std_map_int_maanim_subscript, string_format_int, string_format_int2, string_format_int2_text2,
+    string_format_int2_text_copy, string_format_int3, string_format_rank_comment, string_split,
+    text_texture_cache, texture_cache_load, texture_context_init, validate_map_type,
 };
 
 pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -131,14 +130,14 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.volcano_anims = Default::default();
     ctx.smallvolcano_anims = Default::default();
     ctx.unit_sheets = [
-        (0..0x36c).map(|_| cell::Cell::new(None)).collect(),
-        (0..0x36c).map(|_| cell::Cell::new(None)).collect(),
-        (0..0x36c).map(|_| cell::Cell::new(None)).collect(),
-        (0..0x36c).map(|_| cell::Cell::new(None)).collect(),
+        (0..ctx.limits.units).map(|_| cell::Cell::new(None)).collect(),
+        (0..ctx.limits.units).map(|_| cell::Cell::new(None)).collect(),
+        (0..ctx.limits.units).map(|_| cell::Cell::new(None)).collect(),
+        (0..ctx.limits.units).map(|_| cell::Cell::new(None)).collect(),
     ];
     ctx.unit_models[0] = (0..0x15).map(|_| Mamodel::default()).collect();
     ctx.unit_anims[0] = (0..0x15).map(|_| BTreeMap::new()).collect();
-    ctx.enemy_sheets = (0..0x322).map(|_| cell::Cell::new(None)).collect();
+    ctx.enemy_sheets = (0..ctx.limits.enemy_rows.wrapping_sub(2)).map(|_| cell::Cell::new(None)).collect();
     ctx.unit_models[1] = (0..0xb).map(|_| Mamodel::default()).collect();
     ctx.unit_anims[1] = (0..0xb).map(|_| BTreeMap::new()).collect();
     ctx.bg_anim_cache.clear();
@@ -1211,7 +1210,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         .get_mut(part + 7)
         .ok_or(Fault::index_out_of_range((part + 7) as i64, 0))?;
 
-    target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
+    target.set_i32_at(MamodelPart::POS_X, target.i32_at(MamodelPart::POS_X).wrapping_sub(width / 2));
 
     let width = imgcut_get_width(
         ctx.sealed_announce_sheets[1]
@@ -1224,7 +1223,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         .get_mut(part + 8)
         .ok_or(Fault::index_out_of_range((part + 8) as i64, 0))?;
 
-    target.set_i32_at(0x3c, target.i32_at(0x3c).wrapping_sub(width / 2));
+    target.set_i32_at(MamodelPart::POS_X, target.i32_at(MamodelPart::POS_X).wrapping_sub(width / 2));
     ctx.demonbattle_model = model;
 
     Ok(())

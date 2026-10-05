@@ -24,24 +24,24 @@ pub fn get_talent_icon_state(
     let mut talent_slot = 0;
 
     loop {
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
         if definition[talent_slot * 0xe + 1] == abil {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
-            let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+            let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = *levels.entry(definition[talent_slot * 0xe + 1]).or_default();
-            let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+            let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
             if level == definition[talent_slot * 0xe + 2] {
                 return Ok(2);
             }
         }
 
-        let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+        let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
         if definition[talent_slot * 0xe + 1] == abil {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
-            let definition = ctx.talent_definitions.entry(unit_id).or_insert([0; 0x71]);
+            let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = levels.entry(definition[talent_slot * 0xe + 1]).or_default();
 
             if *level > 0 {
@@ -51,7 +51,7 @@ pub fn get_talent_icon_state(
 
         talent_slot += 1;
 
-        if talent_slot == 8 {
+        if talent_slot == ctx.limits.talent_groups as usize {
             return Ok(0);
         }
     }
