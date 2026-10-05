@@ -110,6 +110,17 @@ fn undo_key(event: iced::keyboard::Event) -> Option<Message> {
         .then_some(Message::Studio(studio::Message::Undo))
 }
 
+fn drop_key(event: iced::Event, status: iced::event::Status, _window: window::Id) -> Option<Message> {
+    let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, modifiers, repeat: false, .. }) = event else {
+        return None;
+    };
+
+    let pressed = key == iced::keyboard::Key::Named(iced::keyboard::key::Named::Backspace);
+
+    (pressed && modifiers.is_empty() && status == iced::event::Status::Ignored)
+        .then_some(Message::Studio(studio::Message::DropPicked))
+}
+
 pub(crate) const WINDOW_SHOW_FALLBACK: Duration = Duration::from_millis(400);
 
 const FRAMES_BEFORE_SHOW: u8 = 2;
@@ -543,6 +554,7 @@ impl BattleCatsApp {
             }
 
             subs.push(iced::keyboard::listen().filter_map(undo_key));
+            subs.push(iced::event::listen_with(drop_key));
         }
 
         if !self.window_shown {

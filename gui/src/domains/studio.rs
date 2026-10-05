@@ -506,6 +506,7 @@ pub enum Message {
     AddPart,
     AddCut,
     Undo,
+    DropPicked,
     Persisted(u64, PathBuf, Option<Stamp>),
     Watched(u64, Arc<Vigil>),
     OpenManage,
@@ -1072,19 +1073,7 @@ impl State {
     }
 
     pub(crate) fn drop_part(&mut self, part: usize) -> bool {
-        let Some(session) = self.session.as_mut() else {
-            return false;
-        };
-
-        session.remember(Tag::Bulk);
-
-        let Some(moved) = session.pose.as_mut().and_then(|pose| pose.doc.remove_part(part)) else {
-            return false;
-        };
-
-        session.restructure(moved);
-
-        true
+        self.session.as_mut().is_some_and(|session| session.drop_part(part))
     }
 
     pub(crate) fn add_channel(&mut self, part: usize, kind: i32) -> bool {
@@ -1759,6 +1748,15 @@ impl State {
                 task
             }
             Message::Undo => session.undo(),
+            Message::DropPicked => {
+                let picked = session.chosen_part().filter(|_| session.mode == Mode::Entity && session.focus == Focus::Part);
+
+                if let Some(part) = picked {
+                    session.drop_part(part);
+                }
+
+                Task::none()
+            }
             Message::Handed(hand) => {
                 if !session.animated() {
                     return Task::none();
@@ -2467,8 +2465,25 @@ impl Session {
             history::Shot::Rig(files) => {
                 self.flush();
 
+                let sheeted = [self.plan.set.sheet.as_deref(), self.plan.set.cuts.as_deref()];
+                let mut resheeted = false;
+
                 for (path, body) in files {
+                    if fs::read(&path).is_ok_and(|held| held == body) {
+                        continue;
+                    }
+
+                    resheeted |= sheeted.contains(&Some(path.as_path()));
                     self.rewrite(&path, &body);
+                }
+
+                if !resheeted {
+                    let part = self.pose.as_ref().and_then(|pose| pose.part);
+                    let held = self.draft.as_ref().and_then(|draft| held_curve(&draft.doc, draft.track?));
+
+                    self.reread(part, held);
+
+                    return Task::none();
                 }
 
                 self.draft = None;
@@ -2683,6 +2698,18 @@ impl Session {
         self.relist();
     }
 
+    fn drop_part(&mut self, part: usize) -> bool {
+        self.remember(Tag::Bulk);
+
+        let Some(moved) = self.pose.as_mut().and_then(|pose| pose.doc.remove_part(part)) else {
+            return false;
+        };
+
+        self.restructure(moved);
+
+        true
+    }
+
     fn restructure(&mut self, moved: Vec<Option<usize>>) {
         let Some(pose) = self.pose.as_mut() else {
             return;
@@ -2691,15 +2718,13 @@ impl Session {
         pose.backing.dirty = true;
         pose.persist_now();
 
-        self.wanted_part = self
-            .pose
-            .as_ref()
-            .and_then(|pose| pose.part)
-            .and_then(|at| moved.get(at).copied().flatten());
+        let part = pose.part.and_then(|at| moved.get(at).copied().flatten());
 
-        if let Some(draft) = self.draft.as_mut() {
+        let held = self.draft.as_mut().and_then(|draft| {
             draft.persist_now();
-        }
+
+            held_curve(&draft.doc, draft.track?)
+        });
 
         for path in self.viewer.anim_paths() {
             retarget_file(&path, &moved);
@@ -2711,7 +2736,36 @@ impl Session {
             .filter_map(|at| moved.get(*at).copied().flatten())
             .collect();
 
-        self.resplice();
+        let held = held.and_then(|held| {
+            let landed = moved.get(usize::try_from(held.part).ok()?).copied().flatten()?;
+
+            Some(Held { part: i32::try_from(landed).ok()?, ..held })
+        });
+
+        self.reread(part, held);
+    }
+
+    fn reread(&mut self, part: Option<usize>, held: Option<Held>) {
+        self.restamp();
+
+        self.pose = self.posed.as_deref().and_then(Pose::load);
+
+        if let Some(pose) = self.pose.as_mut()
+            && let Some(at) = part.filter(|at| *at < pose.doc.count())
+        {
+            pose.pick(at);
+        }
+
+        self.draft = self.opened.as_deref().and_then(Draft::load);
+
+        if let Some(held) = held {
+            self.recover(held);
+        }
+
+        if let (Some(draft), Some(showing)) = (self.draft.as_ref(), self.viewer.selected_anim().cloned()) {
+            self.viewer.adopt_anim(&showing, draft.doc.shared());
+        }
+
         self.settle_pose();
     }
 
