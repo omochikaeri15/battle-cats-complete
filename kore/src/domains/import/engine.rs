@@ -1,14 +1,14 @@
 pub mod apk;
 pub(crate) mod audit;
 pub(crate) mod forms;
-pub(crate) mod hardcoded;
 pub mod keys;
 pub(crate) mod manifest;
 pub(crate) mod router;
 pub mod rules;
 pub mod sort;
+mod units;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -55,6 +55,45 @@ struct DecryptedCandidate {
     pub clean_data: Vec<u8>,
 }
 
+struct Reader<'a> {
+    keys: &'a cryptology::Keys,
+}
+
+impl Reader<'_> {
+    fn read(&self, task: &UniversalTask) -> Result<Vec<u8>, String> {
+        if task.is_loose {
+            return fs::read(&task.pack_path).map_err(|error| format!("Could not read loose file {}: {}", task.pack_path.display(), error));
+        }
+
+        let pack = task.pack_path.display();
+
+        let mut source = fs::File::open(&task.pack_path).map_err(|_| format!("Could not open {} while extracting {}", pack, task.final_name))?;
+
+        let aligned = task.byte_size.div_ceil(16) * 16;
+        let remaining = source.metadata().map_or(aligned, |data| data.len().saturating_sub(task.byte_offset) as usize);
+
+        if remaining == 0 && task.byte_size > 0 {
+            return Err(format!("{} starts past the end of {}", task.final_name, pack));
+        }
+
+        let mut encrypted = vec![0u8; aligned.min(remaining)];
+
+        source
+            .seek(SeekFrom::Start(task.byte_offset))
+            .map_err(|_| format!("Could not seek to {} in {}", task.byte_offset, pack))?;
+
+        source
+            .read_exact(&mut encrypted)
+            .map_err(|error| format!("Could not read {} from {}: {}", task.final_name, pack, error))?;
+
+        let (mut decrypted, _) = cryptology::decrypt_chunk(&encrypted, &task.original_name, self.keys);
+
+        decrypted.truncate(task.byte_size);
+
+        Ok(audit::scrub(decrypted, &task.final_name))
+    }
+}
+
 fn determine_region_code(filename: &str, folder_region: &str) -> String {
     if folder_region != "en" {
         return folder_region.to_string();
@@ -82,6 +121,10 @@ fn get_region_priority(region_code: &str) -> u8 {
     }
 }
 
+fn outranks(region: &str, rival: &str) -> bool {
+    get_region_priority(region).cmp(&get_region_priority(rival)).then_with(|| rival.cmp(region)).is_gt()
+}
+
 enum Verdict {
     Skip,
     Keep,
@@ -93,7 +136,7 @@ fn verdict(present: bool, region: &str, size: usize, checksum: u64, record: &man
         return Verdict::Write;
     }
 
-    if region != record.winner && size < record.size {
+    if region != record.winner && (size < record.size || (size == record.size && outranks(&record.winner, region))) {
         return Verdict::Skip;
     }
 
@@ -286,6 +329,25 @@ pub(crate) fn run_universal_import(
             universal_task_map.entry(final_resolved_filename).or_default().push(extraction_task);
         }
 
+        let weighed_packs: Vec<(String, String, u64)> = discovered_list_files
+            .par_iter()
+            .filter_map(|item_path| {
+                let pack_path = item_path.with_extension("pack");
+                let pack_filename = pack_path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+                let region_code = determine_region_code(&pack_filename, current_region_code);
+
+                if current_pack_hashes.get(&pack_filename).is_some_and(|regions| regions.contains_key(&region_code)) {
+                    return None;
+                }
+
+                manifest::hash_file(&pack_path).ok().map(|checksum| (pack_filename, region_code, checksum))
+            })
+            .collect();
+
+        for (pack_filename, region_code, checksum) in weighed_packs {
+            current_pack_hashes.entry(pack_filename).or_default().entry(region_code).or_insert(checksum);
+        }
+
         for item_path in discovered_list_files {
             let corresponding_pack_path = item_path.with_extension("pack");
             if !corresponding_pack_path.exists() {
@@ -295,12 +357,6 @@ pub(crate) fn run_universal_import(
             let pack_filename = corresponding_pack_path.file_name().unwrap_or_default().to_string_lossy().into_owned();
             let final_region_code = determine_region_code(&pack_filename, current_region_code);
             let file_chrono_score = chronology::calculate_weight(&corresponding_pack_path, &global_temporary_directories);
-            let pack_region_map = current_pack_hashes.entry(pack_filename.clone()).or_default();
-
-            if !pack_region_map.contains_key(&final_region_code)
-                && let Ok(pack_hash_value) = manifest::hash_file(&corresponding_pack_path) {
-                pack_region_map.insert(final_region_code.clone(), pack_hash_value);
-            }
 
             let Ok(list_file_data) = fs::read(&item_path) else {
                 continue;
@@ -384,79 +440,77 @@ pub(crate) fn run_universal_import(
         }
     }
 
-    let hardcoded_rules = hardcoded::generate_rules();
-    let mut final_extraction_queue: Vec<(String, Vec<UniversalTask>, PathBuf)> = Vec::new();
+    let present_regions: HashSet<String> = universal_task_map.values().flatten().map(|task| task.region_code.clone()).collect();
+    let (rosters, loose_files) = units::seat(universal_task_map, &asset_router_utility);
 
-    for (resolved_filename, duplicate_tasks) in universal_task_map {
-        let matched_rule = duplicate_tasks.first().and_then(|task| hardcoded_rules.get(&task.original_name).copied());
+    let final_extraction_queue: Vec<(String, Vec<UniversalTask>, PathBuf)> = loose_files
+        .into_par_iter()
+        .filter_map(|(resolved_filename, duplicate_tasks)| {
+            let mut tasks_by_region: HashMap<String, Vec<UniversalTask>> = HashMap::new();
+            for processing_task in duplicate_tasks {
+                tasks_by_region.entry(processing_task.region_code.clone()).or_default().push(processing_task);
+            }
 
-        let mut tasks_by_region: HashMap<String, Vec<UniversalTask>> = HashMap::new();
-        for processing_task in duplicate_tasks {
-            tasks_by_region.entry(processing_task.region_code.clone()).or_default().push(processing_task);
-        }
+            let mut regional_winners_to_decrypt: Vec<UniversalTask> = Vec::new();
+            for (_, mut regional_tasks) in tasks_by_region {
+                regional_tasks.sort_by_key(|task| task.chrono_score);
 
-        let mut regional_winners_to_decrypt: Vec<UniversalTask> = Vec::new();
-        for (_, mut regional_tasks) in tasks_by_region {
-            if let Some(rule) = matched_rule {
-                match rule {
-                    hardcoded::HardcodedType::Oldest => {
-                        regional_tasks.sort_by_key(|task| std::cmp::Reverse(task.chrono_score));
+                if let Some(winning_task) = regional_tasks.pop() {
+                    regional_winners_to_decrypt.push(winning_task);
+                }
+            }
+
+            let representative_candidate = regional_winners_to_decrypt.first()?;
+
+            let target_destination_path = asset_router_utility.resolve_destination(&representative_candidate.original_name, &resolved_filename);
+
+            let mut requires_memory_decryption = false;
+
+            if let Some(existing_placement) = ledger.placement(&resolved_filename) {
+                for candidate in &regional_winners_to_decrypt {
+                    if candidate.is_loose {
+                        if candidate.byte_size > existing_placement.record.encrypted {
+                            requires_memory_decryption = true;
+                            break;
+                        }
+                    } else {
+                        let pack_filename = candidate.pack_name();
+
+                        let newly_calculated_hash = current_pack_hashes
+                            .get(&pack_filename)
+                            .and_then(|region_map| region_map.get(&candidate.region_code))
+                            .copied();
+
+                        let saved_manifest_hash = ledger.pack_checksum(&pack_filename, &candidate.region_code);
+
+                        if newly_calculated_hash.is_none() || newly_calculated_hash != saved_manifest_hash {
+                            requires_memory_decryption = true;
+                            break;
+                        }
                     }
+                }
+
+                if !requires_memory_decryption && !target_destination_path.exists() {
+                    requires_memory_decryption = true;
                 }
             } else {
-                regional_tasks.sort_by_key(|task| task.chrono_score);
-            }
-
-            if let Some(winning_task) = regional_tasks.pop() {
-                regional_winners_to_decrypt.push(winning_task);
-            }
-        }
-
-        let Some(representative_candidate) = regional_winners_to_decrypt.first() else {
-            continue;
-        };
-
-        let target_destination_path = asset_router_utility.resolve_destination(&representative_candidate.original_name, &resolved_filename);
-
-        let mut requires_memory_decryption = false;
-
-        if let Some(existing_placement) = ledger.placement(&resolved_filename) {
-            for candidate in &regional_winners_to_decrypt {
-                if candidate.is_loose {
-                    if candidate.byte_size > existing_placement.record.encrypted {
-                        requires_memory_decryption = true;
-                        break;
-                    }
-                } else {
-                    let pack_filename = candidate.pack_name();
-
-                    let newly_calculated_hash = current_pack_hashes
-                        .get(&pack_filename)
-                        .and_then(|region_map| region_map.get(&candidate.region_code))
-                        .copied();
-
-                    let saved_manifest_hash = ledger.pack_checksum(&pack_filename, &candidate.region_code);
-
-                    if newly_calculated_hash.is_none() || newly_calculated_hash != saved_manifest_hash {
-                        requires_memory_decryption = true;
-                        break;
-                    }
-                }
-            }
-
-            if !requires_memory_decryption && !target_destination_path.exists() {
                 requires_memory_decryption = true;
             }
-        } else {
-            requires_memory_decryption = true;
-        }
 
-        if requires_memory_decryption {
-            final_extraction_queue.push((resolved_filename, regional_winners_to_decrypt, target_destination_path));
-        }
-    }
+            requires_memory_decryption.then_some((resolved_filename, regional_winners_to_decrypt, target_destination_path))
+        })
+        .collect();
 
-    if final_extraction_queue.is_empty() {
+    let unit_rosters: Vec<Vec<units::Member>> = rosters.into_values().collect();
+
+    let stale_rosters: Vec<&Vec<units::Member>> = unit_rosters
+        .par_iter()
+        .filter(|members| units::stale(members, &ledger, &current_pack_hashes))
+        .collect();
+
+    let stale_members: usize = stale_rosters.iter().map(|members| members.len()).sum();
+
+    if final_extraction_queue.is_empty() && stale_rosters.is_empty() {
         emit(JobEvent::Log("Workspace is completely up to date.".to_string()));
 
         mining::commit(Vec::new(), Vec::new(), detected_builds);
@@ -469,7 +523,7 @@ pub(crate) fn run_universal_import(
         return Ok(());
     }
 
-    let total = final_extraction_queue.len();
+    let total = final_extraction_queue.len() + stale_members;
     emit(JobEvent::Progress { current: 0, total });
     progress.reset(total);
 
@@ -494,7 +548,62 @@ pub(crate) fn run_universal_import(
         format!("Comparing and organizing {} game files...", total)
     }));
 
-    let updated_placements: Vec<(String, manifest::Placement, Option<mining::FileDelta>)> = final_extraction_queue
+    let reader = Reader { keys: &nyanko_keys };
+
+    let census = if stale_rosters.is_empty() {
+        units::Census::default()
+    } else {
+        units::Census::take(&unit_rosters, &reader)
+    };
+
+    let bench = units::Bench {
+        reader: &reader,
+        ledger: &ledger,
+        census: &census,
+        present: &present_regions,
+        tracked,
+    };
+
+    let mut updated_placements: Vec<(String, manifest::Placement, Option<mining::FileDelta>)> = stale_rosters
+        .into_par_iter()
+        .flat_map_iter(|members| {
+            let outcomes = if abort_flag.load(Ordering::Relaxed) { Vec::new() } else { bench.settle(members) };
+
+            outcomes.into_iter().filter_map(|outcome| {
+                advance_progress();
+
+                match outcome {
+                    units::Outcome::Settled(settled) => {
+                        let units::Settled { name, placement, sample, written } = *settled;
+
+                        if written {
+                            let current_extracted_total = successfully_extracted_count.fetch_add(1, Ordering::Relaxed) + 1;
+                            if (current_extracted_total as usize).is_multiple_of(console_update_interval) {
+                                emit(JobEvent::Log(format!("Processed {} files | Routing: {}", current_extracted_total, name)));
+                            }
+                        } else {
+                            let current_known_total = recognized_count.fetch_add(1, Ordering::Relaxed) + 1;
+                            if current_known_total.is_multiple_of(console_update_interval) {
+                                emit(JobEvent::Log(format!("Recorded {} files | Matching: {}", current_known_total, name)));
+                            }
+                        }
+
+                        Some((name, placement, sample))
+                    }
+                    units::Outcome::Kept => {
+                        recognized_count.fetch_add(1, Ordering::Relaxed);
+                        None
+                    }
+                    units::Outcome::Failed => {
+                        failed_decryption_count.fetch_add(1, Ordering::Relaxed);
+                        None
+                    }
+                }
+            })
+        })
+        .collect();
+
+    let loose_placements: Vec<(String, manifest::Placement, Option<mining::FileDelta>)> = final_extraction_queue
         .into_par_iter()
         .filter_map(|(resolved_filename, regional_tasks_to_decrypt, target_destination_path)| {
             if abort_flag.load(Ordering::Relaxed) {
@@ -504,65 +613,13 @@ pub(crate) fn run_universal_import(
             let mut decrypted_candidates: Vec<DecryptedCandidate> = Vec::new();
 
             for processing_task in regional_tasks_to_decrypt {
-                if processing_task.is_loose {
-                    match fs::read(&processing_task.pack_path) {
-                        Ok(raw_data) => decrypted_candidates.push(DecryptedCandidate {
-                            task: processing_task.clone(),
-                            clean_data: raw_data,
-                        }),
-                        Err(error) => {
-                            failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                            warn!("Could not read loose file {}: {}", processing_task.pack_path.display(), error);
-                        }
+                match reader.read(&processing_task) {
+                    Ok(clean_data) => decrypted_candidates.push(DecryptedCandidate { task: processing_task, clean_data }),
+                    Err(fault) => {
+                        failed_decryption_count.fetch_add(1, Ordering::Relaxed);
+                        warn!("{fault}");
                     }
-                    continue;
                 }
-
-                let pack_display = processing_task.pack_path.display();
-
-                let Ok(mut input_pack_file) = fs::File::open(&processing_task.pack_path) else {
-                    failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                    warn!("Could not open {} while extracting {}", pack_display, processing_task.final_name);
-                    continue;
-                };
-
-                let memory_aligned_size = processing_task.byte_size.div_ceil(16) * 16;
-
-                let bytes_remaining = input_pack_file
-                    .metadata()
-                    .map_or(memory_aligned_size, |data| data.len().saturating_sub(processing_task.byte_offset) as usize);
-
-                if bytes_remaining == 0 && processing_task.byte_size > 0 {
-                    failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                    warn!("{} starts past the end of {}", processing_task.final_name, pack_display);
-                    continue;
-                }
-
-                let mut encrypted_byte_buffer = vec![0u8; memory_aligned_size.min(bytes_remaining)];
-
-                if input_pack_file.seek(SeekFrom::Start(processing_task.byte_offset)).is_err() {
-                    failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                    warn!("Could not seek to {} in {}", processing_task.byte_offset, pack_display);
-                    continue;
-                }
-
-                if let Err(error) = input_pack_file.read_exact(&mut encrypted_byte_buffer) {
-                    failed_decryption_count.fetch_add(1, Ordering::Relaxed);
-                    warn!("Could not read {} from {}: {}", processing_task.final_name, pack_display, error);
-                    continue;
-                }
-
-                let (decrypted_byte_vector, _) = cryptology::decrypt_chunk(&encrypted_byte_buffer, &processing_task.original_name, &nyanko_keys);
-
-                let strict_size_limit = std::cmp::min(processing_task.byte_size, decrypted_byte_vector.len());
-                let exact_data_slice = &decrypted_byte_vector[..strict_size_limit];
-
-                let cleaned_data_vector = audit::strip_carriage_returns(exact_data_slice, &processing_task.final_name);
-
-                decrypted_candidates.push(DecryptedCandidate {
-                    task: processing_task,
-                    clean_data: cleaned_data_vector,
-                });
             }
 
             if decrypted_candidates.is_empty() {
@@ -572,12 +629,12 @@ pub(crate) fn run_universal_import(
             }
 
             decrypted_candidates.sort_by(|candidate_a, candidate_b| {
-                let weight_cmp = candidate_a.clean_data.len().cmp(&candidate_b.clean_data.len());
-                if weight_cmp == std::cmp::Ordering::Equal {
-                    get_region_priority(&candidate_a.task.region_code).cmp(&get_region_priority(&candidate_b.task.region_code))
-                } else {
-                    weight_cmp
-                }
+                candidate_a
+                    .clean_data
+                    .len()
+                    .cmp(&candidate_b.clean_data.len())
+                    .then_with(|| get_region_priority(&candidate_a.task.region_code).cmp(&get_region_priority(&candidate_b.task.region_code)))
+                    .then_with(|| candidate_b.task.region_code.cmp(&candidate_a.task.region_code))
             });
 
             let Some(mut winning_candidate) = decrypted_candidates.pop() else {
@@ -592,10 +649,7 @@ pub(crate) fn run_universal_import(
                     donors.push(held);
                 }
 
-                if let Some((merged, filled)) = forms::adopt_declared_forms(&winning_candidate.clean_data, &donors) {
-                    let units = filled.iter().map(|unit| format!("{unit:03}")).collect::<Vec<_>>().join(", ");
-
-                    emit(JobEvent::Log(format!("{resolved_filename}: kept the evolved forms another region declares for unit {units}")));
+                if let Some((merged, _)) = forms::adopt_declared_forms(&winning_candidate.clean_data, &donors) {
                     winning_candidate.clean_data = merged;
                 }
             }
@@ -676,12 +730,15 @@ pub(crate) fn run_universal_import(
                         size: winning_size,
                         encrypted: winning_candidate.task.byte_size,
                         checksum: winning_checksum,
+                        standing: None,
                     },
                 },
                 sample.flatten(),
             ))
         })
         .collect();
+
+    updated_placements.extend(loose_placements);
 
     if abort_flag.load(Ordering::Relaxed) {
         cleanup_temporary_directories(&global_temporary_directories);
@@ -732,7 +789,7 @@ mod tests {
     use super::*;
 
     fn record(winner: &str, size: usize, checksum: u64) -> manifest::FileRecord {
-        manifest::FileRecord { winner: winner.to_string(), size, encrypted: size, checksum }
+        manifest::FileRecord { winner: winner.to_string(), size, encrypted: size, checksum, standing: None }
     }
 
     // Wiping the game folder leaves the manifest behind, so every record describes a file
@@ -749,6 +806,16 @@ mod tests {
         let held = record("ja", 50567, 11);
 
         assert!(matches!(verdict(true, "en", 4000, 22, &held), Verdict::Skip));
+    }
+
+    // Two regions shipping different files of the same size used to go to whichever was imported last.
+    #[test]
+    fn an_exact_size_tie_goes_to_the_same_region_in_either_import_order() {
+        assert!(matches!(verdict(true, "en", 453, 22, &record("ja", 453, 11)), Verdict::Skip));
+        assert!(matches!(verdict(true, "ja", 453, 11, &record("en", 453, 22)), Verdict::Write));
+
+        assert!(matches!(verdict(true, "th", 2360, 22, &record("de", 2360, 11)), Verdict::Skip));
+        assert!(matches!(verdict(true, "de", 2360, 11, &record("th", 2360, 22)), Verdict::Write));
     }
 
     #[test]

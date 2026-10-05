@@ -177,6 +177,7 @@ fn sort_raw_folder(
                     size: clean_file_data.len(),
                     encrypted: file_data.len(),
                     checksum,
+                    standing: None,
                 },
             };
 

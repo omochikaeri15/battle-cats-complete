@@ -540,12 +540,12 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
                             let model = &ctx.warp_chara_model;
                             let part = mamodel_get_part(model, 0).ok_or(Fault::null_pointer())?;
                             let body = model.parts.get(part + 1).ok_or(Fault::index_out_of_range((part + 1) as i64, model.parts.len() as i64))?;
-                            let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(pivot_y).wrapping_add(body.i32_at(MamodelPart::POS_Y)).wrapping_add(body.i32_at(MamodelPart::POS_Y_ANIM));
+                            let y = ctx.i32_at(AppContext::DRAW_TEMP_2)?.wrapping_sub(pivot_y).wrapping_add(body.i32_at(MamodelPart::Y)).wrapping_add(body.i32_at(MamodelPart::Y_ANIM));
                             let scale_x = body.i32_at(MamodelPart::SCALE_X) as f32;
                             let scale_y = body.i32_at(MamodelPart::SCALE_X_ANIM) as f32;
                             let unit_x = mamodel_get_scale_unit(model);
                             let unit_y = mamodel_get_scale_unit(model);
-                            let opacity = body.i32_at(MamodelPart::LIVE_OPACITY);
+                            let opacity = body.i32_at(MamodelPart::WORLD_OPACITY);
                             let alpha = ops::idiv((opacity << 8).wrapping_sub(opacity), model.opacity_unit).ok_or(Fault::divide(model.opacity_unit as i64))?;
 
                             if alpha > 0 {

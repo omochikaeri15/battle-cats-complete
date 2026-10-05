@@ -17,18 +17,18 @@ pub fn maanim_animate(
         for part in model.parts.iter_mut() {
             part.set_i32_at(MamodelPart::PARENT_ANIM, 0);
             part.set_i32_at(MamodelPart::SHEET_ANIM, 0);
-            part.set_i32_at(MamodelPart::CUT_ANIM, 0);
+            part.set_i32_at(MamodelPart::SPRITE_ANIM, 0);
             part.set_i32_at(MamodelPart::DEPTH_ANIM, 0);
-            part.set_i32_at(MamodelPart::POS_X_ANIM, 0);
-            part.set_i32_at(MamodelPart::POS_Y_ANIM, 0);
+            part.set_i32_at(MamodelPart::X_ANIM, 0);
+            part.set_i32_at(MamodelPart::Y_ANIM, 0);
             part.set_i32_at(MamodelPart::PIVOT_X_ANIM, 0);
             part.set_i32_at(MamodelPart::PIVOT_Y_ANIM, 0);
             part.set_i32_at(MamodelPart::SCALE_Y_ANIM, scale_unit);
             part.set_i32_at(MamodelPart::SCALE_X_ANIM, scale_unit);
             part.set_i32_at(MamodelPart::ANGLE_ANIM, 0);
             part.set_i32_at(MamodelPart::OPACITY_ANIM, opacity_unit);
-            part.set_u8_at(MamodelPart::FLIP_Y, 0);
-            part.set_u8_at(MamodelPart::FLIP_X, 0);
+            part.set_u8_at(MamodelPart::V_FLIP, 0);
+            part.set_u8_at(MamodelPart::H_FLIP, 0);
         }
     }
 
@@ -277,10 +277,10 @@ pub fn maanim_animate(
             match track.header[1] as u32 {
                 0x0 => part.set_i32_at(MamodelPart::PARENT_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::PARENT))),
                 0x1 => part.set_i32_at(MamodelPart::SHEET_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::SHEET))),
-                0x2 => part.set_i32_at(MamodelPart::CUT_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::CUT))),
+                0x2 => part.set_i32_at(MamodelPart::SPRITE_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::SPRITE))),
                 0x3 => part.set_i32_at(MamodelPart::DEPTH_ANIM, value.wrapping_sub(part.i32_at(MamodelPart::DEPTH))),
-                0x4 => part.set_i32_at(MamodelPart::POS_X_ANIM, value),
-                0x5 => part.set_i32_at(MamodelPart::POS_Y_ANIM, value),
+                0x4 => part.set_i32_at(MamodelPart::X_ANIM, value),
+                0x5 => part.set_i32_at(MamodelPart::Y_ANIM, value),
                 0x6 => part.set_i32_at(MamodelPart::PIVOT_X_ANIM, value),
                 0x7 => part.set_i32_at(MamodelPart::PIVOT_Y_ANIM, value),
                 0x8 => {
@@ -291,8 +291,8 @@ pub fn maanim_animate(
                 0xa => part.set_i32_at(MamodelPart::SCALE_Y_ANIM, value),
                 0xb => part.set_i32_at(MamodelPart::ANGLE_ANIM, value),
                 0xc => part.set_i32_at(MamodelPart::OPACITY_ANIM, value),
-                0xd => part.set_u8_at(MamodelPart::FLIP_X, (value != 0) as u8),
-                0xe => part.set_u8_at(MamodelPart::FLIP_Y, (value != 0) as u8),
+                0xd => part.set_u8_at(MamodelPart::H_FLIP, (value != 0) as u8),
+                0xe => part.set_u8_at(MamodelPart::V_FLIP, (value != 0) as u8),
                 _ => {}
             }
         }

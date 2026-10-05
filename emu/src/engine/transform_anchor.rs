@@ -13,11 +13,11 @@ pub fn transform_anchor(
 
     let spread_x = x
         .wrapping_sub(part.i32_at(MamodelPart::PIVOT_X).wrapping_add(part.i32_at(MamodelPart::PIVOT_X_ANIM)))
-        .wrapping_mul(part.i32_at(MamodelPart::LIVE_SCALE_X)) as i64;
+        .wrapping_mul(part.i32_at(MamodelPart::WORLD_SCALE_X)) as i64;
 
     let spread_y = y
         .wrapping_sub(part.i32_at(MamodelPart::PIVOT_Y).wrapping_add(part.i32_at(MamodelPart::PIVOT_Y_ANIM)))
-        .wrapping_mul(part.i32_at(MamodelPart::LIVE_SCALE_Y)) as i64;
+        .wrapping_mul(part.i32_at(MamodelPart::WORLD_SCALE_Y)) as i64;
 
     if scale_unit == 0 {
         return Err(Fault::divide_by_zero());

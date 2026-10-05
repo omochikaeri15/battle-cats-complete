@@ -16,3 +16,11 @@ pub(crate) fn strip_carriage_returns(data: &[u8], filename: &str) -> Vec<u8> {
 
     data.iter().copied().filter(|&byte| byte != b'\r').collect()
 }
+
+pub(crate) fn scrub(mut data: Vec<u8>, filename: &str) -> Vec<u8> {
+    if is_auditable_text(filename) {
+        data.retain(|&byte| byte != b'\r');
+    }
+
+    data
+}

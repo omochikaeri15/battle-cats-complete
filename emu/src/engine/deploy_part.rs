@@ -32,22 +32,22 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         } else {
             across.wrapping_neg()
         };
-        part.set_i32_at(MamodelPart::LIVE_SCALE_X, scale_x);
+        part.set_i32_at(MamodelPart::WORLD_SCALE_X, scale_x);
 
         scale_y = ops::idiv(
             part.i32_at(MamodelPart::SCALE_Y_ANIM).wrapping_mul(part.i32_at(MamodelPart::SCALE_Y)),
             scale_unit,
         )
         .ok_or(Fault::divide(scale_unit as i64))?;
-        part.set_i32_at(MamodelPart::LIVE_SCALE_Y, scale_y);
+        part.set_i32_at(MamodelPart::WORLD_SCALE_Y, scale_y);
 
         opacity = ops::idiv(
             part.i32_at(MamodelPart::OPACITY_ANIM).wrapping_mul(part.i32_at(MamodelPart::OPACITY)),
             model.opacity_unit,
         )
         .ok_or(Fault::divide(model.opacity_unit as i64))?;
-        flip_x = part.u8_at(MamodelPart::FLIP_X);
-        flip_y = part.u8_at(MamodelPart::FLIP_Y);
+        flip_x = part.u8_at(MamodelPart::H_FLIP);
+        flip_y = part.u8_at(MamodelPart::V_FLIP);
     } else {
         let above = *model
             .parts
@@ -55,25 +55,25 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             .ok_or(Fault::index_out_of_range(parent as i64, model.parts.len() as i64))?;
         let scale_unit = model.scale_unit as i64;
 
-        let across = (above.i32_at(MamodelPart::LIVE_SCALE_X) as i64)
+        let across = (above.i32_at(MamodelPart::WORLD_SCALE_X) as i64)
             .wrapping_mul(part.i32_at(MamodelPart::SCALE_X_ANIM) as i64)
             .wrapping_mul(own_scale_x);
         let across =
             ops::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))?;
         scale_x =
             ops::div_wide(across, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
-        part.set_i32_at(MamodelPart::LIVE_SCALE_X, scale_x);
+        part.set_i32_at(MamodelPart::WORLD_SCALE_X, scale_x);
 
-        let down = (above.i32_at(MamodelPart::LIVE_SCALE_Y) as i64)
+        let down = (above.i32_at(MamodelPart::WORLD_SCALE_Y) as i64)
             .wrapping_mul(part.i32_at(MamodelPart::SCALE_Y_ANIM) as i64)
             .wrapping_mul(part.i32_at(MamodelPart::SCALE_Y) as i64);
         let down = ops::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))?;
         scale_y =
             ops::div_wide(down, scale_unit).ok_or(Fault::divide(scale_unit))? as i32;
-        part.set_i32_at(MamodelPart::LIVE_SCALE_Y, scale_y);
+        part.set_i32_at(MamodelPart::WORLD_SCALE_Y, scale_y);
 
         let opacity_unit = model.opacity_unit as i64;
-        let faded = (above.i32_at(MamodelPart::LIVE_OPACITY) as i64)
+        let faded = (above.i32_at(MamodelPart::WORLD_OPACITY) as i64)
             .wrapping_mul(part.i32_at(MamodelPart::OPACITY_ANIM) as i64)
             .wrapping_mul(part.i32_at(MamodelPart::OPACITY) as i64);
         let faded =
@@ -81,20 +81,20 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         opacity = ops::div_wide(faded, opacity_unit)
             .ok_or(Fault::divide(opacity_unit))? as i32;
 
-        flip_x = (part.u8_at(MamodelPart::FLIP_X) != above.u8_at(MamodelPart::LIVE_FLIP_X)) as u8;
-        flip_y = (part.u8_at(MamodelPart::FLIP_Y) != above.u8_at(MamodelPart::LIVE_FLIP_Y)) as u8;
+        flip_x = (part.u8_at(MamodelPart::H_FLIP) != above.u8_at(MamodelPart::WORLD_H_FLIP)) as u8;
+        flip_y = (part.u8_at(MamodelPart::V_FLIP) != above.u8_at(MamodelPart::WORLD_V_FLIP)) as u8;
     }
 
-    part.set_i32_at(MamodelPart::LIVE_OPACITY, opacity);
-    part.set_u8_at(MamodelPart::LIVE_FLIP_X, flip_x);
-    part.set_u8_at(MamodelPart::LIVE_FLIP_Y, flip_y);
+    part.set_i32_at(MamodelPart::WORLD_OPACITY, opacity);
+    part.set_u8_at(MamodelPart::WORLD_H_FLIP, flip_x);
+    part.set_u8_at(MamodelPart::WORLD_V_FLIP, flip_y);
 
-    if part.u8_at(MamodelPart::FLIP_X) != 0 {
-        part.set_i32_at(MamodelPart::LIVE_SCALE_X, scale_x.wrapping_neg());
+    if part.u8_at(MamodelPart::H_FLIP) != 0 {
+        part.set_i32_at(MamodelPart::WORLD_SCALE_X, scale_x.wrapping_neg());
     }
 
-    if part.u8_at(MamodelPart::FLIP_Y) != 0 {
-        part.set_i32_at(MamodelPart::LIVE_SCALE_Y, scale_y.wrapping_neg());
+    if part.u8_at(MamodelPart::V_FLIP) != 0 {
+        part.set_i32_at(MamodelPart::WORLD_SCALE_Y, scale_y.wrapping_neg());
     }
 
     let sheet_id = (part.i32_at(MamodelPart::SHEET) as i64).wrapping_add(part.i32_at(MamodelPart::SHEET_ANIM) as i64);
@@ -131,7 +131,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             width = imgcut_get_width(sheet);
             height = imgcut_get_height(sheet);
         } else {
-            let cut = part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT));
+            let cut = part.i32_at(MamodelPart::SPRITE_ANIM).wrapping_add(part.i32_at(MamodelPart::SPRITE));
 
             if cut < 0 || cut >= imgcut_get_cut_count(sheet) as i32 {
                 *model
@@ -143,12 +143,12 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             }
 
             width =
-                imgcut_get_sprite_cut(sheet, part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT)))?[2];
+                imgcut_get_sprite_cut(sheet, part.i32_at(MamodelPart::SPRITE_ANIM).wrapping_add(part.i32_at(MamodelPart::SPRITE)))?[2];
             height =
-                imgcut_get_sprite_cut(sheet, part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT)))?[3];
+                imgcut_get_sprite_cut(sheet, part.i32_at(MamodelPart::SPRITE_ANIM).wrapping_add(part.i32_at(MamodelPart::SPRITE)))?[3];
         }
 
-        let live_x = part.i32_at(MamodelPart::LIVE_SCALE_X);
+        let live_x = part.i32_at(MamodelPart::WORLD_SCALE_X);
         let left = ops::idiv(
             part.i32_at(MamodelPart::PIVOT_X_ANIM)
                 .wrapping_add(part.i32_at(MamodelPart::PIVOT_X))
@@ -157,16 +157,16 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             model.scale_unit,
         )
         .ok_or(Fault::divide(model.scale_unit as i64))?;
-        part.set_i32_at(MamodelPart::QUAD_1_X, left);
-        part.set_i32_at(MamodelPart::QUAD_0_X, left);
+        part.set_i32_at(MamodelPart::CORNER_1_X, left);
+        part.set_i32_at(MamodelPart::CORNER_0_X, left);
 
         let right = ops::idiv(width.wrapping_mul(live_x), model.scale_unit)
             .ok_or(Fault::divide(model.scale_unit as i64))?
             .wrapping_add(left);
-        part.set_i32_at(MamodelPart::QUAD_3_X, right);
-        part.set_i32_at(MamodelPart::QUAD_2_X, right);
+        part.set_i32_at(MamodelPart::CORNER_3_X, right);
+        part.set_i32_at(MamodelPart::CORNER_2_X, right);
 
-        let live_y = part.i32_at(MamodelPart::LIVE_SCALE_Y);
+        let live_y = part.i32_at(MamodelPart::WORLD_SCALE_Y);
         let top = ops::idiv(
             part.i32_at(MamodelPart::PIVOT_Y_ANIM)
                 .wrapping_add(part.i32_at(MamodelPart::PIVOT_Y))
@@ -175,14 +175,14 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
             model.scale_unit,
         )
         .ok_or(Fault::divide(model.scale_unit as i64))?;
-        part.set_i32_at(MamodelPart::QUAD_3_Y, top);
-        part.set_i32_at(MamodelPart::QUAD_0_Y, top);
+        part.set_i32_at(MamodelPart::CORNER_3_Y, top);
+        part.set_i32_at(MamodelPart::CORNER_0_Y, top);
 
         let bottom = ops::idiv(height.wrapping_mul(live_y), model.scale_unit)
             .ok_or(Fault::divide(model.scale_unit as i64))?
             .wrapping_add(top);
-        part.set_i32_at(MamodelPart::QUAD_2_Y, bottom);
-        part.set_i32_at(MamodelPart::QUAD_1_Y, bottom);
+        part.set_i32_at(MamodelPart::CORNER_2_Y, bottom);
+        part.set_i32_at(MamodelPart::CORNER_1_Y, bottom);
     }
 
     let parent = part.i32_at(MamodelPart::PARENT_ANIM).wrapping_add(part.i32_at(MamodelPart::PARENT));
@@ -196,7 +196,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
     ];
 
     if parent == -1 {
-        matrix_set_translation(&mut mat, part.i32_at(MamodelPart::POS_X_ANIM), part.i32_at(MamodelPart::POS_Y_ANIM));
+        matrix_set_translation(&mut mat, part.i32_at(MamodelPart::X_ANIM), part.i32_at(MamodelPart::Y_ANIM));
     } else {
         let above = *model
             .parts
@@ -213,16 +213,16 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         ];
 
         let across = ops::idiv(
-            part.i32_at(MamodelPart::POS_X_ANIM)
-                .wrapping_add(part.i32_at(MamodelPart::POS_X))
-                .wrapping_mul(above.i32_at(MamodelPart::LIVE_SCALE_X)),
+            part.i32_at(MamodelPart::X_ANIM)
+                .wrapping_add(part.i32_at(MamodelPart::X))
+                .wrapping_mul(above.i32_at(MamodelPart::WORLD_SCALE_X)),
             model.scale_unit,
         )
         .ok_or(Fault::divide(model.scale_unit as i64))?;
         let down = ops::idiv(
-            part.i32_at(MamodelPart::POS_Y_ANIM)
-                .wrapping_add(part.i32_at(MamodelPart::POS_Y))
-                .wrapping_mul(above.i32_at(MamodelPart::LIVE_SCALE_Y)),
+            part.i32_at(MamodelPart::Y_ANIM)
+                .wrapping_add(part.i32_at(MamodelPart::Y))
+                .wrapping_mul(above.i32_at(MamodelPart::WORLD_SCALE_Y)),
             model.scale_unit,
         )
         .ok_or(Fault::divide(model.scale_unit as i64))?;
@@ -237,7 +237,7 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
         degrees = -degrees;
     }
 
-    if part.u8_at(MamodelPart::LIVE_FLIP_X) != part.u8_at(MamodelPart::LIVE_FLIP_Y) {
+    if part.u8_at(MamodelPart::WORLD_H_FLIP) != part.u8_at(MamodelPart::WORLD_V_FLIP) {
         degrees = -degrees;
     }
 
@@ -248,10 +248,10 @@ pub fn deploy_part(part_index: i32, model: &mut Mamodel) -> Result<(), Fault> {
     }
 
     for corner in [
-        MamodelPart::QUAD_0_X,
-        MamodelPart::QUAD_1_X,
-        MamodelPart::QUAD_2_X,
-        MamodelPart::QUAD_3_X,
+        MamodelPart::CORNER_0_X,
+        MamodelPart::CORNER_1_X,
+        MamodelPart::CORNER_2_X,
+        MamodelPart::CORNER_3_X,
     ] {
         let mut out = 0i64;
 

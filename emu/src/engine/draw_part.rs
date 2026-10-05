@@ -27,7 +27,7 @@ pub fn draw_part(
     }
 
     let alpha = ops::idiv(
-        (part.i32_at(MamodelPart::LIVE_OPACITY) << 8).wrapping_sub(part.i32_at(MamodelPart::LIVE_OPACITY)),
+        (part.i32_at(MamodelPart::WORLD_OPACITY) << 8).wrapping_sub(part.i32_at(MamodelPart::WORLD_OPACITY)),
         model.opacity_unit,
     )
     .ok_or(Fault::divide(model.opacity_unit as i64))?;
@@ -61,15 +61,15 @@ pub fn draw_part(
     draw_sprite_cut(
         dc,
         sheet,
-        part.i32_at(MamodelPart::QUAD_0_X).wrapping_add(ox),
-        part.i32_at(MamodelPart::QUAD_0_Y).wrapping_add(oy),
-        part.i32_at(MamodelPart::QUAD_1_X).wrapping_add(ox),
-        part.i32_at(MamodelPart::QUAD_1_Y).wrapping_add(oy),
-        part.i32_at(MamodelPart::QUAD_2_X).wrapping_add(ox),
-        part.i32_at(MamodelPart::QUAD_2_Y).wrapping_add(oy),
-        ox.wrapping_add(part.i32_at(MamodelPart::QUAD_3_X)),
-        oy.wrapping_add(part.i32_at(MamodelPart::QUAD_3_Y)),
-        part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT)),
+        part.i32_at(MamodelPart::CORNER_0_X).wrapping_add(ox),
+        part.i32_at(MamodelPart::CORNER_0_Y).wrapping_add(oy),
+        part.i32_at(MamodelPart::CORNER_1_X).wrapping_add(ox),
+        part.i32_at(MamodelPart::CORNER_1_Y).wrapping_add(oy),
+        part.i32_at(MamodelPart::CORNER_2_X).wrapping_add(ox),
+        part.i32_at(MamodelPart::CORNER_2_Y).wrapping_add(oy),
+        ox.wrapping_add(part.i32_at(MamodelPart::CORNER_3_X)),
+        oy.wrapping_add(part.i32_at(MamodelPart::CORNER_3_Y)),
+        part.i32_at(MamodelPart::SPRITE_ANIM).wrapping_add(part.i32_at(MamodelPart::SPRITE)),
     );
 
     Ok(())

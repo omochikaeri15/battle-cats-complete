@@ -22,6 +22,8 @@ pub(crate) struct FileRecord {
     pub size: usize,
     pub encrypted: usize,
     pub checksum: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standing: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -219,7 +221,7 @@ mod tests {
     use super::*;
 
     fn record(winner: &str, size: usize) -> FileRecord {
-        FileRecord { winner: winner.to_string(), size, encrypted: size, checksum: size as u64 }
+        FileRecord { winner: winner.to_string(), size, encrypted: size, checksum: size as u64, standing: None }
     }
 
     fn placed(pack: &str, winner: &str, size: usize) -> Placement {

@@ -44,7 +44,7 @@ pub fn draw_model_scaled(
                 }
 
                 let faded = ops::idiv(
-                    (part.i32_at(MamodelPart::LIVE_OPACITY) << 8).wrapping_sub(part.i32_at(MamodelPart::LIVE_OPACITY)),
+                    (part.i32_at(MamodelPart::WORLD_OPACITY) << 8).wrapping_sub(part.i32_at(MamodelPart::WORLD_OPACITY)),
                     model.opacity_unit,
                 )
                 .ok_or(Fault::divide(model.opacity_unit as i64))?
@@ -61,30 +61,30 @@ pub fn draw_model_scaled(
                 } else {
                     0
                 };
-                let cut = part.i32_at(MamodelPart::CUT_ANIM).wrapping_add(part.i32_at(MamodelPart::CUT));
+                let cut = part.i32_at(MamodelPart::SPRITE_ANIM).wrapping_add(part.i32_at(MamodelPart::SPRITE));
                 let x0 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_0_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::CORNER_0_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y0 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_0_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::CORNER_0_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x1 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_1_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::CORNER_1_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y1 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_1_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::CORNER_1_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x2 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_2_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::CORNER_2_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y2 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_2_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::CORNER_2_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let x3 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_3_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
+                    part.i32_at(MamodelPart::CORNER_3_X).wrapping_add(shift_x) as f32 * scale + pivot_x as f32 + x as f32,
                 );
                 let y3 = ops::cvttss2si(
-                    part.i32_at(MamodelPart::QUAD_3_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
+                    part.i32_at(MamodelPart::CORNER_3_Y).wrapping_add(shift_y) as f32 * scale + pivot_y as f32 + y as f32,
                 );
                 let slot = model
                     .sheet_table

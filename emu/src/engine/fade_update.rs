@@ -15,8 +15,6 @@ use super::{
     vibration_clear,
 };
 
-const WALLET: usize = 0x2648;
-
 enum Step {
     Advance,
     TreasureCalc,
@@ -222,7 +220,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<8>(AppContext::DECK_BAR_SLIDE, [0; 8])?;
 
                 for button in 0..10 {
-                    set_deck_cooldown(ctx, WALLET, button, 0, 1)?;
+                    set_deck_cooldown(ctx, AppContext::faction_flags(0), button, 0, 1)?;
                 }
 
                 for offset in (0..0x380usize).step_by(0x10) {
@@ -304,11 +302,11 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.set_block_at::<0x27d8>(AppContext::WAVE_HITS, [0; 0x27d8])?;
                 ctx.set_block_at::<0x30>(AppContext::PROC_ROLLS, [0; 0x30])?;
                 ctx.set_block_at::<1>(AppContext::SNIPER_CASINGS_LIVE, [0])?;
-                set_worker_level(ctx, WALLET, 7)?;
+                set_worker_level(ctx, AppContext::faction_flags(0), 7)?;
 
-                let money = get_max_money(ctx, WALLET)?;
+                let money = get_max_money(ctx, AppContext::faction_flags(0))?;
 
-                set_money(ctx, WALLET, money)?;
+                set_money(ctx, AppContext::faction_flags(0), money)?;
                 set_cannon_countdown(ctx, 0, 0)?;
                 step = Step::SaveStop;
             }
@@ -430,7 +428,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         ctx.set_block_at::<8>(AppContext::DECK_BAR_SLIDE, [0; 8])?;
 
                         for button in 0..10usize {
-                            set_deck_cooldown(ctx, WALLET, button as i32, 0, 1)?;
+                            set_deck_cooldown(ctx, AppContext::faction_flags(0), button as i32, 0, 1)?;
                             ctx.set_i32_at(AppContext::DECK_COOLDOWN_VFX + button * 4, 0)?;
                         }
 
@@ -518,11 +516,11 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                         ctx.counter_surge_events.clear();
                         ctx.explosion_events.clear();
                         ctx.set_block_at::<0x30>(AppContext::PROC_ROLLS, [0; 0x30])?;
-                        set_worker_level(ctx, WALLET, 7)?;
+                        set_worker_level(ctx, AppContext::faction_flags(0), 7)?;
 
-                        let money = get_max_money(ctx, WALLET)?;
+                        let money = get_max_money(ctx, AppContext::faction_flags(0))?;
 
-                        set_money(ctx, WALLET, money)?;
+                        set_money(ctx, AppContext::faction_flags(0), money)?;
                         set_cannon_countdown(ctx, 0, 0)?;
                         ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_WATCHED, [0])?;
                         deploy_limit_reset(ctx)?;

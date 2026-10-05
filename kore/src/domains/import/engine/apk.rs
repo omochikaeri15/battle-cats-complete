@@ -16,6 +16,10 @@ const JUNK_NAMES: [&str; 2] = ["save_data.old", "stamp-cert-sha256"];
 
 const JUNK_EXTENSIONS: [&str; 3] = ["proto", "properties", "txt"];
 
+const TELEMETRY: &str = "firebase";
+
+const TELEMETRY_PREFIX: &str = "aqs.";
+
 const SESSION: &str = "session";
 
 const SESSION_SUFFIXES: [&str; 2] = [".data", ".version"];
@@ -74,7 +78,7 @@ fn junk(path: &Path) -> bool {
         return false;
     };
 
-    if JUNK_NAMES.contains(&name.as_str()) {
+    if JUNK_NAMES.contains(&name.as_str()) || name.contains(TELEMETRY) || name.starts_with(TELEMETRY_PREFIX) {
         return true;
     }
 
@@ -251,10 +255,13 @@ mod tests {
         assert!(junk(Path::new("/pull/layout.txt")));
         assert!(junk(Path::new("/pull/aapt2.proto")));
         assert!(junk(Path::new("/pull/build.PROPERTIES")));
+        assert!(junk(Path::new("/pull/aqs.675772a8433d40caa51bbd6efa6a4d01")));
+        assert!(junk(Path::new("/pull/FirebaseHeartBeatW0RFRkFVTFRd+MTo0NTMw.preferences_pb")));
 
         assert!(!junk(Path::new("/pull/SAVE_DATA")), "only the .OLD backup is dropped");
         assert!(!junk(Path::new("/pull/unit001.csv")));
         assert!(!junk(Path::new("/pull/sessionless.png")), "the suffixes still have to match");
+        assert!(!junk(Path::new("/pull/aqs_banner.png")), "only the dotted telemetry prefix is dropped");
     }
 
     // An .xapk is a wrapper: no binary AndroidManifest.xml at its root, just the

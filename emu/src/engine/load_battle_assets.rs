@@ -1210,7 +1210,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         .get_mut(part + 7)
         .ok_or(Fault::index_out_of_range((part + 7) as i64, 0))?;
 
-    target.set_i32_at(MamodelPart::POS_X, target.i32_at(MamodelPart::POS_X).wrapping_sub(width / 2));
+    target.set_i32_at(MamodelPart::X, target.i32_at(MamodelPart::X).wrapping_sub(width / 2));
 
     let width = imgcut_get_width(
         ctx.sealed_announce_sheets[1]
@@ -1223,7 +1223,7 @@ pub fn load_battle_assets(ctx: &mut AppContext) -> Result<(), Fault> {
         .get_mut(part + 8)
         .ok_or(Fault::index_out_of_range((part + 8) as i64, 0))?;
 
-    target.set_i32_at(MamodelPart::POS_X, target.i32_at(MamodelPart::POS_X).wrapping_sub(width / 2));
+    target.set_i32_at(MamodelPart::X, target.i32_at(MamodelPart::X).wrapping_sub(width / 2));
     ctx.demonbattle_model = model;
 
     Ok(())

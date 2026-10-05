@@ -8,6 +8,8 @@ use crate::domains::enemy::patterns as enemy_patterns;
 use crate::domains::settings::ImportStructure;
 use crate::domains::stage::patterns as stage_patterns;
 
+use super::units::{Kind, Slot};
+
 struct CatPatternsSet {
     universal: Regex,
     combo_table: Regex,
@@ -600,6 +602,45 @@ impl AssetRouter {
         name != clean_name
     }
 
+    pub(crate) fn stem(&self, original_name: &str) -> (String, String) {
+        let path = Path::new(original_name);
+        let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+        let ext = path.extension().unwrap_or_default().to_string_lossy();
+        let base_name = Self::clean_base_name(&stem, &ext);
+        let clean_stem = Path::new(&base_name).file_stem().unwrap_or_default().to_string_lossy().into_owned();
+
+        (clean_stem, ext.into_owned())
+    }
+
+    pub(crate) fn slot(&self, original_name: &str) -> Option<Slot> {
+        let path = Path::new(original_name);
+        let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+        let ext = path.extension().unwrap_or_default().to_string_lossy();
+        let base_name = Self::clean_base_name(&stem, &ext);
+
+        if Self::is_cat_base_banner(original_name, &base_name) || cat_patterns::CAT_UNIVERSAL_FILES.contains(&base_name.as_str()) {
+            return None;
+        }
+
+        if self
+            .global_matcher
+            .get_dest(&base_name, &self.sheets_dir, &self.ui_dir, &self.tables_dir, &self.audio_dir)
+            .is_some()
+        {
+            return None;
+        }
+
+        let root = Path::new("");
+
+        let (kind, folder) = self
+            .cat_matcher
+            .get_dest(&base_name, root)
+            .map(|folder| (Kind::Cat, folder))
+            .or_else(|| self.enemy_matcher.get_dest(&base_name, root).map(|folder| (Kind::Enemy, folder)))?;
+
+        Slot::read(kind, &folder, &ext)
+    }
+
     pub(crate) fn resolve_destination(&self, original_name: &str, final_name: &str) -> PathBuf {
         if self.structure == ImportStructure::Flat {
             return self.game_dir.join(final_name);
@@ -652,6 +693,36 @@ mod tests {
             ("Nyancombo2_ko.csv", "Nyancombo2"),
         ] {
             assert_eq!(router.resolve_destination(name, name), combo.join(folder).join(name), "{name}");
+        }
+    }
+
+    // Which unit a file belongs to cannot depend on the folder layout the user picked.
+    #[test]
+    fn unit_files_are_recognised_under_either_structure() {
+        use super::super::units::{Home, Kind, Role, Unit};
+
+        let flat = AssetRouter::new(Path::new("game"), ImportStructure::Flat).expect("router");
+
+        for router in [router(), flat] {
+            let sheet = router.slot("531_s.png").expect("a cat sheet");
+            assert_eq!((sheet.home, sheet.rig, sheet.role), (Home::Unit(Unit { kind: Kind::Cat, id: 531 }), Some('s'), Role::Sheet));
+
+            let model = router.slot("120_e.mamodel").expect("an enemy model");
+            assert_eq!((model.home, model.rig, model.role), (Home::Unit(Unit { kind: Kind::Enemy, id: 120 }), Some('e'), Role::Model));
+
+            let stats = router.slot("unit156.csv").expect("cat stats");
+            assert_eq!((stats.home, stats.rig, stats.role), (Home::Unit(Unit { kind: Kind::Cat, id: 155 }), None, Role::Other));
+
+            assert_eq!(router.slot("enemy_icon_120.png").map(|slot| slot.role), Some(Role::Image));
+            assert_eq!(
+                router.slot("016_s_ja.png").map(|slot| slot.home),
+                Some(Home::Unit(Unit { kind: Kind::Cat, id: 16 })),
+                "a region suffix does not hide the unit"
+            );
+
+            for shared in ["unitbuy.csv", "006_m.png", "NyancomboData.csv", "img015.png"] {
+                assert!(router.slot(shared).is_none(), "{shared}");
+            }
         }
     }
 
