@@ -8,7 +8,7 @@ use std::error::Error;
 use std::fmt;
 
 use crate::common::Region;
-use ciphers::{decrypt_cbc, decrypt_ecb, encrypt_cbc, encrypt_ecb, get_md5_key};
+use ciphers::{decrypt_cbc, decrypt_ecb, encrypt_cbc, encrypt_ecb, get_md5_key, padded_cbc, padded_ecb};
 
 pub use manifest::PackEntry;
 pub use verify::check_integrity;
@@ -151,14 +151,16 @@ impl Keys {
 /// are the unmodified input.
 pub fn decrypt_chunk(data: &[u8], internal_filename: &str, keys: &Keys) -> (Vec<u8>, Decrypted) {
     for cipher in &keys.ciphers {
-        if let Ok(result) = decrypt_cbc(data, &cipher.key, &cipher.iv)
+        if padded_cbc(data, &cipher.key, &cipher.iv)
+            && let Ok(result) = decrypt_cbc(data, &cipher.key, &cipher.iv)
             && check_integrity(&result, internal_filename) {
             return (result, Decrypted::Regional(cipher.region));
         }
     }
 
     let server_key = get_md5_key("battlecats");
-    if let Ok(result) = decrypt_ecb(data, &server_key)
+    if padded_ecb(data, &server_key)
+        && let Ok(result) = decrypt_ecb(data, &server_key)
         && check_integrity(&result, internal_filename) {
         return (result, Decrypted::Server);
     }
@@ -322,6 +324,27 @@ mod tests {
 
         assert_eq!(origin, Decrypted::Passthrough);
         assert_eq!(returned.as_slice(), encrypted.as_slice());
+    }
+
+    #[test]
+    fn test_later_cipher_matches_after_earlier_ones_fail() {
+        let keys = Keys::parse(&[(Region::Ja, IV_HEX, KEY_HEX), (Region::En, KEY_HEX, IV_HEX)])
+            .expect("Failed to parse synthetic keys");
+        let cipher = &keys.ciphers[1];
+
+        for payload in ["1,2,3".to_string(), "HP,ATK,RANGE\n100,50,250\n".repeat(8)] {
+            let encrypted = encrypt_chunk(
+                payload.as_bytes(),
+                PackType::Standard,
+                Some(&cipher.key),
+                Some(&cipher.iv)
+            ).expect("Failed to encrypt standard CBC chunk");
+
+            let (decrypted, origin) = decrypt_chunk(&encrypted, "unit_01.csv", &keys);
+
+            assert_eq!(origin, Decrypted::Regional(Region::En));
+            assert_eq!(payload.as_bytes(), decrypted.as_slice());
+        }
     }
 
     #[test]
