@@ -335,6 +335,8 @@ pub struct Entity {
     pub drain_percent: i32,
     /// Non-zero when the entity ignores incoming drain effects.
     pub drain_immune: i32,
+    /// The percentage taken off the redeployment delay on each deploy the engine's production count selects.
+    pub recharge_cut: i32,
     /// Non-zero when the source row carried trailing values this parser does not interpret.
     pub has_unknown_abilities: i32,
 }

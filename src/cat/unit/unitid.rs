@@ -148,6 +148,7 @@ pub const COLUMNS: &[Column] = columns::columns! {
     explosion_spawn_span: 115, Quarter;
     explosion_immune: 116;
     drain_immune: 117;
+    recharge_cut: 118;
 };
 
 fn from_row(cols: &[&str]) -> Entity {
