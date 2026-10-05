@@ -792,13 +792,19 @@ impl State {
             self.recalled.remove(0);
         }
 
-        history::shelve(&mut self.histories, key, history, HISTORY_SETS);
+        if !history.native() {
+            history::shelve(&mut self.histories, key, history, HISTORY_SETS);
+        }
     }
 
-    fn recall_history(&mut self, name: &str) -> History {
+    fn recall_history(&mut self, set: &sets::Set) -> History {
+        if let Some(folder) = sets::ledger_folder(set) {
+            return History::on_disk(&folder, &set.files());
+        }
+
         self.histories
             .iter()
-            .position(|(held, _)| held == name)
+            .position(|(held, _)| *held == set.name)
             .map_or_else(History::default, |at| self.histories.remove(at).1)
     }
 
@@ -848,7 +854,7 @@ impl State {
             plan.motion = Some(motion);
         }
 
-        let history = self.recall_history(&plan.set.name);
+        let history = self.recall_history(&plan.set);
 
         self.session = Some(Session {
             plan,
@@ -1102,33 +1108,7 @@ impl State {
     }
 
     pub(crate) fn drop_channel(&mut self, track: usize) -> bool {
-        let Some(session) = self.session.as_mut() else {
-            return false;
-        };
-
-        session.remember(Tag::Keys);
-
-        let Some(draft) = session.draft.as_mut() else {
-            return false;
-        };
-
-        if draft.doc.remove(track).is_none() {
-            return false;
-        }
-
-        draft.track = match draft.track {
-            Some(held) if held == track => None,
-            Some(held) if held > track => Some(held - 1),
-            held => held,
-        };
-
-        draft.restate();
-        draft.backing.dirty = true;
-
-        session.aim();
-        session.relist();
-
-        true
+        self.session.as_mut().is_some_and(|session| session.drop_channel(track))
     }
 
     pub(crate) fn sync_state(&self, state: &mut StudioState) {
@@ -1192,6 +1172,7 @@ impl State {
     pub(crate) fn flush_now(&mut self) {
         if let Some(session) = self.session.as_mut() {
             session.flush();
+            session.history.seal(&session.plan.set.files());
         }
     }
 
@@ -1749,10 +1730,21 @@ impl State {
             }
             Message::Undo => session.undo(),
             Message::DropPicked => {
-                let picked = session.chosen_part().filter(|_| session.mode == Mode::Entity && session.focus == Focus::Part);
+                if session.mode != Mode::Entity {
+                    return Task::none();
+                }
 
-                if let Some(part) = picked {
-                    session.drop_part(part);
+                match session.focus {
+                    Focus::Part => {
+                        if let Some(part) = session.chosen_part() {
+                            session.drop_part(part);
+                        }
+                    }
+                    Focus::Curve => {
+                        if let Some(track) = session.chosen_track() {
+                            session.drop_channel(track);
+                        }
+                    }
                 }
 
                 Task::none()
@@ -2696,6 +2688,36 @@ impl Session {
 
         self.aim();
         self.relist();
+    }
+
+    fn chosen_track(&self) -> Option<usize> {
+        self.draft.as_ref().and_then(|draft| draft.track)
+    }
+
+    fn drop_channel(&mut self, track: usize) -> bool {
+        self.remember(Tag::Keys);
+
+        let Some(draft) = self.draft.as_mut() else {
+            return false;
+        };
+
+        if draft.doc.remove(track).is_none() {
+            return false;
+        }
+
+        draft.track = match draft.track {
+            Some(held) if held == track => None,
+            Some(held) if held > track => Some(held - 1),
+            held => held,
+        };
+
+        draft.restate();
+        draft.backing.dirty = true;
+
+        self.aim();
+        self.relist();
+
+        true
     }
 
     fn drop_part(&mut self, part: usize) -> bool {

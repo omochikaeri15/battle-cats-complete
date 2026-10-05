@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use kore::domains::studio::{Kind, Ledger, Snapshot};
 use kore::systems::animation::authoring::{Imgcut, Maanim, Mamodel};
+use tracing::warn;
 
 use super::{Field, Gizmo};
 
@@ -48,7 +50,7 @@ pub(super) enum Shot {
     Anim(PathBuf, Maanim),
     Model(PathBuf, Mamodel),
     Cuts(PathBuf, Imgcut),
-    Rig(Vec<(PathBuf, Vec<u8>)>),
+    Rig(Snapshot),
 }
 
 impl Shot {
@@ -58,28 +60,77 @@ impl Shot {
             Shot::Rig(_) => None,
         }
     }
+
+    fn sealed(self) -> (Kind, Snapshot) {
+        match self {
+            Shot::Anim(path, doc) => (Kind::Anim, vec![(path, doc.write())]),
+            Shot::Model(path, doc) => (Kind::Model, vec![(path, doc.write())]),
+            Shot::Cuts(path, doc) => (Kind::Cuts, vec![(path, doc.write())]),
+            Shot::Rig(files) => (Kind::Rig, files),
+        }
+    }
+
+    fn revive(kind: Kind, mut files: Snapshot) -> Option<Shot> {
+        if kind == Kind::Rig {
+            return Some(Shot::Rig(files));
+        }
+
+        let (path, body) = files.pop()?;
+
+        let revived = match kind {
+            Kind::Anim => Maanim::parse(&body).map(|doc| Shot::Anim(path, doc)),
+            Kind::Model => Mamodel::parse(&body).map(|doc| Shot::Model(path, doc)),
+            Kind::Cuts => Imgcut::parse(&body).map(|doc| Shot::Cuts(path, doc)),
+            Kind::Rig => return None,
+        };
+
+        revived.inspect_err(|err| warn!("Studio could not parse a saved history snapshot: {}", err)).ok()
+    }
 }
 
-struct Entry {
+struct Mark {
     tag: Tag,
-    shot: Shot,
+    anchor: Option<PathBuf>,
     at: Instant,
 }
 
-#[derive(Default)]
+enum Store {
+    Memory(Vec<Shot>),
+    Disk(Ledger),
+}
+
 pub(super) struct History {
-    entries: Vec<Entry>,
+    store: Store,
+    last: Option<Mark>,
     holding: bool,
     opened: bool,
 }
 
+impl Default for History {
+    fn default() -> Self {
+        Self::over(Store::Memory(Vec::new()))
+    }
+}
+
 impl History {
+    fn over(store: Store) -> Self {
+        Self { store, last: None, holding: false, opened: false }
+    }
+
+    pub(super) fn on_disk(folder: &Path, files: &[PathBuf]) -> Self {
+        Self::over(Store::Disk(Ledger::open(folder, files)))
+    }
+
+    pub(super) fn native(&self) -> bool {
+        matches!(self.store, Store::Disk(_))
+    }
+
     pub(super) fn wanted(&self, tag: Tag, anchor: Option<&Path>) -> bool {
-        let Some(last) = self.entries.last() else {
+        let Some(last) = self.last.as_ref() else {
             return true;
         };
 
-        let same = last.tag == tag && last.shot.anchor() == anchor;
+        let same = last.tag == tag && last.anchor.as_deref() == anchor;
 
         if self.holding {
             return !self.opened || !same;
@@ -89,11 +140,22 @@ impl History {
     }
 
     pub(super) fn push(&mut self, tag: Tag, shot: Shot) {
-        self.entries.push(Entry { tag, shot, at: Instant::now() });
+        self.last = Some(Mark { tag, anchor: shot.anchor().map(Path::to_path_buf), at: Instant::now() });
         self.opened = self.holding;
 
-        while self.entries.len() > DEPTH {
-            self.entries.remove(0);
+        match &mut self.store {
+            Store::Memory(shots) => {
+                shots.push(shot);
+
+                if shots.len() > DEPTH {
+                    shots.drain(..shots.len() - DEPTH);
+                }
+            }
+            Store::Disk(ledger) => {
+                let (kind, files) = shot.sealed();
+
+                ledger.push(kind, &files);
+            }
         }
     }
 
@@ -108,11 +170,27 @@ impl History {
     }
 
     pub(super) fn pop(&mut self) -> Option<Shot> {
-        self.entries.pop().map(|entry| entry.shot)
+        self.last = None;
+
+        match &mut self.store {
+            Store::Memory(shots) => shots.pop(),
+            Store::Disk(ledger) => ledger.pop().and_then(|(kind, files)| Shot::revive(kind, files)),
+        }
+    }
+
+    pub(super) fn seal(&mut self, files: &[PathBuf]) {
+        if let Store::Disk(ledger) = &mut self.store {
+            ledger.seal(files);
+        }
     }
 
     pub(super) fn clear(&mut self) {
-        self.entries.clear();
+        match &mut self.store {
+            Store::Memory(shots) => shots.clear(),
+            Store::Disk(ledger) => ledger.clear(),
+        }
+
+        self.last = None;
         self.release();
     }
 }
@@ -151,7 +229,9 @@ mod tests {
         assert!(history.wanted(tag, Some(&path)));
         history.push(tag, Shot::Cuts(path.clone(), cuts()));
 
-        history.entries[0].at = Instant::now() - COALESCE * 4;
+        if let Some(last) = history.last.as_mut() {
+            last.at = Instant::now() - COALESCE * 4;
+        }
         assert!(!history.wanted(tag, Some(&path)), "the window does not matter while held");
 
         history.release();
@@ -162,14 +242,17 @@ mod tests {
     #[test]
     fn the_stack_never_grows_past_its_depth() {
         let mut history = History::default();
-        let path = PathBuf::from("studio/a/x.imgcut");
 
         for at in 0..DEPTH + 10 {
-            history.push(Tag::Cut(at, 0), Shot::Cuts(path.clone(), cuts()));
+            history.push(Tag::Cut(at, 0), Shot::Cuts(PathBuf::from(format!("studio/a/{at}.imgcut")), cuts()));
         }
 
-        assert_eq!(history.entries.len(), DEPTH);
-        assert_eq!(history.entries[0].tag, Tag::Cut(10, 0), "the oldest entries fall off the front");
+        let Store::Memory(shots) = &history.store else {
+            panic!("a mounted set keeps its history in memory");
+        };
+
+        assert_eq!(shots.len(), DEPTH);
+        assert_eq!(shots[0].anchor(), Some(Path::new("studio/a/10.imgcut")), "the oldest entries fall off the front");
     }
 }
 

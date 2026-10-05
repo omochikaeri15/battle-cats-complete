@@ -140,5 +140,15 @@ Selecting a marked row explains it. Eight faults are detected: a zero scale divi
 
 Opening a cat or an enemy from a Mod or an unlocked `game` sets this for you, as the files say which side they belong to. Turn that off through `Settings > Studio > Auto Set Fault`.
 
-## Undo
-`Ctrl+Z` reverts the last change, up to 25 back. History is kept for the last three sets you loaded; loading a fourth drops the oldest.
+## Keybinds
+There are a few keybinds that introduce unique behavior or shortcuts.
+
+### Undo
+`Ctrl+Z` reverts the last change, with different behavior based on where your set was edited.
+
+If your set is studio-native, which includes any sets within the `studio/` folder, you can undo up to 500 changes back **or** 64 MB worth of data back. Per-set, so there is no set limit.
+
+If your set is write-in-place, which includes editing an unlocked mounted animation set, you can undo up to 25 changes back. History is kept for the last three sets you loaded; loading a fourth drops the oldest.
+
+### Delete
+`Backspace` when a part or its channel is selected removes the entire part, or the part's selected channel. Shortcut for `Context Menu > Delete "Part N"` and `Context Menu > Remove channel from "Part N"`.

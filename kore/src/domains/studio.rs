@@ -1,5 +1,6 @@
 mod aim;
 mod blank;
+mod ledger;
 
 use std::env;
 use std::ffi::OsStr;
@@ -22,6 +23,7 @@ use crate::systems::animation::{self, Motion, MotionSet, Rigging};
 use crate::Source;
 
 pub use blank::SEED_SUFFIX;
+pub use ledger::{Kind, Ledger, Snapshot};
 
 const EXPORT_DIR: &str = "exports";
 const SHEET_EXT: &str = "png";
@@ -239,6 +241,14 @@ pub fn folder_name(set: &Set) -> Option<String> {
         .and_then(Path::file_name)
         .and_then(OsStr::to_str)
         .map(str::to_owned)
+}
+
+pub fn ledger_folder(set: &Set) -> Option<PathBuf> {
+    if set.home() != Home::Studio {
+        return None;
+    }
+
+    set.files().first()?.parent().map(Path::to_path_buf)
 }
 
 pub fn pullable(set: &Set, unlocked: bool) -> bool {
