@@ -7,7 +7,7 @@ pub fn get_talent_icon_state(
     _faction: i32,
     unit_id: i32,
     form: i32,
-    abil: i32,
+    ability: i32,
 ) -> Result<i32, Fault> {
     if !ctx.talent_definitions.contains_key(&unit_id) {
         return Ok(0);
@@ -26,7 +26,7 @@ pub fn get_talent_icon_state(
     loop {
         let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
-        if definition[talent_slot * 0xe + 1] == abil {
+        if definition[talent_slot * 0xe + 1] == ability {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
             let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = *levels.entry(definition[talent_slot * 0xe + 1]).or_default();
@@ -39,7 +39,7 @@ pub fn get_talent_icon_state(
 
         let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
-        if definition[talent_slot * 0xe + 1] == abil {
+        if definition[talent_slot * 0xe + 1] == ability {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
             let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = levels.entry(definition[talent_slot * 0xe + 1]).or_default();

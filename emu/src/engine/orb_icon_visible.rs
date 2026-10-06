@@ -20,9 +20,9 @@ pub fn orb_icon_visible(
         return Ok(false);
     }
 
-    let abil = get_orb_def(&ctx.orb_store, orb)?.abil;
+    let ability = get_orb_def(&ctx.orb_store, orb)?.ability;
 
-    if !orb_ability_flag(&mut ctx.orb_store, abil) {
+    if !orb_ability_flag(&mut ctx.orb_store, ability) {
         return Ok(true);
     }
 

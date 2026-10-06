@@ -50,7 +50,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                 break;
             }
 
-            let abil = read_csv_cell(stm, base.wrapping_add(2)) as i32;
+            let ability = read_csv_cell(stm, base.wrapping_add(2)) as i32;
             let max_level = read_csv_cell(stm, base.wrapping_add(3)) as i32;
             let Some(window) = row.get_mut(base as usize..base.wrapping_add(15) as usize) else {
                 return Err(Fault::null_pointer());
@@ -59,7 +59,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                 return Err(Fault::null_pointer());
             };
 
-            *slot = abil;
+            *slot = ability;
 
             let Some(slot) = window.get_mut(2) else {
                 return Err(Fault::null_pointer());
@@ -107,7 +107,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
 
         while group != ctx.limits.talent_groups {
             let index = 1i32.wrapping_add(group.wrapping_mul(14)) as usize;
-            let abil = ctx
+            let ability = ctx
                 .talent_definitions
                 .entry(unit_id)
                 .or_insert_with(|| ctx.limits.talent_row())
@@ -115,7 +115,7 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                 .copied()
                 .unwrap_or(0);
 
-            kept.insert(abil, 0);
+            kept.insert(ability, 0);
 
             if !ctx.talent_levels.is_empty()
                 && ctx.talent_levels.contains_key(&unit_id)
@@ -123,16 +123,16 @@ pub fn load_talent_type_csv(ctx: &mut AppContext) -> Result<(), Fault> {
                     .talent_levels
                     .entry(unit_id)
                     .or_default()
-                    .contains_key(&abil)
+                    .contains_key(&ability)
             {
                 let level = *ctx
                     .talent_levels
                     .entry(unit_id)
                     .or_default()
-                    .entry(abil)
+                    .entry(ability)
                     .or_default();
 
-                kept.insert(abil, level);
+                kept.insert(ability, level);
             }
 
             group += 1;

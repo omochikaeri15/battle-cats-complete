@@ -5,7 +5,7 @@ use super::{AppContext, get_equipped_orb, has_fixed_lineup};
 pub fn get_orb_value_sum(
     ctx: &mut AppContext,
     unit_id: i32,
-    abil: i32,
+    ability: i32,
     param: i32,
     dflt: i32,
 ) -> Result<i32, Fault> {
@@ -39,7 +39,7 @@ pub fn get_orb_value_sum(
                 Fault::index_out_of_range(orb_index as i64, ctx.orb_store.orbs.len() as i64),
             )?;
 
-            if orb.abil == abil {
+            if orb.ability == ability {
                 value = value.wrapping_add(*orb.values.get(param as i64 as usize).ok_or(
                     Fault::index_out_of_range(param as i64, orb.values.len() as i64),
                 )?);

@@ -25,7 +25,7 @@ pub fn orb_parse_record(record: &mut OrbDef, node: Option<&JsonNode>) -> Result<
             _ => Ok(json_value_as_int(found)),
         })? as i32;
 
-    record.abil = fields
+    record.ability = fields
         .get(b"content".as_slice())
         .map_or(Ok(0), |found| match found {
             JsonNode::String(text) => json_string_as_int(text),

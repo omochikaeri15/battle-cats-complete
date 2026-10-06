@@ -56,9 +56,9 @@ pub fn get_trait_icon_set(
 
     if with_talents != 0 {
         for slot in 0..ctx.limits.talent_groups as usize {
-            let abil = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row())[1 + slot * 14];
+            let ability = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row())[1 + slot * 14];
 
-            if let Some(&(_, icon)) = TALENT_TRAIT_ICONS.iter().find(|(key, _)| *key == abil) {
+            if let Some(&(_, icon)) = TALENT_TRAIT_ICONS.iter().find(|(key, _)| *key == ability) {
                 icons.insert(icon, true);
             }
         }

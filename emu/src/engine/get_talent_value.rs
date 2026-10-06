@@ -7,10 +7,10 @@ pub fn get_talent_value(
     faction: i32,
     unit_id: i32,
     form: i32,
-    abil: i32,
+    ability: i32,
     param: i32,
 ) -> Result<i32, Fault> {
-    if !has_talent(ctx, faction, unit_id, form, abil)? {
+    if !has_talent(ctx, faction, unit_id, form, ability)? {
         return Ok(0);
     }
 
@@ -19,7 +19,7 @@ pub fn get_talent_value(
     loop {
         let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
-        if definition[talent_slot * 0xe + 1] == abil {
+        if definition[talent_slot * 0xe + 1] == ability {
             break;
         }
 

@@ -16,14 +16,14 @@ pub fn load_orb_options_csv(ctx: &mut AppContext) -> Result<(), Fault> {
             return Ok(());
         }
 
-        let abil = read_csv_cell(stm, 0) as i32;
+        let ability = read_csv_cell(stm, 0) as i32;
         let flagged = read_csv_cell(stm, 1);
 
-        ctx.orb_store.ability_flags.entry(abil).or_insert([0, 1])[0] = u8::from(flagged != 0);
+        ctx.orb_store.ability_flags.entry(ability).or_insert([0, 1])[0] = u8::from(flagged != 0);
 
         let repeats = read_csv_cell(stm, 2);
 
-        ctx.orb_store.ability_flags.entry(abil).or_insert([0, 1])[1] = u8::from(repeats != 0);
+        ctx.orb_store.ability_flags.entry(ability).or_insert([0, 1])[1] = u8::from(repeats != 0);
     }
 
     Ok(())

@@ -75,7 +75,7 @@ pub fn compute_attack(
         let mut boost = get_talent_value(ctx, faction, unit_id, form, 0x1f, 0)?;
 
         if form > 1 {
-            let orb_abil = if get_map_type(ctx, 0)? == 0 || ex_redirect_check_a(ctx)? {
+            let orb_ability = if get_map_type(ctx, 0)? == 0 || ex_redirect_check_a(ctx)? {
                 Some(9)
             } else if get_map_type(ctx, 0)? == -9 || ex_redirect_check_b(ctx)? || is_ex_map_68(ctx)?
             {
@@ -84,8 +84,8 @@ pub fn compute_attack(
                 None
             };
 
-            if let Some(abil) = orb_abil {
-                boost = boost.wrapping_add(get_orb_value_max(ctx, unit_id, abil, 1, 0)?);
+            if let Some(ability) = orb_ability {
+                boost = boost.wrapping_add(get_orb_value_max(ctx, unit_id, ability, 1, 0)?);
             }
         }
 

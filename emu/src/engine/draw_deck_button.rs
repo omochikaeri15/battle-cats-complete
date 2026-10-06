@@ -434,7 +434,7 @@ pub fn draw_deck_button(
 
         let def = get_orb_def(&ctx.orb_store, orb)?;
         let trait_index = def.trait_index;
-        let abil = def.abil;
+        let ability = def.ability;
 
         if !orb_icon_visible(ctx, wallet, 0, slot, index, 0)? {
             index = index.wrapping_add(1);
@@ -442,20 +442,20 @@ pub fn draw_deck_button(
             continue;
         }
 
-        if !orb_ability_flag(&mut ctx.orb_store, abil) {
+        if !orb_ability_flag(&mut ctx.orb_store, ability) {
             index = index.wrapping_add(1);
 
             continue;
         }
 
-        if !orb_ability_repeat(&mut ctx.orb_store, abil) {
-            if seen.get(&abil).copied().unwrap_or(0) != 0 {
+        if !orb_ability_repeat(&mut ctx.orb_store, ability) {
+            if seen.get(&ability).copied().unwrap_or(0) != 0 {
                 index = index.wrapping_add(1);
 
                 continue;
             }
 
-            seen.insert(abil, 1);
+            seen.insert(ability, 1);
         }
 
         let attribute = ctx.equipment_attribute_s_sheet.clone();
@@ -480,7 +480,7 @@ pub fn draw_deck_button(
             effect,
             step.wrapping_add(origin).wrapping_add(-2),
             lower,
-            abil,
+            ability,
         );
         set_alpha(draw_context(&mut ctx.draw)?, 0xff);
 

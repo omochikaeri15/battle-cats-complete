@@ -9,11 +9,11 @@ use super::{
 
 pub fn orb_applies_to_unit(
     ctx: &mut AppContext,
-    abil: i32,
+    ability: i32,
     trait_index: i32,
     unit_id: i32,
 ) -> Result<i32, Fault> {
-    if abil == 0x11 {
+    if ability == 0x11 {
         let form = get_unit_form(ctx, unit_id)?;
 
         if stat_surge_immune(ctx, 0, unit_id, form)? {
@@ -21,7 +21,7 @@ pub fn orb_applies_to_unit(
         }
     }
 
-    if abil == 0x13 {
+    if ability == 0x13 {
         let form = get_unit_form(ctx, unit_id)?;
 
         if stat_recharge_cut(ctx, 0, unit_id, form)? > 0 {
@@ -29,7 +29,7 @@ pub fn orb_applies_to_unit(
         }
     }
 
-    if (abil.wrapping_add(-2) as u32) > 2 {
+    if (ability.wrapping_add(-2) as u32) > 2 {
         return Ok(0);
     }
 
@@ -40,7 +40,7 @@ pub fn orb_applies_to_unit(
     let mut form = 2;
 
     while form != forms {
-        let matched = match abil {
+        let matched = match ability {
             2 => stat_strong_against(ctx, 0, unit_id, form)?,
             3 => stat_massive_damage(ctx, 0, unit_id, form)?,
             4 => stat_resist(ctx, 0, unit_id, form)?,

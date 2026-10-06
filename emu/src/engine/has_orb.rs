@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{AppContext, OrbStore, get_equipped_orb};
 
-pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, abil: i32) -> Result<bool, Fault> {
+pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, ability: i32) -> Result<bool, Fault> {
     let mut slot = 0i32;
 
     loop {
@@ -24,7 +24,7 @@ pub fn has_orb(ctx: &AppContext, store: &OrbStore, unit_id: i32, abil: i32) -> R
                 .get(orb_index as i64 as usize)
                 .ok_or(Fault::index_out_of_range(orb_index as i64, store.orbs.len() as i64))?;
 
-            if orb.abil == abil {
+            if orb.ability == ability {
                 return Ok(slot < slot_count);
             }
         }

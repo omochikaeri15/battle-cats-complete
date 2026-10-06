@@ -9,7 +9,7 @@ pub struct OrbDef {
     pub id: i32,
     pub grade: i32,
     pub trait_index: i32,
-    pub abil: i32,
+    pub ability: i32,
     pub values: Vec<i32>,
 }
 
@@ -27,7 +27,7 @@ pub struct OrbStore {
 pub fn get_orb_value_max(
     ctx: &mut AppContext,
     unit_id: i32,
-    abil: i32,
+    ability: i32,
     param: i32,
     dflt: i32,
 ) -> Result<i32, Fault> {
@@ -64,7 +64,7 @@ pub fn get_orb_value_max(
                 .get(orb_index as usize)
                 .ok_or(Fault::index_out_of_range(orb_index as i64, ctx.orb_store.orbs.len() as i64))?;
 
-            if orb.abil == abil && orb.grade > best_grade {
+            if orb.ability == ability && orb.grade > best_grade {
                 value = *orb
                     .values
                     .get(param as usize)

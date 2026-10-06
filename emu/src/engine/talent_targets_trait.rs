@@ -39,9 +39,9 @@ pub fn talent_targets_trait(
     ]);
 
     if target_talents.contains_key(&trait_bit) {
-        let abil = *target_talents.entry(trait_bit).or_default();
+        let ability = *target_talents.entry(trait_bit).or_default();
 
-        if has_talent(ctx, faction, unit_id, form, abil)? {
+        if has_talent(ctx, faction, unit_id, form, ability)? {
             return Ok(true);
         }
     }
@@ -51,9 +51,9 @@ pub fn talent_targets_trait(
     loop {
         let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
 
-        let abil = definition[talent_slot * 0xe + 1];
+        let ability = definition[talent_slot * 0xe + 1];
 
-        if (abil.wrapping_sub(1) as u32) < 9 || abil == 0x3c || abil == 0x33 {
+        if (ability.wrapping_sub(1) as u32) < 9 || ability == 0x3c || ability == 0x33 {
             let levels = ctx.talent_levels.entry(unit_id).or_default();
             let definition = ctx.talent_definitions.entry(unit_id).or_insert_with(|| ctx.limits.talent_row());
             let level = levels.entry(definition[talent_slot * 0xe + 1]).or_default();

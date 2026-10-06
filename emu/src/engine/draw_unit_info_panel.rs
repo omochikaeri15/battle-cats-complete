@@ -133,14 +133,14 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
                 continue;
             }
 
-            let abil = ctx.picture_book_abilities[row][2];
-            let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
+            let ability = ctx.picture_book_abilities[row][2];
+            let level = *ctx.talent_levels.entry(unit_id).or_default().entry(ability).or_default();
 
             if level <= 0 {
                 continue;
             }
 
-            let capped = level == get_talent_max_level(ctx, 0, unit_id, abil)?;
+            let capped = level == get_talent_max_level(ctx, 0, unit_id, ability)?;
             let sheet = ctx.img015_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
@@ -193,14 +193,14 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
                 continue;
             }
 
-            let abil = ctx.picture_book_abilities[row][2];
-            let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
+            let ability = ctx.picture_book_abilities[row][2];
+            let level = *ctx.talent_levels.entry(unit_id).or_default().entry(ability).or_default();
 
             if level <= 0 {
                 continue;
             }
 
-            let capped = level == get_talent_max_level(ctx, 0, unit_id, abil)?;
+            let capped = level == get_talent_max_level(ctx, 0, unit_id, ability)?;
             let sheet = ctx.img015_sheet.clone();
             let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
@@ -233,7 +233,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
                     let def = get_orb_def(&ctx.orb_store, orb)?;
                     let trait_index = def.trait_index;
-                    let abil = def.abil;
+                    let ability = def.ability;
                     let grade = def.grade;
 
                     let source = ctx.equipment_attribute_sheet.clone().ok_or(Fault::null_pointer())?;
@@ -244,14 +244,14 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
                     ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
                     let source = ctx.equipment_effect_sheet.clone().ok_or(Fault::null_pointer())?;
-                    let child = ui_node_set_sprite(&source, 0, 0, abil)?;
+                    let child = ui_node_set_sprite(&source, 0, 0, ability)?;
                     let placed = ui_node_add_child(&mut node, child);
 
                     ui_node_set_anchor(placed, 1);
                     ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
                     let source = ctx.equipment_shadow_sheet.clone().ok_or(Fault::null_pointer())?;
-                    let child = ui_node_set_sprite(&source, 0, 0, abil)?;
+                    let child = ui_node_set_sprite(&source, 0, 0, ability)?;
                     let placed = ui_node_add_child(&mut node, child);
 
                     ui_node_set_anchor(placed, 1);
@@ -270,7 +270,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
                     ui_node_set_anchor(placed, 1);
                     ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
-                    if orb_applies_to_unit(ctx, abil, trait_index, unit_id)? == 2 {
+                    if orb_applies_to_unit(ctx, ability, trait_index, unit_id)? == 2 {
                         let child = ui_node_get_child(&mut node, 0)?;
 
                         ui_node_set_color(child, 0x7f, 0x7f, 0x7f);
@@ -343,14 +343,14 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             continue;
         }
 
-        let abil = ctx.picture_book_abilities[row][2];
-        let level = *ctx.talent_levels.entry(unit_id).or_default().entry(abil).or_default();
+        let ability = ctx.picture_book_abilities[row][2];
+        let level = *ctx.talent_levels.entry(unit_id).or_default().entry(ability).or_default();
 
         if level <= 0 {
             continue;
         }
 
-        let capped = level == get_talent_max_level(ctx, 0, unit_id, abil)?;
+        let capped = level == get_talent_max_level(ctx, 0, unit_id, ability)?;
         let sheet = ctx.img015_sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
 
@@ -390,7 +390,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
 
             let def = get_orb_def(&ctx.orb_store, orb)?;
             let trait_index = def.trait_index;
-            let abil = def.abil;
+            let ability = def.ability;
             let grade = def.grade;
 
             let source = ctx.equipment_attribute_sheet.clone().ok_or(Fault::null_pointer())?;
@@ -401,14 +401,14 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
             let source = ctx.equipment_effect_sheet.clone().ok_or(Fault::null_pointer())?;
-            let child = ui_node_set_sprite(&source, 0, 0, abil)?;
+            let child = ui_node_set_sprite(&source, 0, 0, ability)?;
             let placed = ui_node_add_child(&mut node, child);
 
             ui_node_set_anchor(placed, 1);
             ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
             let source = ctx.equipment_shadow_sheet.clone().ok_or(Fault::null_pointer())?;
-            let child = ui_node_set_sprite(&source, 0, 0, abil)?;
+            let child = ui_node_set_sprite(&source, 0, 0, ability)?;
             let placed = ui_node_add_child(&mut node, child);
 
             ui_node_set_anchor(placed, 1);
@@ -427,7 +427,7 @@ pub fn draw_unit_info_panel(ctx: &mut AppContext, unit_id: i32, form: i32, panel
             ui_node_set_anchor(placed, 1);
             ui_node_set_zoom(placed, 0.5764706, 0.5764706);
 
-            if orb_applies_to_unit(ctx, abil, trait_index, unit_id)? == 2 {
+            if orb_applies_to_unit(ctx, ability, trait_index, unit_id)? == 2 {
                 let child = ui_node_get_child(&mut node, 0)?;
 
                 ui_node_set_color(child, 0x7f, 0x7f, 0x7f);

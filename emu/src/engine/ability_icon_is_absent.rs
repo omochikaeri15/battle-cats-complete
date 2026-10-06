@@ -8,7 +8,7 @@ pub fn ability_icon_is_absent(
     unit_id: i32,
     form: i32,
 ) -> Result<bool, Fault> {
-    let abil = match icon {
+    let ability = match icon {
         0x20 => 0x12,
         0x21 => 0x13,
         0x22 => 0x14,
@@ -22,5 +22,5 @@ pub fn ability_icon_is_absent(
         _ => return Ok(false),
     };
 
-    Ok(get_talent_icon_state(ctx, 0, unit_id, form, abil)? == 0)
+    Ok(get_talent_icon_state(ctx, 0, unit_id, form, ability)? == 0)
 }

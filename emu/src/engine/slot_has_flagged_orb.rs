@@ -17,11 +17,11 @@ pub fn slot_has_flagged_orb(ctx: &mut AppContext, faction: i32, slot: i32) -> Re
         let orb = get_equipped_orb(ctx, unit_id, orb_slot)?;
 
         if orb != -1 {
-            let abil = get_orb_def(&ctx.orb_store, orb)?.abil;
+            let ability = get_orb_def(&ctx.orb_store, orb)?.ability;
             let map_id = get_global_map_id(ctx, 0)?;
 
-            if (!get_special_rule(ctx, &ctx.special_rules, map_id, 1)? || abil != 0x13)
-                && orb_ability_flag(&mut ctx.orb_store, abil)
+            if (!get_special_rule(ctx, &ctx.special_rules, map_id, 1)? || ability != 0x13)
+                && orb_ability_flag(&mut ctx.orb_store, ability)
             {
                 return Ok(true);
             }
