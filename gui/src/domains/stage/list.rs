@@ -9,6 +9,7 @@ use nyanko::chapter::Category;
 
 use kore::domains::stage::filter::{CompiledStageFilter, StageFilterState, StageLookupContext};
 use kore::domains::stage::{navigate, GlobalMapId, GlobalStageId, StageDataState};
+use kore::systems::treasure::Bonus;
 use kore::Vault;
 
 use crate::app::theme;
@@ -69,7 +70,7 @@ impl State {
         }
     }
 
-    pub fn refresh(&mut self, filter_state: &StageFilterState, data: &StageDataState, vault: &Vault) {
+    pub fn refresh(&mut self, filter_state: &StageFilterState, data: &StageDataState, vault: &Vault, treasure: &Bonus) {
         if self.sorted_categories.is_none() {
             let mut categories = navigate::get_categories(&data.registry);
             categories.sort_by_key(|category| category.sort_order());
@@ -89,7 +90,7 @@ impl State {
             self.matching_categories.clear();
 
             if compiled.is_active() {
-                let ctx = StageLookupContext::from_data(data, vault);
+                let ctx = StageLookupContext::from_data(data, vault, treasure);
 
                 for (stage_key, stage) in &data.registry.stages {
                     let map_key = GlobalMapId { category: stage_key.category.clone(), map: stage_key.map };

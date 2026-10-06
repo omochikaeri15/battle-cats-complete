@@ -25,11 +25,13 @@ use kore::domains::stage::filter::enemy::EnemyFilter;
 use kore::domains::stage::filter::StageFilterState;
 use kore::domains::stage::scanner::{self, StageBundle};
 use kore::domains::stage::{fixedlineup as core_fixedlineup, GlobalMapId, StageDataState};
+use kore::systems::treasure::Bonus;
 use kore::Vault;
 
 use crate::app::state::StageListState;
 use crate::app::theme;
 use crate::common::fonts;
+use crate::systems::combat::enemy_filter::Art;
 use crate::widget::{slide, smooth_scroll, status, Slide};
 
 pub(crate) use crowns::CROWN_GLYPH;
@@ -83,6 +85,7 @@ pub struct State {
     scan_progress: Option<(usize, usize)>,
     cached_key: Option<u64>,
     scan_generation: u64,
+    bonus: Bonus,
     filter: filter::State,
     list: list::State,
     info: info::State,
@@ -102,6 +105,7 @@ impl Default for State {
             scan_progress: None,
             cached_key: None,
             scan_generation: 0,
+            bonus: Bonus::default(),
             filter: filter::State::default(),
             list: list::State::default(),
             info: info::State::default(),
@@ -129,8 +133,21 @@ impl State {
             self.fixedlineup.clear_icons();
         }
 
+        self.refilter(vault);
+    }
+
+    fn refilter(&mut self, vault: &Vault) {
         self.list.invalidate_filter();
-        self.list.refresh(&self.filter.filter_state, &self.data, vault);
+        self.list.refresh(&self.filter.filter_state, &self.data, vault, &self.bonus);
+    }
+
+    pub(crate) fn set_treasure(&mut self, treasure: Bonus, vault: &Vault) {
+        if self.bonus == treasure {
+            return;
+        }
+
+        self.bonus = treasure;
+        self.refilter(vault);
     }
 
     pub(crate) fn reload_selected(&mut self, vault: &Vault) {
@@ -237,9 +254,10 @@ impl State {
         }
     }
 
-    pub fn sync_enemies(&mut self, enemies: &[EnemyEntry]) {
+    pub fn sync_enemies(&mut self, enemies: &[EnemyEntry], vault: &Vault) {
         self.data.sync_enemies(enemies);
         self.battleground.clear_icons();
+        self.refilter(vault);
     }
 
     pub fn update(&mut self, message: Message, global_ctx: GlobalContext<'_>) -> Task<Message> {
@@ -312,7 +330,7 @@ impl State {
             }
         };
 
-        self.list.refresh(&self.filter.filter_state, &self.data, global_ctx.vault);
+        self.list.refresh(&self.filter.filter_state, &self.data, global_ctx.vault, &self.bonus);
         self.refresh_summary(global_ctx);
         task
     }
@@ -358,6 +376,14 @@ impl State {
             .filter_state
             .is_open
             .then(|| self.filter.view(window, names).map(Message::Filter))
+    }
+
+    pub(crate) fn attributes_popup_open(&self) -> bool {
+        self.filter.attributes_open()
+    }
+
+    pub(crate) fn attributes_popup_view<'a>(&'a self, art: Art<'a>, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
+        self.filter.attributes_view(art, window, names).map(|view| view.map(Message::Filter))
     }
 
     fn prune_selection(&mut self) {

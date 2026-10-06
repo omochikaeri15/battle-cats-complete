@@ -130,9 +130,10 @@ pub enum Kind {
     ReplayAnimationExport,
     Source,
     Provider,
+    StageAttributes,
 }
 
-pub(crate) const KIND_COUNT: usize = 55;
+pub(crate) const KIND_COUNT: usize = 56;
 
 const KINDS: [Kind; KIND_COUNT] = [
     Kind::CatFilter,
@@ -190,6 +191,7 @@ const KINDS: [Kind; KIND_COUNT] = [
     Kind::ReplayAnimationExport,
     Kind::Source,
     Kind::Provider,
+    Kind::StageAttributes,
 ];
 
 impl Kind {
@@ -250,6 +252,7 @@ impl Kind {
             Self::ReplayAnimationExport => "replay_animation_export",
             Self::Source => "source",
             Self::Provider => "provider",
+            Self::StageAttributes => "stage_attributes",
         }
     }
 

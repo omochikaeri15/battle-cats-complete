@@ -13,10 +13,17 @@ use kore::domains::stage::filter::treasure::TreasureFilter;
 use kore::domains::stage::filter::StageFilterState;
 
 use crate::app::theme;
+use crate::systems::combat::enemy_filter::{self, Art, Panel, Profile};
 use crate::widget::{popup, range_row, section, smooth_scroll};
 
 
 const POPUP: popup::Spec = popup::Spec::new(popup::Kind::StageFilter, Size::new(720.0, 528.0));
+const ATTRIBUTES: Profile = Profile {
+    spec: popup::Spec::new(popup::Kind::StageAttributes, Size::new(600.0, 528.0)),
+    title: "Battleground Attributes",
+    scroll_id: "stage-attributes-scroll",
+    magnification: "Stage",
+};
 const CLEAR_BTN_CLEARANCE: f32 = 56.0;
 const CONTENT_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 2.0;
@@ -315,6 +322,8 @@ pub enum Message {
     EnemyNameChanged(usize, String),
     EnemyBossTypeChanged(usize, Option<u32>),
     EnemyIsBaseToggled(usize),
+    EnemyAttributesToggled(usize),
+    EnemyAttributes(enemy_filter::Message),
     EnemyRangeMinChanged(usize, EnemyRange, String),
     EnemyRangeMaxChanged(usize, EnemyRange, String),
 
@@ -342,10 +351,22 @@ pub enum Message {
     MaterialAmountMaxChanged(usize, String),
 }
 
-#[derive(Default)]
 pub struct State {
     pub filter_state: StageFilterState,
     popup: popup::State,
+    attributes: Panel,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self { filter_state: StageFilterState::default(), popup: popup::State::default(), attributes: Panel::new(ATTRIBUTES) }
+    }
+}
+
+fn show_attributes(state: &mut StageFilterState, target: Option<usize>) {
+    for (idx, enemy) in state.enemies.iter_mut().enumerate() {
+        enemy.attributes.is_open = target == Some(idx) && !enemy.attributes.is_open;
+    }
 }
 
 impl State {
@@ -356,9 +377,13 @@ impl State {
             Message::Popup(msg) => {
                 if self.popup.update(msg, POPUP) {
                     state.is_open = false;
+                    show_attributes(state, None);
                 }
             }
-            Message::Toggle => state.is_open = !state.is_open,
+            Message::Toggle => {
+                state.is_open = !state.is_open;
+                show_attributes(state, None);
+            }
             Message::Clear => *state = StageFilterState { is_open: state.is_open, ..Default::default() },
 
             Message::CategoryChanged(value) => state.category_name = value,
@@ -388,6 +413,12 @@ impl State {
             }
             Message::EnemyIsBaseToggled(idx) => {
                 if let Some(enemy) = state.enemies.get_mut(idx) { enemy.is_base = cycle_tristate(enemy.is_base); }
+            }
+            Message::EnemyAttributesToggled(idx) => show_attributes(state, Some(idx)),
+            Message::EnemyAttributes(msg) => {
+                if let Some(enemy) = state.enemies.iter_mut().find(|enemy| enemy.attributes.is_open) {
+                    self.attributes.update(&mut enemy.attributes, msg);
+                }
             }
             Message::EnemyRangeMinChanged(idx, range, value) => {
                 if let Some(enemy) = state.enemies.get_mut(idx) { enemy_range_mut(enemy, range).min = value; }
@@ -451,6 +482,16 @@ impl State {
 
     pub fn view<'a>(&'a self, window: Size, names: &'a NameBook) -> Element<'a, Message> {
         self.popup.view("Advanced Stage Filter", POPUP, window, Message::Popup, move || self.content_view(names), None)
+    }
+
+    pub(super) fn attributes_open(&self) -> bool {
+        self.filter_state.enemies.iter().any(|enemy| enemy.attributes.is_open)
+    }
+
+    pub(super) fn attributes_view<'a>(&'a self, art: Art<'a>, window: Size, names: &'a NameBook) -> Option<Element<'a, Message>> {
+        let enemy = self.filter_state.enemies.iter().find(|enemy| enemy.attributes.is_open)?;
+
+        Some(self.attributes.view(&enemy.attributes, art, window, names).map(Message::EnemyAttributes))
     }
 
     fn content_view<'a>(&'a self, names: &'a NameBook) -> Element<'a, Message> {
@@ -800,8 +841,13 @@ fn enemy_card<'a>(idx: usize, enemy: &'a EnemyFilter) -> Element<'a, Message> {
         Some(_) => "Unknown",
     };
 
+    let attributes_active = enemy.attributes.is_active();
+
     let body = column![
         close_row(mode, Message::RemoveEnemy(idx)),
+        button(text("Attributes").size(CONTROL_TEXT_SIZE))
+            .on_press(Message::EnemyAttributesToggled(idx))
+            .style(move |theme: &Theme, status| theme::toggle_button(theme, status, attributes_active)),
         row![
             text("Boss Type:"),
             pick_list(vec!["Any", "None", "Boss", "Screen Shake"], Some(boss_type_label), move |s| {

@@ -38,6 +38,7 @@ use crate::app::state::{AnimState, AppState, EnemyListState};
 use crate::app::theme;
 use crate::common::CustomAssets;
 use crate::common::SpriteSheet;
+use crate::systems::combat::enemy_filter::Art;
 use crate::common::header_icon::{self, HeaderIcon};
 use crate::editor;
 use crate::widget::{grid_frames, grid_header, grid_value, name_box, popup, roster_list, statblock_export, status};
@@ -541,6 +542,10 @@ impl EnemyState {
 
     pub fn filter_popup_open(&self) -> bool {
         self.filter.filter_state.is_open
+    }
+
+    pub(crate) fn filter_art(&self) -> Art<'_> {
+        self.filter.art(&self.img015_sheets, &self.custom_assets)
     }
 
     pub(crate) fn filter_scroll_task<M: 'static>(&self) -> Task<M> {

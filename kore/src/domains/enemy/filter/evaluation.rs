@@ -7,13 +7,11 @@ use crate::domains::enemy::scanner::EnemyEntry;
 use crate::systems::combat::NameBook;
 use crate::systems::treasure::Bonus;
 
-pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, mag: i32, treasure: &Bonus) -> i32 {
+pub(crate) fn get_stat_value(s: &Entity, stat: &str, anim_frames: i32, magnification: Magnification, treasure: &Bonus) -> i32 {
     let reg_name = match stat {
         "Atk Cycle (f)" => "Atk Cycle",
         _ => stat,
     };
-
-    let magnification = Magnification { hitpoints: mag, attack: mag };
 
     ENEMY_STATS_REGISTRY.iter()
         .find(|d| d.name == reg_name)
@@ -31,7 +29,14 @@ pub(crate) fn has_trait_or_ability(s: &Entity, identity: Identity) -> bool {
 }
 
 pub fn entity_passes_filter(enemy: &EnemyEntry, filter: &EnemyFilterState) -> bool {
-    let mag = filter.mag_input.parse::<i32>().unwrap_or(100);
+    passes_at(enemy, filter, target_magnification(filter).unwrap_or_default(), &filter.treasure)
+}
+
+pub(crate) fn target_magnification(filter: &EnemyFilterState) -> Option<Magnification> {
+    filter.mag_input.trim().parse::<i32>().ok().map(|mag| Magnification { hitpoints: mag, attack: mag })
+}
+
+pub(crate) fn passes_at(enemy: &EnemyEntry, filter: &EnemyFilterState, magnification: Magnification, treasure: &Bonus) -> bool {
     let has_stat_filters = filter.stat_ranges.values().any(|r| !r.min.is_empty() || !r.max.is_empty());
     let has_identity_filters = !filter.active_identities.is_empty();
 
@@ -49,7 +54,7 @@ pub fn entity_passes_filter(enemy: &EnemyEntry, filter: &EnemyFilterState) -> bo
             if range.min.is_empty() && range.max.is_empty() { continue; }
             active_conditions += 1;
 
-            let val = get_stat_value(stats, stat_name, enemy.atk_anim_frames, mag, &filter.treasure);
+            let val = get_stat_value(stats, stat_name, enemy.atk_anim_frames, magnification, treasure);
 
             let r_min = range.min.parse::<i32>().unwrap_or(i32::MIN);
             let r_max = range.max.parse::<i32>().unwrap_or(i32::MAX);

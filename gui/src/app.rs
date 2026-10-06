@@ -247,6 +247,7 @@ enum ActivePopup {
     EnemyExport,
     EnemyFilter,
     StageFilter,
+    StageAttributes,
     ModsImport,
     ModsExport,
     SettingsKeys,
@@ -274,7 +275,7 @@ enum ActivePopup {
 
 impl ActivePopup {
     #[cfg(test)]
-    const ALL: [Self; 32] = [
+    const ALL: [Self; 33] = [
         Self::InitErrors,
         Self::Updater,
         Self::VersionNotice,
@@ -284,6 +285,7 @@ impl ActivePopup {
         Self::EnemyExport,
         Self::EnemyFilter,
         Self::StageFilter,
+        Self::StageAttributes,
         Self::ModsImport,
         Self::ModsExport,
         Self::SettingsKeys,
@@ -320,6 +322,7 @@ impl ActivePopup {
             Self::EnemyExport => popup::Kind::EnemyAnimationExport,
             Self::EnemyFilter => popup::Kind::EnemyFilter,
             Self::StageFilter => popup::Kind::StageFilter,
+            Self::StageAttributes => popup::Kind::StageAttributes,
             Self::ModsImport => popup::Kind::ModImport,
             Self::ModsExport => popup::Kind::ModExport,
             Self::SettingsKeys => popup::Kind::Keys,
@@ -1038,6 +1041,7 @@ impl BattleCatsApp {
         self.treasure = Bonus::resolve(&self.treasure_catalog, &self.settings.general.treasures);
         self.cat_state.set_treasure(self.treasure);
         self.enemy_state.set_treasure(self.treasure);
+        self.stage_state.set_treasure(self.treasure, &self.vault);
         self.refresh_sandbox_treasure();
     }
 
@@ -1413,7 +1417,7 @@ impl BattleCatsApp {
                 let retabbed = matches!(msg, enemy::Message::SelectTab(..));
                 let task = self.enemy_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Enemy);
                 if enemies_loaded {
-                    self.stage_state.sync_enemies(&self.enemy_state.data.enemies);
+                    self.stage_state.sync_enemies(&self.enemy_state.data.enemies, &self.vault);
                 }
                 self.enemy_state.sync_state(&mut self.app_state.enemy);
                 self.sync_editor(enemies_loaded);
@@ -1450,6 +1454,10 @@ impl BattleCatsApp {
                 }
                 self.stage_state.sync_state(&mut self.app_state.stage);
                 self.sync_popup(ActivePopup::StageFilter, self.stage_state.filter_popup_open());
+
+                let attributes_opened = self.stage_state.attributes_popup_open() && !self.active_popups.contains(&ActivePopup::StageAttributes);
+
+                self.sync_popup(ActivePopup::StageAttributes, self.stage_state.attributes_popup_open());
                 self.sync_editor(stages_loaded);
                 self.sync_sandbox_rules();
 
@@ -1457,6 +1465,10 @@ impl BattleCatsApp {
                     let mined = self.restock_mining();
 
                     return Task::batch([task, mined, self.reconcile_caches()]);
+                }
+
+                if attributes_opened {
+                    return Task::batch([task, self.update(Message::Enemy(enemy::Message::SheetsCheck))]);
                 }
 
                 task
@@ -2053,6 +2065,18 @@ impl BattleCatsApp {
                         }
 
                         self.stage_state.filter_popup_view(self.window_size, &self.names).map(|view| view.map(Message::Stage))
+                    }
+                    ActivePopup::StageAttributes => {
+                        let sandboxed = matches!(self.current_page, Page::Sandbox)
+                            && self.app_state.sandbox.tab == crate::app::state::SandboxTab::Stage;
+
+                        if !matches!(self.current_page, Page::Stages) && !sandboxed {
+                            return None;
+                        }
+
+                        self.stage_state
+                            .attributes_popup_view(self.enemy_state.filter_art(), self.window_size, &self.names)
+                            .map(|view| view.map(Message::Stage))
                     }
                     ActivePopup::ModsImport => {
                         if !matches!(self.current_page, Page::Mods) {

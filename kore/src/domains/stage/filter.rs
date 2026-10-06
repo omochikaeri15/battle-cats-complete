@@ -14,6 +14,8 @@ use nyanko::chapter::{Map, Stage};
 use serde::{Deserialize, Serialize};
 use tracing::trace;
 
+use crate::domains::enemy::scanner::EnemyEntry;
+use crate::systems::treasure::Bonus;
 use crate::{ItemStore, Vault, Vfs};
 
 use super::StageDataState;
@@ -269,7 +271,9 @@ impl StageFilterState {
 }
 
 pub struct StageLookupContext<'a> {
+    pub enemy_registry: &'a HashMap<u32, EnemyEntry>,
     pub enemy_name_registry: &'a [String],
+    pub treasure: &'a Bonus,
     pub lock_registry: &'a HashMap<u32, LockSkipDataEntry>,
     pub cpu_setting: &'a ScatCpuSetting,
     pub items: &'a ItemStore,
@@ -280,9 +284,11 @@ pub struct StageLookupContext<'a> {
 }
 
 impl<'a> StageLookupContext<'a> {
-    pub fn from_data(data: &'a StageDataState, vault: &'a Vault) -> Self {
+    pub fn from_data(data: &'a StageDataState, vault: &'a Vault, treasure: &'a Bonus) -> Self {
         Self {
+            enemy_registry: &data.enemy_registry,
             enemy_name_registry: &data.enemy_name_registry,
+            treasure,
             lock_registry: &data.lock_skip_registry,
             cpu_setting: &data.scat_cpu_setting,
             items: &vault.vds.items,
@@ -453,8 +459,10 @@ impl CompiledStageFilter {
         }
 
         if !self.enemies.is_empty() {
+            let crown_mag = stage.crown_magnification(target_crown).unwrap_or(100);
+
             for enemy_filter in &self.enemies {
-                let found = stage.enemies.iter().any(|enemy| enemy_filter.matches(enemy, ctx.enemy_name_registry));
+                let found = stage.enemies.iter().any(|enemy| enemy_filter.matches(enemy, crown_mag, ctx));
                 if enemy_filter.is_exclude { if found { return false; } } else if !found { return false; }
             }
         }
