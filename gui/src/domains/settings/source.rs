@@ -45,7 +45,7 @@ const BODY_SIZE: f32 = 14.0;
 const SUBTLE_ALPHA: f32 = 0.6;
 const INPUT_WIDTH: f32 = 440.0;
 const MODES: [&str; 2] = ["Prompt", "Ignore"];
-const LINK_HINT: &str = "A Provider link to an asset payload, served through a file or folder\nChecked on launch, and newer files are offered as a download";
+const LINK_HINT: &str = "A Provider link to an asset payload, served through a folder\nChecked on launch, and newer files are offered as a download";
 const MODE_HINT: &str = "Prompt asks before downloading newer files found on launch\nIgnore never checks on launch";
 
 #[derive(Debug, Clone)]
@@ -155,12 +155,6 @@ fn progress(step: Step) -> Progress {
             detail: format!("{} of {}", format_size(done), format_size(total)),
             sealed: false,
         },
-        Step::Extracting { done, total } => Progress {
-            heading: "Extracting game files",
-            fraction: done as f32 / total.max(1) as f32,
-            detail: format!("{} of {} files", done, total),
-            sealed: false,
-        },
         Step::Replacing => Progress {
             heading: "Replacing game files",
             fraction: 1.0,
@@ -173,9 +167,9 @@ fn progress(step: Step) -> Progress {
 fn failure(kind: ErrorKind) -> &'static str {
     match kind {
         ErrorKind::Link => "That is not a Provider link this app can read",
-        ErrorKind::Missing => "The shared file could not be found, or is not public",
+        ErrorKind::Missing => "The shared folder could not be found, holds no payload, or is not public",
         ErrorKind::Network => "The Provider could not be reached, or the download was cut short",
-        ErrorKind::Archive => "The download is not a zip this app can read",
+        ErrorKind::Archive => "The download is not a payload this app can read",
         ErrorKind::Disk => "The new files could not be written to disk",
         ErrorKind::Aborted => "The download was cancelled",
     }
@@ -517,7 +511,7 @@ impl State {
             Status::Installing(_) => ("Downloading Files...", theme::warning_button, Some(Message::Show)),
             Status::Installed => ("Files Updated!", theme::success_status, None),
             Status::Failed(ErrorKind::Link) => ("Invalid Link!", theme::danger_status, None),
-            Status::Failed(ErrorKind::Missing) => ("File Not Found!", theme::danger_status, None),
+            Status::Failed(ErrorKind::Missing) => ("Folder Not Found!", theme::danger_status, None),
             Status::Failed(ErrorKind::Network) => ("Failed to Check!", theme::danger_status, None),
             Status::Failed(_) => ("Download Failed!", theme::danger_status, None),
         };
