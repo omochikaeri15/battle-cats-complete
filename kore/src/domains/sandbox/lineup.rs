@@ -81,6 +81,134 @@ pub enum Cell {
     Bench(usize),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Edge {
+    Before,
+    After,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Placed {
+    Kept(Cell),
+    Carried,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Arrangement {
+    pub lifted: Option<Cell>,
+    pub slots: [Option<Placed>; LINEUP_SLOTS],
+    pub bench: [Option<Placed>; BENCH_SLOTS],
+}
+
+impl Arrangement {
+    fn resting(lineup: &Lineup, lifted: Option<Cell>) -> Self {
+        let mut plan = Self { lifted, slots: [None; LINEUP_SLOTS], bench: [None; BENCH_SLOTS] };
+        let kept = (0..lineup.slots.len()).map(Cell::Slot).filter(|cell| Some(*cell) != lifted);
+
+        for (index, cell) in kept.enumerate() {
+            plan.slots[index] = Some(Placed::Kept(cell));
+        }
+
+        for (index, held) in lineup.bench.iter().enumerate() {
+            let cell = Cell::Bench(index);
+
+            plan.bench[index] = held.as_ref().filter(|_| Some(cell) != lifted).map(|_| Placed::Kept(cell));
+        }
+
+        plan
+    }
+
+    pub fn get(&self, cell: Cell) -> Option<Placed> {
+        match cell {
+            Cell::Slot(index) => self.slots.get(index).copied().flatten(),
+            Cell::Bench(index) => self.bench.get(index).copied().flatten(),
+        }
+    }
+
+    pub fn landing(&self) -> Option<Cell> {
+        let slot = self.slots.iter().position(|placed| *placed == Some(Placed::Carried)).map(Cell::Slot);
+
+        slot.or_else(|| self.bench.iter().position(|placed| *placed == Some(Placed::Carried)).map(Cell::Bench))
+    }
+
+    fn set(&mut self, cell: Cell, placed: Placed) {
+        match cell {
+            Cell::Slot(index) => {
+                if let Some(held) = self.slots.get_mut(index) {
+                    *held = Some(placed);
+                }
+            }
+            Cell::Bench(index) => {
+                if let Some(held) = self.bench.get_mut(index) {
+                    *held = Some(placed);
+                }
+            }
+        }
+    }
+
+    fn fielded(&self) -> usize {
+        self.slots.iter().flatten().count()
+    }
+
+    fn shelve(&mut self, displaced: Cell) {
+        let open = match displaced {
+            Cell::Slot(_) => self.bench.iter().position(Option::is_none).map(Cell::Bench),
+            Cell::Bench(_) => (self.fielded() < LINEUP_SLOTS).then(|| Cell::Slot(self.fielded())),
+        };
+
+        if let Some(open) = open {
+            self.set(open, Placed::Kept(displaced));
+        }
+    }
+
+    fn position(&self, cell: Cell) -> Option<usize> {
+        let kept = Some(Placed::Kept(cell));
+
+        match cell {
+            Cell::Slot(_) => self.slots.iter().position(|placed| *placed == kept),
+            Cell::Bench(_) => self.bench.iter().position(|placed| *placed == kept),
+        }
+    }
+
+    fn wedge(&mut self, cell: Cell) -> bool {
+        match cell {
+            Cell::Slot(index) => {
+                let fielded = self.fielded();
+
+                if fielded >= LINEUP_SLOTS {
+                    return false;
+                }
+
+                let at = index.min(fielded);
+
+                self.slots[at..=fielded].rotate_right(1);
+                self.slots[at] = Some(Placed::Carried);
+
+                true
+            }
+            Cell::Bench(index) => {
+                if let Some(hole) = (index..BENCH_SLOTS).find(|at| self.bench[*at].is_none()) {
+                    self.bench[index..=hole].rotate_right(1);
+                    self.bench[index] = Some(Placed::Carried);
+
+                    return true;
+                }
+
+                let end = index.min(BENCH_SLOTS).checked_sub(1);
+                let Some(hole) = end.and_then(|end| (0..=end).rev().find(|at| self.bench[*at].is_none())) else {
+                    return false;
+                };
+                let end = end.unwrap_or(0);
+
+                self.bench[hole..=end].rotate_left(1);
+                self.bench[end] = Some(Placed::Carried);
+
+                true
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Lineup {
@@ -142,67 +270,71 @@ impl Lineup {
         }
     }
 
-    pub fn place(&mut self, member: Member, target: Cell) -> Option<Cell> {
-        if let Some(held) = self.find(member.id) {
-            self.take(held);
+    pub fn arrange(&self, lifted: Option<Cell>, target: Cell, edge: Edge) -> Option<Arrangement> {
+        let lifted = lifted.filter(|cell| self.get(*cell).is_some());
+
+        if lifted == Some(target) {
+            let mut plan = Arrangement::resting(self, None);
+
+            plan.lifted = lifted;
+            plan.set(target, Placed::Carried);
+
+            return Some(plan);
         }
 
-        match target {
-            Cell::Slot(index) if index < self.slots.len() => {
-                let displaced = std::mem::replace(&mut self.slots[index], member);
+        if self.get(target).is_none() {
+            let mut plan = Arrangement::resting(self, lifted);
 
-                self.shelve(displaced);
+            return match target {
+                Cell::Slot(_) => plan.wedge(Cell::Slot(plan.fielded())).then_some(plan),
+                Cell::Bench(index) => {
+                    plan.bench[index] = Some(Placed::Carried);
 
-                Some(Cell::Slot(index))
-            }
-            Cell::Slot(_) if self.slots.len() < LINEUP_SLOTS => {
-                self.slots.push(member);
-
-                Some(Cell::Slot(self.slots.len() - 1))
-            }
-            Cell::Slot(_) => None,
-            Cell::Bench(index) => {
-                let held = self.bench.get_mut(index)?;
-                let displaced = held.replace(member);
-
-                if let Some(displaced) = displaced {
-                    self.shelve(displaced);
+                    Some(plan)
                 }
-
-                Some(Cell::Bench(index))
-            }
-        }
-    }
-
-    pub fn shift(&mut self, from: Cell, target: Cell) {
-        if from == target {
-            return;
+            };
         }
 
-        let Some(member) = self.take(from) else {
-            return;
+        let mut plan = Arrangement::resting(self, lifted);
+        let at = plan.position(target)? + usize::from(edge == Edge::After);
+        let cell = match target {
+            Cell::Slot(_) => Cell::Slot(at),
+            Cell::Bench(_) => Cell::Bench(at),
         };
 
-        let landed = match (from, target) {
-            (Cell::Slot(_), Cell::Slot(index)) => {
-                let at = index.min(self.slots.len());
-
-                self.slots.insert(at, member);
-
-                return;
-            }
-            _ => self.place(member, target),
-        };
-
-        if landed.is_none() {
-            tracing::debug!("a lineup move had nowhere to land");
+        if plan.wedge(cell) {
+            return Some(plan);
         }
+
+        let mut plan = Arrangement::resting(self, None);
+
+        plan.lifted = lifted;
+        plan.set(target, Placed::Carried);
+
+        match lifted {
+            Some(from) => plan.set(from, Placed::Kept(target)),
+            None => plan.shelve(target),
+        }
+
+        Some(plan)
     }
 
-    fn shelve(&mut self, member: Member) {
-        if let Some(open) = self.bench.iter().position(Option::is_none) {
-            self.bench[open] = Some(member);
-        }
+    pub fn commit(&mut self, plan: &Arrangement, fresh: Option<Member>) {
+        let mut slots: Vec<Option<Member>> = std::mem::take(&mut self.slots).into_iter().map(Some).collect();
+        let mut bench = std::mem::take(&mut self.bench);
+        let mut carried = match plan.lifted {
+            Some(Cell::Slot(index)) => slots.get_mut(index).and_then(Option::take),
+            Some(Cell::Bench(index)) => bench.get_mut(index).and_then(Option::take),
+            None => fresh,
+        };
+        let mut pick = |placed: Placed| match placed {
+            Placed::Carried => carried.take(),
+            Placed::Kept(Cell::Slot(index)) => slots.get_mut(index).and_then(Option::take),
+            Placed::Kept(Cell::Bench(index)) => bench.get_mut(index).and_then(Option::take),
+        };
+
+        self.slots = plan.slots.iter().flatten().filter_map(|placed| pick(*placed)).collect();
+        self.bench = plan.bench.map(|placed| placed.and_then(&mut pick));
     }
 
     pub fn active(&self, row: &NyancomboData) -> bool {
@@ -596,11 +728,171 @@ mod tests {
     #[test]
     fn the_bench_keeps_its_holes() {
         let mut lineup = Lineup::default();
+        let plan = lineup.arrange(None, Cell::Bench(3), Edge::Before).unwrap();
 
-        lineup.place(unit(7), Cell::Bench(3));
+        lineup.commit(&plan, Some(unit(7)));
 
         assert!(lineup.bench[0].is_none());
         assert_eq!(lineup.bench[3].as_ref().map(|member| member.id), Some(7));
+    }
+
+    fn ids(lineup: &Lineup) -> Vec<u32> {
+        lineup.slots.iter().map(|member| member.id).collect()
+    }
+
+    fn bench_ids(lineup: &Lineup) -> Vec<Option<u32>> {
+        lineup.bench.iter().map(|held| held.as_ref().map(|member| member.id)).collect()
+    }
+
+    fn fielded(count: u32) -> Lineup {
+        let mut lineup = Lineup::default();
+
+        for id in 0..count {
+            lineup.add(unit(id));
+        }
+
+        lineup
+    }
+
+    // Like the game, a drop onto a unit never replaces it while there is room to push.
+    #[test]
+    fn dropping_onto_a_unit_wedges_in_beside_it() {
+        let mut lineup = fielded(4);
+        let plan = lineup.arrange(None, Cell::Slot(1), Edge::After).unwrap();
+
+        assert_eq!(plan.landing(), Some(Cell::Slot(2)));
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(ids(&lineup), [0, 1, 40, 2, 3]);
+        assert!(lineup.bench.iter().all(Option::is_none));
+    }
+
+    // The unit under the cursor and everything after it slide right to open the cell.
+    #[test]
+    fn dropping_beside_a_unit_pushes_the_rest_along() {
+        let mut lineup = fielded(4);
+        let plan = lineup.arrange(Some(Cell::Slot(3)), Cell::Slot(1), Edge::Before).unwrap();
+
+        assert_eq!(plan.landing(), Some(Cell::Slot(1)));
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [0, 3, 1, 2]);
+
+        let plan = lineup.arrange(Some(Cell::Slot(0)), Cell::Slot(2), Edge::After).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [3, 1, 0, 2]);
+    }
+
+    // Only a full lineup replaces the unit under the cursor, and the displaced unit is
+    // shelved rather than lost while the bench has a hole.
+    #[test]
+    fn a_full_lineup_replaces_instead() {
+        let mut lineup = fielded(10);
+        let plan = lineup.arrange(None, Cell::Slot(4), Edge::Before).unwrap();
+
+        assert_eq!(plan.landing(), Some(Cell::Slot(4)));
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(ids(&lineup), [0, 1, 2, 3, 40, 5, 6, 7, 8, 9]);
+        assert_eq!(bench_ids(&lineup)[0], Some(4));
+
+        let plan = lineup.arrange(Some(Cell::Slot(9)), Cell::Slot(4), Edge::Before).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [0, 1, 2, 3, 9, 40, 5, 6, 7, 8], "a fielded unit frees its own cell, so it still pushes");
+    }
+
+    #[test]
+    fn a_replaced_unit_is_gone_when_nothing_can_hold_it() {
+        let mut lineup = fielded(10);
+
+        for index in 0..BENCH_SLOTS {
+            lineup.bench[index] = Some(unit(100 + index as u32));
+        }
+
+        let plan = lineup.arrange(None, Cell::Slot(0), Edge::After).unwrap();
+
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(ids(&lineup)[0], 40);
+        assert!(lineup.find(0).is_none());
+    }
+
+    // Empty lineup cells are not addressable: the unit lands on the next open one.
+    #[test]
+    fn an_empty_slot_means_the_next_open_cell() {
+        let mut lineup = fielded(3);
+        let plan = lineup.arrange(None, Cell::Slot(8), Edge::Before).unwrap();
+
+        assert_eq!(plan.landing(), Some(Cell::Slot(3)));
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(ids(&lineup), [0, 1, 2, 40]);
+
+        let plan = lineup.arrange(Some(Cell::Slot(0)), Cell::Slot(7), Edge::After).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [1, 2, 40, 0]);
+    }
+
+    #[test]
+    fn a_full_bench_replaces_and_fields_the_displaced_unit() {
+        let mut lineup = fielded(2);
+
+        for index in 0..BENCH_SLOTS {
+            lineup.bench[index] = Some(unit(100 + index as u32));
+        }
+
+        let plan = lineup.arrange(None, Cell::Bench(1), Edge::Before).unwrap();
+
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(bench_ids(&lineup)[1], Some(40));
+        assert_eq!(ids(&lineup), [0, 1, 101]);
+    }
+
+    #[test]
+    fn a_unit_already_fielded_is_moved_not_doubled() {
+        let mut lineup = fielded(3);
+        let plan = lineup.arrange(lineup.find(2), Cell::Slot(0), Edge::Before).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [2, 0, 1]);
+    }
+
+    // The bench pushes right into the first hole, and only falls back to pushing left when
+    // nothing to the right can give way.
+    #[test]
+    fn the_bench_pushes_toward_a_hole() {
+        let mut lineup = Lineup { bench: [Some(unit(10)), Some(unit(11)), None, Some(unit(13)), Some(unit(14))], ..Lineup::default() };
+        let plan = lineup.arrange(None, Cell::Bench(0), Edge::Before).unwrap();
+
+        lineup.commit(&plan, Some(unit(40)));
+        assert_eq!(bench_ids(&lineup), [Some(40), Some(10), Some(11), Some(13), Some(14)]);
+
+        let plan = lineup.arrange(Some(Cell::Bench(0)), Cell::Bench(4), Edge::After).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(bench_ids(&lineup), [Some(10), Some(11), Some(13), Some(14), Some(40)]);
+        assert_eq!(lineup.arrange(None, Cell::Bench(2), Edge::Before).and_then(|plan| plan.landing()), Some(Cell::Bench(2)), "a full bench replaces");
+    }
+
+    #[test]
+    fn a_benched_unit_dropped_on_a_full_lineup_trades_cells() {
+        let mut lineup = fielded(10);
+
+        lineup.bench[2] = Some(unit(30));
+
+        let plan = lineup.arrange(Some(Cell::Bench(2)), Cell::Slot(1), Edge::After).unwrap();
+
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup)[1], 30);
+        assert_eq!(bench_ids(&lineup)[2], Some(1));
+    }
+
+    #[test]
+    fn dropping_a_unit_on_its_own_cell_changes_nothing() {
+        let mut lineup = fielded(3);
+        let plan = lineup.arrange(Some(Cell::Slot(1)), Cell::Slot(1), Edge::After).unwrap();
+
+        assert_eq!(plan.landing(), Some(Cell::Slot(1)));
+        lineup.commit(&plan, None);
+        assert_eq!(ids(&lineup), [0, 1, 2]);
     }
 
     #[test]
@@ -640,7 +932,7 @@ mod tests {
         }
 
         for index in 0..BENCH_SLOTS {
-            lineup.place(unit(100 + index as u32), Cell::Bench(index));
+            lineup.bench[index] = Some(unit(100 + index as u32));
         }
 
         lineup.adopt(&combo(&[(50, 0), (51, 0)]), |id, form| Member { form, ..unit(id) });

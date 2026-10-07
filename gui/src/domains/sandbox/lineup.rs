@@ -15,7 +15,7 @@ use kore::domains::cat::game::stats::get_final_stats;
 use kore::systems::treasure::Bonus;
 use kore::domains::sandbox::orb::Allowance;
 use kore::domains::sandbox::rules::Rules;
-use kore::domains::sandbox::{mount_of, Cell, Lineup, Member, Roster, BENCH_SLOTS, LINEUP_SLOTS};
+use kore::domains::sandbox::{mount_of, Arrangement, Cell, Edge, Lineup, Member, Placed, Roster, BENCH_SLOTS, LINEUP_SLOTS};
 use kore::domains::settings::Settings;
 use kore::Vfs;
 use kore::Source;
@@ -140,6 +140,13 @@ enum Cargo {
     Held(Cell),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Landing {
+    Off,
+    Card,
+    Cell(Cell, Edge),
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 enum Drag {
     #[default]
@@ -151,8 +158,9 @@ enum Drag {
     },
     Moving {
         cargo: Cargo,
+        lifted: Option<Cell>,
         at: Point,
-        onto: Option<Cell>,
+        landing: Landing,
     },
 }
 
@@ -193,6 +201,7 @@ pub struct State {
     combos: combos::State,
     orbs: orbs::State,
     drag: Drag,
+    plan: Option<Arrangement>,
     area: Size,
     metrics: Metrics,
     rules: Rules,
@@ -224,6 +233,7 @@ impl State {
             combos: combos::State::default(),
             orbs: orbs::State::default(),
             drag: Drag::Idle,
+            plan: None,
             area: Size::ZERO,
             metrics: Metrics::FULL,
             rules: Rules::default(),
@@ -465,42 +475,57 @@ impl State {
         self.combos.focus(None);
     }
 
-    fn landing(&self, at: Point) -> Option<Cell> {
+    fn landing(&self, at: Point) -> Landing {
         if self.area.width <= 0.0 {
-            return None;
+            return Landing::Card;
         }
 
         let metrics = self.metrics;
-        let left = LEFT_WIDTH + ((self.area.width - LEFT_WIDTH - RIGHT_WIDTH - metrics.deck_width()) / 2.0).max(0.0) + metrics.pad;
-        let across = at.x - left;
+        let card_left = LEFT_WIDTH + ((self.area.width - LEFT_WIDTH - RIGHT_WIDTH - metrics.deck_width()) / 2.0).max(0.0);
+        let on_card = (card_left..card_left + metrics.deck_width()).contains(&at.x) && (TOP_PAD..TOP_PAD + metrics.deck_height()).contains(&at.y);
 
-        if !(0.0..metrics.grid_width()).contains(&across) {
-            return None;
+        if !on_card {
+            return Landing::Off;
         }
 
+        let half = metrics.gap / 2.0;
+        let across = at.x - card_left - metrics.pad + half;
         let pitch = metrics.cell_width + metrics.gap;
-        let column = (across / pitch) as usize;
 
-        if column >= COLUMNS || across - column as f32 * pitch > metrics.cell_width {
-            return None;
+        if !(0.0..pitch * COLUMNS as f32).contains(&across) {
+            return Landing::Card;
         }
+
+        let column = (across / pitch) as usize;
+        let offset = across - column as f32 * pitch;
+        let edge = if offset < pitch / 2.0 { Edge::Before } else { Edge::After };
 
         let down = at.y - TOP_PAD;
-        let grid = down - metrics.grid_top();
-        let bench = down - metrics.bench_top();
-
-        if (0.0..metrics.cell_height).contains(&bench) {
-            return Some(Cell::Bench(column));
-        }
-
-        if !(0.0..metrics.cell_height * 2.0 + metrics.gap).contains(&grid) {
-            return None;
-        }
-
         let fall = metrics.cell_height + metrics.gap;
+        let bench = down - metrics.bench_top() + half;
+
+        if (0.0..fall).contains(&bench) {
+            return Landing::Cell(Cell::Bench(column), edge);
+        }
+
+        let grid = down - metrics.grid_top() + half;
+        let lines = LINEUP_SLOTS / COLUMNS;
+
+        if !(0.0..fall * lines as f32).contains(&grid) {
+            return Landing::Card;
+        }
+
         let line = (grid / fall) as usize;
 
-        (grid - line as f32 * fall <= metrics.cell_height).then_some(Cell::Slot(line * COLUMNS + column))
+        Landing::Cell(Cell::Slot(line * COLUMNS + column), edge)
+    }
+
+    fn plan(lifted: Option<Cell>, landing: Landing, lineup: Option<&Lineup>) -> Option<Arrangement> {
+        let Landing::Cell(target, edge) = landing else {
+            return None;
+        };
+
+        lineup?.arrange(lifted, target, edge)
     }
 
     fn held(&self, lineup: Option<&Lineup>) -> Option<Cell> {
@@ -610,18 +635,36 @@ impl State {
                 Task::none()
             }
             Message::DragMove(at) => {
+                let lineup = app_state.sandbox.roster.current();
+
                 self.drag = match self.drag {
                     Drag::Pressed { cargo, since, from } => {
                         let origin = from.unwrap_or(at);
                         let strayed = (at.x - origin.x).abs() > SLACK || (at.y - origin.y).abs() > SLACK;
 
                         if strayed || since.elapsed() >= RIPE {
-                            Drag::Moving { cargo, at, onto: self.landing(at) }
+                            let landing = self.landing(at);
+                            let lifted = match cargo {
+                                Cargo::Held(cell) => Some(cell),
+                                Cargo::Fresh(id) => lineup.and_then(|lineup| lineup.find(id)),
+                            };
+
+                            self.plan = Self::plan(lifted, landing, lineup);
+
+                            Drag::Moving { cargo, lifted, at, landing }
                         } else {
                             Drag::Pressed { cargo, since, from: Some(origin) }
                         }
                     }
-                    Drag::Moving { cargo, .. } => Drag::Moving { cargo, at, onto: self.landing(at) },
+                    Drag::Moving { cargo, lifted, landing: before, .. } => {
+                        let landing = self.landing(at);
+
+                        if landing != before {
+                            self.plan = Self::plan(lifted, landing, lineup);
+                        }
+
+                        Drag::Moving { cargo, lifted, at, landing }
+                    }
                     Drag::Idle => Drag::Idle,
                 };
 
@@ -629,11 +672,13 @@ impl State {
             }
             Message::DragCancel => {
                 self.drag = Drag::Idle;
+                self.plan = None;
 
                 Task::none()
             }
             Message::DragEnd => {
                 let settled = std::mem::take(&mut self.drag);
+                let plan = self.plan.take();
 
                 match settled {
                     Drag::Pressed { cargo: Cargo::Fresh(id), .. } => {
@@ -651,15 +696,17 @@ impl State {
                             self.open(cell, lineup, &ctx.vault.vfs);
                         }
                     }
-                    Drag::Moving { cargo: Cargo::Fresh(id), onto: Some(onto), .. } => {
-                        if let Some(member) = self.recruit(id, None, settings, &app_state.sandbox.roster) {
-                            app_state.sandbox.roster.current_mut().place(self.fitted(member, ctx), onto);
+                    Drag::Moving { cargo, landing: Landing::Cell(..), .. } if let Some(plan) = plan => {
+                        let fresh = match cargo {
+                            Cargo::Fresh(id) if plan.lifted.is_none() => self.recruit(id, None, settings, &app_state.sandbox.roster).map(|member| self.fitted(member, ctx)),
+                            _ => None,
+                        };
+
+                        if plan.lifted.is_some() || fresh.is_some() {
+                            app_state.sandbox.roster.current_mut().commit(&plan, fresh);
                         }
                     }
-                    Drag::Moving { cargo: Cargo::Held(from), onto: Some(onto), .. } => {
-                        app_state.sandbox.roster.current_mut().shift(from, onto);
-                    }
-                    Drag::Moving { cargo: Cargo::Held(from), onto: None, .. } => {
+                    Drag::Moving { cargo: Cargo::Held(from), landing: Landing::Off, .. } => {
                         app_state.sandbox.roster.current_mut().take(from);
                     }
                     _ => (),
@@ -835,14 +882,14 @@ impl State {
 
     pub fn view<'a>(&'a self, app_state: &'a AppState) -> Element<'a, Message> {
         let lineup = app_state.sandbox.roster.current();
-        let onto = match self.drag {
-            Drag::Moving { onto, .. } => onto,
+        let lifted = match self.drag {
+            Drag::Moving { lifted, .. } => lifted,
             _ => None,
         };
 
         let center = container(
             column![
-                self.view_deck(lineup, onto),
+                self.view_deck(lineup, lifted, self.plan.as_ref()),
                 self.combos.view((self.area.width - LEFT_WIDTH - RIGHT_WIDTH - CARD_GAP * 2.0).max(0.0)).map(Message::Combos),
             ]
                 .spacing(CARD_GAP)
@@ -873,7 +920,7 @@ impl State {
             );
         }
 
-        layers.into()
+        editor::suppress(layers, self.drag != Drag::Idle)
     }
 
     fn ghost<'a>(&'a self, cargo: Cargo, at: Point, lineup: Option<&'a Lineup>, roster: &Roster) -> Element<'a, Message> {
@@ -911,8 +958,17 @@ impl State {
         container(carried).padding(placed).width(Length::Fill).height(Length::Fill).into()
     }
 
-    fn view_deck<'a>(&'a self, lineup: Option<&'a Lineup>, onto: Option<Cell>) -> Element<'a, Message> {
+    fn view_deck<'a>(&'a self, lineup: Option<&'a Lineup>, lifted: Option<Cell>, plan: Option<&Arrangement>) -> Element<'a, Message> {
         let metrics = self.metrics;
+        let shown = |cell: Cell| -> (Option<(Cell, &'a Member)>, bool) {
+            let source = plan.map_or_else(|| (lifted != Some(cell)).then_some(Placed::Kept(cell)), |plan| plan.get(cell));
+
+            match source {
+                Some(Placed::Kept(source)) => (lineup.and_then(|lineup| lineup.get(source)).map(|member| (source, member)), false),
+                Some(Placed::Carried) => (None, true),
+                None => (None, false),
+            }
+        };
         let mut grid = Column::new().spacing(metrics.gap);
 
         for line in 0..LINEUP_SLOTS / COLUMNS {
@@ -920,8 +976,9 @@ impl State {
 
             for column in 0..COLUMNS {
                 let cell = Cell::Slot(line * COLUMNS + column);
+                let (member, aimed) = shown(cell);
 
-                cells = cells.push(self.view_cell(cell, lineup.and_then(|lineup| lineup.get(cell)), onto == Some(cell)));
+                cells = cells.push(self.view_cell(cell, member, aimed));
             }
 
             grid = grid.push(cells);
@@ -931,8 +988,9 @@ impl State {
 
         for index in 0..BENCH_SLOTS {
             let cell = Cell::Bench(index);
+            let (member, aimed) = shown(cell);
 
-            bench = bench.push(self.view_cell(cell, lineup.and_then(|lineup| lineup.get(cell)), onto == Some(cell)));
+            bench = bench.push(self.view_cell(cell, member, aimed));
         }
 
         let titled = |label: &'a str, height: f32, size: f32| {
@@ -968,7 +1026,7 @@ impl State {
             .into()
     }
 
-    fn view_cell<'a>(&'a self, cell: Cell, member: Option<&'a Member>, aimed: bool) -> Element<'a, Message> {
+    fn view_cell<'a>(&'a self, cell: Cell, member: Option<(Cell, &'a Member)>, aimed: bool) -> Element<'a, Message> {
         let metrics = self.metrics;
         let (width, height) = (Length::Fixed(metrics.cell_width), Length::Fixed(metrics.cell_height));
 
@@ -986,7 +1044,7 @@ impl State {
             }
         };
 
-        let Some(member) = member else {
+        let Some((source, member)) = member else {
             return container(Space::new()).width(width).height(height).style(frame).into();
         };
 
@@ -1019,14 +1077,14 @@ impl State {
         let coin: Element<'a, Message> = self
             .coin
             .clone()
-            .filter(|_| self.priced.get(&cell).is_some_and(|priced| priced.talented))
+            .filter(|_| self.priced.get(&source).is_some_and(|priced| priced.talented))
             .map_or_else(|| Space::new().into(), |handle| iced_image(handle).height(Length::Fixed(COIN_SIZE * metrics.scale)).into());
 
         let corner = |content: Element<'a, Message>, across: Horizontal, down: Vertical| {
             container(content).width(Length::Fill).height(Length::Fill).align_x(across).align_y(down)
         };
 
-        let priced = self.priced.get(&cell).copied().unwrap_or_default();
+        let priced = self.priced.get(&source).copied().unwrap_or_default();
         let price = container(theme::bold_text(format!("{}\u{00a2}", priced.cost)).size(metrics.text(COST_SIZE)).color(Color::WHITE))
             .padding([1, 6])
             .style(|_: &Theme| container::Style {
