@@ -102,7 +102,7 @@ fn assemble(
         is_cat: true,
         id_str: cat_entry.id_str(current_form),
         name: cat_entry.display_name(current_form),
-        icon_path: cat_entry.deploy_icon_paths[current_form].clone(),
+        icon: cat_entry.deploy_icon_paths[current_form].as_ref().map(|path| ctx.global.vault.vfs.source(path)),
         top_label: "Level:".to_string(),
         top_value: level_input,
         headers_1,

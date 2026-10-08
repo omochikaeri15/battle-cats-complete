@@ -69,7 +69,7 @@ fn assemble(ctx: &RenderContext<'_>, enemy_entry: &EnemyEntry) -> StatblockData 
         is_cat: false,
         id_str: enemy_entry.id_str(),
         name: enemy_entry.display_name(),
-        icon_path: enemy_entry.icon_path.clone(),
+        icon: enemy_entry.icon_path.as_ref().map(|path| ctx.global.vault.vfs.source(path)),
         top_label: "Magnify:".to_string(),
         top_value: top_val_str,
         headers_1,

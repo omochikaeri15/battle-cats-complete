@@ -14,7 +14,8 @@ use nyanko::files::img015;
 use crate::common::{assets, frames};
 use crate::common::formats::SpriteSheet;
 use crate::systems::combat::{AbilityItem, CustomIcon};
-use crate::common::gfx::autocrop;
+use crate::common::gfx::{autocrop, open_image};
+use crate::Source;
 
 use draw::*;
 
@@ -40,7 +41,7 @@ pub struct StatblockData {
     pub is_cat: bool,
     pub id_str: String,
     pub name: String,
-    pub icon_path: Option<PathBuf>,
+    pub icon: Option<Source>,
     pub top_label: String,
     pub top_value: String,
     pub headers_1: Vec<String>,
@@ -147,7 +148,7 @@ pub fn build_statblock_image(
     let icon_box_width = px(ICON_BOX_WIDTH);
     let icon_box_height = px(ICON_BOX_HEIGHT);
 
-    let header_icon = data.icon_path.as_ref().and_then(|path| image::open(path).ok()).map(|icon_img| {
+    let header_icon = data.icon.as_ref().and_then(open_image).map(|icon_img| {
         let rgba = autocrop(icon_img.to_rgba8());
         let (source_w, source_h) = (rgba.width() as f32, rgba.height() as f32);
 
