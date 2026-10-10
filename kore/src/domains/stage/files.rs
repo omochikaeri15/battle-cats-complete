@@ -36,6 +36,14 @@ pub const MAP_NAME: &str = "Map_Name.csv";
 pub const DROP_ITEM: &str = "DropItem.csv";
 pub const DROP_CHARA: &str = "drop_chara.csv";
 pub const MAP_OPTION: &str = "Map_option.csv";
+pub(crate) const STAGE_OPTION: &str = "Stage_option.csv";
+pub(crate) const CHARA_GROUP: &str = "Charagroup.csv";
+pub(crate) const SCORE_BONUS: &str = "ScoreBonusMap.json";
+pub(crate) const SPECIAL_RULES: &str = "SpecialRulesMap.json";
+pub(crate) const SPECIAL_RULE_OPTIONS: &str = "SpecialRulesMapOption.json";
+pub(crate) const EX_OPTION: &str = "EX_option.csv";
+pub(crate) const DIFFICULTY: &str = "difficulty_level.tsv";
+pub(crate) const FIXED_FORMATION: &str = "fixed_formation.csv";
 pub const GATYA_ITEM_BUY: &str = "Gatyaitembuy.csv";
 pub const GATYA_ITEM_NAME: &str = "GatyaitemName.csv";
 

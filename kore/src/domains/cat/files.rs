@@ -127,6 +127,17 @@ pub fn stats_id(filename: &str) -> Option<u32> {
     digits.parse::<u32>().ok()?.checked_sub(1)
 }
 
+pub fn explanation_id(filename: &str) -> Option<u32> {
+    let body = filename.strip_prefix("Unit_Explanation")?.strip_suffix(".csv")?;
+    let digits = body.split_once('_').map_or(body, |(digits, _)| digits);
+
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+
+    digits.parse::<u32>().ok()?.checked_sub(1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,6 +146,21 @@ mod tests {
     fn stats_file_and_stats_id_are_inverses() {
         for id in 0..900u32 {
             assert_eq!(stats_id(&stats_file(id)), Some(id), "round trip for cat {id}");
+        }
+    }
+
+    #[test]
+    fn explanation_id_reads_the_base_and_regional_names() {
+        for id in 0..900u32 {
+            assert_eq!(explanation_id(&explanation_file(id)), Some(id), "round trip for cat {id}");
+        }
+
+        // The regional copies carry a language suffix after the number.
+        assert_eq!(explanation_id("Unit_Explanation45_en.csv"), Some(44));
+        assert_eq!(explanation_id("Unit_Explanation45_ja.csv"), Some(44));
+
+        for name in ["Unit_Explanation.csv", "Unit_Explanation0.csv", "Unit_Explanation_en.csv", "Unit_Explanation1.tsv", "unitbuy.csv"] {
+            assert_eq!(explanation_id(name), None, "{name} is not a per-unit explanation file");
         }
     }
 

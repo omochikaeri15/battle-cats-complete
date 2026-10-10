@@ -12,20 +12,13 @@ use nyanko::chapter::stage::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::domains::stage::files::{DROP_ITEM, MAP_NAME};
+use crate::domains::stage::files::{
+    CHARA_GROUP, DIFFICULTY, DROP_ITEM, EX_OPTION, FIXED_FORMATION, MAP_NAME, MAP_OPTION, SCORE_BONUS, SPECIAL_RULES,
+    SPECIAL_RULE_OPTIONS, STAGE_OPTION,
+};
 use crate::Vfs;
 
 use super::Slot;
-
-const MAP_OPTION: &str = "Map_option.csv";
-const STAGE_OPTION: &str = "Stage_option.csv";
-const CHARA_GROUP: &str = "Charagroup.csv";
-const SCORE_BONUS: &str = "ScoreBonusMap.json";
-const SPECIAL_RULES: &str = "SpecialRulesMap.json";
-const SPECIAL_RULE_OPTIONS: &str = "SpecialRulesMapOption.json";
-const EX_OPTION: &str = "EX_option.csv";
-const DIFFICULTY: &str = "difficulty_level.tsv";
-const FIXED_FORMATION: &str = "fixed_formation.csv";
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct StageStore {
@@ -61,6 +54,20 @@ impl Clone for StageStore {
 }
 
 impl StageStore {
+    pub fn warm(&self) -> bool {
+        super::held(&self.map_names)
+            && super::held(&self.map_options)
+            && super::held(&self.stage_options)
+            && super::held(&self.charagroups)
+            && super::held(&self.drop_items)
+            && super::held(&self.score_bonuses)
+            && super::held(&self.special_rules)
+            && super::held(&self.special_rule_options)
+            && super::held(&self.ex_options)
+            && super::held(&self.difficulties)
+            && super::held(&self.fixed_formations)
+    }
+
     pub fn map_names(&self, vfs: &Vfs) -> Arc<HashMap<u32, String>> {
         super::cached(&self.map_names, || {
             let mut merged = HashMap::new();
@@ -155,7 +162,7 @@ impl StageStore {
         })
     }
 
-    pub(super) fn evict(&self, filename: &str) {
+    pub(super) fn evict(&self, filename: &str) -> bool {
         match filename {
             MAP_NAME => super::reset(&self.map_names),
             MAP_OPTION => super::reset(&self.map_options),
@@ -168,8 +175,10 @@ impl StageStore {
             EX_OPTION => super::reset(&self.ex_options),
             DIFFICULTY => super::reset(&self.difficulties),
             FIXED_FORMATION => super::reset(&self.fixed_formations),
-            _ => (),
+            _ => return false,
         }
+
+        true
     }
 
     pub(super) fn clear(&self) {

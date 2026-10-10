@@ -162,7 +162,7 @@ impl CatStore {
         super::cached(&self.orb_slots, || waiter::equipmentslot(vfs))
     }
 
-    pub(super) fn evict(&self, filename: &str) {
+    pub(super) fn evict(&self, filename: &str) -> bool {
         match filename {
             files::SKILL_ACQUISITION => super::reset(&self.talents),
             files::SKILL_LEVEL => super::reset(&self.talent_costs),
@@ -178,8 +178,10 @@ impl CatStore {
             files::NYANCOMBO_PARAM => super::reset(&self.combo_params),
             files::EQUIPMENT_LIST => super::reset(&self.orbs),
             files::EQUIPMENT_SLOT => super::reset(&self.orb_slots),
-            _ => (),
+            _ => return false,
         }
+
+        true
     }
 
     pub(super) fn clear(&self) {

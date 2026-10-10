@@ -215,22 +215,34 @@ impl EnemyState {
         stats
     }
 
-    pub(crate) fn invalidate_assets(&mut self, enemies: &HashSet<u32>, vault: &Vault, show_invalid: bool) {
+    pub(crate) fn invalidate_assets(&mut self, icons: &HashSet<u32>, data: &HashSet<u32>, vault: &Vault, show_invalid: bool) {
         self.dynamic_stats.replace(None);
         self.animation.invalidate_paths();
 
         let mut dropped: Vec<u32> = Vec::new();
         let mut restored: Vec<EnemyEntry> = Vec::new();
 
-        for id in enemies.iter().copied() {
-            self.list.forget(id);
+        for id in icons {
+            self.list.forget(*id);
+        }
 
-            let Some(entry) = self.data.enemies.iter_mut().find(|entry| entry.id == id) else {
+        for id in icons.union(data).copied() {
+            let Some(index) = self.data.enemies.iter().position(|entry| entry.id == id) else {
                 restored.extend(scanner::scan_single(id, vault, show_invalid));
                 continue;
             };
 
-            if !scanner::revalidate(&vault.vfs, entry, show_invalid) {
+            if data.contains(&id) {
+                if let Some(entry) = scanner::scan_single(id, vault, show_invalid) {
+                    self.data.enemies[index] = entry;
+                } else {
+                    dropped.push(id);
+                }
+
+                continue;
+            }
+
+            if !scanner::revalidate(&vault.vfs, &mut self.data.enemies[index], show_invalid) {
                 dropped.push(id);
             }
         }

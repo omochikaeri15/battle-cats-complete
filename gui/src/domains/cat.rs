@@ -57,7 +57,7 @@ const ICON_BOX_HEIGHT: f32 = 96.0;
 
 pub(crate) struct CatChanges<'a> {
     pub(crate) images: &'a HashSet<u32>,
-    pub(crate) stats: &'a HashSet<u32>,
+    pub(crate) data: &'a HashSet<u32>,
     pub(crate) items: &'a HashSet<u32>,
 }
 
@@ -466,13 +466,23 @@ impl State {
         let mut dropped: Vec<u32> = Vec::new();
         let mut restored: Vec<CatEntry> = Vec::new();
 
-        for id in changed.images.union(changed.stats).copied() {
-            let Some(entry) = self.data.cats.iter_mut().find(|entry| entry.id == id) else {
+        for id in changed.images.union(changed.data).copied() {
+            let Some(index) = self.data.cats.iter().position(|entry| entry.id == id) else {
                 restored.extend(scanner::scan_single(id, vault, config));
                 continue;
             };
 
-            if !scanner::revalidate(&vault.vfs, entry, config) {
+            if changed.data.contains(&id) {
+                if let Some(entry) = scanner::scan_single(id, vault, config) {
+                    self.data.cats[index] = entry;
+                } else {
+                    dropped.push(id);
+                }
+
+                continue;
+            }
+
+            if !scanner::revalidate(&vault.vfs, &mut self.data.cats[index], config) {
                 dropped.push(id);
             }
         }
@@ -497,6 +507,11 @@ impl State {
         self.filter.refresh_combos(vault);
         self.header_icon_cache.borrow_mut().clear();
         self.list.refresh(&self.data.cats, &self.search_query, &self.filter.filter_state);
+    }
+
+    pub(crate) fn reshare(&mut self, vault: &Vault) {
+        scanner::reshare(&mut self.data.cats, vault);
+        self.dynamic_stats.replace(None);
     }
 
     pub(crate) fn reload_selected(&mut self, vault: &Vault, config: &ScannerConfig) {

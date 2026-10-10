@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::hash::Hash;
+use std::iter;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -15,7 +17,7 @@ use crate::common::job::Ticker;
 use crate::common::io::cache::{self, Scan};
 use crate::domains::cat::waiter::unitexplanation;
 use crate::domains::settings::ScannerConfig;
-use crate::{Vfs, Vault};
+use crate::{StageStore, Vfs, Vault};
 
 use super::files;
 use super::names;
@@ -214,6 +216,85 @@ fn scan(config: &ScannerConfig, vault: &Vault, progress: impl Fn(usize, usize) +
 }
 
 #[instrument(skip_all)]
+fn rule_id(rule: &RuleType) -> u8 {
+    match rule {
+        RuleType::TrustFund(_) => 0,
+        RuleType::CooldownEquality(_) => 1,
+        RuleType::LineupLimit(_) => 2,
+        RuleType::RarityLimit(_) => 3,
+        RuleType::CheapLabor(_) => 4,
+        RuleType::CatCost(_) => 5,
+        RuleType::CatProduction(_) => 6,
+        RuleType::TotalDeployLimit(_) => 7,
+        RuleType::MoreThanOne(_) => 8,
+        RuleType::MegaCatCannon(_) => 9,
+        RuleType::UniformMotion(_) => 10,
+        RuleType::CompoundingCost(_) => 11,
+        RuleType::Unknown(id, _) => *id,
+    }
+}
+
+pub fn warm(vault: &Vault) {
+    drop(context(vault));
+}
+
+pub enum Touch {
+    Maps(Vec<GlobalMapId>),
+    Everything,
+}
+
+pub fn touched(registry: &StageRegistry, before: &StageStore, vault: &Vault, changed: &[&str]) -> Touch {
+    if !before.warm() {
+        return Touch::Everything;
+    }
+
+    let vfs = &vault.vfs;
+    let after = &vault.vds.stages;
+    let mut globals = BTreeSet::new();
+
+    for name in changed.iter().flat_map(|name| iter::once((*name).to_owned()).chain(vfs.stripped(name))) {
+        match name.as_str() {
+            files::MAP_NAME => globals.extend(differing_keys(&before.map_names(vfs), &after.map_names(vfs))),
+            files::MAP_OPTION => globals.extend(differing_keys(&before.map_options(vfs), &after.map_options(vfs))),
+            files::STAGE_OPTION => globals.extend(differing_keys(&before.stage_options(vfs), &after.stage_options(vfs))),
+            files::DROP_ITEM => globals.extend(differing_keys(&before.drop_items(vfs), &after.drop_items(vfs))),
+            files::SCORE_BONUS => globals.extend(differing_keys(&before.score_bonuses(vfs), &after.score_bonuses(vfs))),
+            files::SPECIAL_RULES => globals.extend(differing_keys(&before.special_rules(vfs), &after.special_rules(vfs))),
+            files::EX_OPTION => globals.extend(differing_keys(&before.ex_options(vfs), &after.ex_options(vfs))),
+            files::DIFFICULTY => globals.extend(differing_keys(&before.difficulties(vfs), &after.difficulties(vfs))),
+            files::FIXED_FORMATION => {
+                globals.extend(differing_keys(&before.fixed_formations(vfs), &after.fixed_formations(vfs)).map(|(map, _, _)| map));
+            }
+            files::CHARA_GROUP => {
+                let groups: BTreeSet<u32> = differing_keys(&before.charagroups(vfs), &after.charagroups(vfs)).collect();
+                let options = after.stage_options(vfs);
+
+                globals.extend(options.iter().filter(|(_, rows)| rows.iter().any(|row| groups.contains(&row.charagroup_id))).map(|(map, _)| *map));
+            }
+            files::SPECIAL_RULE_OPTIONS => {
+                let rules: BTreeSet<u8> = differing_keys(&before.special_rule_options(vfs), &after.special_rule_options(vfs)).collect();
+                let maps = after.special_rules(vfs);
+
+                globals.extend(maps.iter().filter(|(_, entry)| entry.rules.iter().any(|rule| rules.contains(&rule_id(rule)))).map(|(map, _)| *map));
+            }
+            _ => (),
+        }
+    }
+
+    let maps = registry
+        .addresses
+        .iter()
+        .filter(|(_, address)| address.global.is_some_and(|global| globals.contains(&global)))
+        .map(|(id, _)| id.clone())
+        .collect();
+
+    Touch::Maps(maps)
+}
+
+fn differing_keys<'a, K: Eq + Hash + Copy, V: PartialEq>(before: &'a HashMap<K, V>, after: &'a HashMap<K, V>) -> impl Iterator<Item = K> + 'a {
+    before.keys().chain(after.keys()).copied().filter(move |key| before.get(key) != after.get(key))
+}
+
 pub fn scan_single(vault: &Vault, category: &Category, map_id: u32) -> StageRegistry {
     let vfs = &vault.vfs;
     let ctx = context(vault);
@@ -531,23 +612,7 @@ fn load_map(
 
     if let Some(rule) = &special_rules {
         for target_rule in &rule.rules {
-            let rule_id = match target_rule {
-                RuleType::TrustFund(_) => 0,
-                RuleType::CooldownEquality(_) => 1,
-                RuleType::LineupLimit(_) => 2,
-                RuleType::RarityLimit(_) => 3,
-                RuleType::CheapLabor(_) => 4,
-                RuleType::CatCost(_) => 5,
-                RuleType::CatProduction(_) => 6,
-                RuleType::TotalDeployLimit(_) => 7,
-                RuleType::MoreThanOne(_) => 8,
-                RuleType::MegaCatCannon(_) => 9,
-                RuleType::UniformMotion(_) => 10,
-                RuleType::CompoundingCost(_) => 11,
-                RuleType::Unknown(id, _) => *id,
-            };
-
-            if let Some(opt) = ctx.special_rule_options.get(&rule_id) {
+            if let Some(opt) = ctx.special_rule_options.get(&rule_id(target_rule)) {
                 invalid_combos.extend(&opt.invalid_combo_ids);
             }
         }

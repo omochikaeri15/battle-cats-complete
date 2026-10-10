@@ -20,13 +20,16 @@ use kore::systems::combat::NameBook;
 use kore::common::game::{localizable, param};
 use kore::common::io::json;
 use kore::domains::cat::files as cat_files;
+use kore::domains::cat::scanner as cat_scanner;
+use kore::domains::enemy::scanner as enemy_scanner;
 use kore::domains::mods as kore_mods;
 use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
+use kore::domains::stage::scanner::{self as stage_scanner, Touch};
 use kore::domains::stage::GlobalMapId;
 use kore::systems::treasure::{Bonus, Catalog};
-use kore::{ContentStore, Vault};
+use kore::{ContentStore, Evicted, StageStore, Vault};
 
 use crate::common::feedback::Slot;
 use crate::common::fonts;
@@ -687,7 +690,7 @@ impl BattleCatsApp {
         self.home_state.set_game_empty(self.vault.vfs.count(architecture::GAME) == 0);
     }
 
-    fn apply_changes(&mut self, paths: Vec<PathBuf>) -> Task<Message> {
+    fn apply_changes(&mut self, paths: Vec<PathBuf>, relist: bool) -> Task<Message> {
         self.sandbox_state.forget_assets();
 
         if !self.vault_ready {
@@ -706,20 +709,30 @@ impl BattleCatsApp {
         }
 
         let mut units = HashSet::new();
-        let mut stats = HashSet::new();
+        let mut cat_data = HashSet::new();
         let mut enemies = HashSet::new();
         let mut items = HashSet::new();
         let mut stage_coarse = false;
         let mut remounted_mods = HashSet::new();
         let mut restyled_mods = HashSet::new();
         let mut pruned = false;
+        let mut evicted = Evicted::default();
+        let mut tables: Vec<&str> = Vec::new();
+        let stages_before = self.vault.vds.stages.clone();
 
         for path in &paths {
             let Some(mount) = watcher::mount_of(path) else { continue; };
             let Some(name) = path.file_name().and_then(|name| name.to_str()) else { continue; };
 
+            let hit = if mount != architecture::GAME || path.is_file() { self.vault.evict(name) } else { Evicted::default() };
+
+            if hit != Evicted::default() {
+                tables.push(name);
+            }
+
+            evicted |= hit;
+
             if mount != architecture::GAME {
-                self.vault.evict(name);
 
                 if name.eq_ignore_ascii_case(kore_mods::ICON) {
                     restyled_mods.insert(mount.clone());
@@ -746,22 +759,27 @@ impl BattleCatsApp {
                 if let Err(err) = self.vault.vfs.create((mount.as_str(), path.as_path())) {
                     warn!(path = %path.display(), "Failed to index a changed file: {}", err);
                 }
-
-                self.vault.evict(name);
             } else if !path.exists() {
                 let dropped = self.vault.vfs.prune(mount.as_str(), path.as_path());
 
                 trace!(path = %path.display(), files = dropped.len(), "Dropped deleted paths from the index");
                 self.vault.purge(&dropped);
-                self.vault.vds.evict(name);
+
+                let pruned_tables = self.vault.vds.evict(name);
+
+                if pruned_tables != Evicted::default() {
+                    tables.push(name);
+                }
+
+                evicted |= pruned_tables;
 
                 pruned |= !dropped.is_empty();
             }
 
             let is_image = path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("png"));
 
-            if let Some(id) = cat_files::stats_id(name) {
-                stats.insert(id);
+            if let Some(id) = cat_files::stats_id(name).or_else(|| cat_files::explanation_id(name)) {
+                cat_data.insert(id);
             }
 
             match watcher::asset(name) {
@@ -811,15 +829,40 @@ impl BattleCatsApp {
         }
 
         let cat_config = self.settings.scanner_config(None);
+        let touched_cats = evicted.cats.then(|| cat_scanner::touched(&self.cat_state.data.cats, &self.vault, &tables));
 
-        let changed = cat::CatChanges { images: &units, stats: &stats, items: &items };
+        if let Some(touched) = &touched_cats {
+            cat_data.extend(&touched.rows);
+        }
+
+        let enemy_data = if evicted.enemies {
+            enemy_scanner::touched(&self.enemy_state.data.enemies, &self.vault, &tables)
+        } else {
+            HashSet::new()
+        };
+
+        let stage_rescan = if evicted.stages {
+            self.refresh_stages(&stages_before, &tables, relist)
+        } else {
+            Task::none()
+        };
+
+        let changed = cat::CatChanges { images: &units, data: &cat_data, items: &items };
 
         self.cat_state.invalidate_assets(&changed, &self.vault, &cat_config);
-        self.enemy_state.invalidate_assets(&enemies, &self.vault, self.settings.show_invalid_enemies());
+        self.enemy_state.invalidate_assets(&enemies, &enemy_data, &self.vault, self.settings.show_invalid_enemies());
+
+        if touched_cats.is_some_and(|touched| touched.shared) {
+            self.cat_state.reshare(&self.vault);
+        }
 
         self.cat_state.reload_selected(&self.vault, &cat_config);
         self.enemy_state.reload_selected(&self.vault, self.settings.show_invalid_enemies());
         self.stage_state.reload_selected(&self.vault);
+
+        if !enemy_data.is_empty() {
+            self.stage_state.sync_enemies(&self.enemy_state.data.enemies, &self.vault);
+        }
         self.refresh_treasure();
         self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure, names: &self.names });
 
@@ -828,11 +871,28 @@ impl BattleCatsApp {
         self.index_dirty = true;
         self.last_change_at = Some(Instant::now());
 
-        if units.is_empty() && stats.is_empty() {
-            return files_task;
+        if units.is_empty() && cat_data.is_empty() && !evicted.cats {
+            return Task::batch([files_task, stage_rescan]);
         }
 
-        Task::batch([files_task, self.adopt_sandbox_cats()])
+        Task::batch([files_task, stage_rescan, self.adopt_sandbox_cats()])
+    }
+
+    fn refresh_stages(&mut self, before: &StageStore, tables: &[&str], relist: bool) -> Task<Message> {
+        match stage_scanner::touched(&self.stage_state.data.registry, before, &self.vault, tables) {
+            Touch::Maps(maps) => {
+                debug!(maps = maps.len(), "Reloading the maps a stage table change reached");
+                self.stage_state.reload_maps(&maps, &self.vault);
+
+                Task::none()
+            }
+            Touch::Everything if relist => {
+                info!("A stage table changed with no baseline to diff against, rescanning stages");
+
+                self.stage_state.rescan(&self.settings, &self.vault, self.mods_state.active_mod()).map(Message::Stage)
+            }
+            Touch::Everything => Task::none(),
+        }
     }
 
     fn replay_changes(&mut self) -> Task<Message> {
@@ -844,7 +904,7 @@ impl BattleCatsApp {
 
         info!(paths = pending.len(), "Replaying changes that landed while the index was rebuilding");
 
-        self.apply_changes(pending)
+        self.apply_changes(pending, false)
     }
 
     fn quiet(&self) -> bool {
@@ -1346,7 +1406,7 @@ impl BattleCatsApp {
             }
             Message::FilesChanged(Change::Batch(paths)) => {
                 let replays = paths.iter().any(|path| sandbox::State::is_replay(path));
-                let task = self.apply_changes(paths);
+                let task = self.apply_changes(paths, true);
                 self.sync_editor(true);
 
                 if !replays {

@@ -7,7 +7,7 @@ use std::iter;
 use crate::common::io::cache;
 use crate::domains::settings::{ScannerConfig, Settings};
 
-pub use vds::{CatStore, ContentStore, EnemyStore, ItemStore, NameStore, StageStore, TreasureStore, Vds};
+pub use vds::{CatStore, ContentStore, EnemyStore, Evicted, ItemStore, NameStore, StageStore, TreasureStore, Vds};
 pub use vfs::{Conflict, Listing, Memory, Mount, Source, Target, Vfs, VfsError};
 
 pub struct Vault {
@@ -49,14 +49,17 @@ impl Vault {
         cache::content_key(index, config)
     }
 
-    pub fn evict(&self, key: &str) {
+    pub fn evict(&self, key: &str) -> Evicted {
         self.vfs.evict(key);
-        self.vds.evict(key);
+
+        let mut evicted = self.vds.evict(key);
 
         if let Some(base) = self.vfs.stripped(key) {
             self.vfs.evict(&base);
-            self.vds.evict(&base);
+            evicted |= self.vds.evict(&base);
         }
+
+        evicted
     }
 
     pub fn purge(&self, keys: &[Box<str>]) {

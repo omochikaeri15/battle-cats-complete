@@ -153,6 +153,16 @@ impl State {
     pub(crate) fn reload_selected(&mut self, vault: &Vault) {
         let Some(map_id) = self.data.selected_map.clone() else { return; };
 
+        self.reload_map(&map_id, vault);
+    }
+
+    pub(crate) fn reload_maps(&mut self, maps: &[GlobalMapId], vault: &Vault) {
+        for map_id in maps {
+            self.reload_map(map_id, vault);
+        }
+    }
+
+    fn reload_map(&mut self, map_id: &GlobalMapId, vault: &Vault) {
         let rebuilt = scanner::scan_single(vault, &map_id.category, map_id.map);
 
         if rebuilt.maps.is_empty() {
@@ -196,6 +206,7 @@ impl State {
 
         thread::spawn(move || {
             if cached && let Some((key, bundle)) = scanner::hydrate() {
+                scanner::warm(&vault);
                 let _ = tx.unbounded_send(Message::Loaded(generation, Box::new(bundle), Some(key)));
                 return;
             }

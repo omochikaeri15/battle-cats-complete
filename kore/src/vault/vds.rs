@@ -7,6 +7,7 @@ mod names;
 mod stage;
 mod treasure;
 
+use std::ops::BitOrAssign;
 use std::sync::{Arc, RwLock};
 
 use tracing::warn;
@@ -23,6 +24,21 @@ pub use treasure::TreasureStore;
 
 type Slot<T> = RwLock<Option<Arc<T>>>;
 
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Evicted {
+    pub cats: bool,
+    pub enemies: bool,
+    pub stages: bool,
+}
+
+impl BitOrAssign for Evicted {
+    fn bitor_assign(&mut self, other: Self) {
+        self.cats |= other.cats;
+        self.enemies |= other.enemies;
+        self.stages |= other.stages;
+    }
+}
+
 #[derive(Default)]
 pub struct Vds {
     pub cats: CatStore,
@@ -34,13 +50,18 @@ pub struct Vds {
 }
 
 impl Vds {
-    pub fn evict(&self, filename: &str) {
-        self.cats.evict(filename);
-        self.enemies.evict(filename);
+    pub fn evict(&self, filename: &str) -> Evicted {
+        let evicted = Evicted {
+            cats: self.cats.evict(filename),
+            enemies: self.enemies.evict(filename),
+            stages: self.stages.evict(filename),
+        };
+
         self.items.evict(filename);
         self.names.evict(filename);
-        self.stages.evict(filename);
         self.treasures.evict(filename);
+
+        evicted
     }
 
     pub fn purge(&self, filenames: &[Box<str>]) {
@@ -73,6 +94,10 @@ fn cached<T>(slot: &Slot<T>, build: impl FnOnce() -> T) -> Arc<T> {
     }
 
     value
+}
+
+fn held<T>(slot: &Slot<T>) -> bool {
+    slot.read().is_ok_and(|current| current.is_some())
 }
 
 fn reset<T>(slot: &Slot<T>) {

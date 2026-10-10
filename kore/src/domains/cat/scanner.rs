@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -254,6 +255,52 @@ pub fn persist(payload: &[u8]) {
 
 pub fn load(config: ScannerConfig, vault: Arc<Vault>, progress: impl Fn(usize, usize) + Sync) -> Scan<Vec<CatEntry>> {
     scan(config, &vault, progress)
+}
+
+#[derive(Default)]
+pub struct Touched {
+    pub rows: HashSet<u32>,
+    pub shared: bool,
+}
+
+pub fn touched(cats: &[CatEntry], vault: &Vault, changed: &[&str]) -> Touched {
+    let vfs = &vault.vfs;
+    let store = &vault.vds.cats;
+    let mut touched = Touched::default();
+    let blank = UnitEvolve::default();
+
+    for name in changed.iter().flat_map(|name| iter::once((*name).to_owned()).chain(vfs.stripped(name))) {
+        match name.as_str() {
+            files::UNIT_BUY => {
+                let table = store.unitbuy(vfs);
+
+                touched.rows.extend(differing(cats, &table, |cat, row| row == Some(&cat.unitbuy)));
+                touched.rows.extend(table.keys().copied().filter(|id| cats.binary_search_by_key(id, |cat| cat.id).is_err()));
+            }
+            files::UNIT_LEVEL => touched.rows.extend(differing(cats, &store.curves(vfs), |cat, row| row == cat.curve.as_ref())),
+            files::UNIT_EVOLVE => touched.rows.extend(differing(cats, &store.evolve(vfs), |cat, row| *row.unwrap_or(&blank) == cat.evolve_text)),
+            files::SKILL_ACQUISITION => touched.rows.extend(differing(cats, &store.talents(vfs), |cat, row| row == cat.talent_data.as_ref())),
+            files::SKILL_LEVEL | files::SKILL_DESCRIPTIONS => touched.shared = true,
+            _ => (),
+        }
+    }
+
+    touched
+}
+
+fn differing<'a, V>(cats: &'a [CatEntry], table: &'a HashMap<u32, V>, same: impl Fn(&CatEntry, Option<&V>) -> bool + 'a) -> impl Iterator<Item = u32> + 'a {
+    cats.iter().filter(move |cat| !same(cat, table.get(&cat.id))).map(|cat| cat.id)
+}
+
+pub fn reshare(cats: &mut [CatEntry], vault: &Vault) {
+    let vfs = &vault.vfs;
+    let talent_costs = vault.vds.cats.talent_costs(vfs);
+    let skill_descriptions = vault.vds.cats.descriptions(vfs);
+
+    for cat in cats {
+        cat.talent_costs = Arc::clone(&talent_costs);
+        cat.skill_descriptions = Arc::clone(&skill_descriptions);
+    }
 }
 
 pub fn scan_single(id: u32, vault: &Vault, config: &ScannerConfig) -> Option<CatEntry> {

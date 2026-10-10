@@ -1,5 +1,7 @@
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::Read;
+use std::iter;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -139,6 +141,41 @@ fn scan(config: ScannerConfig, vault: &Vault, progress: impl Fn(usize, usize) + 
     let payload = key.and_then(|key| cache::encode::<EnemyCache>(key, &parsed_enemies));
 
     Scan { data: parsed_enemies, key, payload }
+}
+
+pub fn touched(enemies: &[EnemyEntry], vault: &Vault, changed: &[&str]) -> HashSet<u32> {
+    let vfs = &vault.vfs;
+    let store = &vault.vds.enemies;
+    let mut rows = HashSet::new();
+
+    for name in changed.iter().flat_map(|name| iter::once((*name).to_owned()).chain(vfs.stripped(name))) {
+        match name.as_str() {
+            files::STATS => {
+                let stats = store.stats(vfs);
+
+                rows.extend(differing(enemies, |enemy| stats.get(enemy.id as usize) != Some(&enemy.stats)));
+            }
+            files::NAMES => {
+                let names = store.names(vfs);
+
+                rows.extend(differing(enemies, |enemy| names.get(enemy.id as usize).map_or(!enemy.name.is_empty(), |name| *name != enemy.name)));
+            }
+            files::PICTURE_BOOK => {
+                let descriptions = store.descriptions(vfs);
+
+                rows.extend(differing(enemies, |enemy| {
+                    descriptions.get(enemy.id as usize).map_or(!enemy.description.is_empty(), |text| *text != enemy.description)
+                }));
+            }
+            _ => (),
+        }
+    }
+
+    rows
+}
+
+fn differing<'a>(enemies: &'a [EnemyEntry], changed: impl Fn(&EnemyEntry) -> bool + 'a) -> impl Iterator<Item = u32> + 'a {
+    enemies.iter().filter(move |enemy| changed(enemy)).map(|enemy| enemy.id)
 }
 
 pub fn scan_single(id: u32, vault: &Vault, show_invalid: bool) -> Option<EnemyEntry> {

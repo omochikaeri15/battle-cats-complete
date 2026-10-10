@@ -8,6 +8,6 @@ pub mod domains;
 pub mod systems;
 
 pub use vault::{
-    CatStore, Conflict, ContentStore, EnemyStore, ItemStore, Listing, NameStore, Memory, Mount, Source, StageStore, Target, TreasureStore, Vault,
+    CatStore, Conflict, ContentStore, EnemyStore, Evicted, ItemStore, Listing, NameStore, Memory, Mount, Source, StageStore, Target, TreasureStore, Vault,
     Vds, Vfs, VfsError,
 };

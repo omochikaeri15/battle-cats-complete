@@ -90,13 +90,15 @@ impl EnemyStore {
         })
     }
 
-    pub(super) fn evict(&self, filename: &str) {
+    pub(super) fn evict(&self, filename: &str) -> bool {
         match filename {
             ENEMY_STATS => super::reset(&self.stats),
             ENEMY_NAME => super::reset(&self.names),
             ENEMY_PICTURE_BOOK => super::reset(&self.descriptions),
-            _ => (),
+            _ => return false,
         }
+
+        true
     }
 
     pub(super) fn clear(&self) {
