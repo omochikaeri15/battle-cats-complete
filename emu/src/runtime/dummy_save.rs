@@ -28,6 +28,7 @@ const CHAPTER_ROW_STRIDE: usize = 0xd0;
 const CHAPTER_STAGES: usize = 0x30;
 const STAGE_CLEARED: i32 = 1;
 const TWO_ROWS_UNLOCKED: i32 = 2;
+const MAP_RETURN_POPUP: i32 = 0x4b;
 
 pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     let tutorial = &setup.tutorial;
@@ -46,6 +47,7 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
     ctx.set_i32_at(AppContext::MEDAL_MONEY_0, MEDAL_PROGRESS_CAP)?;
     ctx.set_i32_at(AppContext::MEDAL_MONEY_1, MEDAL_PROGRESS_CAP)?;
     ctx.set_i32_at(AppContext::MEDAL_MONEY_4, MEDAL_PROGRESS_CAP)?;
+    ctx.unlock_popups.insert(MAP_RETURN_POPUP, true);
 
     ctx.set_i32_at(AppContext::BATTLE_ZOOM_Y, ZOOM_ANCHOR)?;
     reset_stage_name_tables(ctx)?;
@@ -93,7 +95,6 @@ pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault>
     ctx.set_i32_at(AppContext::SELECTED_DECK_PRESET, 0)?;
 
     fill_dummy_lineup(ctx, setup)?;
-
 
     Ok(())
 }
