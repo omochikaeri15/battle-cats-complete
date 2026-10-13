@@ -219,6 +219,13 @@ impl Message {
     pub(crate) fn retunes_treasure(&self) -> bool {
         matches!(self, Self::Config(config::Message::Treasure(_)))
     }
+
+    pub(crate) fn resurfaces_editor(&self) -> bool {
+        matches!(
+            self,
+            Self::Tab(_) | Self::Lineup(lineup::Message::DragEnd | lineup::Message::Cat(cat::Message::SelectTab(_)))
+        )
+    }
 }
 
 impl State {

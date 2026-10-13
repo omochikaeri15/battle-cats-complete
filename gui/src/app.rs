@@ -679,7 +679,7 @@ impl BattleCatsApp {
 
         self.sync_editor(false);
 
-        Task::batch([task, flush_task, self.editor.restore_scroll()])
+        Task::batch([task, flush_task, self.editor.restore_scroll(self)])
     }
 
     pub(crate) fn sync_home_status(&mut self) {
@@ -1462,7 +1462,7 @@ impl BattleCatsApp {
                 }
 
                 if retabbed {
-                    return Task::batch([task, self.editor.restore_scroll()]);
+                    return Task::batch([task, self.editor.restore_scroll(self)]);
                 }
 
                 task
@@ -1491,7 +1491,7 @@ impl BattleCatsApp {
                 }
 
                 if retabbed {
-                    return Task::batch([task, self.editor.restore_scroll()]);
+                    return Task::batch([task, self.editor.restore_scroll(self)]);
                 }
 
                 task
@@ -1745,6 +1745,7 @@ impl BattleCatsApp {
                 }
 
                 let retuned = msg.retunes_treasure();
+                let resurfaced = msg.resurfaces_editor();
                 let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure, names: &self.names };
                 let task = self.sandbox_state.update(msg, &mut self.settings, &mut self.app_state, global_ctx).map(Message::Sandbox);
 
@@ -1754,8 +1755,10 @@ impl BattleCatsApp {
 
                 self.sync_sandbox_rules();
                 self.sync_sandbox_popups();
+                self.sync_editor(false);
 
-                let task = Task::batch([task, gathering.unwrap_or_else(Task::none)]);
+                let restored = resurfaced.then(|| self.editor.restore_scroll(self));
+                let task = Task::batch([task, gathering.unwrap_or_else(Task::none)].into_iter().chain(restored));
 
                 if disagreed {
                     return Task::batch([task, self.navigate(Page::Home)]);

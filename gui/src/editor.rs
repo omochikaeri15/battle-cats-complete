@@ -89,6 +89,7 @@ pub enum Target {
 pub(crate) struct Context {
     values: EditorMode,
     page: Page,
+    seat: Seat,
     file: Option<FileTarget>,
     cats: Vec<CatTarget>,
     enemies: Vec<EnemyTarget>,
@@ -183,32 +184,33 @@ fn scene(app: &BattleCatsApp) -> Page {
         return app.current_page;
     }
 
-    if app.sandbox_state.inspector().is_some() {
-        return Page::Cats;
-    }
-
     match app.app_state.sandbox.tab {
+        SandboxTab::Lineup if app.sandbox_state.inspector().is_some() => Page::Cats,
         SandboxTab::Stage => Page::Stages,
         _ => Page::Sandbox,
     }
 }
 
+fn inspecting(app: &BattleCatsApp) -> Option<&crate::domains::cat::State> {
+    let on_lineup = app.current_page == Page::Sandbox && app.app_state.sandbox.tab == SandboxTab::Lineup;
+
+    on_lineup.then(|| app.sandbox_state.inspector()).flatten()
+}
+
+fn seat(app: &BattleCatsApp) -> Seat {
+    inspecting(app).map_or(Seat::Main, |_| Seat::Sandbox)
+}
+
 fn held_view(app: &BattleCatsApp) -> &crate::domains::cat::State {
-    app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox).unwrap_or(&app.cat_state)
+    inspecting(app).unwrap_or(&app.cat_state)
 }
 
 fn held_cat(app: &BattleCatsApp) -> Option<u32> {
-    match app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox) {
-        Some(inspector) => inspector.selected_cat,
-        None => app.app_state.cat.selected_cat,
-    }
+    inspecting(app).map_or(app.app_state.cat.selected_cat, |inspector| inspector.selected_cat)
 }
 
 fn held_form(app: &BattleCatsApp) -> usize {
-    match app.sandbox_state.inspector().filter(|_| app.current_page == Page::Sandbox) {
-        Some(inspector) => inspector.selected_form,
-        None => app.app_state.cat.selected_form,
-    }
+    inspecting(app).map_or(app.app_state.cat.selected_form, |inspector| inspector.selected_form)
 }
 
 fn asset_files(app: &BattleCatsApp, base: &str) -> Vec<AssetFile> {
@@ -480,9 +482,9 @@ pub enum Message {
     ConfirmExpired,
     FailureExpired,
     Replaced(bool),
-    Figures(figures::Subject, figures::Message),
+    Figures(Seat, figures::Subject, figures::Message),
     Ground(ground::Message),
-    Prose(prose::Subject, prose::Message),
+    Prose(Seat, prose::Subject, prose::Message),
 }
 
 struct Item {
@@ -675,6 +677,84 @@ fn panels<'a>(items: &'a [Item], trail: &[usize]) -> Vec<&'a [Item]> {
     open
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Seat {
+    Main,
+    Sandbox,
+}
+
+const SEATS: usize = 2;
+
+impl Seat {
+    const ALL: [Seat; SEATS] = [Seat::Main, Seat::Sandbox];
+
+    fn slot(self) -> usize {
+        match self {
+            Seat::Main => 0,
+            Seat::Sandbox => 1,
+        }
+    }
+}
+
+#[derive(Default)]
+struct Bank {
+    figures: [figures::State; figures::COUNT],
+    prose: [prose::State; prose::COUNT],
+    glossary_aim: Option<(Identity, Faction)>,
+}
+
+impl Bank {
+    fn drafting(&self) -> bool {
+        self.figures.iter().any(figures::State::drafting) || self.prose.iter().any(prose::State::drafting)
+    }
+
+    fn drifted(&self) -> bool {
+        self.figures.iter().any(figures::State::drifted) || self.prose.iter().any(prose::State::drifted)
+    }
+
+    fn stacked(&self, page: Page) -> usize {
+        let prose = prose::SUBJECTS
+            .into_iter()
+            .filter(|subject| subject.page() == page && self.prose[subject.slot()].drafting())
+            .count();
+
+        let figures = figures::SUBJECTS
+            .into_iter()
+            .filter(|subject| subject.page() == page && self.figures[subject.slot()].drafting())
+            .count();
+
+        prose + figures
+    }
+
+    fn relocalize(&self) {
+        for slot in &self.figures {
+            slot.relocalize();
+        }
+    }
+
+    fn flush_now(&mut self, vfs: &Vfs) {
+        for slot in &mut self.figures {
+            slot.flush_now(vfs);
+        }
+
+        for slot in &mut self.prose {
+            slot.flush_now(vfs);
+        }
+    }
+
+    fn flush(&mut self, seat: Seat, vfs: &Vfs) -> Vec<Task<Message>> {
+        let figures = figures::SUBJECTS
+            .into_iter()
+            .map(|subject| self.figures[subject.slot()].flush(vfs).map(move |inner| Message::Figures(seat, subject, inner)));
+
+        let prose = prose::SUBJECTS
+            .into_iter()
+            .map(|subject| self.prose[subject.slot()].flush(vfs).map(move |inner| Message::Prose(seat, subject, inner)));
+
+        figures.chain(prose).collect()
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct State {
     open: Option<Open>,
@@ -684,15 +764,14 @@ pub(crate) struct State {
     pending: Option<Trail>,
     confirm: Slot<Trail>,
     failed: Slot<Trail>,
-    figures: [figures::State; figures::COUNT],
-    prose: [prose::State; prose::COUNT],
+    banks: [Bank; SEATS],
     ground: ground::State,
     synced: Option<Key>,
-    glossary_aim: Option<(Identity, Faction)>,
 }
 
 struct Snapshot {
     page: Page,
+    seat: Seat,
     figures: [Option<figures::Plan>; figures::COUNT],
     prose: [Vec<prose::Plan>; prose::COUNT],
     ground: Option<ground::Plan>,
@@ -701,6 +780,7 @@ struct Snapshot {
 #[derive(PartialEq)]
 struct Key {
     page: Page,
+    seat: Seat,
     values: EditorMode,
     cat: Option<u32>,
     form: usize,
@@ -720,6 +800,7 @@ struct Open {
     at: Point,
     items: Vec<Item>,
     trail: Trail,
+    seat: Seat,
 }
 
 impl State {
@@ -739,7 +820,7 @@ impl State {
         self.confirm.expire();
         self.failed.expire();
         self.pending = None;
-        self.open = (!items.is_empty()).then_some(Open { at, items, trail: Trail::new() });
+        self.open = (!items.is_empty()).then_some(Open { at, items, trail: Trail::new(), seat: context.seat });
     }
 
     pub(crate) fn update(&mut self, message: Message, vfs: &Vfs, studio: &mut studio::State) -> Task<Message> {
@@ -777,14 +858,12 @@ impl State {
 
                 self.failed.set(trail, Message::FailureExpired)
             }
-            Message::Prose(subject, msg) => self
-                .prose_mut(subject)
+            Message::Prose(seat, subject, msg) => self.banks[seat.slot()].prose[subject.slot()]
                 .update(msg, vfs)
-                .map(move |inner| Message::Prose(subject, inner)),
-            Message::Figures(subject, msg) => self
-                .subject_mut(subject)
+                .map(move |inner| Message::Prose(seat, subject, inner)),
+            Message::Figures(seat, subject, msg) => self.banks[seat.slot()].figures[subject.slot()]
                 .update(msg, vfs)
-                .map(move |inner| Message::Figures(subject, inner)),
+                .map(move |inner| Message::Figures(seat, subject, inner)),
             Message::Ground(msg) => self.ground.update(msg, vfs).map(Message::Ground),
             Message::Opened(..) => Task::none(),
         }
@@ -810,16 +889,18 @@ impl State {
         let mut views: Vec<(u64, popup::Kind, Element<'_, Message>)> = Vec::new();
         let cap = level_cap(app);
         let used = talent_costs(app);
+        let seat = seat(app);
+        let bank = &self.banks[seat.slot()];
 
         for subject in prose::SUBJECTS {
             if subject.page() != scene(app) || !prose_tab(app, subject) {
                 continue;
             }
 
-            let slot = &self.prose[subject.slot()];
+            let slot = &bank.prose[subject.slot()];
 
             if let Some(view) = slot.view(window) {
-                views.push((slot.raised(), subject.kind(), view.map(move |inner| Message::Prose(subject, inner))));
+                views.push((slot.raised(), subject.kind(), view.map(move |inner| Message::Prose(seat, subject, inner))));
             }
         }
 
@@ -828,10 +909,10 @@ impl State {
                 continue;
             }
 
-            let slot = &self.figures[subject.slot()];
+            let slot = &bank.figures[subject.slot()];
 
             if let Some(view) = slot.view(window, cap, used, &app.cat_state.data.cats, &app.vault, &app.names) {
-                views.push((slot.raised(), figures::kind(subject), view.map(move |inner| Message::Figures(subject, inner))));
+                views.push((slot.raised(), figures::kind(subject), view.map(move |inner| Message::Figures(seat, subject, inner))));
             }
         }
 
@@ -860,79 +941,71 @@ impl State {
             .collect()
     }
 
-    pub(crate) fn restore_scroll<M: Send + 'static>(&self) -> Task<M> {
+    pub(crate) fn restore_scroll<M: Send + 'static>(&self, app: &BattleCatsApp) -> Task<M> {
+        let bank = &self.banks[seat(app).slot()];
         let tasks: Vec<Task<M>> =
-            figures::SUBJECTS.iter().filter_map(|subject| self.figures[subject.slot()].restore_scroll()).collect();
+            figures::SUBJECTS.iter().filter_map(|subject| bank.figures[subject.slot()].restore_scroll()).collect();
 
         Task::batch(tasks)
     }
 
     pub(crate) fn relocalize(&self) {
-        for slot in &self.figures {
-            slot.relocalize();
+        for bank in &self.banks {
+            bank.relocalize();
         }
 
         self.ground.forget();
     }
 
     pub(crate) fn flush_now(&mut self, vfs: &Vfs) {
-        for slot in &mut self.figures {
-            slot.flush_now(vfs);
-        }
-
-        for slot in &mut self.prose {
-            slot.flush_now(vfs);
+        for bank in &mut self.banks {
+            bank.flush_now(vfs);
         }
 
         self.ground.flush_now(vfs);
     }
 
     pub(crate) fn flush_drafts(&mut self, vfs: &Vfs) -> Task<Message> {
-        let figures = figures::SUBJECTS
-            .into_iter()
-            .map(|subject| self.figures[subject.slot()].flush(vfs).map(move |inner| Message::Figures(subject, inner)));
+        let tasks: Vec<Task<Message>> = Seat::ALL.into_iter().flat_map(|seat| self.banks[seat.slot()].flush(seat, vfs)).collect();
 
-        let prose = prose::SUBJECTS
-            .into_iter()
-            .map(|subject| self.prose[subject.slot()].flush(vfs).map(move |inner| Message::Prose(subject, inner)));
-
-        Task::batch(figures.chain(prose))
+        Task::batch(tasks)
     }
 
     fn drafting(&self) -> bool {
-        self.figures.iter().any(figures::State::drafting)
-            || self.prose.iter().any(prose::State::drafting)
-            || self.ground.drafting()
+        self.banks.iter().any(Bank::drafting) || self.ground.drafting()
     }
 
-    fn figures_drafting(&self, subject: figures::Subject) -> bool {
-        self.figures[subject.slot()].drafting()
+    fn figures_drafting(&self, seat: Seat, subject: figures::Subject) -> bool {
+        self.banks[seat.slot()].figures[subject.slot()].drafting()
     }
 
-    fn prose_drafting(&self, subject: prose::Subject) -> bool {
-        self.prose[subject.slot()].drafting()
+    fn prose_drafting(&self, seat: Seat, subject: prose::Subject) -> bool {
+        self.banks[seat.slot()].prose[subject.slot()].drafting()
+    }
+
+    fn glossary_aim(&self, seat: Seat) -> Option<(Identity, Faction)> {
+        self.banks[seat.slot()].glossary_aim
     }
 
     fn stale(&self, key: &Key) -> bool {
-        self.synced.as_ref() != Some(key) || self.drifted()
+        self.synced.as_ref() != Some(key) || self.drifted(key.seat)
     }
 
-    fn drifted(&self) -> bool {
-        self.figures.iter().any(figures::State::drifted)
-            || self.prose.iter().any(prose::State::drifted)
-            || self.ground.drifted()
+    fn drifted(&self, seat: Seat) -> bool {
+        self.banks[seat.slot()].drifted() || self.ground.drifted()
     }
 
     pub(crate) fn apply(&mut self, update: Update, vfs: &Vfs) {
         let Update { snapshot, key } = update;
         self.synced = Some(key);
+        let bank = &mut self.banks[snapshot.seat.slot()];
 
         for subject in prose::SUBJECTS {
             if subject.page() != snapshot.page {
                 continue;
             }
 
-            self.prose[subject.slot()].sync(&snapshot.prose[subject.slot()], vfs);
+            bank.prose[subject.slot()].sync(&snapshot.prose[subject.slot()], vfs);
         }
 
         self.ground.sync(snapshot.ground, vfs);
@@ -942,33 +1015,11 @@ impl State {
                 continue;
             }
 
-            self.figures[slot].sync(plan, vfs);
+            bank.figures[slot].sync(plan, vfs);
         }
     }
 
-    fn stacked(&self, page: Page) -> usize {
-        let prose = prose::SUBJECTS
-            .into_iter()
-            .filter(|subject| subject.page() == page && self.prose[subject.slot()].drafting())
-            .count();
-
-        let figures = figures::SUBJECTS
-            .into_iter()
-            .filter(|subject| subject.page() == page && self.figures[subject.slot()].drafting())
-            .count();
-
-        prose + figures
-    }
-
-    fn subject_mut(&mut self, subject: figures::Subject) -> &mut figures::State {
-        &mut self.figures[subject.slot()]
-    }
-
-    fn prose_mut(&mut self, subject: prose::Subject) -> &mut prose::State {
-        &mut self.prose[subject.slot()]
-    }
-
-    fn perform(&mut self, action: &Action, vfs: &Vfs, studio: &mut studio::State) -> Outcome {
+    fn perform(&mut self, seat: Seat, action: &Action, vfs: &Vfs, studio: &mut studio::State) -> Outcome {
         match action {
             Action::Add { source, target_mod } => match mods::adopt(target_mod, source) {
                 Ok(path) => {
@@ -1069,10 +1120,11 @@ impl State {
             },
             Action::EditFigures(plan) => {
                 let subject = plan.subject();
-                let already = self.figures[subject.slot()].drafting();
-                let nudge = self.stacked(subject.page()) - usize::from(already);
+                let bank = &mut self.banks[seat.slot()];
+                let already = bank.figures[subject.slot()].drafting();
+                let nudge = bank.stacked(subject.page()) - usize::from(already);
 
-                self.subject_mut(subject).begin(plan.clone(), nudge, vfs);
+                bank.figures[subject.slot()].begin(plan.clone(), nudge, vfs);
 
                 Outcome::Done
             }
@@ -1085,14 +1137,16 @@ impl State {
             }
             Action::EditProse(plan) => {
                 let subject = plan.subject();
+                let bank = &mut self.banks[seat.slot()];
 
                 if let Some(aim) = plan.aim() {
-                    self.glossary_aim = Some(aim);
+                    bank.glossary_aim = Some(aim);
                 }
-                let already = self.prose[subject.slot()].drafting();
-                let nudge = self.stacked(subject.page()) - usize::from(already);
 
-                self.prose_mut(subject).begin(plan.clone(), nudge, vfs);
+                let already = bank.prose[subject.slot()].drafting();
+                let nudge = bank.stacked(subject.page()) - usize::from(already);
+
+                bank.prose[subject.slot()].begin(plan.clone(), nudge, vfs);
 
                 Outcome::Done
             }
@@ -1149,7 +1203,7 @@ impl State {
 
         let outcome = pick(&open.items, &trail)
             .and_then(|item| item.action.as_ref())
-            .map_or(Outcome::Done, |action| self.perform(action, vfs, studio));
+            .map_or(Outcome::Done, |action| self.perform(open.seat, action, vfs, studio));
 
         match outcome {
             Outcome::Done => Task::none(),
@@ -1206,6 +1260,7 @@ pub(crate) fn context(app: &BattleCatsApp, target: Option<Target>) -> Context {
         return Context {
             values: app.settings.files.editor_mode,
             page: scene(app),
+            seat: seat(app),
             file: None,
             cats: Vec::new(),
             enemies: Vec::new(),
@@ -1229,6 +1284,7 @@ pub(crate) fn context(app: &BattleCatsApp, target: Option<Target>) -> Context {
     Context {
         values: app.settings.files.editor_mode,
         page: scene(app),
+        seat: seat(app),
         file: file_target(app, target),
         cats: cat_payloads(app, reached(Target::CatAttributes)),
         enemies: enemy_payloads(app, reached(Target::EnemyAttributes)),
@@ -2877,6 +2933,7 @@ pub(crate) fn refresh(app: &BattleCatsApp, editor: &State, force: bool) -> Optio
 fn key(app: &BattleCatsApp) -> Key {
     Key {
         page: scene(app),
+        seat: seat(app),
         values: app.settings.files.editor_mode,
         cat: held_cat(app),
         form: held_form(app),
@@ -2889,21 +2946,24 @@ fn key(app: &BattleCatsApp) -> Key {
 }
 
 fn snapshot(app: &BattleCatsApp, editor: &State) -> Snapshot {
+    let seat = seat(app);
+
     Snapshot {
         page: scene(app),
+        seat,
         figures: figures::SUBJECTS.map(|subject| {
-            if subject.page() != scene(app) || !editor.figures_drafting(subject) {
+            if subject.page() != scene(app) || !editor.figures_drafting(seat, subject) {
                 return None;
             }
 
             current_plan(app, subject)
         }),
         prose: prose::SUBJECTS.map(|subject| {
-            if subject.page() != scene(app) || !editor.prose_drafting(subject) {
+            if subject.page() != scene(app) || !editor.prose_drafting(seat, subject) {
                 return Vec::new();
             }
 
-            let target = match (subject, editor.glossary_aim) {
+            let target = match (subject, editor.glossary_aim(seat)) {
                 (prose::Subject::CatGlossary | prose::Subject::EnemyGlossary, Some((identity, faction))) => glossary_target(app, identity, faction),
                 _ => prose_target(app, subject),
             };
