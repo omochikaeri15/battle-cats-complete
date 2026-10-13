@@ -15,7 +15,7 @@ pub(super) const CARD_GAP: f32 = 8.0;
 pub(super) const BODY_PADDING: f32 = 12.0;
 
 const LABEL_SIZE: f32 = 12.0;
-const INPUT_SIZE: f32 = 13.0;
+pub(super) const INPUT_SIZE: f32 = 13.0;
 const CARD_PADDING: f32 = 6.0;
 const SYNC_WIDTH: f32 = 172.0;
 const FIELD_PADDING: f32 = 4.0;
@@ -47,6 +47,10 @@ pub(super) fn grid_id(subject: Subject) -> Id {
 
 pub(super) fn usable(width: f32) -> f32 {
     (width - BODY_PADDING * 2.0).max(CARD_WIDTH)
+}
+
+pub(super) fn combo_room(label: f32) -> f32 {
+    label + FIELD_INSET * 2.0 + CARET_RESERVE
 }
 
 pub(super) fn grid<'a>(

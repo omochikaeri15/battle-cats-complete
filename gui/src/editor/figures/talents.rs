@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, scrollable, text, tooltip, Column, Row};
-use iced::{Element, Length, Theme};
+use iced::{Element, Font, Length, Theme};
 use nyanko::combat::{get_talent, Faction, Identity};
 use rustc_hash::FxHashMap;
 
@@ -18,6 +18,7 @@ use kore::systems::combat::registry::get_display_def;
 use kore::{Vault, Vfs};
 
 use crate::app::theme;
+use crate::common::glyphs::Ruler;
 use crate::widget::smooth_scroll;
 
 use super::resolved::{Rule, PERCENT_CEILING};
@@ -80,14 +81,22 @@ const MONEY_NUMERATOR: i32 = 3;
 const MONEY_DENOMINATOR: i32 = 2;
 
 const HEADER_LINES: usize = 3;
+const ABILITY_COLUMN: usize = 0;
 
-static WIDTHS: LazyLock<[f32; HEADINGS.len()]> = LazyLock::new(|| {
+static FLOOR: LazyLock<[f32; HEADINGS.len()]> = LazyLock::new(|| {
     HEADINGS.map(|heading| heading.content.max(wrapped(heading.label)))
 });
 
-static TABLE_WIDTH: LazyLock<f32> = LazyLock::new(|| {
-    WIDTHS.iter().sum::<f32>() + COLUMN_GAP * (HEADINGS.len() - 1) as f32
-});
+fn widths(ability: f32) -> [f32; HEADINGS.len()] {
+    let mut widths = *FLOOR;
+    widths[ABILITY_COLUMN] = widths[ABILITY_COLUMN].max(ability);
+
+    widths
+}
+
+fn table_width(widths: &[f32]) -> f32 {
+    widths.iter().sum::<f32>() + COLUMN_GAP * widths.len().saturating_sub(1) as f32
+}
 
 fn wrapped(label: &str) -> f32 {
     let words: Vec<usize> = label.split_whitespace().map(|word| word.chars().count()).collect();
@@ -112,6 +121,9 @@ fn split(words: &[usize], lines: usize) -> usize {
 
 const COLUMN_GAP: f32 = 6.0;
 const ROW_GAP: f32 = 2.0;
+const SCROLLBAR_WIDTH: f32 = 6.0;
+const SCROLLBAR_SPACING: f32 = 2.0;
+const LABEL_SLACK: f32 = 1.0;
 const ROW_PADDING: f32 = 4.0;
 #[cfg(test)]
 const FRAME_BORDER: f32 = 6.0;
@@ -136,7 +148,7 @@ const TYPE_ID_TITLE: &str = "Type ID";
 
 #[cfg(test)]
 fn columns() -> f32 {
-    *TABLE_WIDTH + FRAME_BORDER
+    table_width(&*FLOOR) + FRAME_BORDER
 }
 
 pub(super) fn view<'a>(draft: &'a Draft, frame: Frame<'a>) -> Element<'a, Message> {
@@ -183,15 +195,25 @@ fn resolved<'a>(draft: &'a Draft, frame: &Frame<'a>) -> Element<'a, Message> {
     }
 
     let filled = filled(draft);
+    let widths = widths(names.ability_width(glossary));
     let mut rows = Column::new().spacing(ROW_GAP);
 
     for slot in 0..TALENT_SLOTS.min(filled + 1) {
-        rows = rows.push(striped(talent_row(draft, slot, names, vfs, glossary), slot));
+        rows = rows.push(striped(talent_row(draft, slot, names, vfs, glossary, &widths), slot));
     }
 
-    let body = column![headings(), rows].height(Length::Fill);
+    let body = container(sideways(column![headings(&widths), rows].into()))
+        .height(Length::Fill)
+        .center_x(Length::Fill);
 
     cards::shell(None, body.into(), cards::footer(vec![traits(draft, glossary), cards::sync(armed)]))
+}
+
+fn sideways<'a>(table: Element<'a, Message>) -> Element<'a, Message> {
+    let rail = scrollable::Scrollbar::new().width(SCROLLBAR_WIDTH).spacing(SCROLLBAR_SPACING);
+    let area = scrollable(table).direction(scrollable::Direction::Horizontal(rail)).width(Length::Shrink);
+
+    smooth_scroll(area).into()
 }
 
 fn scrolled<'a>(rows: Column<'a, Message>) -> Element<'a, Message> {
@@ -222,17 +244,16 @@ fn chooser<'a>(names: &Names, vfs: &Vfs, index: usize, hunt: &str) -> Element<'a
 }
 
 fn striped<'a>(content: Element<'a, Message>, index: usize) -> Element<'a, Message> {
-    let framed = container(content)
+    container(content)
         .padding(ROW_PADDING)
-        .style(move |theme: &Theme| theme::zebra_table_row(theme, index));
-
-    centred(framed.into())
+        .style(move |theme: &Theme| theme::zebra_table_row(theme, index))
+        .into()
 }
 
-fn headings<'a>() -> Element<'a, Message> {
+fn headings<'a>(widths: &[f32; HEADINGS.len()]) -> Element<'a, Message> {
     let mut line = Row::new().spacing(COLUMN_GAP).align_y(Vertical::Center);
 
-    for (heading, width) in HEADINGS.iter().zip(*WIDTHS) {
+    for (heading, width) in HEADINGS.iter().zip(*widths) {
         line = line.push(
             container(
                 text(heading.label).size(LABEL_SIZE).align_x(Horizontal::Center).width(Length::Fill),
@@ -241,11 +262,10 @@ fn headings<'a>() -> Element<'a, Message> {
         );
     }
 
-    let framed = container(line.width(Length::Fixed(*TABLE_WIDTH)))
+    container(line.width(Length::Fixed(table_width(widths))))
         .padding(ROW_PADDING)
-        .style(theme::zebra_table_header);
-
-    centred(framed.into())
+        .style(theme::zebra_table_header)
+        .into()
 }
 
 fn centred<'a>(content: Element<'a, Message>) -> Element<'a, Message> {
@@ -258,6 +278,7 @@ fn talent_row<'a>(
     names: &Names,
     vfs: &Vfs,
     glossary: &'a NameBook,
+    widths: &[f32; HEADINGS.len()],
 ) -> Element<'a, Message> {
     let base = TALENT_HEAD + slot * TALENT_STRIDE;
     let ability = draft.reads_at(base + ABILITY).unwrap_or_default();
@@ -288,11 +309,11 @@ fn talent_row<'a>(
 
     let mut line = Row::new().spacing(COLUMN_GAP).align_y(Vertical::Center);
 
-    for (cell, width) in cells.into_iter().zip(*WIDTHS) {
+    for (cell, width) in cells.into_iter().zip(*widths) {
         line = line.push(container(cell).width(Length::Fixed(width)));
     }
 
-    line.width(Length::Fixed(*TABLE_WIDTH)).into()
+    line.width(Length::Fixed(table_width(widths))).into()
 }
 
 fn ultra<'a>(current: i32, index: usize) -> Element<'a, Message> {
@@ -536,12 +557,31 @@ impl fmt::Display for Named {
 pub(super) struct Names {
     listed: RefCell<Option<Vec<Named>>>,
     images: RefCell<FxHashMap<i32, Option<Handle>>>,
+    ability: RefCell<Option<f32>>,
 }
 
 impl Names {
     pub(super) fn forget(&self) {
         self.listed.borrow_mut().take();
         self.images.borrow_mut().clear();
+        self.ability.borrow_mut().take();
+    }
+
+    fn ability_width(&self, glossary: &NameBook) -> f32 {
+        if let Some(held) = *self.ability.borrow() {
+            return held;
+        }
+
+        let mut ruler = Ruler::new(Font::DEFAULT, cards::INPUT_SIZE);
+        let widest = catalogue(glossary)
+            .iter()
+            .map(|skill| ruler.width(&skill.to_string()))
+            .fold(0.0, f32::max);
+        let width = cards::combo_room(widest.ceil() + LABEL_SLACK);
+
+        *self.ability.borrow_mut() = Some(width);
+
+        width
     }
 
     fn choices(&self, vfs: &Vfs) -> Vec<Named> {
