@@ -27,7 +27,7 @@ use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::scanner::{self as stage_scanner, Touch};
-use kore::domains::stage::GlobalMapId;
+use kore::domains::stage::{navigate::map_screen_slot, GlobalMapId};
 use kore::systems::treasure::{Bonus, Catalog};
 use kore::{ContentStore, Evicted, StageStore, Vault};
 
@@ -2004,7 +2004,7 @@ impl BattleCatsApp {
         let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
         let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
         let map_id = i32::try_from(global).ok()?;
-        let layout = i32::try_from(picked.stage).ok()?;
+        let layout = map_screen_slot(map_id, i32::try_from(picked.stage).ok()?);
         let slot = Lottery::load(&self.vault.vfs).slot_for(map_id, layout);
 
         Some(::emu::runtime::StageEntry {
