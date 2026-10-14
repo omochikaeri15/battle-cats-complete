@@ -179,12 +179,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
 
-      - name: Alias the old asset names for installs that predate the architecture suffix
-        run: |
-          cp windows-x64-build/bcc_windows_x64.zip bcc_windows.zip
-          cp linux-x64-build/bcc_linux_x64.zip bcc_linux.zip
-          cp mac-arm-build/bcc_mac_arm.zip bcc_mac.zip
-
       - name: List artifacts (Verification)
         run: ls -R
 
@@ -200,7 +194,4 @@ jobs:
             linux-x64-build/bcc_linux_x64.zip \
             linux-arm-build/bcc_linux_arm.zip \
             mac-arm-build/bcc_mac_arm.zip \
-            mac-intel-build/bcc_mac_intel.zip \
-            bcc_windows.zip \
-            bcc_linux.zip \
-            bcc_mac.zip
+            mac-intel-build/bcc_mac_intel.zip
