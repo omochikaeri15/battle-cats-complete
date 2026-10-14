@@ -356,7 +356,8 @@ pub(crate) fn restart_app() {
 fn platform() -> &'static str {
     match () {
         _ if cfg!(target_os = "windows") => "windows",
-        _ if cfg!(target_os = "macos") => "mac",
+        _ if cfg!(all(target_os = "macos", target_arch = "aarch64")) => "mac_arm",
+        _ if cfg!(target_os = "macos") => "mac_intel",
         _ => "linux",
     }
 }

@@ -119,12 +119,22 @@ jobs:
           retention-days: 1
 
   build-macos:
-    name: Build MacOS
+    name: Build MacOS (${{ matrix.flavor }})
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - flavor: arm
+            target: aarch64-apple-darwin
+          - flavor: intel
+            target: x86_64-apple-darwin
     steps:
       - uses: actions/checkout@v5
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
@@ -135,22 +145,22 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release (GUI)
-        run: cargo build -p gui --release --verbose
+        run: cargo build -p gui --release --verbose --target ${{ matrix.target }}
 
       - name: Prepare and Zip (Mac)
         run: |
-          mv target/release/gui "${{ env.BIN_NAME }}"
+          mv "target/${{ matrix.target }}/release/gui" "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
-          zip bcc_mac.zip "${{ env.BIN_NAME }}"
+          zip "bcc_mac_${{ matrix.flavor }}.zip" "${{ env.BIN_NAME }}"
 
       - name: Upload Mac Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mac-build
-          path: bcc_mac.zip
+          name: mac-${{ matrix.flavor }}-build
+          path: bcc_mac_${{ matrix.flavor }}.zip
           retention-days: 1
 
   create-release:
@@ -159,6 +169,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
+
+      - name: Alias the arm build for installs that predate the Mac split
+        run: cp mac-arm-build/bcc_mac_arm.zip bcc_mac.zip
 
       - name: List artifacts (Verification)
         run: ls -R
@@ -173,4 +186,6 @@ jobs:
             --draft \
             windows-build/bcc_windows.zip \
             linux-build/bcc_linux.zip \
-            mac-build/bcc_mac.zip
+            mac-arm-build/bcc_mac_arm.zip \
+            mac-intel-build/bcc_mac_intel.zip \
+            bcc_mac.zip
