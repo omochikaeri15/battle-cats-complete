@@ -69,20 +69,29 @@ jobs:
       - name: Rename and Zip (Windows)
         run: |
           move target\release\gui.exe "${{ env.BIN_NAME }}.exe"
-          Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows.zip
+          Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows_x64.zip
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: bcc_windows.zip
+          name: windows-x64-build
+          path: bcc_windows_x64.zip
           retention-days: 1
 
   build-linux:
-    name: Build Linux
+    name: Build Linux (${{ matrix.flavor }})
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - flavor: x64
+            runner: ubuntu-22.04
+            asset: bcc_linux_x64.zip
+          - flavor: arm
+            runner: ubuntu-22.04-arm
+            asset: bcc_linux_arm.zip
     steps:
       - uses: actions/checkout@v5
 
@@ -100,7 +109,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release (GUI)
         run: cargo build -p gui --release --verbose
@@ -109,13 +118,13 @@ jobs:
         run: |
           mv target/release/gui "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
-          zip bcc_linux.zip "${{ env.BIN_NAME }}"
+          zip "${{ matrix.asset }}" "${{ env.BIN_NAME }}"
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build
-          path: bcc_linux.zip
+          name: linux-${{ matrix.flavor }}-build
+          path: ${{ matrix.asset }}
           retention-days: 1
 
   build-macos:
@@ -170,8 +179,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
 
-      - name: Alias the arm build for installs that predate the Mac split
-        run: cp mac-arm-build/bcc_mac_arm.zip bcc_mac.zip
+      - name: Alias the old asset names for installs that predate the architecture suffix
+        run: |
+          cp windows-x64-build/bcc_windows_x64.zip bcc_windows.zip
+          cp linux-x64-build/bcc_linux_x64.zip bcc_linux.zip
+          cp mac-arm-build/bcc_mac_arm.zip bcc_mac.zip
 
       - name: List artifacts (Verification)
         run: ls -R
@@ -184,8 +196,11 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "v${{ needs.check-version.outputs.app_version }}" \
             --draft \
-            windows-build/bcc_windows.zip \
-            linux-build/bcc_linux.zip \
+            windows-x64-build/bcc_windows_x64.zip \
+            linux-x64-build/bcc_linux_x64.zip \
+            linux-arm-build/bcc_linux_arm.zip \
             mac-arm-build/bcc_mac_arm.zip \
             mac-intel-build/bcc_mac_intel.zip \
+            bcc_windows.zip \
+            bcc_linux.zip \
             bcc_mac.zip
