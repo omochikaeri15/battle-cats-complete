@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use tracing::{error, info};
 
+use crate::common::platform;
 use crate::systems::addons::DownloadConfig;
 use crate::systems::addons::paths::{get_tools_dir, AddonStatus, AVIF_BIN};
 
@@ -23,19 +24,11 @@ impl Default for AvifManager {
 impl AvifManager {
     pub fn install(&mut self) -> DownloadConfig {
         info!("Starting avifenc installation...");
-        let asset_name = if cfg!(target_os = "windows") {
-            "avifenc_win.zip"
-        } else if cfg!(target_os = "macos") {
-            "avifenc_mac.zip"
-        } else {
-            "avifenc_linux.zip"
-        };
-
         self.status = AddonStatus::Downloading(0.0, "Starting...".to_string());
 
         DownloadConfig {
             folder_name: "avifenc".to_string(),
-            asset_name: asset_name.to_string(),
+            asset_name: format!("avifenc_{}.zip", platform::suffix()),
             binary_name: AVIF_BIN.to_string(),
         }
     }

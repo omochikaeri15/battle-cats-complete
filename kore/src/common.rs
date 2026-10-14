@@ -14,6 +14,7 @@ pub mod job;
 pub mod superscript;
 pub mod junk;
 pub mod keys;
+pub mod platform;
 pub mod preview;
 pub mod process;
 pub mod region;

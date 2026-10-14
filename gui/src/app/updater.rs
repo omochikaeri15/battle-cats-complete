@@ -16,8 +16,7 @@ use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 use self_update::{cargo_crate_version, version, Download, Extract, TempDir};
 use tracing::{error, info, warn};
 
-use kore::common::github;
-use kore::common::process;
+use kore::common::{github, platform, process};
 
 use crate::common::feedback::CONFIRM_SHORT_LABEL;
 use crate::widget::popup;
@@ -353,20 +352,10 @@ pub(crate) fn restart_app() {
     std::process::exit(0);
 }
 
-fn platform() -> &'static str {
-    match () {
-        _ if cfg!(target_os = "windows") => "windows_x64",
-        _ if cfg!(all(target_os = "macos", target_arch = "aarch64")) => "mac_arm",
-        _ if cfg!(target_os = "macos") => "mac_intel",
-        _ if cfg!(target_arch = "aarch64") => "linux_arm",
-        _ => "linux_x64",
-    }
-}
-
 fn asset_candidates() -> [String; 2] {
     [
-        format!("bcc_{}.zip", platform()),
-        format!("bcc_gui_{}={}_{}.zip", cargo_crate_version!(), kore::VERSION, platform()),
+        format!("bcc_{}.zip", platform::suffix()),
+        format!("bcc_gui_{}={}_{}.zip", cargo_crate_version!(), kore::VERSION, platform::suffix()),
     ]
 }
 
@@ -516,7 +505,7 @@ mod tests {
     }
 
     fn known_asset() -> String {
-        format!("bcc_{}.zip", platform())
+        format!("bcc_{}.zip", platform::suffix())
     }
 
     #[test]

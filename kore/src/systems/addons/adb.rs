@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 
+use crate::common::platform;
 use crate::systems::addons::DownloadConfig;
 use crate::systems::addons::paths::{get_tools_dir, AddonStatus, ADB_BIN};
 
@@ -25,19 +26,11 @@ impl Default for AdbManager {
 
 impl AdbManager {
     pub fn install(&mut self) -> DownloadConfig {
-        let asset_name = if cfg!(target_os = "windows") {
-            "adb_win.zip"
-        } else if cfg!(target_os = "macos") {
-            "adb_mac.zip"
-        } else {
-            "adb_linux.zip"
-        };
-
         self.status = AddonStatus::Downloading(0.0, "Starting...".to_string());
 
         DownloadConfig {
             folder_name: "adb".to_string(),
-            asset_name: asset_name.to_string(),
+            asset_name: format!("adb_{}.zip", platform::suffix()),
             binary_name: ADB_BIN.to_string(),
         }
     }

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use tracing::{error, info};
 
+use crate::common::platform;
 use crate::systems::addons::DownloadConfig;
 use crate::systems::addons::paths::{get_tools_dir, AddonStatus, APKEDITOR_JAR, JAVA_BIN};
 
@@ -24,21 +25,13 @@ impl ApkeditorManager {
     pub fn install(&mut self) -> DownloadConfig {
         info!("Starting APKEditor JRE installation...");
 
-        let asset_name = if cfg!(target_os = "windows") {
-            "jre_win.zip"
-        } else if cfg!(target_os = "macos") {
-            "jre_mac.zip"
-        } else {
-            "jre_linux.zip"
-        };
-
         let bin_name = if cfg!(target_os = "windows") { "java.exe" } else { "java" };
 
         self.status = AddonStatus::Downloading(0.0, "Starting...".to_string());
 
         DownloadConfig {
             folder_name: "apkeditor".to_string(),
-            asset_name: asset_name.to_string(),
+            asset_name: format!("jre_{}.zip", platform::suffix()),
             binary_name: bin_name.to_string(),
         }
     }

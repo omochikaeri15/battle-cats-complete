@@ -43,6 +43,7 @@ CHANGELOG.md
 .idea/
 .zed/
 .gram/
+.tools/
 *swp
 
 # OS Junk

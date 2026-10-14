@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use tracing::{error, info};
 
+use crate::common::platform;
 use crate::systems::addons::DownloadConfig;
 use crate::systems::addons::paths::{get_tools_dir, AddonStatus, FFMPEG_BIN};
 
@@ -45,19 +46,11 @@ impl Default for FfmpegManager {
 impl FfmpegManager {
     pub fn install(&mut self) -> DownloadConfig {
         info!("Starting FFmpeg installation...");
-        let asset_name = if cfg!(target_os = "windows") {
-            "ffmpeg_win.zip"
-        } else if cfg!(target_os = "macos") {
-            "ffmpeg_mac.zip"
-        } else {
-            "ffmpeg_linux.zip"
-        };
-
         self.status = AddonStatus::Downloading(0.0, "Starting...".to_string());
 
         DownloadConfig {
             folder_name: "ffmpeg".to_string(),
-            asset_name: asset_name.to_string(),
+            asset_name: format!("ffmpeg_{}.zip", platform::suffix()),
             binary_name: FFMPEG_BIN.to_string(),
         }
     }
