@@ -426,6 +426,22 @@ pub fn get_talent(id: u8) -> Option<&'static Ability> {
     REGISTRY.iter().find(|ability| ability.talent_id == Some(id))
 }
 
+/// Reports whether a leveled talent extends its unit to the traits its talent row targets.
+///
+/// A talent row carries one trait mask for the whole unit, and the engine reads it only
+/// through the talents that grant a targeted effect: the first nine identifiers (weaken
+/// through warp), dodge and curse. Any other leveled talent leaves the mask unread, whatever
+/// name the group displays.
+///
+/// # Arguments
+/// * `id` - The talent identifier recorded on a talent group.
+///
+/// # Returns
+/// `true` when a leveled group with that identifier turns the row's trait mask on.
+pub fn targets_traits(id: u8) -> bool {
+    (1..=9).contains(&id) || id == 51 || id == 60
+}
+
 /// Looks up an ability's definition by its identifier.
 ///
 /// # Arguments
