@@ -180,7 +180,7 @@ fn member(
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct ComboEffects {
     pub groups: Vec<Vec<i32>>,
     pub labels: HashMap<i32, String>,

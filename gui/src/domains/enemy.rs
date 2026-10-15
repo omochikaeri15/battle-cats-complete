@@ -16,7 +16,7 @@ use iced::widget::{
     text, text_input, Id, Space,
 };
 use iced::{Color, Element, Length, Size, Subscription, Task, Theme};
-use nyanko::combat::Entity;
+use nyanko::combat::{Entity, Identity};
 use tracing::info;
 
 use kore::common::context::GlobalContext;
@@ -76,7 +76,7 @@ pub enum Message {
     AnimationTick,
     SheetsCheck,
     ScanProgress(u64, usize, usize),
-    Loaded(u64, Vec<EnemyEntry>, Option<u64>),
+    Loaded(u64, Vec<EnemyEntry>, Option<u64>, HashSet<Identity>),
     Img015Loaded(u64, usize, Option<CoreSpriteSheet>),
     SearchChanged(String),
     SelectEnemy(u32),
@@ -99,7 +99,7 @@ impl std::fmt::Debug for Message {
             Self::AnimationTick => write!(f, "AnimationTick"),
             Self::SheetsCheck => write!(f, "SheetsCheck"),
             Self::ScanProgress(_, done, total) => write!(f, "ScanProgress({}/{})", done, total),
-            Self::Loaded(_, enemies, _) => write!(f, "Loaded({})", enemies.len()),
+            Self::Loaded(_, enemies, _, _) => write!(f, "Loaded({})", enemies.len()),
             Self::Img015Loaded(_, i, _) => write!(f, "Img015Loaded({})", i),
             Self::SearchChanged(s) => write!(f, "SearchChanged({})", s),
             Self::SelectEnemy(id) => write!(f, "SelectEnemy({})", id),
@@ -137,6 +137,7 @@ pub struct EnemyState {
     header_icon_dummy: HeaderIcon,
 
     scan_progress: Option<(usize, usize)>,
+    hydrating: bool,
     cached_key: Option<u64>,
 
     list: list::State,
@@ -168,6 +169,7 @@ impl Default for EnemyState {
             header_icon_dummy,
 
             scan_progress: None,
+            hydrating: false,
             cached_key: None,
 
             list: list::State::default(),
@@ -276,8 +278,9 @@ impl EnemyState {
         self.data.enemies[index] = entry;
     }
 
-    pub fn set_indexing(&mut self) {
+    pub fn set_indexing(&mut self, hydrating: bool) {
         self.scan_progress = Some((0, 0));
+        self.hydrating = hydrating;
     }
 
     pub(crate) fn clear_indexing(&mut self) {
@@ -307,7 +310,8 @@ impl EnemyState {
 
         thread::spawn(move || {
             if cached && let Some((key, enemies)) = scanner::hydrate() {
-                let _ = tx.unbounded_send(Message::Loaded(generation, enemies, Some(key)));
+                let available = filter::State::available(&enemies);
+                let _ = tx.unbounded_send(Message::Loaded(generation, enemies, Some(key), available));
                 return;
             }
 
@@ -316,7 +320,8 @@ impl EnemyState {
             });
 
             let payload = scan.payload;
-            let _ = tx.unbounded_send(Message::Loaded(generation, scan.data, scan.key));
+            let available = filter::State::available(&scan.data);
+            let _ = tx.unbounded_send(Message::Loaded(generation, scan.data, scan.key, available));
 
             if let Some(bytes) = payload {
                 scanner::persist(&bytes);
@@ -398,7 +403,7 @@ impl EnemyState {
                 }
                 Task::none()
             }
-            Message::Loaded(generation, enemies, key) => {
+            Message::Loaded(generation, enemies, key, available) => {
                 if generation != self.scan_generation {
                     return Task::none();
                 }
@@ -409,7 +414,7 @@ impl EnemyState {
                 self.list.invalidate();
                 self.header_icon_cache.borrow_mut().clear();
                 self.data.enemies = enemies;
-                let filter_task = self.filter.refresh_available(&self.data.enemies).map(Message::Filter);
+                let filter_task = self.filter.refresh_available(available).map(Message::Filter);
                 let preload_task = match self.selected_enemy.and_then(|id| self.data.enemies.iter().find(|e| e.id == id)) {
                     Some(enemy) => {
                         if self.selected_tab != DetailTab::Animation {
@@ -642,7 +647,7 @@ impl EnemyState {
         let (done, total) = self.scan_progress?;
 
         if total == 0 {
-            return Some(status("Indexing File System...", None));
+            return Some(status(if self.hydrating { "Loading Enemies..." } else { "Indexing File System..." }, None));
         }
 
         Some(status("Scanning Enemies...", Some(format!("{} / {}", done, total))))

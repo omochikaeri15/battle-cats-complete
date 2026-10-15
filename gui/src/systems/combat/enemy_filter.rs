@@ -60,8 +60,12 @@ impl Catalog {
         self.icons.clear();
     }
 
-    pub(crate) fn refresh(&mut self, enemies: &[EnemyEntry]) {
-        self.available = present_identities(enemies.iter().map(|enemy| &enemy.stats));
+    pub(crate) fn available(enemies: &[EnemyEntry]) -> HashSet<Identity> {
+        present_identities(enemies.iter().map(|enemy| &enemy.stats))
+    }
+
+    pub(crate) fn refresh(&mut self, available: HashSet<Identity>) {
+        self.available = available;
     }
 }
 

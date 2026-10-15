@@ -86,7 +86,7 @@ pub enum Message {
     AnimationTick,
     SheetsCheck,
     ScanProgress(u64, usize, usize),
-    Loaded(u64, Vec<CatEntry>, Option<u64>),
+    Loaded(u64, Vec<CatEntry>, Option<u64>, Box<filter::Available>),
     Img015Loaded(u64, usize, Option<CoreSpriteSheet>),
     Img022Loaded(u64, usize, Option<CoreSpriteSheet>),
     SearchChanged(String),
@@ -155,7 +155,7 @@ impl std::fmt::Debug for Message {
             Self::AnimationTick => write!(f, "AnimationTick"),
             Self::SheetsCheck => write!(f, "SheetsCheck"),
             Self::ScanProgress(_, done, total) => write!(f, "ScanProgress({}/{})", done, total),
-            Self::Loaded(_, cats, _) => write!(f, "Loaded({})", cats.len()),
+            Self::Loaded(_, cats, _, _) => write!(f, "Loaded({})", cats.len()),
             Self::Img015Loaded(_, i, _) => write!(f, "Img015Loaded({})", i),
             Self::Img022Loaded(_, i, _) => write!(f, "Img022Loaded({})", i),
             Self::SearchChanged(s) => write!(f, "SearchChanged({})", s),
@@ -207,6 +207,7 @@ pub struct State {
     header_icon_dummy: HeaderIcon,
 
     scan_progress: Option<(usize, usize)>,
+    hydrating: bool,
     cached_key: Option<u64>,
 
     list: list::State,
@@ -246,6 +247,7 @@ impl Default for State {
             header_icon_dummy,
 
             scan_progress: None,
+            hydrating: false,
             cached_key: None,
 
             list: list::State::default(),
@@ -302,11 +304,11 @@ impl State {
         self.dynamic_stats.replace(None);
         self.header_icon_cache.borrow_mut().clear();
         self.data.cats = cats.to_vec();
-        self.filter.refresh_combos(vault);
+        let available = filter::Available::of(&self.data.cats, vault);
         self.list.refresh(&self.data.cats, &self.search_query, &self.filter.filter_state);
 
         Task::batch([
-            self.filter.refresh_available(&self.data.cats).map(Message::Filter),
+            self.filter.refresh_available(available).map(Message::Filter),
             self.check_sheets(&vault.vfs),
             self.list.take_scroll(),
         ])
@@ -522,8 +524,9 @@ impl State {
         self.data.cats[index] = entry;
     }
 
-    pub fn set_indexing(&mut self) {
+    pub fn set_indexing(&mut self, hydrating: bool) {
         self.scan_progress = Some((0, 0));
+        self.hydrating = hydrating;
     }
 
     pub(crate) fn clear_indexing(&mut self) {
@@ -553,16 +556,19 @@ impl State {
 
         thread::spawn(move || {
             if cached && let Some((key, cats)) = scanner::hydrate(&scan_store) {
-                let _ = tx.unbounded_send(Message::Loaded(generation, cats, Some(key)));
+                let available = Box::new(filter::Available::of(&cats, &scan_store));
+                let _ = tx.unbounded_send(Message::Loaded(generation, cats, Some(key), available));
                 return;
             }
 
+            let vault = Arc::clone(&scan_store);
             let scan = scanner::load(config, scan_store, |done, total| {
                 let _ = tx.unbounded_send(Message::ScanProgress(generation, done, total));
             });
 
             let payload = scan.payload;
-            let _ = tx.unbounded_send(Message::Loaded(generation, scan.data, scan.key));
+            let available = Box::new(filter::Available::of(&scan.data, &vault));
+            let _ = tx.unbounded_send(Message::Loaded(generation, scan.data, scan.key, available));
 
             if let Some(bytes) = payload {
                 scanner::persist(&bytes);
@@ -703,7 +709,7 @@ impl State {
                 }
                 Task::none()
             }
-            Message::Loaded(generation, cats, key) => {
+            Message::Loaded(generation, cats, key, available) => {
                 if generation != self.scan_generation {
                     return Task::none();
                 }
@@ -715,8 +721,7 @@ impl State {
                 self.details.clear_icons();
                 self.details.clear_combos();
                 self.data.cats = cats;
-                self.filter.refresh_combos(global_ctx.vault);
-                let filter_task = self.filter.refresh_available(&self.data.cats).map(Message::Filter);
+                let filter_task = self.filter.refresh_available(*available).map(Message::Filter);
                 let preload_task = match self.selected_cat.and_then(|id| self.data.cats.iter().find(|c| c.id == id)) {
                     Some(cat) => {
                         let (form, tab) = self.clamped_selection(cat);
@@ -1029,7 +1034,7 @@ impl State {
         let (done, total) = self.scan_progress?;
 
         if total == 0 {
-            return Some(status("Indexing File System...", None));
+            return Some(status(if self.hydrating { "Loading Cats..." } else { "Indexing File System..." }, None));
         }
 
         Some(status("Scanning Cats...", Some(format!("{} / {}", done, total))))

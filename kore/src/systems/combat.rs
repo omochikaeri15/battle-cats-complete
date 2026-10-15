@@ -88,7 +88,7 @@ pub fn present_identities<'a>(entities: impl Iterator<Item = &'a Entity>) -> Has
     present
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct TalentIdentities {
     pub normal: HashSet<Identity>,
     pub ultra: HashSet<Identity>,

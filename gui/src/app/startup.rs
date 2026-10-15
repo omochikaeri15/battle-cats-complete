@@ -179,9 +179,9 @@ impl BattleCatsApp {
         let (tx, rx) = mpsc::unbounded();
 
         self.rebuild_running = true;
-        self.cat_state.set_indexing();
-        self.enemy_state.set_indexing();
-        self.stage_state.set_indexing();
+        self.cat_state.set_indexing(hydrate);
+        self.enemy_state.set_indexing(hydrate);
+        self.stage_state.set_indexing(hydrate);
 
         let settled = Arc::clone(&self.settled);
 

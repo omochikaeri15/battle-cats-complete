@@ -61,6 +61,22 @@ pub struct State {
     scroll_offset: f32,
 }
 
+#[derive(Clone, Default)]
+pub struct Available {
+    inherent: HashSet<Identity>,
+    gainable: TalentIdentities,
+    combos: ComboEffects,
+}
+
+impl Available {
+    pub(super) fn of(cats: &[CatEntry], vault: &Vault) -> Self {
+        Self {
+            inherent: present_identities(cats.iter().flat_map(|cat| cat.stats.iter().flatten())),
+            gainable: talent_identities(cats.iter().filter_map(|cat| cat.talent_data.as_ref())),
+            combos: combo::effects(vault),
+        }
+    }
+}
 
 impl State {
     pub(super) fn clear_icons(&self) {
@@ -125,9 +141,12 @@ impl State {
         Some(section.into())
     }
 
-    pub(super) fn refresh_available(&mut self, cats: &[CatEntry]) -> Task<Message> {
-        self.inherent = present_identities(cats.iter().flat_map(|cat| cat.stats.iter().flatten()));
-        self.gainable = talent_identities(cats.iter().filter_map(|cat| cat.talent_data.as_ref()));
+    pub(super) fn refresh_available(&mut self, available: Available) -> Task<Message> {
+        self.inherent = available.inherent;
+        self.gainable = available.gainable;
+        self.combos = available.combos;
+        self.filter_state.combo_effects.retain(|effect| self.combos.units.contains_key(effect));
+        self.resolve_combo_units();
 
         self.restore_scroll()
     }

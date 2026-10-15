@@ -83,6 +83,7 @@ pub struct State {
     pub selected_crown: u8,
     entered: bool,
     scan_progress: Option<(usize, usize)>,
+    hydrating: bool,
     cached_key: Option<u64>,
     scan_generation: u64,
     bonus: Bonus,
@@ -103,6 +104,7 @@ impl Default for State {
             selected_crown: 0,
             entered: true,
             scan_progress: None,
+            hydrating: false,
             cached_key: None,
             scan_generation: 0,
             bonus: Bonus::default(),
@@ -174,8 +176,9 @@ impl State {
         self.data.registry.stages.extend(rebuilt.stages);
     }
 
-    pub fn set_indexing(&mut self) {
+    pub fn set_indexing(&mut self, hydrating: bool) {
         self.scan_progress = Some((0, 0));
+        self.hydrating = hydrating;
     }
 
     pub(crate) fn clear_indexing(&mut self) {
@@ -479,7 +482,7 @@ impl State {
         let (done, total) = self.scan_progress?;
 
         if total == 0 {
-            return Some(status("Indexing File System...", None));
+            return Some(status(if self.hydrating { "Loading Stages..." } else { "Indexing File System..." }, None));
         }
 
         Some(status("Scanning Stages...", Some(format!("{} / {}", done, total))))

@@ -13,6 +13,7 @@ use iced::widget::{button, column, container, markdown, opaque, operation, row, 
 use iced::{task, window, Element, Length, Size, Subscription, Task, Theme};
 use nyanko::files::{Localizable, Param};
 use rustc_hash::FxHasher;
+use smol::Timer;
 use tracing::{debug, info, trace, warn};
 
 use kore::common::context::GlobalContext;
@@ -125,6 +126,7 @@ fn drop_key(event: iced::Event, status: iced::event::Status, _window: window::Id
 }
 
 pub(crate) const WINDOW_SHOW_FALLBACK: Duration = Duration::from_millis(400);
+const LISTS_PATIENCE: Duration = Duration::from_millis(600);
 
 const FRAMES_BEFORE_SHOW: u8 = 2;
 const SLOW_PASS: Duration = Duration::from_millis(250);
@@ -359,6 +361,7 @@ pub enum Message {
     DownloadTick,
     FramePainted,
     ShowWindow,
+    ListsPatience,
     Navigate(Page),
     CloseRequested(window::Id),
     CloseWithMode(window::Id, window::Mode),
@@ -575,6 +578,14 @@ impl BattleCatsApp {
         }
 
         Subscription::batch(subs)
+    }
+
+    fn reveal_when_ready(&mut self) -> Task<Message> {
+        if self.window_shown || self.frames_painted < FRAMES_BEFORE_SHOW || self.listed != LISTED_ALL {
+            return Task::none();
+        }
+
+        self.show_window()
     }
 
     fn show_window(&mut self) -> Task<Message> {
@@ -1169,6 +1180,8 @@ impl BattleCatsApp {
             self.settled.store(true, Ordering::Relaxed);
         }
 
+        let task = Task::batch([task, self.reveal_when_ready()]);
+
         let Some(ticket) = self.mining_state.take_wanted() else {
             return task;
         };
@@ -1217,22 +1230,32 @@ impl BattleCatsApp {
 
                 self.frames_painted = self.frames_painted.saturating_add(1);
 
-                if self.frames_painted == 1 && let Some(boot) = self.boot {
+                if self.frames_painted != 1 {
+                    return self.reveal_when_ready();
+                }
+
+                if let Some(boot) = self.boot {
                     info!(ms = boot.elapsed().as_millis(), "First frame painted");
                 }
 
-                if self.frames_painted < FRAMES_BEFORE_SHOW {
-                    return Task::none();
-                }
+                let patience = Task::future(Timer::after(LISTS_PATIENCE)).map(|_| Message::ListsPatience);
 
-                self.show_window()
+                Task::batch([patience, self.reveal_when_ready()])
             }
             Message::ShowWindow => {
-                if self.window_shown {
+                if self.window_shown || self.frames_painted > 0 {
                     return Task::none();
                 }
 
                 warn!("First frame never reported; revealing the window on the startup fallback");
+                self.show_window()
+            }
+            Message::ListsPatience => {
+                if self.window_shown {
+                    return Task::none();
+                }
+
+                info!(listed = self.listed, "Lists still loading after the first frame; revealing the window without them");
                 self.show_window()
             }
             Message::DownloadTick => {

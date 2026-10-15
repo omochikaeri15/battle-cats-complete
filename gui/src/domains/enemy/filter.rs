@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use iced::{Element, Size, Task};
+use nyanko::combat::Identity;
 
 use kore::domains::enemy::filter::EnemyFilterState;
 use kore::domains::enemy::scanner::EnemyEntry;
@@ -50,8 +53,12 @@ impl State {
         self.panel.restore_scroll()
     }
 
-    pub(super) fn refresh_available(&mut self, enemies: &[EnemyEntry]) -> Task<Message> {
-        self.catalog.refresh(enemies);
+    pub(super) fn available(enemies: &[EnemyEntry]) -> HashSet<Identity> {
+        Catalog::available(enemies)
+    }
+
+    pub(super) fn refresh_available(&mut self, available: HashSet<Identity>) -> Task<Message> {
+        self.catalog.refresh(available);
 
         self.restore_scroll()
     }
