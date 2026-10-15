@@ -104,7 +104,7 @@ pub fn talent_identities<'a>(talents: impl Iterator<Item = &'a Talent>) -> Talen
             for ability in REGISTRY {
                 let Some(talent_id) = ability.talent_id else { continue; };
 
-                if group.ability_id == talent_id || group.name_id as u8 == talent_id {
+                if abilities::talent_grants(group, talent.type_id, talent_id) {
                     side.insert(ability.identity);
                 }
             }

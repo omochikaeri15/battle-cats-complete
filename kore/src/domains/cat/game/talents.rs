@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
-use nyanko::combat::{get_talent, Ability, Attribute, AttrUnit, Entity, Identity};
+use nyanko::combat::{get_talent, targets_traits, Ability, Attribute, AttrUnit, Entity, Identity};
 
 use crate::common::frames;
 use crate::common::glyphs::ARROW;
@@ -372,7 +372,7 @@ fn process_single_attribute(
     strings_changed.push(format!("{}: {} {} {ARROW} {}", attribute_key, format_value(old_value), difference_string, format_value(new_value)));
 }
 
-fn apply_target_traits(battle_stats: &mut Entity, target_name_id: i16, bitmask_type_id: u16) {
+fn apply_target_traits(battle_stats: &mut Entity, bitmask_type_id: u16) {
     let mut apply_trait_bit = |bit_index: u16| {
         match bit_index {
             0 => battle_stats.trait_red = 1,
@@ -391,15 +391,9 @@ fn apply_target_traits(battle_stats: &mut Entity, target_name_id: i16, bitmask_t
         }
     };
 
-    if (0..=11).contains(&target_name_id) {
-        apply_trait_bit(target_name_id as u16);
-    }
-
-    if bitmask_type_id > 0 {
-        for bit_index in 0..=11 {
-            if (bitmask_type_id & (1 << bit_index)) != 0 {
-                apply_trait_bit(bit_index);
-            }
+    for bit_index in 0..=11 {
+        if (bitmask_type_id & (1 << bit_index)) != 0 {
+            apply_trait_bit(bit_index);
         }
     }
 }
@@ -418,8 +412,8 @@ pub(crate) fn apply_talent_stats(base_stats: &Entity, talent_data: &Talent, tale
     for (talent_index, talent_group) in ordered {
         let current_level = *talent_levels.get(&(talent_index as u8)).unwrap_or(&0);
 
-        if current_level > 0 && talent_group.name_id != -1 {
-            apply_target_traits(&mut mutated_stats, talent_group.name_id, talent_data.type_id);
+        if current_level > 0 && targets_traits(talent_group.ability_id) {
+            apply_target_traits(&mut mutated_stats, talent_data.type_id);
         }
 
         if current_level == 0 { continue; }

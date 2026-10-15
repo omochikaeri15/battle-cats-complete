@@ -5,6 +5,7 @@ use tracing::trace;
 
 use crate::domains::cat::filter::{CatFilterState, FilterCounts, RangeInput, TalentFilterMode};
 use crate::domains::cat::scanner::CatEntry;
+use crate::systems::combat::abilities::talent_grants;
 use crate::systems::combat::comparable;
 use crate::systems::combat::registry::{get_display_def, AbilityIcon};
 use crate::systems::combat::NameBook;
@@ -51,7 +52,7 @@ pub(crate) fn evaluate_icon_requirements(
             && let Some(talent_data) = cat.talent_data.as_ref() {
             for talent_group in &talent_data.groups {
                 let matches_target_icon = pure_ability_definition.is_some_and(|pure_def| {
-                    pure_def.talent_id.is_some_and(|talent_id| talent_group.ability_id == talent_id || talent_group.name_id as u8 == talent_id)
+                    pure_def.talent_id.is_some_and(|talent_id| talent_grants(talent_group, talent_data.type_id, talent_id))
                 });
 
                 if matches_target_icon {

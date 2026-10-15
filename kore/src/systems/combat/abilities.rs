@@ -1,4 +1,5 @@
-use nyanko::combat::{get_talent, AttrUnit, AttrValue, Entity, Faction, Identity, REGISTRY};
+use nyanko::cat::unit::TalentGroup;
+use nyanko::combat::{get_talent, targets_traits, AttrUnit, AttrValue, Entity, Faction, Identity, REGISTRY};
 use nyanko::files::img015;
 use tracing::trace;
 
@@ -169,7 +170,7 @@ fn talent_border(ctx: &RenderContext<'_>, ability_id: u8) -> Option<usize> {
     if !is_trait_id(ability_id) { return None; }
 
     data.groups.iter().enumerate().any(|(index, group)| {
-        *levels.get(&(index as u8)).unwrap_or(&0) > 0 && enables_trait(group.name_id, data.type_id, ability_id)
+        *levels.get(&(index as u8)).unwrap_or(&0) > 0 && enables_trait(group, data.type_id, ability_id)
     }).then_some(img015::BORDER_GOLD)
 }
 
@@ -177,13 +178,15 @@ fn is_trait_id(id: u8) -> bool {
     (33..=43).contains(&id) || id == 57
 }
 
-fn enables_trait(name_id: i16, type_id: u16, target_id: u8) -> bool {
+pub(crate) fn talent_grants(group: &TalentGroup, type_id: u16, talent_id: u8) -> bool {
+    group.ability_id == talent_id || enables_trait(group, type_id, talent_id)
+}
+
+fn enables_trait(group: &TalentGroup, type_id: u16, target_id: u8) -> bool {
     let bit_idx = match target_id {
         33 => 0, 34 => 1, 35 => 2, 36 => 3, 37 => 4, 38 => 5, 39 => 6, 40 => 7, 41 => 8, 42 => 9, 43 => 10, 57 => 11,
         _ => return false,
     };
 
-    if name_id == bit_idx { return true; }
-
-    type_id > 0 && (type_id & (1 << bit_idx)) != 0
+    targets_traits(group.ability_id) && (type_id & (1 << bit_idx)) != 0
 }

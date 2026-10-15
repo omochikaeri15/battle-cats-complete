@@ -296,14 +296,16 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         .get(treasure)
                         .cloned()
                         .ok_or(Fault::index_out_of_range(treasure as i64, ctx.treasure2_texts.len() as i64))?;
-                let map = (ctx.i32_at(AppContext::CHAPTER_MODE)? as i64).wrapping_add(3) as usize;
-                let stage = ctx.i32_at(AppContext::CASTLE_ID)? as i64 as usize;
-                let second = ctx
-                    .stage_names_numbered
-                    .get(map)
-                    .and_then(|names| names.get(stage))
+                let chapter = ctx.i32_at(AppContext::CHAPTER_MODE)? as i64 as usize;
+                let castle = ctx.i32_at(AppContext::CASTLE_ID)? as i64 as usize;
+                let names = ctx
+                    .treasure1_texts
+                    .get(chapter)
+                    .ok_or(Fault::index_out_of_range(chapter as i64, ctx.treasure1_texts.len() as i64))?;
+                let second = names
+                    .get(castle)
                     .cloned()
-                    .ok_or(Fault::index_out_of_range(stage as i64, 0))?;
+                    .ok_or(Fault::index_out_of_range(castle as i64, names.len() as i64))?;
 
                 message = format_string2(ctx, &text, &first, &second)?;
                 handler = game_win_update_lambda_3;

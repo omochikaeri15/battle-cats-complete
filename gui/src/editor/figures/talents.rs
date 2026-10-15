@@ -8,7 +8,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, scrollable, text, tooltip, Column, Row};
 use iced::{Element, Font, Length, Theme};
-use nyanko::combat::{get_talent, Faction, Identity};
+use nyanko::combat::{get_ability, get_talent, Faction, Identity};
 use rustc_hash::FxHashMap;
 
 use kore::common::gfx::autocrop;
@@ -287,6 +287,7 @@ fn talent_row<'a>(
     let skills = cards::options(catalogue(glossary), Skill::of(ability, glossary), move |pick: Skill| {
         Message::Picked(base + ABILITY, pick.id)
     });
+    let skills = disclaimed(skills, ability, glossary);
 
     let picture = names.control(vfs, image_id(named, ability), named, base + NAME_ID);
 
@@ -333,6 +334,33 @@ fn ultra<'a>(current: i32, index: usize) -> Element<'a, Message> {
         .style(style)
         .on_press(Message::Picked(index, i32::from(!set)))
         .into()
+}
+
+fn disclaimed<'a>(field: Element<'a, Message>, ability: i32, glossary: &NameBook) -> Element<'a, Message> {
+    let blocker = get_ability(Identity::WaveBlock).and_then(|definition| definition.talent_id);
+    let immune = get_ability(Identity::ImmuneWave).and_then(|definition| definition.talent_id);
+
+    let (Some(blocker), Some(immune)) = (blocker, immune) else {
+        return field;
+    };
+
+    if ability != i32::from(blocker) {
+        return field;
+    }
+
+    let blocker_ability = glossary.ability(Identity::WaveBlock, Faction::Cat);
+    let immune_ability = glossary.ability(Identity::ImmuneWave, Faction::Cat);
+    let mislabel = glossary.talent(blocker).unwrap_or(blocker_ability);
+    let genuine = glossary.talent(immune).unwrap_or(immune_ability);
+    let notice = format!(
+        "Disclaimer: PONOS assigns the name \"{mislabel}\" to what the community knows as the {blocker_ability} ability\nIf you want the genuine {immune_ability} ability, please select \"{genuine}\" instead"
+    );
+
+    let bubble = container(theme::centered_text(notice).size(TRAIT_SIZE))
+        .padding(HINT_PADDING)
+        .style(container::bordered_box);
+
+    tooltip(field, bubble, tooltip::Position::Top).into()
 }
 
 fn explained<'a>(field: Element<'a, Message>, meaning: Option<Value>) -> Element<'a, Message> {
