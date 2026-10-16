@@ -2,12 +2,12 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use nyanko::cat::unit::{NyancomboData, UnitBuy};
-use nyanko::files::GatyaItemBuy;
-use nyanko::chapter::stage::{MapStageDataEntry, MapStageDataHeader};
 use nyanko::cat::unitid;
+use nyanko::chapter::stage::{MapStageDataEntry, MapStageDataHeader};
 use nyanko::combat::Scale;
 use nyanko::common::{Column, FromColumn};
 use nyanko::enemy::t_unit;
+use nyanko::files::GatyaItemBuy;
 
 use kore::domains::settings::EditorMode;
 
@@ -72,7 +72,9 @@ impl Subject {
             | Subject::Talents
             | Subject::Costs
             | Subject::Combo => Page::Cats,
-            Subject::MapStage | Subject::MapDrops | Subject::DropChara | Subject::ItemBuy => Page::Stages,
+            Subject::MapStage | Subject::MapDrops | Subject::DropChara | Subject::ItemBuy => {
+                Page::Stages
+            }
         }
     }
 }
@@ -82,27 +84,60 @@ pub(super) struct Schema {
     comments: bool,
 }
 
-pub(super) static CAT: Schema = Schema { subject: Subject::Cat, comments: true };
+pub(super) static CAT: Schema = Schema {
+    subject: Subject::Cat,
+    comments: true,
+};
 
-pub(super) static ENEMY: Schema = Schema { subject: Subject::Enemy, comments: false };
+pub(super) static ENEMY: Schema = Schema {
+    subject: Subject::Enemy,
+    comments: false,
+};
 
-pub(super) static BUY: Schema = Schema { subject: Subject::Buy, comments: false };
+pub(super) static BUY: Schema = Schema {
+    subject: Subject::Buy,
+    comments: false,
+};
 
-pub(super) static CURVE: Schema = Schema { subject: Subject::Curve, comments: false };
+pub(super) static CURVE: Schema = Schema {
+    subject: Subject::Curve,
+    comments: false,
+};
 
-pub(super) static TALENTS: Schema = Schema { subject: Subject::Talents, comments: false };
+pub(super) static TALENTS: Schema = Schema {
+    subject: Subject::Talents,
+    comments: false,
+};
 
-pub(super) static COSTS: Schema = Schema { subject: Subject::Costs, comments: false };
+pub(super) static COSTS: Schema = Schema {
+    subject: Subject::Costs,
+    comments: false,
+};
 
-pub(super) static COMBO: Schema = Schema { subject: Subject::Combo, comments: false };
+pub(super) static COMBO: Schema = Schema {
+    subject: Subject::Combo,
+    comments: false,
+};
 
-pub(super) static MAP_STAGE: Schema = Schema { subject: Subject::MapStage, comments: true };
+pub(super) static MAP_STAGE: Schema = Schema {
+    subject: Subject::MapStage,
+    comments: true,
+};
 
-pub(super) static MAP_DROPS: Schema = Schema { subject: Subject::MapDrops, comments: true };
+pub(super) static MAP_DROPS: Schema = Schema {
+    subject: Subject::MapDrops,
+    comments: true,
+};
 
-pub(super) static DROP_CHARA: Schema = Schema { subject: Subject::DropChara, comments: true };
+pub(super) static DROP_CHARA: Schema = Schema {
+    subject: Subject::DropChara,
+    comments: true,
+};
 
-pub(super) static ITEM_BUY: Schema = Schema { subject: Subject::ItemBuy, comments: false };
+pub(super) static ITEM_BUY: Schema = Schema {
+    subject: Subject::ItemBuy,
+    comments: false,
+};
 
 pub(super) fn of(subject: Subject) -> &'static Schema {
     match subject {
@@ -157,7 +192,9 @@ const TALENT_FIELDS: [&str; TALENT_STRIDE] = [
 const NAME_ID: usize = 12;
 
 pub(super) fn slot_of(index: usize) -> Option<usize> {
-    index.checked_sub(TALENT_HEAD).map(|offset| offset / TALENT_STRIDE)
+    index
+        .checked_sub(TALENT_HEAD)
+        .map(|offset| offset / TALENT_STRIDE)
 }
 
 fn talent_label(index: usize) -> String {
@@ -226,7 +263,7 @@ const BUY_NAMES: &[(&str, &str)] = &[
     ("sell_xp_yield", "Sell XP"),
     ("sell_np_yield", "Sell NP"),
     ("level_cap_ch2", "Level Cap Ch2"),
-    ("evolve_level_xp", "Evolve Level XP"),
+    ("true_form_obtain_level", "True Form Obtain Level"),
     ("egg_id_normal", "Egg ID Normal"),
     ("egg_id_evolved", "Egg ID Evolved"),
 ];
@@ -300,7 +337,8 @@ static COMBO_ORDER: LazyLock<Vec<Entry>> = LazyLock::new(|| order(NyancomboData:
 
 static ITEM_BUY_ORDER: LazyLock<Vec<Entry>> = LazyLock::new(|| order(GatyaItemBuy::COLUMNS));
 
-static ITEM_BUY_LABELS: LazyLock<Vec<String>> = LazyLock::new(|| labels(&ITEM_BUY_ORDER, ITEM_BUY_NAMES));
+static ITEM_BUY_LABELS: LazyLock<Vec<String>> =
+    LazyLock::new(|| labels(&ITEM_BUY_ORDER, ITEM_BUY_NAMES));
 
 // The popup is one draft over three lines of the file, so the three column tables are one
 // table: the map-wide header, then the map pattern, then the stage's own row. `CHROME`
@@ -359,7 +397,9 @@ fn prettify(field: &str) -> String {
         .map(|word| {
             let mut chars = word.chars();
 
-            chars.next().map_or_else(String::new, |first| first.to_uppercase().chain(chars).collect())
+            chars.next().map_or_else(String::new, |first| {
+                first.to_uppercase().chain(chars).collect()
+            })
         })
         .collect::<Vec<String>>()
         .join(" ")
@@ -374,7 +414,11 @@ impl Schema {
             Subject::Combo => &COMBO_ORDER,
             Subject::MapStage => &MAP_STAGE_ORDER,
             Subject::ItemBuy => &ITEM_BUY_ORDER,
-            Subject::Curve | Subject::Talents | Subject::Costs | Subject::MapDrops | Subject::DropChara => &[],
+            Subject::Curve
+            | Subject::Talents
+            | Subject::Costs
+            | Subject::MapDrops
+            | Subject::DropChara => &[],
         }
     }
 
@@ -436,9 +480,10 @@ impl Schema {
             _ => &BUY_LABELS,
         };
 
-        table
-            .get(index)
-            .map_or_else(|| Cow::Owned(format!("Column {}", index + 1)), |label| Cow::Borrowed(label.as_str()))
+        table.get(index).map_or_else(
+            || Cow::Owned(format!("Column {}", index + 1)),
+            |label| Cow::Borrowed(label.as_str()),
+        )
     }
 
     // The cells that live on a line other than the addressed one, always leading.
@@ -475,8 +520,13 @@ impl Schema {
             return false;
         }
 
-        (0..TALENT_SLOTS)
-            .all(|slot| cells.get(TALENT_HEAD + slot * TALENT_STRIDE).copied().unwrap_or_default() == 0)
+        (0..TALENT_SLOTS).all(|slot| {
+            cells
+                .get(TALENT_HEAD + slot * TALENT_STRIDE)
+                .copied()
+                .unwrap_or_default()
+                == 0
+        })
     }
 
     pub(super) fn index_of(&self, field: &str) -> Option<usize> {
@@ -492,7 +542,8 @@ impl Schema {
             return raw;
         }
 
-        self.column(index).map_or(raw, |column| column.scale.apply(raw))
+        self.column(index)
+            .map_or(raw, |column| column.scale.apply(raw))
     }
 
     pub(super) fn to_raw(&self, index: usize, display: i32, values: EditorMode) -> i32 {
@@ -523,13 +574,15 @@ impl Schema {
             return held;
         }
 
-        self.column(index).and_then(|column| i32::from_column(column.default)).unwrap_or(0)
+        self.column(index)
+            .and_then(|column| i32::from_column(column.default))
+            .unwrap_or(0)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{FromColumn, CAT, CAT_NAMES, ENEMY, ENEMY_NAMES, Schema};
+    use super::{CAT, CAT_NAMES, ENEMY, ENEMY_NAMES, FromColumn, Schema};
 
     fn check(schema: &Schema, names: &[(&str, &str)], subject: &str) {
         for (field, _) in names {
