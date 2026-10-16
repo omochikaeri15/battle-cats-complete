@@ -29,23 +29,23 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
         return Err(Fault::null_pointer());
     };
 
-    for (unit_key, entry) in data {
-        let unit_key = string_to_int(unit_key)?;
+    for (entry_key, entry) in data {
+        let entry_key = string_to_int(entry_key)?;
         let JsonNode::Object(fields) = entry else {
             return Err(Fault::null_pointer());
         };
         let Some(JsonNode::Array(values)) = fields.get(b"a".as_slice()) else {
             continue;
         };
-        let unit_id = ops::div_10(unit_key);
-        let form = unit_key
-            .wrapping_sub(unit_id.wrapping_mul(10))
+        let group = ops::div_10(entry_key);
+        let rarity = entry_key
+            .wrapping_sub(group.wrapping_mul(10))
             .wrapping_sub(1);
 
         ctx.catseye_behavior
-            .entry(unit_id)
+            .entry(group)
             .or_default()
-            .entry(form)
+            .entry(rarity)
             .or_default()
             .resize(values.len(), CatseyeStep::default());
 
@@ -72,9 +72,9 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
                 if let Some(step) = ctx
                     .catseye_behavior
-                    .entry(unit_id)
+                    .entry(group)
                     .or_default()
-                    .entry(form)
+                    .entry(rarity)
                     .or_default()
                     .get_mut(index)
                 {
@@ -92,9 +92,9 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
             if let Some(step) = ctx
                 .catseye_behavior
-                .entry(unit_id)
+                .entry(group)
                 .or_default()
-                .entry(form)
+                .entry(rarity)
                 .or_default()
                 .get_mut(index)
             {
@@ -111,9 +111,9 @@ pub fn load_catseye_behavior_json(ctx: &mut AppContext) -> Result<(), Fault> {
 
             if let Some(step) = ctx
                 .catseye_behavior
-                .entry(unit_id)
+                .entry(group)
                 .or_default()
-                .entry(form)
+                .entry(rarity)
                 .or_default()
                 .get_mut(index)
             {

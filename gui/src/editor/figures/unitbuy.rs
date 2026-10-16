@@ -145,9 +145,7 @@ pub(super) fn rule(field: &str) -> Option<Rule> {
         | "fanfare_tier"
         | "evolved_form_unlock_level"
         | "true_form_event_id"
-        | "plus_cap_grows" => Some(Rule::Plain),
-
-        "unknown_56" => Some(Rule::Opaque),
+        | "plus_cap_grows" | "item_powerup_group" => Some(Rule::Plain),
 
         _ => None,
     }
