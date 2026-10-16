@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::common::columns;
-use crate::common::file::{self, Separator};
 use crate::common::columns::Column;
+use crate::common::file::{self, Separator};
 
 /// Represents errors that can occur during the parsing of unit progression data.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +16,10 @@ pub enum UnitBuyError {
 impl fmt::Display for UnitBuyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyFile => write!(f, "The provided file bytes contained no valid unit buy data."),
+            Self::EmptyFile => write!(
+                f,
+                "The provided file bytes contained no valid unit buy data."
+            ),
         }
     }
 }
@@ -99,8 +102,8 @@ pub struct UnitBuy {
     pub level_cap_ch2: i32,
     /// The maximum plus level attainable before any cap extension is applied.
     pub base_max_plus_level: i32,
-    /// The experience required to perform the standard evolution.
-    pub evolve_level_xp: i32,
+    /// Level at which a unit obtains its true form.
+    pub true_form_obtain_level: i32,
     /// The level the unit must reach before the evolved form becomes available.
     pub evolved_form_unlock_level: i32,
     /// The maximum level attainable after clearing the first chapter.
@@ -221,7 +224,7 @@ impl Default for UnitBuy {
             fanfare_tier: 0,
             level_cap_ch2: 0,
             base_max_plus_level: 0,
-            evolve_level_xp: -1,
+            true_form_obtain_level: -1,
             evolved_form_unlock_level: 0,
             level_cap_ch1: 0,
             true_form_id: 0,
@@ -298,7 +301,7 @@ impl UnitBuy {
         fanfare_tier                   : 17;
         level_cap_ch2                  : 18;
         base_max_plus_level            : 19;
-        evolve_level_xp                : 20, Raw, -1;
+        true_form_obtain_level                : 20, Raw, -1;
         evolved_form_unlock_level      : 21;
         level_cap_ch1                  : 22;
         true_form_id                   : 23;
@@ -442,7 +445,9 @@ impl UnitBuy {
     /// An iterator over the slots of [`UnitBuy::true_form_material_slots`] that
     /// name a real requirement.
     pub fn true_form_materials(&self) -> impl Iterator<Item = EvolveMaterial> {
-        self.true_form_material_slots().into_iter().filter(EvolveMaterial::is_occupied)
+        self.true_form_material_slots()
+            .into_iter()
+            .filter(EvolveMaterial::is_occupied)
     }
 
     /// Yields the Ultra form evolution's occupied material slots in table order.
@@ -451,7 +456,9 @@ impl UnitBuy {
     /// An iterator over the slots of [`UnitBuy::ultra_form_material_slots`] that
     /// name a real requirement.
     pub fn ultra_form_materials(&self) -> impl Iterator<Item = EvolveMaterial> {
-        self.ultra_form_material_slots().into_iter().filter(EvolveMaterial::is_occupied)
+        self.ultra_form_material_slots()
+            .into_iter()
+            .filter(EvolveMaterial::is_occupied)
     }
 
     fn from_csv_line(csv_line: &str, delimiter: char) -> Self {
@@ -481,12 +488,18 @@ impl UnitBuy {
     /// # Returns
     /// A `Result` containing the parsed rows keyed by unit identifier on
     /// success, or a `UnitBuyError` if the file contained no parseable rows.
-    pub fn parse<B: AsRef<[u8]>>(bytes: B, separator: Option<Separator>) -> Result<HashMap<u32, Self>, UnitBuyError> {
+    pub fn parse<B: AsRef<[u8]>>(
+        bytes: B,
+        separator: Option<Separator>,
+    ) -> Result<HashMap<u32, Self>, UnitBuyError> {
         parse_inner(bytes.as_ref(), separator)
     }
 }
 
-fn parse_inner(bytes: &[u8], separator: Option<Separator>) -> Result<HashMap<u32, UnitBuy>, UnitBuyError> {
+fn parse_inner(
+    bytes: &[u8],
+    separator: Option<Separator>,
+) -> Result<HashMap<u32, UnitBuy>, UnitBuyError> {
     let file_content = file::scrub(bytes);
     let delimiter = file::resolve(separator, &file_content);
 
@@ -539,7 +552,7 @@ mod tests {
         "fanfare_tier",
         "level_cap_ch2",
         "base_max_plus_level",
-        "evolve_level_xp",
+        "true_form_obtain_level",
         "evolved_form_unlock_level",
         "level_cap_ch1",
         "true_form_id",
@@ -643,13 +656,19 @@ mod tests {
         assert_eq!(row.currency_type, 0, "currency_type");
         assert_eq!(row.rarity, 1, "rarity");
         assert_eq!(row.guide_order, 1000150, "guide_order");
-        assert_eq!(row.chapter_unlock_requirement, 0, "chapter_unlock_requirement");
+        assert_eq!(
+            row.chapter_unlock_requirement, 0,
+            "chapter_unlock_requirement"
+        );
         assert_eq!(row.sell_xp_yield, 999, "sell_xp_yield");
         assert_eq!(row.fanfare_tier, 3, "fanfare_tier");
         assert_eq!(row.level_cap_ch2, 20, "level_cap_ch2");
         assert_eq!(row.base_max_plus_level, 0, "base_max_plus_level");
-        assert_eq!(row.evolve_level_xp, -1, "evolve_level_xp");
-        assert_eq!(row.evolved_form_unlock_level, 10, "evolved_form_unlock_level");
+        assert_eq!(row.true_form_obtain_level, -1, "true_form_obtain_level");
+        assert_eq!(
+            row.evolved_form_unlock_level, 10,
+            "evolved_form_unlock_level"
+        );
         assert_eq!(row.level_cap_ch1, 10, "level_cap_ch1");
         assert_eq!(row.true_form_id, 15017, "true_form_id");
         assert_eq!(row.ultra_form_id, 0, "ultra_form_id");
@@ -657,31 +676,67 @@ mod tests {
         assert_eq!(row.ultra_form_unlock_level, -1, "ultra_form_unlock_level");
         assert_eq!(row.true_form_xp_cost, 500000, "true_form_xp_cost");
         assert_eq!(row.true_form_material_1_id, 31, "true_form_material_1_id");
-        assert_eq!(row.true_form_material_1_quantity, 3, "true_form_material_1_quantity");
+        assert_eq!(
+            row.true_form_material_1_quantity, 3,
+            "true_form_material_1_quantity"
+        );
         assert_eq!(row.true_form_material_2_id, 32, "true_form_material_2_id");
-        assert_eq!(row.true_form_material_2_quantity, 3, "true_form_material_2_quantity");
+        assert_eq!(
+            row.true_form_material_2_quantity, 3,
+            "true_form_material_2_quantity"
+        );
         assert_eq!(row.true_form_material_3_id, 34, "true_form_material_3_id");
-        assert_eq!(row.true_form_material_3_quantity, 3, "true_form_material_3_quantity");
+        assert_eq!(
+            row.true_form_material_3_quantity, 3,
+            "true_form_material_3_quantity"
+        );
         assert_eq!(row.true_form_material_4_id, 43, "true_form_material_4_id");
-        assert_eq!(row.true_form_material_4_quantity, 1, "true_form_material_4_quantity");
+        assert_eq!(
+            row.true_form_material_4_quantity, 1,
+            "true_form_material_4_quantity"
+        );
         assert_eq!(row.true_form_material_5_id, 164, "true_form_material_5_id");
-        assert_eq!(row.true_form_material_5_quantity, 1, "true_form_material_5_quantity");
+        assert_eq!(
+            row.true_form_material_5_quantity, 1,
+            "true_form_material_5_quantity"
+        );
         assert_eq!(row.ultra_form_xp_cost, 0, "ultra_form_xp_cost");
         assert_eq!(row.ultra_form_material_1_id, 0, "ultra_form_material_1_id");
-        assert_eq!(row.ultra_form_material_1_quantity, 0, "ultra_form_material_1_quantity");
+        assert_eq!(
+            row.ultra_form_material_1_quantity, 0,
+            "ultra_form_material_1_quantity"
+        );
         assert_eq!(row.ultra_form_material_2_id, 0, "ultra_form_material_2_id");
-        assert_eq!(row.ultra_form_material_2_quantity, 0, "ultra_form_material_2_quantity");
+        assert_eq!(
+            row.ultra_form_material_2_quantity, 0,
+            "ultra_form_material_2_quantity"
+        );
         assert_eq!(row.ultra_form_material_3_id, 0, "ultra_form_material_3_id");
-        assert_eq!(row.ultra_form_material_3_quantity, 0, "ultra_form_material_3_quantity");
+        assert_eq!(
+            row.ultra_form_material_3_quantity, 0,
+            "ultra_form_material_3_quantity"
+        );
         assert_eq!(row.ultra_form_material_4_id, 0, "ultra_form_material_4_id");
-        assert_eq!(row.ultra_form_material_4_quantity, 0, "ultra_form_material_4_quantity");
+        assert_eq!(
+            row.ultra_form_material_4_quantity, 0,
+            "ultra_form_material_4_quantity"
+        );
         assert_eq!(row.ultra_form_material_5_id, 0, "ultra_form_material_5_id");
-        assert_eq!(row.ultra_form_material_5_quantity, 0, "ultra_form_material_5_quantity");
+        assert_eq!(
+            row.ultra_form_material_5_quantity, 0,
+            "ultra_form_material_5_quantity"
+        );
         assert_eq!(row.level_cap_standard, 30, "level_cap_standard");
         assert_eq!(row.level_cap_catseye, 50, "level_cap_catseye");
         assert_eq!(row.level_cap_plus, 0, "level_cap_plus");
-        assert_eq!(row.normal_evolution_y_offset, 0, "normal_evolution_y_offset");
-        assert_eq!(row.evolved_evolution_y_offset, 0, "evolved_evolution_y_offset");
+        assert_eq!(
+            row.normal_evolution_y_offset, 0,
+            "normal_evolution_y_offset"
+        );
+        assert_eq!(
+            row.evolved_evolution_y_offset, 0,
+            "evolved_evolution_y_offset"
+        );
         assert_eq!(row.true_evolution_y_offset, 0, "true_evolution_y_offset");
         assert_eq!(row.ultra_evolution_y_offset, 0, "ultra_evolution_y_offset");
         assert_eq!(row.unknown_56, 2, "unknown_56");
@@ -700,7 +755,9 @@ mod tests {
 
         assert_eq!(
             row.upgrade_costs(),
-            [50, 100, 3100, 7100, 12100, 18100, 25100, 33100, 42100, 52100]
+            [
+                50, 100, 3100, 7100, 12100, 18100, 25100, 33100, 42100, 52100
+            ]
         );
 
         let occupied: Vec<(i32, i32)> = row
@@ -758,6 +815,9 @@ mod tests {
 
     #[test]
     fn a_file_with_no_rows_is_an_error() {
-        assert_eq!(UnitBuy::parse("\n\n", None).unwrap_err(), UnitBuyError::EmptyFile);
+        assert_eq!(
+            UnitBuy::parse("\n\n", None).unwrap_err(),
+            UnitBuyError::EmptyFile
+        );
     }
 }
