@@ -174,8 +174,8 @@ pub struct UnitBuy {
     pub true_evolution_y_offset: i32,
     /// The vertical sprite offset applied to the Ultra form on the evolution screen.
     pub ultra_evolution_y_offset: i32,
-    /// A column present in the raw data whose effect on the engine is not established.
-    pub unknown_56: i32,
+    /// The group of unititempowerup.json entries holding the unit's Catseye level cap steps, keyed together with the rarity, or zero when the unit has none.
+    pub item_powerup_group: i32,
     /// The game version in which the unit was introduced, encoded as a packed integer.
     pub version_added: i32,
     /// The Neko Points refunded when the unit is sold.
@@ -260,7 +260,7 @@ impl Default for UnitBuy {
             evolved_evolution_y_offset: 0,
             true_evolution_y_offset: 0,
             ultra_evolution_y_offset: 0,
-            unknown_56: 0,
+            item_powerup_group: 0,
             version_added: -1,
             sell_np_yield: 0,
             true_form_event_id: 0,
@@ -337,7 +337,7 @@ impl UnitBuy {
         evolved_evolution_y_offset     : 53;
         true_evolution_y_offset        : 54;
         ultra_evolution_y_offset       : 55;
-        unknown_56                     : 56;
+        item_powerup_group             : 56;
         version_added                  : 57, Raw, -1;
         sell_np_yield                  : 58;
         true_form_event_id             : 59;
@@ -588,7 +588,7 @@ mod tests {
         "evolved_evolution_y_offset",
         "true_evolution_y_offset",
         "ultra_evolution_y_offset",
-        "unknown_56",
+        "item_powerup_group",
         "version_added",
         "sell_np_yield",
         "true_form_event_id",
@@ -739,7 +739,7 @@ mod tests {
         );
         assert_eq!(row.true_evolution_y_offset, 0, "true_evolution_y_offset");
         assert_eq!(row.ultra_evolution_y_offset, 0, "ultra_evolution_y_offset");
-        assert_eq!(row.unknown_56, 2, "unknown_56");
+        assert_eq!(row.item_powerup_group, 2, "item_powerup_group");
         assert_eq!(row.version_added, 0, "version_added");
         assert_eq!(row.sell_np_yield, 1, "sell_np_yield");
         assert_eq!(row.true_form_event_id, 0, "true_form_event_id");
