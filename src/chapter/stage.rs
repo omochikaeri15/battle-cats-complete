@@ -3,6 +3,7 @@
 //! This module re-exports the aggregate [`Stage`] structure alongside every
 //! specialized parser and error type that contributes to it.
 
+mod background;
 mod battleground;
 mod certification_preset;
 mod charagroup;
@@ -22,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::chapter::Category;
 
+pub use background::{Background, BackgroundEntry, BackgroundError, Rgba};
 pub use battleground::{Battleground, BattlegroundEntry, BattlegroundError, BossType, EnemyAmount};
 pub use certification_preset::{AbilityType, CannonType, CertificationPreset, CertificationPresetError, EvolutionForm, PresetAbility, PresetChara, PresetTreasure, TreasureType};
 pub use charagroup::{CharaGroup, CharaGroupEntry, CharaGroupError, CharaGroupType};
