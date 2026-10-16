@@ -1218,7 +1218,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                             std_shared_ptr_texture_reset(
                                                 &mut ctx.unit_info_texts[3],
                                             );
-                                            load_conjure_desc_textures(ctx, 1, unit_id, 0)?;
+                                            load_conjure_desc_textures(ctx, 1, unit_id, 0, -1)?;
                                         } else if index == ctx.i32_at(AppContext::DECK_HOLD_SLOT)? {
                                             ctx.set_i32_at(
                                                 AppContext::DECK_HOLD_FRAMES,

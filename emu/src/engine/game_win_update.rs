@@ -20,11 +20,11 @@ use super::{
     get_stage_index, get_stage_name, handle_battle_swipe_pinch, has_inquiry_code, hidden_drop_key,
     hit_test_rect, imgcut_get_sprite_cut, is_score_stage, labyrinth_active, labyrinth_rank,
     labyrinth_result_ready, labyrinth_submit, labyrinth_unit_count, map_index_of_map_id,
-    map_type_of_map_id, message_layer_set, min_i32, new_button_register, new_button_set_animated,
-    new_button_set_touchable, play_sound, query_localizable, reward_def_lookup, sound_manager,
-    stage_pair_record, string_format_int, string_format_rank_comment, substitute_tokens,
-    texture_cache_load, touch_is_down, touch_released, ui_node_add_child, ui_node_set_anchor,
-    ui_node_set_sprite, xor_row46_get,
+    map_type_of_map_id, message_layer_clear, message_layer_set, min_i32, new_button_register,
+    new_button_set_animated, new_button_set_touchable, play_sound, query_localizable,
+    reward_def_lookup, sound_manager, stage_pair_record, string_format_int,
+    string_format_rank_comment, substitute_tokens, texture_cache_load, touch_is_down,
+    touch_released, ui_node_add_child, ui_node_set_anchor, ui_node_set_sprite, xor_row46_get,
 };
 
 pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
@@ -148,6 +148,8 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             }
 
             let unlocked = ctx.i32_at(AppContext::NEXT_STAGE_UNLOCKED)?;
+
+            message_layer_clear(ctx, 0x69);
 
             let text = query_localizable(ctx, b"treasure_effect_popup");
             let name = ctx

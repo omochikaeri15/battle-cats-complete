@@ -17,7 +17,7 @@ pub fn unit_info_select(ctx: &mut AppContext, slot: i32) -> Result<(), Fault> {
     ctx.unit_info_texts[2] = None;
     ctx.unit_info_texts[3] = None;
 
-    load_conjure_desc_textures(ctx, 1, unit_id, 0)?;
+    load_conjure_desc_textures(ctx, 1, unit_id, 0, -1)?;
 
     Ok(())
 }

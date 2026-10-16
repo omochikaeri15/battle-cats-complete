@@ -129,6 +129,7 @@ pub fn unit_meets_restriction(
     else {
         return Ok(true);
     };
+    let params = params.clone();
     let mut counts: BTreeMap<i32, i32> = BTreeMap::new();
 
     if slot > 0 {
@@ -145,24 +146,35 @@ pub fn unit_meets_restriction(
                 (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
             )?);
 
-            if ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32
-                <= 1
-            {
+            let mut cell =
+                ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32;
+
+            if ctx.i32_at(AppContext::SCENE_0X64_PAGE)? != 3 {
+                if in_battle != 0 {
+                    pair[..4].copy_from_slice(
+                        &ctx.block_at::<4>((scan * 4 + AppContext::BATTLE_DECK as i64) as usize)?,
+                    );
+                    pair[4..].copy_from_slice(
+                        &ctx.block_at::<4>(AppContext::BATTLE_DECK + AppContext::DECK_KEY)?,
+                    );
+                    cell = ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))?
+                        as i32;
+                } else if ctx.u8_at(AppContext::USE_BUILT_DECK)? != 0 {
+                    let stage_key = get_built_deck_stage_key(ctx)?;
+                    let rows = get_built_deck_rows(ctx, stage_key)?;
+
+                    cell = rows
+                        .get(scan as usize)
+                        .ok_or(Fault::index_out_of_range(scan, 10))?
+                        .0 as i32;
+                }
+            }
+
+            if cell < 2 {
                 break;
             }
 
-            let preset = (ctx.i32_at(AppContext::SELECTED_DECK_PRESET)? as i64)
-                * AppContext::DECK_STRIDE as i64;
-
-            pair[..4].copy_from_slice(
-                &ctx.block_at::<4>((preset + scan * 4 + AppContext::DECK_PRESETS as i64) as usize)?,
-            );
-            pair[4..].copy_from_slice(&ctx.block_at::<4>(
-                (preset + (AppContext::DECK_PRESETS + AppContext::DECK_KEY) as i64) as usize,
-            )?);
-
-            let listed = (ops::xor_row_decode(&pair, 1, 0).ok_or(Fault::index_out_of_range(0, 1))? as i32)
-                .wrapping_add(-2);
+            let listed = cell.wrapping_add(-2);
             let rarity = get_unit_rarity(ctx, listed)?;
             let count = counts.entry(rarity).or_insert(0);
 

@@ -9,8 +9,14 @@ pub fn load_conjure_desc_textures(
     first_slot: usize,
     unit_id: i32,
     index: i32,
+    form: i32,
 ) -> Result<i32, Fault> {
-    let form = get_unit_form(ctx, unit_id)?;
+    let mut form = form;
+
+    if form == -1 {
+        form = get_unit_form(ctx, unit_id)?;
+    }
+
     let spirit = stat_conjure_unit_id(ctx, 0, unit_id, form)?;
 
     if spirit < 0 {
