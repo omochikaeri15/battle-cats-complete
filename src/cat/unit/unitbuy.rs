@@ -93,16 +93,16 @@ pub struct UnitBuy {
     pub chapter_unlock_requirement: i32,
     /// The experience refunded when the unit is sold.
     pub sell_xp_yield: i32,
-    /// A column present in the raw data whose effect on the engine is not established.
-    pub unknown_17: i32,
+    /// The tier of the fanfare played when the unit is obtained, on the same scale as the rarity column of the item table.
+    pub fanfare_tier: i32,
     /// The maximum level attainable after clearing the second chapter.
     pub level_cap_ch2: i32,
     /// The maximum plus level attainable before any cap extension is applied.
     pub base_max_plus_level: i32,
     /// The experience required to perform the standard evolution.
     pub evolve_level_xp: i32,
-    /// A column present in the raw data whose effect on the engine is not established.
-    pub unknown_21: i32,
+    /// The level the unit must reach before the evolved form becomes available.
+    pub evolved_form_unlock_level: i32,
     /// The maximum level attainable after clearing the first chapter.
     pub level_cap_ch1: i32,
     /// The identifier of the unit's True form, or zero when the unit has none.
@@ -177,10 +177,10 @@ pub struct UnitBuy {
     pub version_added: i32,
     /// The Neko Points refunded when the unit is sold.
     pub sell_np_yield: i32,
-    /// A column present in the raw data whose effect on the engine is not established.
-    pub unknown_59: i32,
-    /// A column present in the raw data whose effect on the engine is not established.
-    pub unknown_60: i32,
+    /// The identifier of the scheduled event that unlocks the True form while it runs, or zero when no event does.
+    pub true_form_event_id: i32,
+    /// Non-zero when the unit's plus level cap rises over time, which makes the cap-reached notice name the current cap.
+    pub plus_cap_grows: i32,
     /// The raw egg identifier for the unit's base form, or negative one when it is not an egg unit.
     /// Prefer [`UnitBuy::egg_ids`] over reading this sentinel directly.
     pub egg_id_normal: i32,
@@ -218,11 +218,11 @@ impl Default for UnitBuy {
             guide_order: -1,
             chapter_unlock_requirement: 0,
             sell_xp_yield: 0,
-            unknown_17: 0,
+            fanfare_tier: 0,
             level_cap_ch2: 0,
             base_max_plus_level: 0,
             evolve_level_xp: -1,
-            unknown_21: 0,
+            evolved_form_unlock_level: 0,
             level_cap_ch1: 0,
             true_form_id: 0,
             ultra_form_id: 0,
@@ -260,8 +260,8 @@ impl Default for UnitBuy {
             unknown_56: 0,
             version_added: -1,
             sell_np_yield: 0,
-            unknown_59: 0,
-            unknown_60: 0,
+            true_form_event_id: 0,
+            plus_cap_grows: 0,
             egg_id_normal: -1,
             egg_id_evolved: -1,
             rest: Vec::new(),
@@ -295,11 +295,11 @@ impl UnitBuy {
         guide_order                    : 14, Raw, -1;
         chapter_unlock_requirement     : 15;
         sell_xp_yield                  : 16;
-        unknown_17                     : 17;
+        fanfare_tier                   : 17;
         level_cap_ch2                  : 18;
         base_max_plus_level            : 19;
         evolve_level_xp                : 20, Raw, -1;
-        unknown_21                     : 21;
+        evolved_form_unlock_level      : 21;
         level_cap_ch1                  : 22;
         true_form_id                   : 23;
         ultra_form_id                  : 24;
@@ -337,8 +337,8 @@ impl UnitBuy {
         unknown_56                     : 56;
         version_added                  : 57, Raw, -1;
         sell_np_yield                  : 58;
-        unknown_59                     : 59;
-        unknown_60                     : 60;
+        true_form_event_id             : 59;
+        plus_cap_grows                 : 60;
         egg_id_normal                  : 61, Raw, -1;
         egg_id_evolved                 : 62, Raw, -1;
     };
@@ -536,11 +536,11 @@ mod tests {
         "guide_order",
         "chapter_unlock_requirement",
         "sell_xp_yield",
-        "unknown_17",
+        "fanfare_tier",
         "level_cap_ch2",
         "base_max_plus_level",
         "evolve_level_xp",
-        "unknown_21",
+        "evolved_form_unlock_level",
         "level_cap_ch1",
         "true_form_id",
         "ultra_form_id",
@@ -578,8 +578,8 @@ mod tests {
         "unknown_56",
         "version_added",
         "sell_np_yield",
-        "unknown_59",
-        "unknown_60",
+        "true_form_event_id",
+        "plus_cap_grows",
         "egg_id_normal",
         "egg_id_evolved",
     ];
@@ -645,11 +645,11 @@ mod tests {
         assert_eq!(row.guide_order, 1000150, "guide_order");
         assert_eq!(row.chapter_unlock_requirement, 0, "chapter_unlock_requirement");
         assert_eq!(row.sell_xp_yield, 999, "sell_xp_yield");
-        assert_eq!(row.unknown_17, 3, "unknown_17");
+        assert_eq!(row.fanfare_tier, 3, "fanfare_tier");
         assert_eq!(row.level_cap_ch2, 20, "level_cap_ch2");
         assert_eq!(row.base_max_plus_level, 0, "base_max_plus_level");
         assert_eq!(row.evolve_level_xp, -1, "evolve_level_xp");
-        assert_eq!(row.unknown_21, 10, "unknown_21");
+        assert_eq!(row.evolved_form_unlock_level, 10, "evolved_form_unlock_level");
         assert_eq!(row.level_cap_ch1, 10, "level_cap_ch1");
         assert_eq!(row.true_form_id, 15017, "true_form_id");
         assert_eq!(row.ultra_form_id, 0, "ultra_form_id");
@@ -687,8 +687,8 @@ mod tests {
         assert_eq!(row.unknown_56, 2, "unknown_56");
         assert_eq!(row.version_added, 0, "version_added");
         assert_eq!(row.sell_np_yield, 1, "sell_np_yield");
-        assert_eq!(row.unknown_59, 0, "unknown_59");
-        assert_eq!(row.unknown_60, 0, "unknown_60");
+        assert_eq!(row.true_form_event_id, 0, "true_form_event_id");
+        assert_eq!(row.plus_cap_grows, 0, "plus_cap_grows");
         assert_eq!(row.egg_id_normal, -1, "egg_id_normal");
         assert_eq!(row.egg_id_evolved, -1, "egg_id_evolved");
         assert!(row.rest.is_empty());
