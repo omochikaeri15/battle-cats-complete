@@ -23,6 +23,7 @@ pub struct AppState {
     pub(crate) files: FilesState,
     pub(crate) data: GameDataState,
     pub(crate) animation: AnimState,
+    pub(crate) background: BackgroundState,
     pub(crate) studio: StudioState,
     pub(crate) notice: NoticeState,
     pub(crate) help: HelpState,
@@ -288,6 +289,26 @@ impl Default for AnimState {
             placement: Placement::default(),
             pan: (0.0, 0.0),
             zoom: 1.0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub(crate) struct BackgroundState {
+    pub last_export_format: ExportFormat,
+    pub last_export_quality: Option<i32>,
+    pub last_export_compression: Option<i32>,
+    pub controls_expanded: bool,
+}
+
+impl Default for BackgroundState {
+    fn default() -> Self {
+        Self {
+            last_export_format: ExportFormat::Gif,
+            last_export_quality: None,
+            last_export_compression: None,
+            controls_expanded: true,
         }
     }
 }

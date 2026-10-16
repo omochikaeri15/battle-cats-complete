@@ -539,7 +539,7 @@ impl BattleCatsApp {
             self.cat_state.subscription().map(Message::Cat),
             self.enemy_state.subscription().map(Message::Enemy),
             self.import_state.subscription().map(Message::Import),
-            self.utilities_state.subscription().map(Message::Utilities),
+            self.utilities_state.subscription(self.current_page == Page::Utilities).map(Message::Utilities),
             Subscription::run(watcher::changes).map(Message::FilesChanged),
             window::close_requests().map(Message::CloseRequested),
             iced::event::listen_with(fullscreen_key),
@@ -941,13 +941,14 @@ impl BattleCatsApp {
 
             let adopted = self.adopt_vault(rebuilt, false);
             let replayed = self.replay_changes();
+            let refreshed = self.utilities_state.invalidate(&self.vault).map(Message::Utilities);
 
             if !queued {
-                return Task::batch([adopted, replayed]);
+                return Task::batch([adopted, replayed, refreshed]);
             }
 
             info!("More changes landed mid-validation, indexing again");
-            return Task::batch([adopted, replayed, self.rebuild_content()]);
+            return Task::batch([adopted, replayed, refreshed, self.rebuild_content()]);
         }
 
         self.replay.clear();
@@ -1429,16 +1430,17 @@ impl BattleCatsApp {
             }
             Message::FilesChanged(Change::Batch(paths)) => {
                 let replays = paths.iter().any(|path| sandbox::State::is_replay(path));
+                let utilities = self.utilities_state.files_changed(&paths, &self.vault).map(Message::Utilities);
                 let task = self.apply_changes(paths, true);
                 self.sync_editor(true);
 
                 if !replays {
-                    return task;
+                    return Task::batch([task, utilities]);
                 }
 
                 let relisted = self.sandbox_state.relist_replays(&self.settings, &self.localizable).map(Message::Sandbox);
 
-                Task::batch([task, relisted])
+                Task::batch([task, relisted, utilities])
             }
             Message::IndexPersisted => {
                 self.index_persisting = false;
@@ -1705,7 +1707,7 @@ impl BattleCatsApp {
                 task
             }
             Message::Utilities(msg) => {
-                let task = self.utilities_state.update(msg, &mut self.settings, &mut self.app_state).map(Message::Utilities);
+                let task = self.utilities_state.update(msg, &mut self.settings, &mut self.app_state, &self.vault).map(Message::Utilities);
                 self.sync_popup(ActivePopup::UtilityExport, self.utilities_state.export_popup_visible());
                 self.sync_popup(ActivePopup::UtilitySettings, self.utilities_state.settings_popup_visible());
                 task

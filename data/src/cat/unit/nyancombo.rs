@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::file::{self, Separator};
 
+/// The characters a table leaves in a line that holds no name, which draw nothing.
+const INVISIBLE: [char; 6] = ['\u{200b}', '\u{200c}', '\u{200d}', '\u{2060}', '\u{feff}', '\u{00ad}'];
+
 /// Represents errors that can occur while parsing a localized combo text table.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -96,8 +99,12 @@ fn parse_line(line: &str, separator: Option<Separator>) -> Nyancombo {
     );
 
     Nyancombo {
-        text: (!stripped.trim().is_empty()).then(|| stripped.to_owned()),
+        text: (!is_blank(stripped)).then(|| stripped.to_owned()),
     }
+}
+
+fn is_blank(text: &str) -> bool {
+    text.chars().all(|c| c.is_whitespace() || c.is_control() || INVISIBLE.contains(&c))
 }
 
 fn parse_inner(bytes: &[u8], separator: Option<Separator>) -> Result<Vec<Nyancombo>, NyancomboError> {
@@ -179,6 +186,15 @@ mod tests {
         );
 
         assert_eq!(described, "Unit Attack Up (Sm)");
+    }
+
+    #[test]
+    fn an_invisible_placeholder_counts_as_a_blank_line() {
+        let parsed = Nyancombo::parse("Cat Army\n\u{200b}\n\u{feff}  \nRed Strike\n", None).expect("the table parses");
+
+        assert_eq!(parsed[1].text, None);
+        assert_eq!(parsed[2].text, None);
+        assert_eq!(parsed[3].text.as_deref(), Some("Red Strike"));
     }
 
     #[test]

@@ -9,8 +9,9 @@ use gif::{
     Frame as GifFrame, Repeat as GifRepeat,
 };
 use image::RgbaImage;
+use rayon::prelude::*;
 use tracing::{error, info, warn};
-use webp_animation::Encoder as WebpEncoder;
+use webp_animation::{Encoder as WebpEncoder, EncoderOptions, EncodingConfig, EncodingType};
 
 use super::{EncoderMessage, EncoderStatus, ExportConfig, ExportFormat};
 
@@ -41,19 +42,36 @@ pub(crate) fn encode_native(
                 warn!("Failed to set GIF repeat loop: {}", e);
             }
 
-            while let Ok(message) = receiver.recv() {
+            let speed = quantizer_speed(config.quality_percent);
+            let batch_size = rayon::current_num_threads().max(1);
+            let mut batch: Vec<(Vec<u8>, u32, u32, u32)> = Vec::with_capacity(batch_size);
+            let mut finished = false;
+
+            while !finished {
+                batch.clear();
+
+                while batch.len() < batch_size {
+                    match receiver.recv() {
+                        Ok(EncoderMessage::Frame(raw_pixels, width, height, delay)) => batch.push((raw_pixels, width, height, delay)),
+                        Ok(EncoderMessage::Finish) | Err(_) => {
+                            finished = true;
+                            break;
+                        }
+                    }
+                }
+
                 if abort_signal.load(Ordering::Relaxed) {
                     info!("GIF encoding aborted midway.");
                     return false;
                 }
 
-                match message {
-                    EncoderMessage::Frame(raw_pixels, width, height, delay_milliseconds) => {
+                let quantized: Vec<GifFrame<'static>> = batch
+                    .par_drain(..)
+                    .map(|(raw_pixels, width, height, delay_milliseconds)| {
                         let image_data = prepare_image(raw_pixels, width, height, config.background);
-                        let mut frame_ticks = (delay_milliseconds as f32 / 10.0).round() as u16;
-                        if frame_ticks < 2 { frame_ticks = 2; }
-
+                        let frame_ticks = ((delay_milliseconds as f32 / 10.0).round() as u16).max(2);
                         let mut pixel_buffer = image_data.into_vec();
+
                         if !config.background {
                             for chunk in pixel_buffer.chunks_exact_mut(4) {
                                 if chunk[3] < 127 {
@@ -64,27 +82,36 @@ pub(crate) fn encode_native(
                             }
                         }
 
-                        let mut gif_frame = GifFrame::from_rgba(config.width as u16, config.height as u16, &mut pixel_buffer);
+                        let mut gif_frame = GifFrame::from_rgba_speed(config.width as u16, config.height as u16, &mut pixel_buffer, speed);
                         gif_frame.dispose = DisposalMethod::Background;
                         gif_frame.delay = frame_ticks;
+                        gif_frame
+                    })
+                    .collect();
 
-                        if let Err(e) = gif_encoder.write_frame(&gif_frame) {
-                            error!("Native GIF encoder broke during write_frame: {}", e);
-                            break;
-                        }
-
-                        frames_processed += 1;
-                        emit(EncoderStatus::Progress(frames_processed));
-                    },
-                    EncoderMessage::Finish => {
-                        is_success = true;
-                        break;
+                for gif_frame in &quantized {
+                    if let Err(e) = gif_encoder.write_frame(gif_frame) {
+                        error!("Native GIF encoder broke during write_frame: {}", e);
+                        return false;
                     }
+
+                    frames_processed += 1;
+                    emit(EncoderStatus::Progress(frames_processed));
                 }
             }
+
+            is_success = true;
         },
         ExportFormat::WebP => {
-            let Ok(mut webp_encoder) = WebpEncoder::new((config.width, config.height)) else {
+            let options = EncoderOptions {
+                encoding_config: Some(EncodingConfig {
+                    encoding_type: EncodingType::new_lossy(),
+                    quality: config.quality_percent.min(100) as f32,
+                    method: config.compression_percent.min(100) as usize * WEBP_SLOWEST_METHOD / 100,
+                }),
+                ..EncoderOptions::default()
+            };
+            let Ok(mut webp_encoder) = WebpEncoder::new_with_options((config.width, config.height), options) else {
                 error!("Failed to instantiate native WebP encoder.");
                 return false;
             };
@@ -200,6 +227,16 @@ pub(crate) fn encode_native(
         }
     }
     is_success
+}
+
+const WEBP_SLOWEST_METHOD: usize = 6;
+const QUANTIZER_SLOWEST: i32 = 1;
+const QUANTIZER_FASTEST: i32 = 30;
+
+fn quantizer_speed(quality_percent: u32) -> i32 {
+    let quality = quality_percent.min(100) as i32;
+
+    (QUANTIZER_FASTEST - quality * (QUANTIZER_FASTEST - QUANTIZER_SLOWEST) / 100).clamp(QUANTIZER_SLOWEST, QUANTIZER_FASTEST)
 }
 
 pub(crate) fn prepare_image(mut pixel_buffer: Vec<u8>, width: u32, height: u32, is_opaque_background: bool) -> RgbaImage {

@@ -1,11 +1,16 @@
 mod animation;
+mod background;
 mod clone;
 mod imgcut;
+
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use iced::widget::{column, container, row, scrollable};
 use iced::{Element, Length, Size, Subscription, Task};
 
 use kore::domains::settings::Settings;
+use kore::Vault;
 
 use crate::app::state::AppState;
 use crate::app::theme;
@@ -16,13 +21,19 @@ const SIDEBAR_PADDING: f32 = 8.0;
 const ROW_GAP: f32 = 4.0;
 const LABEL_SIZE: f32 = 14.0;
 
-const TOOLS: [(&str, Tool); 3] = [("Imgcut", Tool::Imgcut), ("Animation", Tool::Animation), ("Clone", Tool::Clone)];
+const TOOLS: [(&str, Tool); 4] = [
+    ("Imgcut", Tool::Imgcut),
+    ("Animation", Tool::Animation),
+    ("Background", Tool::Background),
+    ("Clone", Tool::Clone),
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tool {
     #[default]
     Imgcut,
     Animation,
+    Background,
     Clone,
 }
 
@@ -31,6 +42,7 @@ pub enum Message {
     ToolSelected(Tool),
     Imgcut(imgcut::Message),
     Animation(animation::Message),
+    Background(background::Message),
     Clone(clone::Message),
 }
 
@@ -39,35 +51,59 @@ pub struct State {
     tool: Tool,
     imgcut: imgcut::State,
     animation: animation::State,
+    background: background::State,
     clone: clone::State,
 }
 
 impl State {
-    pub fn subscription(&self) -> Subscription<Message> {
-        if self.tool != Tool::Animation {
-            return Subscription::none();
+    pub fn subscription(&self, shown: bool) -> Subscription<Message> {
+        match self.tool {
+            Tool::Animation => {
+                iced::time::every(self.animation.pace()).map(|_| Message::Animation(animation::Message::Tick))
+            }
+            Tool::Background if shown => {
+                iced::time::every(self.background.pace()).map(|_| Message::Background(background::Message::Tick))
+            }
+            Tool::Background | Tool::Imgcut | Tool::Clone => Subscription::none(),
         }
-
-        iced::time::every(self.animation.pace()).map(|_| Message::Animation(animation::Message::Tick))
     }
 
-    pub fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState) -> Task<Message> {
+    pub fn update(
+        &mut self,
+        message: Message,
+        settings: &mut Settings,
+        app_state: &mut AppState,
+        vault: &Arc<Vault>,
+    ) -> Task<Message> {
         match message {
             Message::ToolSelected(tool) => {
                 self.tool = tool;
 
-                if tool == Tool::Animation {
-                    let tick = Task::done(Message::Animation(animation::Message::Tick));
+                match tool {
+                    Tool::Animation => {
+                        let tick = Task::done(Message::Animation(animation::Message::Tick));
 
-                    return Task::batch([tick, self.export_scroll_task()]);
+                        Task::batch([tick, self.export_scroll_task()])
+                    }
+                    Tool::Background => Task::done(Message::Background(background::Message::Tick)),
+                    Tool::Imgcut | Tool::Clone => Task::none(),
                 }
-
-                Task::none()
             }
             Message::Imgcut(msg) => self.imgcut.update(msg).map(Message::Imgcut),
             Message::Animation(msg) => self.animation.update(msg, settings, app_state).map(Message::Animation),
+            Message::Background(msg) => {
+                self.background.update(msg, vault, &mut app_state.background).map(Message::Background)
+            }
             Message::Clone(msg) => self.clone.update(msg).map(Message::Clone),
         }
+    }
+
+    pub(crate) fn files_changed(&mut self, paths: &[PathBuf], vault: &Arc<Vault>) -> Task<Message> {
+        self.background.files_changed(paths, vault).map(Message::Background)
+    }
+
+    pub(crate) fn invalidate(&mut self, vault: &Arc<Vault>) -> Task<Message> {
+        self.background.invalidate(vault).map(Message::Background)
     }
 
     pub fn export_popup_visible(&self) -> bool {
@@ -122,6 +158,7 @@ impl State {
         let body = match self.tool {
             Tool::Imgcut => self.imgcut.view().map(Message::Imgcut),
             Tool::Animation => self.animation.view(settings, app_state).map(Message::Animation),
+            Tool::Background => self.background.view(&app_state.background).map(Message::Background),
             Tool::Clone => self.clone.view().map(Message::Clone),
         };
 

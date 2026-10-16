@@ -77,6 +77,10 @@ fn table_rows(bytes: &[u8]) -> (Vec<&[u8]>, Option<&[u8]>) {
     (rows, closer)
 }
 
+fn blank_row(row: &[u8]) -> bool {
+    row.iter().all(|byte| byte.is_ascii_whitespace() || *byte == b'|' || *byte == b',')
+}
+
 fn row_key(row: &[u8]) -> &[u8] {
     row.split(|&byte| byte == b'\t').next().unwrap_or(row)
 }
@@ -293,7 +297,7 @@ impl DiskAssets {
         }
 
         let (rows, closer) = table_rows(&own);
-        let donor = APP_LANGUAGES
+        let donors: Vec<(String, Vec<u8>)> = APP_LANGUAGES
             .iter()
             .filter_map(|&(code, _)| {
                 let variant = format!("{head}_{code}.{extension}");
@@ -302,23 +306,50 @@ impl DiskAssets {
                     return None;
                 }
 
-                let bytes = self.plain(&variant)?;
-                let count = table_rows(&bytes).0.len();
-
-                (count > rows.len()).then_some((count, variant, bytes))
+                self.plain(&variant).map(|bytes| (variant, bytes))
             })
-            .max_by_key(|(count, _, _)| *count);
-        let Some((_, variant, bytes)) = donor else {
-            return own;
-        };
+            .collect();
+        let donor_rows: Vec<(&str, Vec<&[u8]>)> = donors.iter().map(|(variant, bytes)| (variant.as_str(), table_rows(bytes).0)).collect();
+        let longest = donor_rows.iter().map(|(_, held)| held.len()).max().unwrap_or(0).max(rows.len());
+        let mut borrowed: Vec<&str> = Vec::new();
+        let mut filled: Vec<u8> = Vec::with_capacity(own.len());
 
-        self.note(&variant);
+        for at in 0..longest {
+            let held = rows.get(at).copied();
+            let row = if held.is_some_and(|row| !blank_row(row)) {
+                held
+            } else {
+                donor_rows
+                    .iter()
+                    .find_map(|(variant, held)| {
+                        let row = held.get(at).copied().filter(|row| !blank_row(row))?;
 
-        let mut filled: Vec<u8> = rows.join(&b'\n');
+                        if !borrowed.contains(variant) {
+                            borrowed.push(variant);
+                        }
 
-        for row in table_rows(&bytes).0.into_iter().skip(rows.len()) {
-            filled.push(b'\n');
+                        Some(row)
+                    })
+                    .or(held)
+                    .or_else(|| donor_rows.iter().find_map(|(_, held)| held.get(at).copied()))
+            };
+            let Some(row) = row else {
+                continue;
+            };
+
+            if at > 0 {
+                filled.push(b'\n');
+            }
+
             filled.extend_from_slice(row);
+        }
+
+        if borrowed.is_empty() && longest == rows.len() {
+            return own;
+        }
+
+        for variant in borrowed {
+            self.note(variant);
         }
 
         if let Some(closer) = closer {
@@ -496,3 +527,4 @@ impl AssetSource for DiskAssets {
         Vec::new()
     }
 }
+
