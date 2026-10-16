@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
 
 use iced::futures::channel::mpsc;
@@ -8,7 +8,7 @@ use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 use tracing::{error, info, warn};
 
 use kore::domains::import;
-use kore::domains::settings::source::{self, ErrorKind, Stamp, Step};
+use kore::domains::settings::source::{self, ErrorKind, Partial, Stamp, Step};
 use kore::domains::settings::{FilesSettings, Settings as CoreSettings, UpdateMode};
 
 use crate::app::state::SourceState;
@@ -63,6 +63,8 @@ pub enum Message {
     Stepped(Step),
     Finished(Result<Stamp, source::Error>),
     Acknowledge,
+    Resume,
+    Abort,
     Popup(popup::Message),
     BannerExpired,
     Agree,
@@ -87,6 +89,7 @@ enum Status {
     Found(String),
     Installing(Progress),
     Installed,
+    Interrupted(ErrorKind),
     Failed(ErrorKind),
 }
 
@@ -95,6 +98,7 @@ pub struct State {
     popup: popup::State,
     status: Status,
     abort: Arc<AtomicBool>,
+    partial: Arc<Mutex<Option<Partial>>>,
     confirm: Slot<()>,
     banner: Slot<()>,
     refreshed: bool,
@@ -111,6 +115,7 @@ impl Default for State {
             popup: popup::State::default(),
             status: Status::default(),
             abort: Arc::default(),
+            partial: Arc::default(),
             confirm: Slot::default(),
             banner: Slot::default(),
             refreshed: false,
@@ -277,10 +282,19 @@ impl State {
 
                 self.install(core_settings.files.source_link.trim().to_owned())
             }
-            Message::Decline | Message::Acknowledge => {
+            Message::Decline | Message::Acknowledge | Message::Abort => {
                 self.settle();
 
                 Task::none()
+            }
+            Message::Resume => {
+                if !matches!(self.status, Status::Interrupted(_)) {
+                    return Task::none();
+                }
+
+                info!("Resuming the game data download");
+
+                self.install(core_settings.files.source_link.trim().to_owned())
             }
             Message::Ignore => {
                 if !self.confirm.take(&()) {
@@ -325,7 +339,11 @@ impl State {
 
                         return Task::none();
                     }
-                    Err(err) => Status::Failed(err.kind),
+                    Err(err) => {
+                        self.status = Status::Interrupted(err.kind);
+
+                        return Task::none();
+                    }
                 };
 
                 if self.is_open {
@@ -344,7 +362,7 @@ impl State {
                 self.is_open = false;
                 self.confirm.clear();
 
-                if matches!(self.status, Status::Found(_) | Status::Installed | Status::Failed(_)) {
+                if matches!(self.status, Status::Found(_) | Status::Installed) {
                     self.status = Status::Idle;
                 }
 
@@ -400,6 +418,7 @@ impl State {
         self.confirm.clear();
         self.banner.clear();
         self.status = Status::Idle;
+        self.partial.lock().unwrap_or_else(PoisonError::into_inner).take();
     }
 
     fn flash(&mut self, status: Status) -> Task<Message> {
@@ -408,7 +427,7 @@ impl State {
     }
 
     fn prompts(&self) -> bool {
-        matches!(self.status, Status::Found(_) | Status::Installing(_) | Status::Installed | Status::Failed(_))
+        matches!(self.status, Status::Found(_) | Status::Installing(_) | Status::Installed | Status::Interrupted(_))
     }
 
     fn install(&mut self, link: String) -> Task<Message> {
@@ -419,19 +438,31 @@ impl State {
         let (tx, rx) = mpsc::unbounded();
         let steps = tx.clone();
         let abort = self.abort.clone();
+        let slot = self.partial.clone();
 
         let spawned = thread::Builder::new().name("source_install".to_owned()).spawn(move || {
+            let partial = slot.lock().unwrap_or_else(PoisonError::into_inner).take();
             let result = source::install(
                 &link,
+                partial,
                 |step| {
                     let _ = steps.unbounded_send(Message::Stepped(step));
                 },
                 &abort,
             );
 
-            if result.is_ok() {
-                import::forget_imports();
-            }
+            let result = match result {
+                Ok(stamp) => {
+                    import::forget_imports();
+
+                    Ok(stamp)
+                }
+                Err(failure) => {
+                    *slot.lock().unwrap_or_else(PoisonError::into_inner) = failure.partial;
+
+                    Err(failure.error)
+                }
+            };
 
             let _ = tx.unbounded_send(Message::Finished(result));
         });
@@ -439,7 +470,7 @@ impl State {
         if let Err(err) = spawned {
             error!("Failed to spawn the game data download thread: {}", err);
             watcher::resume();
-            self.status = Status::Failed(ErrorKind::Disk);
+            self.status = Status::Interrupted(ErrorKind::Disk);
 
             return Task::none();
         }
@@ -510,6 +541,7 @@ impl State {
             Status::Found(_) => ("Files Found!", theme::success_button, Some(Message::Show)),
             Status::Installing(_) => ("Downloading Files...", theme::warning_button, Some(Message::Show)),
             Status::Installed => ("Files Updated!", theme::success_status, None),
+            Status::Interrupted(_) => ("Download Failed!", theme::danger_button, Some(Message::Show)),
             Status::Failed(ErrorKind::Link) => ("Invalid Link!", theme::danger_status, None),
             Status::Failed(ErrorKind::Missing) => ("Folder Not Found!", theme::danger_status, None),
             Status::Failed(ErrorKind::Network) => ("Failed to Check!", theme::danger_status, None),
@@ -546,8 +578,8 @@ impl State {
             Status::Found(_) => "New Files Available",
             Status::Installing(_) => "Downloading Files",
             Status::Installed => "Files Updated",
-            Status::Failed(_) => "Download Failed",
-            Status::Idle | Status::Checking | Status::Current => return None,
+            Status::Interrupted(_) => "Download Failed",
+            Status::Idle | Status::Checking | Status::Current | Status::Failed(_) => return None,
         };
 
         Some(self.popup.view(title, POPUP, window, Message::Popup, move || {
@@ -555,8 +587,8 @@ impl State {
                 Status::Found(summary) => self.view_found(summary),
                 Status::Installing(progress) => view_installing(progress),
                 Status::Installed => view_installed(),
-                Status::Failed(kind) => view_failed(*kind),
-                Status::Idle | Status::Checking | Status::Current => Space::new().into(),
+                Status::Interrupted(kind) => view_interrupted(*kind),
+                Status::Idle | Status::Checking | Status::Current | Status::Failed(_) => Space::new().into(),
             };
 
             container(body)
@@ -620,12 +652,19 @@ fn view_installed<'a>() -> Element<'a, Message> {
     .into()
 }
 
-fn view_failed<'a>(kind: ErrorKind) -> Element<'a, Message> {
+fn view_interrupted<'a>(kind: ErrorKind) -> Element<'a, Message> {
+    let actions = row![
+        theme::sized_button("Resume", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button).on_press(Message::Resume),
+        theme::sized_button("Abort", theme::POPUP_ACTION_BUTTON_WIDTH, theme::danger_button).on_press(Message::Abort),
+    ]
+    .spacing(BUTTON_SPACING);
+
     column![
         theme::bold_text("The new game files were not installed").size(TITLE_SIZE),
         text(failure(kind)).size(BODY_SIZE),
         subtle_text("Your current \"game\" folder was left as it was"),
-        theme::sized_button("Okay", theme::POPUP_ACTION_BUTTON_WIDTH, theme::neutral_button).on_press(Message::Acknowledge),
+        actions,
+        subtle_text("\"Resume\" keeps what was downloaded and retries from the file that failed"),
     ]
     .spacing(CONTENT_SPACING)
     .align_x(Alignment::Center)

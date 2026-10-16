@@ -6,11 +6,11 @@ use std::ffi::OsString;
 use std::fmt;
 use std::fs;
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{CONTENT_TYPE, LAST_MODIFIED};
@@ -38,8 +38,11 @@ const TITLE_MARK: &str = "flip-entry-title\">";
 const SHORTEST_ID: usize = 10;
 const TIMEOUT: Duration = Duration::from_secs(20);
 const CONNECTIONS: usize = 16;
-const PULL_TRIES: u32 = 4;
-const PULL_PAUSE: Duration = Duration::from_secs(1);
+const PULL_TRIES: u32 = 6;
+const PULL_PAUSE: Duration = Duration::from_secs(2);
+const PAUSE_SLICE: Duration = Duration::from_millis(100);
+const INSPECT_TRIES: u32 = 3;
+const INSPECT_PAUSE: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ErrorKind {
@@ -66,6 +69,40 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.message)
+    }
+}
+
+pub struct Failure {
+    pub error: Error,
+    pub partial: Option<Partial>,
+}
+
+pub struct Partial {
+    id: String,
+    workspace: Workspace,
+    landed: Vec<Held>,
+}
+
+impl Partial {
+    fn new(id: &str) -> Result<Self, Error> {
+        let workspace = Workspace::claim("source").map_err(disk)?;
+
+        fs::create_dir_all(workspace.path().join(architecture::GAME)).map_err(disk)?;
+
+        Ok(Self { id: id.to_owned(), workspace, landed: Vec::new() })
+    }
+
+    fn staged(&self) -> PathBuf {
+        self.workspace.path().join(architecture::GAME)
+    }
+
+    fn intact(self) -> Option<Self> {
+        let staged = self.staged();
+        let whole = self.landed.iter().flat_map(|held| &held.files).all(|(name, size)| {
+            fs::metadata(staged.join(name)).is_ok_and(|meta| meta.is_file() && meta.len() == *size)
+        });
+
+        whole.then_some(self)
     }
 }
 
@@ -115,6 +152,14 @@ impl<E: Fn(Step) + Sync> Tally<'_, E> {
     fn rewind(&self, bytes: u64) {
         self.done.fetch_sub(bytes, Ordering::Relaxed);
     }
+
+    fn pause(&self, wait: Duration) {
+        let until = Instant::now() + wait;
+
+        while !self.halted() && Instant::now() < until {
+            thread::sleep(PAUSE_SLICE);
+        }
+    }
 }
 
 impl<E: Fn(Step) + Sync> Read for Feed<'_, E> {
@@ -160,23 +205,28 @@ pub fn probe(link: &str) -> Result<Stamp, Error> {
     inspect(link).map(|(stamp, _, _)| stamp).inspect_err(|err| warn!("Game data source could not be checked: {}", err))
 }
 
-pub fn install(link: &str, emit: impl Fn(Step) + Sync, abort: &AtomicBool) -> Result<Stamp, Error> {
-    fetch(link, &emit, abort).inspect_err(|err| match err.kind {
+pub fn install(link: &str, partial: Option<Partial>, emit: impl Fn(Step) + Sync, abort: &AtomicBool) -> Result<Stamp, Failure> {
+    fetch(link, partial, &emit, abort).inspect_err(|failure| match failure.error.kind {
         ErrorKind::Aborted => warn!("Game data download was cancelled"),
-        _ => error!("Game data could not be installed from its source: {}", err),
+        _ if failure.partial.is_some() => error!("Game data download stopped and can be resumed: {}", failure.error),
+        _ => error!("Game data could not be installed from its source: {}", failure.error),
     })
 }
 
 fn inspect(link: &str) -> Result<(Stamp, Manifest, Ledger), Error> {
     let folder = parse(link).ok_or_else(|| Error::new(ErrorKind::Link, "this is not a provider folder link".to_owned()))?;
     let client = client(Some(TIMEOUT), false)?;
-    let file = locate(&client, &folder)?;
-    let response = client.get(download_url(&file)).send().map_err(unreachable)?;
+    let (modified, bytes) = retry(|| {
+        let file = locate(&client, &folder)?;
+        let response = client.get(download_url(&file)).send().map_err(unreachable)?;
 
-    vet(&response)?;
+        vet(&response, Error::new(ErrorKind::Missing, "the folder is not shared with anyone who has the link".to_owned()))?;
 
-    let modified = response.headers().get(LAST_MODIFIED).and_then(|value| value.to_str().ok()).unwrap_or_default().to_owned();
-    let bytes = response.bytes().map_err(unreachable)?;
+        let modified = response.headers().get(LAST_MODIFIED).and_then(|value| value.to_str().ok()).unwrap_or_default().to_owned();
+        let bytes = response.bytes().map_err(unreachable)?;
+
+        Ok((modified, bytes))
+    })?;
     let manifest = Manifest::read(&bytes).map_err(malformed)?;
     let ledger = Ledger::load(Path::new(architecture::GAME));
     let stamp = Stamp { id: manifest.id.clone(), modified, size: ledger.missing(&manifest.chunks) };
@@ -186,47 +236,98 @@ fn inspect(link: &str) -> Result<(Stamp, Manifest, Ledger), Error> {
     Ok((stamp, manifest, ledger))
 }
 
-fn fetch(link: &str, emit: &(impl Fn(Step) + Sync), abort: &AtomicBool) -> Result<Stamp, Error> {
-    let (stamp, manifest, ledger) = inspect(link)?;
+fn retry<T>(mut step: impl FnMut() -> Result<T, Error>) -> Result<T, Error> {
+    let mut tries = 1;
+
+    loop {
+        match step() {
+            Err(err) if err.kind == ErrorKind::Network && tries < INSPECT_TRIES => {
+                warn!("The game data source did not answer, trying again: {}", err);
+                thread::sleep(INSPECT_PAUSE * tries);
+                tries += 1;
+            }
+            outcome => return outcome,
+        }
+    }
+}
+
+fn fetch(link: &str, partial: Option<Partial>, emit: &(impl Fn(Step) + Sync), abort: &AtomicBool) -> Result<Stamp, Failure> {
+    let (stamp, manifest, ledger) = match inspect(link) {
+        Ok(found) => found,
+        Err(error) => return Err(Failure { error, partial }),
+    };
     let game = Path::new(architecture::GAME);
     let (mut held, wanted) = ledger.split(game, &manifest.chunks);
-    let workspace = Workspace::claim("source").map_err(disk)?;
-    let staged = workspace.path().join(architecture::GAME);
+    let mut partial = match partial {
+        Some(partial) if partial.id == stamp.id => partial,
+        Some(_) => {
+            info!("The game data source was republished, starting the download over");
 
-    fs::create_dir_all(&staged).map_err(disk)?;
-    info!(payload = stamp.id, chunks = manifest.chunks.len(), kept = held.len(), "Downloading game data from its source");
+            Partial::new(&stamp.id).map_err(|error| Failure { error, partial: None })?
+        }
+        None => Partial::new(&stamp.id).map_err(|error| Failure { error, partial: None })?,
+    };
+    let staged = partial.staged();
+    let (wanted, resumed) = outstanding(wanted, &partial.landed);
+
+    info!(payload = stamp.id, chunks = manifest.chunks.len(), kept = held.len(), landed = partial.landed.len(), "Downloading game data from its source");
 
     let keep: HashSet<OsString> = held.iter().flat_map(|held| held.files.iter().map(|(name, _)| OsString::from(name))).collect();
 
-    held.extend(download(&wanted, &staged, emit, abort)?);
+    if let Err(error) = download(&wanted, &staged, resumed, &mut partial.landed, emit, abort) {
+        let partial = (error.kind != ErrorKind::Aborted).then_some(partial);
+
+        return Err(Failure { error, partial });
+    }
 
     emit(Step::Replacing);
-    replace(game, &staged, &workspace.path().join(RETIRED), &keep)?;
+
+    if let Err(error) = replace(game, &staged, &partial.workspace.path().join(RETIRED), &keep) {
+        return Err(Failure { error, partial: partial.intact() });
+    }
+
+    held.extend(partial.landed);
     Ledger::save(game, held);
     info!("Game data replaced from its source");
 
     Ok(stamp)
 }
 
-fn download(chunks: &[&Chunk], staged: &Path, emit: &(impl Fn(Step) + Sync), abort: &AtomicBool) -> Result<Vec<Held>, Error> {
+fn outstanding<'a>(wanted: Vec<&'a Chunk>, landed: &[Held]) -> (Vec<&'a Chunk>, u64) {
+    let done: HashSet<&str> = landed.iter().map(|held| held.name.as_str()).collect();
+    let (landed, wanted): (Vec<&Chunk>, Vec<&Chunk>) = wanted.into_iter().partition(|chunk| done.contains(chunk.name.as_str()));
+
+    (wanted, landed.iter().map(|chunk| chunk.size).sum())
+}
+
+fn download(
+    chunks: &[&Chunk],
+    staged: &Path,
+    resumed: u64,
+    landed: &mut Vec<Held>,
+    emit: &(impl Fn(Step) + Sync),
+    abort: &AtomicBool,
+) -> Result<(), Error> {
     let client = client(None, true)?;
-    let total = chunks.iter().map(|chunk| chunk.size).sum();
-    let tally = Tally { done: AtomicU64::new(0), total, ticker: Ticker::default(), failed: AtomicBool::new(false), abort, emit };
+    let total = resumed + chunks.iter().map(|chunk| chunk.size).sum::<u64>();
+    let tally = Tally { done: AtomicU64::new(resumed), total, ticker: Ticker::default(), failed: AtomicBool::new(false), abort, emit };
     let next = AtomicUsize::new(0);
-    let landed: Mutex<Vec<Held>> = Mutex::new(Vec::new());
+    let fresh: Mutex<Vec<Held>> = Mutex::new(Vec::new());
     let failure: Mutex<Option<Error>> = Mutex::new(None);
+
+    emit(Step::Downloading { done: resumed, total });
 
     let work = || {
         while let Some(chunk) = chunks.get(next.fetch_add(1, Ordering::Relaxed)).filter(|_| !tally.halted()) {
             match pull(&client, chunk, staged, &tally) {
-                Ok(files) => landed.lock().unwrap_or_else(PoisonError::into_inner).push(Held { name: chunk.name.clone(), files }),
+                Ok(files) => fresh.lock().unwrap_or_else(PoisonError::into_inner).push(Held { name: chunk.name.clone(), files }),
                 Err(err) => {
                     if !tally.halted() {
                         warn!("{} could not be downloaded: {}", chunk.name, err);
+                        failure.lock().unwrap_or_else(PoisonError::into_inner).get_or_insert(err);
                     }
 
                     tally.failed.store(true, Ordering::Relaxed);
-                    failure.lock().unwrap_or_else(PoisonError::into_inner).get_or_insert(err);
 
                     break;
                 }
@@ -244,14 +345,13 @@ fn download(chunks: &[&Chunk], staged: &Path, emit: &(impl Fn(Step) + Sync), abo
         work();
     });
 
+    landed.append(&mut fresh.into_inner().unwrap_or_else(PoisonError::into_inner));
+
     if abort.load(Ordering::Relaxed) {
         return Err(aborted());
     }
 
-    match failure.into_inner().unwrap_or_else(PoisonError::into_inner) {
-        Some(err) => Err(err),
-        None => Ok(landed.into_inner().unwrap_or_else(PoisonError::into_inner)),
-    }
+    failure.into_inner().unwrap_or_else(PoisonError::into_inner).map_or(Ok(()), Err)
 }
 
 fn pull<E: Fn(Step) + Sync>(client: &Client, chunk: &Chunk, staged: &Path, tally: &Tally<E>) -> Result<Vec<(String, u64)>, Error> {
@@ -261,7 +361,7 @@ fn pull<E: Fn(Step) + Sync>(client: &Client, chunk: &Chunk, staged: &Path, tally
         match attempt(client, chunk, staged, tally) {
             Err(err) if err.kind == ErrorKind::Network && tries < PULL_TRIES && !tally.halted() => {
                 warn!("{} was cut off, trying again: {}", chunk.name, err);
-                thread::sleep(PULL_PAUSE * tries);
+                tally.pause(PULL_PAUSE * tries);
                 tries += 1;
             }
             outcome => return outcome,
@@ -272,7 +372,7 @@ fn pull<E: Fn(Step) + Sync>(client: &Client, chunk: &Chunk, staged: &Path, tally
 fn attempt<E: Fn(Step) + Sync>(client: &Client, chunk: &Chunk, staged: &Path, tally: &Tally<E>) -> Result<Vec<(String, u64)>, Error> {
     let response = client.get(download_url(&chunk.address)).send().map_err(unreachable)?;
 
-    vet(&response)?;
+    vet(&response, Error::new(ErrorKind::Network, format!("the provider answered with a page instead of {}", chunk.name)))?;
 
     let mut feed = Feed { response, tally, taken: 0, cut: false };
 
@@ -396,7 +496,7 @@ fn pick(page: &str) -> Option<String> {
     })
 }
 
-fn vet(response: &Response) -> Result<(), Error> {
+fn vet(response: &Response, page: Error) -> Result<(), Error> {
     let status = response.status();
 
     if status == StatusCode::NOT_FOUND {
@@ -407,14 +507,14 @@ fn vet(response: &Response) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::Network, format!("the provider answered {}", status)));
     }
 
-    let page = response
+    let html = response
         .headers()
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .is_some_and(|kind| kind.starts_with("text/html"));
 
-    if page {
-        return Err(Error::new(ErrorKind::Missing, "the folder is not shared with anyone who has the link".to_owned()));
+    if html {
+        return Err(page);
     }
 
     Ok(())
@@ -488,6 +588,22 @@ mod tests {
         assert_eq!(pick(&page).as_deref(), Some("bbb"));
         assert_eq!(pick(&[entry("aaa", "000.chunk"), entry("bbb", "game.zip")].concat()), None);
         assert_eq!(pick("<html>Sign in</html>"), None);
+    }
+
+    // A resumed download only asks for the chunks that never landed, and the bar starts where it was.
+    #[test]
+    fn a_resumed_download_skips_what_already_landed() {
+        let chunk = |name: &str, size: u64| -> Chunk {
+            serde_json::from_str(&format!(r#"{{"name":"{name}","address":"abc","size":{size},"files":1}}"#)).unwrap()
+        };
+        let chunks = [chunk("000.chunk", 10), chunk("001.chunk", 20), chunk("002.chunk", 30)];
+        let landed = vec![Held { name: "001.chunk".to_owned(), files: Vec::new() }];
+
+        let (wanted, resumed) = outstanding(chunks.iter().collect(), &landed);
+
+        assert_eq!(wanted.iter().map(|chunk| chunk.name.as_str()).collect::<Vec<_>>(), ["000.chunk", "002.chunk"]);
+        assert_eq!(resumed, 20);
+        assert_eq!(outstanding(chunks.iter().collect(), &[]).0.len(), 3);
     }
 
     // Republishing the same payload on a later date is not an update, and a stamp saved before payloads had ids is stale.
