@@ -85,9 +85,10 @@ pub(super) fn rule(field: &str) -> Option<Rule> {
         | "ultra_form_material_4_quantity" | "ultra_form_material_5_id" | "ultra_form_material_5_quantity"
         | "level_cap_catseye" | "level_cap_plus" | "normal_evolution_y_offset"
         | "evolved_evolution_y_offset" | "true_evolution_y_offset" | "ultra_evolution_y_offset"
-        | "sell_np_yield" => Some(Rule::Plain),
+        | "sell_np_yield" | "fanfare_tier" | "evolved_form_unlock_level" | "true_form_event_id"
+        | "plus_cap_grows" => Some(Rule::Plain),
 
-        "unknown_17" | "unknown_21" | "unknown_56" | "unknown_59" | "unknown_60" => Some(Rule::Opaque),
+        "unknown_56" => Some(Rule::Opaque),
 
         _ => None,
     }
