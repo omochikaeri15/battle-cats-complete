@@ -36,10 +36,10 @@ const SHIFT_PAUSE: Duration = Duration::from_millis(200);
 const ENTRY_MARK: &str = "id=\"entry-";
 const TITLE_MARK: &str = "flip-entry-title\">";
 const SHORTEST_ID: usize = 10;
-const TIMEOUT: Duration = Duration::from_secs(20);
+const TIMEOUT: Duration = Duration::from_secs(8);
 const CONNECTIONS: usize = 16;
-const PULL_TRIES: u32 = 6;
-const PULL_PAUSE: Duration = Duration::from_secs(2);
+const PULL_TRIES: u32 = 3;
+const PULL_PAUSE: Duration = Duration::from_secs(4);
 const PAUSE_SLICE: Duration = Duration::from_millis(100);
 const INSPECT_TRIES: u32 = 3;
 const INSPECT_PAUSE: Duration = Duration::from_secs(1);
@@ -361,7 +361,7 @@ fn pull<E: Fn(Step) + Sync>(client: &Client, chunk: &Chunk, staged: &Path, tally
         match attempt(client, chunk, staged, tally) {
             Err(err) if err.kind == ErrorKind::Network && tries < PULL_TRIES && !tally.halted() => {
                 warn!("{} was cut off, trying again: {}", chunk.name, err);
-                tally.pause(PULL_PAUSE * tries);
+                tally.pause(PULL_PAUSE);
                 tries += 1;
             }
             outcome => return outcome,
