@@ -36,4 +36,4 @@ You can export a mod under the `Mods` page by selecting your mod and clicking "E
 - **BCM**: Export into a `.bcm` archive, which is an archive format optimized for low file sizes.
 - **Pack**: Export into the games proprietary `.pack` and `.list` format for pack-specific injection. Requires Keys & IV.
 
-Modified or custom `libnative-lib.so` files can also be injected through an export. These files behave uniquely in that their identity is defined in their file contents and file exntention and not by full file name. This allows you to inject custom code for multiple archiectures at once without causing file name conflict errors.
+Modified or custom `libnative-lib.so` files can also be injected through an export. These files behave uniquely in that their identity is defined in their file contents and file exntention and not by full file name. This allows you to inject custom code for multiple archiectures at once without causing file name conflict errors. You will still get conflict errors if they are the same name however, so make sure to rename them off of their original file name if you intend to support multiple architectures.
