@@ -35,3 +35,5 @@ You can export a mod under the `Mods` page by selecting your mod and clicking "E
 - **APK**: Export directly into a `.apk` file, or optionally, if you have the APKEditor add-on, `.xapk` files as well. Requires Keys & IV.
 - **BCM**: Export into a `.bcm` archive, which is an archive format optimized for low file sizes.
 - **Pack**: Export into the games proprietary `.pack` and `.list` format for pack-specific injection. Requires Keys & IV.
+
+Modified or custom `libnative-lib.so` files can also be injected through an export. These files behave uniquely in that their identity is defined in their file contents and file exntention and not by full file name. This allows you to inject custom code for multiple archiectures at once without causing file name conflict errors.
