@@ -244,7 +244,7 @@ pub fn run(
     contents.remove(METADATA);
 
     let natives = native::resolve(contents.take(native::is_library), &shipped_abis, &log_callback);
-    let replaced: Vec<Abi> = natives.iter().map(|(abi, _)| *abi).collect();
+    let has_natives = !natives.is_empty();
     let mut extra: Vec<(String, PathBuf)> = natives.into_iter().map(|(abi, path)| (abi.entry(), path)).collect();
 
     for name in asset_names {
@@ -270,7 +270,7 @@ pub fn run(
         return Err(error);
     }
 
-    if !replaced.is_empty() {
+    if has_natives {
         log_callback("Injecting custom libraries...".to_string());
     }
 
@@ -361,11 +361,6 @@ pub fn run(
             }
         }
     };
-
-    println!("DEBUG: Injected the following:");
-    for abi in &replaced {
-        println!("{}", abi.directory());
-    }
 
     info!("Export completed successfully: {}", success_message);
     emit(JobEvent::Log(success_message));
