@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,7 +16,8 @@ use crate::domains::mods::METADATA;
 use crate::domains::settings::ExportBehavior;
 use crate::Vfs;
 
-use crate::systems::apk::{modify, sign};
+use crate::systems::apk::{modify, native, sign};
+use crate::systems::apk::native::Abi;
 
 use super::pack;
 
@@ -31,6 +32,10 @@ struct Indexed {
 impl Indexed {
     fn remove(&mut self, name: &str) -> Option<PathBuf> {
         self.files.remove(name)
+    }
+
+    fn take(&mut self, matches: impl Fn(&str) -> bool) -> Vec<(String, PathBuf)> {
+        self.files.extract_if(.., |name, _| matches(name)).collect()
     }
 
     fn into_values(self) -> Vec<PathBuf> {
@@ -148,10 +153,15 @@ pub fn run(
 
     debug!("Extracting Manifest & ARSC for look-ahead check...");
     let mut asset_names = Vec::new();
+    let mut shipped_abis = BTreeSet::new();
 
     for index in 0..archive.len() {
         let Ok(mut archive_file) = archive.by_index(index) else { continue; };
         let file_name = archive_file.name().to_string();
+
+        if let Some(abi) = Abi::from_entry(&file_name) {
+            shipped_abis.insert(abi);
+        }
 
         if !archive_file.is_dir()
             && Path::new(&file_name).parent() == Some(Path::new(ASSETS))
@@ -233,7 +243,9 @@ pub fn run(
     let icons = modify::ModIcons::resolve(|name| contents.remove(name));
     contents.remove(METADATA);
 
-    let mut loose = Vec::new();
+    let natives = native::resolve(contents.take(native::is_library), &shipped_abis, &log_callback);
+    let replaced: Vec<Abi> = natives.iter().map(|(abi, _)| *abi).collect();
+    let mut extra: Vec<(String, PathBuf)> = natives.into_iter().map(|(abi, path)| (abi.entry(), path)).collect();
 
     for name in asset_names {
         if GENERATED.contains(&name.as_str()) {
@@ -243,7 +255,7 @@ pub fn run(
         let Some(path) = contents.remove(&name) else { continue; };
 
         trace!(file = %name, path = %path.display(), "Mod file replaces a loose APK asset");
-        loose.push((name, path));
+        extra.push((format!("{}/{}", ASSETS, name), path));
     }
 
     let packed: Vec<PathBuf> = contents.into_values();
@@ -258,6 +270,10 @@ pub fn run(
         return Err(error);
     }
 
+    if !replaced.is_empty() {
+        log_callback("Injecting custom libraries...".to_string());
+    }
+
     log_callback("Rebuilding APK with patch...".to_string());
     let unsigned_apk_path = app_dir.join("unsigned_final.apk");
 
@@ -266,7 +282,7 @@ pub fn run(
         &unsigned_apk_path,
         &assets_dir,
         &icons,
-        &loose,
+        &extra,
         if is_update_patch { None } else { Some(manifest_path.as_path()) },
         if is_update_patch || !extracted_arsc { None } else { Some(arsc_path.as_path()) }
     ) {
@@ -345,6 +361,11 @@ pub fn run(
             }
         }
     };
+
+    println!("DEBUG: Injected the following:");
+    for abi in &replaced {
+        println!("{}", abi.directory());
+    }
 
     info!("Export completed successfully: {}", success_message);
     emit(JobEvent::Log(success_message));

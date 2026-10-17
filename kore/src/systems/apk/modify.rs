@@ -405,7 +405,7 @@ pub(crate) fn inject_and_build_apk(
     output_apk: &Path,
     assets_dir: &Path,
     icons: &ModIcons,
-    loose: &[(String, PathBuf)],
+    extra: &[(String, PathBuf)],
     patched_manifest: Option<&Path>,
     patched_arsc: Option<&Path>,
 ) -> Result<usize, String> {
@@ -439,8 +439,8 @@ pub(crate) fn inject_and_build_apk(
         files_to_inject.insert(format!("assets/{}", name));
     }
 
-    for (name, _) in loose {
-        files_to_inject.insert(format!("assets/{}", name));
+    for (entry, _) in extra {
+        files_to_inject.insert(entry.clone());
     }
 
     debug!("Identified {} files to inject or replace.", files_to_inject.len());
@@ -524,8 +524,8 @@ pub(crate) fn inject_and_build_apk(
         inject_file(&path, &format!("assets/{}", name), store)?;
     }
 
-    for (name, path) in loose {
-        inject_file(path, &format!("assets/{}", name), true)?;
+    for (entry, path) in extra {
+        inject_file(path, entry, true)?;
     }
 
     if !icons.is_empty() {
