@@ -59,6 +59,9 @@ const ABORTED_LABEL: &str = "Aborted!";
 const ENDLESS_LABEL: &str = "???";
 const QUALITY_HINT: &str = "Export quality %";
 const COMPRESSION_HINT: &str = "Export compression %";
+const SET_CAMERA_LABEL: &str = "Set Camera";
+const CLEAR_CAMERA_LABEL: &str = "Clear Camera";
+const NO_CAMERA_HINT: &str = "No camera to clear!";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Feedback {
@@ -74,7 +77,9 @@ pub(super) struct Panel<'a> {
     pub animated: bool,
     pub export_end: i32,
     pub format: &'a ExportFormat,
-    pub formats: Vec<&'static str>,
+    pub formats: &'a [&'static str],
+    pub format_hint: &'a str,
+    pub camera: bool,
     pub copy: Feedback,
     pub export: Feedback,
     pub expanded: bool,
@@ -103,6 +108,8 @@ pub enum Message {
     SetFormat(ExportFormat),
     QualityChanged(String),
     CompressionChanged(String),
+    SetCamera,
+    ClearCamera,
     Copy,
     Export,
 }
@@ -286,6 +293,16 @@ fn control_button<'a>(label: &'a str, font: Font, size: f32, width: f32, on_pres
         .style(control_style)
 }
 
+fn action_button<'a>(label: &'a str, style: theme::ButtonStyleFn, press: Option<Message>) -> Element<'a, Message> {
+    button(text(label).size(TILE_TEXT_SIZE).width(Length::Fill).height(Length::Fill).center())
+        .width(Length::Fixed(ACTION_W))
+        .height(Length::Fixed(ACTION_H))
+        .padding(0)
+        .on_press_maybe(press)
+        .style(style)
+        .into()
+}
+
 fn feedback_button<'a>(idle: &'a str, busy: &'a str, done: &'a str, state: Feedback, press: Message) -> Element<'a, Message> {
     let (label, style): (&'a str, theme::ButtonStyleFn) = match state {
         Feedback::Idle => (idle, theme::primary_button),
@@ -403,7 +420,7 @@ impl State {
             }
             Message::QualityChanged(value) => self.quality_input = value,
             Message::CompressionChanged(value) => self.compression_input = value,
-            Message::ToggleExpanded | Message::SetFormat(_) | Message::Copy | Message::Export => {}
+            Message::ToggleExpanded | Message::SetFormat(_) | Message::SetCamera | Message::ClearCamera | Message::Copy | Message::Export => {}
         }
     }
 
@@ -460,11 +477,18 @@ impl State {
         .on_press(Message::ToggleExpanded)
         .style(button::text);
 
-        let actions = row![
+        let clear_camera = if panel.camera {
+            action_button(CLEAR_CAMERA_LABEL, theme::danger_button, Some(Message::ClearCamera))
+        } else {
+            hover_hint(action_button(CLEAR_CAMERA_LABEL, theme::inert_button, None), NO_CAMERA_HINT)
+        };
+        let cameras = row![action_button(SET_CAMERA_LABEL, theme::primary_button, Some(Message::SetCamera)), clear_camera].spacing(ACTION_GAP);
+        let outputs = row![
             feedback_button(COPY_IDLE, COPY_BUSY, COPY_DONE, panel.copy, Message::Copy),
             feedback_button(EXPORT_IDLE, EXPORT_BUSY, EXPORT_DONE, panel.export, Message::Export),
         ]
         .spacing(ACTION_GAP);
+        let actions = column![cameras, outputs].spacing(GAP);
 
         let body = column![
             rule::horizontal(1),
@@ -489,12 +513,14 @@ impl State {
         let scrubbable = panel.loaded && panel.animated;
         let play_icon = if canvas.is_playing { PAUSE_GLYPH } else { PLAY_GLYPH };
         let selected = format_label(panel.format);
-        let formats = pick_list(panel.formats.clone(), Some(selected), |label: &str| Message::SetFormat(format_of(label)))
+        let formats = pick_list(panel.formats, Some(selected), |label: &str| Message::SetFormat(format_of(label)))
             .width(Length::Fixed(ICON_W))
             .padding(FORMAT_PADDING)
             .text_size(TILE_TEXT_SIZE)
             .style(theme::combo_box)
             .menu_style(theme::combo_box_menu);
+        let formats: Element<'a, Message> =
+            if panel.format_hint.is_empty() { formats.into() } else { hover_hint(formats, panel.format_hint) };
 
         let transport = column![
             control_button(play_icon, fonts::MISC_SYMBOLS, PLAY_TEXT_SIZE, ICON_W, scrubbable.then_some(Message::TogglePlay)),

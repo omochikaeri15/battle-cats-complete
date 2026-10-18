@@ -2,6 +2,7 @@ mod canvas;
 mod controls;
 mod export;
 mod offscreen;
+mod overlay;
 mod pipeline;
 
 use std::sync::Arc;
@@ -15,6 +16,7 @@ use kore::systems::addons::paths::{self, Presence};
 use nyanko::graphics::backdrop::{Backdrop, Camera, Layers, Quad, Screen};
 
 use crate::app::state::BackgroundState;
+use crate::editor;
 use crate::widget::smooth_scroll;
 
 pub const PLAYING_TICK: Duration = Duration::from_millis(33);
@@ -34,6 +36,9 @@ const DEFAULT_COMPRESSION: i32 = 30;
 const REPLAY_CEILING: i32 = 100_000;
 
 const EMPTY_NOTICE: &str = "Enter a Background ID to load a background";
+const FFMPEG_MISSING_HINT: &str = "FFMPEG Addon missing, so file formats and export speeds may be limited";
+const AVIFENC_MISSING_HINT: &str = "AVIFENC Addon missing, so AVIF file format is unavailable";
+const ADDONS_HINT: &str = "Download and manage Addons under Settings > Addons";
 
 fn frame_border<'a>() -> Element<'a, Message> {
     container(Space::new().width(Length::Fill).height(Length::Fill))
@@ -62,6 +67,10 @@ pub struct State {
     canvas: canvas::State,
     controls: controls::State,
     export: export::State,
+    overlay: overlay::State,
+    camera: Option<Camera>,
+    formats: Vec<&'static str>,
+    format_hint: String,
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +78,7 @@ pub enum Message {
     Canvas(canvas::Message),
     Controls(controls::Message),
     Export(export::Message),
+    Overlay(overlay::Message),
 }
 
 fn percentage(input: &str, empty: i32) -> Option<(i32, String)> {
@@ -87,10 +97,7 @@ fn percentage(input: &str, empty: i32) -> Option<(i32, String)> {
     Some((clamped, text))
 }
 
-fn available_formats() -> Vec<&'static str> {
-    let avif = paths::avifenc_status() == Presence::Installed;
-    let ffmpeg = paths::ffmpeg_status() == Presence::Installed;
-
+fn available_formats(ffmpeg: bool, avif: bool) -> Vec<&'static str> {
     controls::FORMAT_OPTIONS
         .iter()
         .copied()
@@ -100,6 +107,24 @@ fn available_formats() -> Vec<&'static str> {
             _ => true,
         })
         .collect()
+}
+
+fn addon_hint(ffmpeg: bool, avif: bool) -> String {
+    let mut lines = Vec::new();
+
+    if !ffmpeg {
+        lines.push(FFMPEG_MISSING_HINT);
+    }
+
+    if !avif {
+        lines.push(AVIFENC_MISSING_HINT);
+    }
+
+    if !lines.is_empty() {
+        lines.push(ADDONS_HINT);
+    }
+
+    lines.join("\n")
 }
 
 impl State {
@@ -114,7 +139,16 @@ impl State {
         self.controls = controls::State::default();
         self.controls.set_quality_text(prefs.last_export_quality.map_or_else(String::new, |value| value.to_string()));
         self.controls.set_compression_text(prefs.last_export_compression.map_or_else(String::new, |value| value.to_string()));
+        self.refresh_addons();
         self.refresh();
+    }
+
+    fn refresh_addons(&mut self) {
+        let ffmpeg = paths::ffmpeg_status() == Presence::Installed;
+        let avif = paths::avifenc_status() == Presence::Installed;
+
+        self.formats = available_formats(ffmpeg, avif);
+        self.format_hint = addon_hint(ffmpeg, avif);
     }
 
     pub fn clear(&mut self) {
@@ -174,9 +208,9 @@ impl State {
 
     fn capture(&self) -> (Camera, u32, u32) {
         let even = |length: f32| ((length.round().max(2.0) as u32) / 2 * 2).max(2);
-        let viewport = self.canvas.viewport;
+        let camera = self.camera.unwrap_or_else(|| self.canvas.camera().rescaled(1.0));
 
-        (self.canvas.camera(), even(viewport.width), even(viewport.height))
+        (camera, even(camera.width), even(camera.height))
     }
 
     fn sync_frame(&mut self, force: bool) {
@@ -224,6 +258,23 @@ impl State {
             }
             Message::Controls(controls::Message::ToggleExpanded) => {
                 prefs.controls_expanded = !prefs.controls_expanded;
+                self.refresh_addons();
+                Task::none()
+            }
+            Message::Controls(controls::Message::SetCamera) => {
+                self.overlay.selecting = true;
+                Task::none()
+            }
+            Message::Controls(controls::Message::ClearCamera) => {
+                self.camera = None;
+                Task::none()
+            }
+            Message::Overlay(msg) => {
+                if let overlay::Message::Selected(camera) = msg {
+                    self.camera = Some(camera);
+                }
+
+                self.overlay.selecting = false;
                 Task::none()
             }
             Message::Controls(controls::Message::SetFormat(format)) => {
@@ -331,13 +382,20 @@ impl State {
         .width(Length::Fill)
         .height(Length::Fill)
         .padding(FRAME_BORDER_WIDTH);
+        let shown = self.camera.filter(|_| prefs.controls_expanded);
+        let selection = container(self.overlay.view(self.canvas.camera(), shown).map(Message::Overlay))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(FRAME_BORDER_WIDTH);
         let panel = controls::Panel {
             canvas: &self.canvas,
             loaded: true,
             animated: scene.animated,
             export_end: DEFAULT_LOOP_END,
             format: &prefs.last_export_format,
-            formats: available_formats(),
+            formats: &self.formats,
+            format_hint: &self.format_hint,
+            camera: self.camera.is_some(),
             copy: self.export.copy_feedback(),
             export: self.export.export_feedback(),
             expanded: prefs.controls_expanded,
@@ -349,7 +407,9 @@ impl State {
             .align_y(iced::alignment::Vertical::Bottom)
             .padding(Padding { left: CONTROLS_INSET_LEFT, ..Padding::ZERO });
 
-        container(stack![viewport, controls, frame_border()]).width(Length::Fill).height(Length::Fill).into()
+        let layers = stack![viewport, selection, self.overlay.hint_view(), controls, frame_border()];
+
+        editor::suppress(container(layers).width(Length::Fill).height(Length::Fill), self.overlay.selecting)
     }
 }
 

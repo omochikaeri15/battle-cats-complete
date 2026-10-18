@@ -19,6 +19,7 @@ pub struct Renderer {
     width: u32,
     height: u32,
     padded: u32,
+    scale: f32,
 }
 
 impl Renderer {
@@ -30,9 +31,11 @@ impl Renderer {
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
             .map_err(|failure| format!("The GPU device for background rendering could not be created: {failure}"))
             .inspect_err(|message| error!("{message}"))?;
-        let max_dim = device.limits().max_texture_dimension_2d;
-        let width = width.clamp(1, max_dim);
-        let height = height.clamp(1, max_dim);
+        let max_dim = device.limits().max_texture_dimension_2d as f32;
+        let (asked_w, asked_h) = (width.max(1) as f32, height.max(1) as f32);
+        let scale = (max_dim / asked_w).min(max_dim / asked_h).min(1.0);
+        let width = ((asked_w * scale).round() as u32).max(1);
+        let height = ((asked_h * scale).round() as u32).max(1);
         let format = wgpu::TextureFormat::Rgba8Unorm;
         let pipeline = Pipeline::create(&device, &queue, format);
         let target = device.create_texture(&wgpu::TextureDescriptor {
@@ -53,7 +56,7 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        Ok(Self { device, queue, pipeline, target, readback, width, height, padded })
+        Ok(Self { device, queue, pipeline, target, readback, width, height, padded, scale })
     }
 
     pub fn width(&self) -> u32 {
@@ -65,7 +68,7 @@ impl Renderer {
     }
 
     pub fn render(&mut self, backdrop: &mut Backdrop, camera: Camera) -> Result<Vec<u8>, String> {
-        let camera = Camera { width: self.width as f32, height: self.height as f32, ..camera };
+        let camera = Camera { width: self.width as f32, height: self.height as f32, ..camera.rescaled(camera.zoom * self.scale) };
         let quads = backdrop.render(camera);
         let scene = pipeline::build(
             &quads,

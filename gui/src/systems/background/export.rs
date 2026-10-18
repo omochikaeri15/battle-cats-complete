@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{mpsc, Arc, Mutex, PoisonError};
 use std::thread;
 
 use arboard::{Clipboard, ImageData};
@@ -19,7 +19,9 @@ use super::controls::Feedback;
 use super::offscreen::Renderer;
 
 const FRAME_DELAY_MS: u32 = 1000 / FRAME_RATE;
-const QUEUED_FRAMES: usize = 64;
+const QUEUED_FRAMES_MAX: usize = 64;
+const QUEUED_FRAMES_MIN: usize = 2;
+const QUEUED_BYTES: usize = 256 * 1024 * 1024;
 
 pub struct Request {
     pub backdrop: Backdrop,
@@ -44,7 +46,7 @@ pub enum Event {
 #[derive(Clone)]
 pub enum Message {
     Export(Event),
-    Copied(u64, Result<RgbaImage, String>),
+    Copied(u64, Result<(), String>),
     ExportExpired,
     CopyExpired,
 }
@@ -75,11 +77,31 @@ pub struct State {
     copies: u64,
     export_feedback: Slot<Feedback>,
     copy_feedback: Slot<Feedback>,
-    clipboard: Option<Clipboard>,
+    clipboard: Arc<Mutex<Option<Clipboard>>>,
 }
 
 pub(super) fn is_forced_opaque(format: &ExportFormat) -> bool {
     matches!(format, ExportFormat::Mp4 | ExportFormat::Mkv | ExportFormat::Webm)
+}
+
+fn queue_depth(width: u32, height: u32) -> usize {
+    let frame_bytes = (width as usize * height as usize * 4).max(1);
+
+    (QUEUED_BYTES / frame_bytes).clamp(QUEUED_FRAMES_MIN, QUEUED_FRAMES_MAX)
+}
+
+fn place_on_clipboard(shared: &Mutex<Option<Clipboard>>, image: &RgbaImage) -> Result<(), String> {
+    let mut held = shared.lock().unwrap_or_else(PoisonError::into_inner);
+
+    if held.is_none() {
+        *held = Some(Clipboard::new().map_err(|err| format!("Clipboard unavailable: {err}"))?);
+    }
+
+    let clipboard = held.as_mut().ok_or_else(|| "Clipboard unavailable".to_owned())?;
+    let (width, height) = image.dimensions();
+    let data = ImageData { width: width as usize, height: height as usize, bytes: Cow::Borrowed(image.as_raw()) };
+
+    clipboard.set_image(data).map_err(|err| err.to_string())
 }
 
 fn seek(backdrop: &mut Backdrop, seed: u32, frame: i32) {
@@ -176,7 +198,7 @@ impl State {
         });
         let (first, last) = (config.start_frame, config.end_frame);
         let abort = Arc::new(AtomicBool::new(false));
-        let (frame_tx, frame_rx) = mpsc::sync_channel(QUEUED_FRAMES);
+        let (frame_tx, frame_rx) = mpsc::sync_channel(queue_depth(width, height));
         let (tx, rx) = unbounded();
 
         let encoder_tx = tx.clone();
@@ -228,6 +250,8 @@ impl State {
 
         self.copying = Some(generation);
 
+        let clipboard = Arc::clone(&self.clipboard);
+
         Task::perform(
             smol::unblock(move || {
                 let mut renderer = Renderer::new(size.0, size.1)?;
@@ -235,24 +259,14 @@ impl State {
                 seek(&mut backdrop, seed, frame);
 
                 let pixels = renderer.render(&mut backdrop, camera)?;
-
-                flipped(pixels, renderer.width(), renderer.height())
+                let image = flipped(pixels, renderer.width(), renderer.height())
                     .map(straight)
-                    .ok_or_else(|| "The rendered background frame had the wrong size".to_owned())
+                    .ok_or_else(|| "The rendered background frame had the wrong size".to_owned())?;
+
+                place_on_clipboard(&clipboard, &image)
             }),
             move |outcome| Message::Copied(generation, outcome),
         )
-    }
-
-    fn ensure_clipboard(&mut self) -> Option<&mut Clipboard> {
-        if self.clipboard.is_none() {
-            match Clipboard::new() {
-                Ok(clipboard) => self.clipboard = Some(clipboard),
-                Err(err) => error!("Failed to open system clipboard: {err}"),
-            }
-        }
-
-        self.clipboard.as_mut()
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -291,21 +305,12 @@ impl State {
 
                 self.export_feedback.set(feedback, Message::ExportExpired)
             }
-            Message::Copied(generation, result) => {
+            Message::Copied(generation, outcome) => {
                 if self.copying != Some(generation) {
                     return Task::none();
                 }
 
                 self.copying = None;
-
-                let outcome = result.and_then(|image| {
-                    let (width, height) = image.dimensions();
-                    let data = ImageData { width: width as usize, height: height as usize, bytes: Cow::Borrowed(image.as_raw()) };
-
-                    self.ensure_clipboard()
-                        .ok_or_else(|| "Clipboard unavailable".to_owned())
-                        .and_then(|clipboard| clipboard.set_image(data).map_err(|err| err.to_string()))
-                });
 
                 if let Err(err) = &outcome {
                     error!("Background copy failed: {err}");
