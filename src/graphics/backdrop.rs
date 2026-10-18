@@ -254,12 +254,69 @@ impl Camera {
         ]
     }
 
+    /// Maps a screen point back onto the scene.
+    ///
+    /// # Arguments
+    /// * `point` - The x and y of the point in screen pixels.
+    ///
+    /// # Returns
+    /// The x and y of the point in design pixels.
+    pub fn unproject(&self, point: [f32; 2]) -> [f32; 2] {
+        let zoom = self.zoom.max(f32::EPSILON);
+
+        [
+            (point[0] - self.width / 2.0) / zoom + self.x,
+            (point[1] - self.horizon()) / zoom + HORIZON as f32,
+        ]
+    }
+
+    /// Returns a camera whose screen covers exactly a region of the scene at the design scale.
+    ///
+    /// # Arguments
+    /// * `top_left` - The x and y of the region's top left corner in design pixels.
+    /// * `size` - The width and height of the region in design pixels.
+    ///
+    /// # Returns
+    /// A `Camera` at a zoom of one whose screen is the region.
+    pub fn framing(top_left: [f32; 2], size: [f32; 2]) -> Self {
+        Self {
+            x: top_left[0] + size[0] / 2.0,
+            y: -top_left[1],
+            zoom: 1.0,
+            width: size[0],
+            height: size[1],
+        }
+    }
+
     /// Returns the screen y the horizon sits at.
     ///
     /// # Returns
     /// An `f32` in screen pixels.
     pub fn horizon(&self) -> f32 {
         HORIZON as f32 + self.y
+    }
+
+    /// Returns a camera framing the same scene region at another zoom.
+    ///
+    /// The screen grows or shrinks with the zoom so that the scene edges it
+    /// shows stay where they are, which is how a view is captured at the
+    /// design scale whatever it is zoomed to.
+    ///
+    /// # Arguments
+    /// * `zoom` - The scale the returned camera draws the scene at.
+    ///
+    /// # Returns
+    /// A `Camera` showing the same scene at the given zoom.
+    pub fn rescaled(&self, zoom: f32) -> Self {
+        let ratio = zoom / self.zoom.max(f32::EPSILON);
+
+        Self {
+            x: self.x,
+            y: self.horizon() * ratio - HORIZON as f32,
+            zoom,
+            width: self.width * ratio,
+            height: self.height * ratio,
+        }
     }
 
     fn scene_left(&self) -> f32 {
