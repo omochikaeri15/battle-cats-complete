@@ -12,14 +12,12 @@ use kore::domains::import;
 use crate::app::theme;
 use crate::common::feedback::{Slot as Confirm, CONFIRM_LABEL};
 
-const RAW: &str = "game/raw";
 const SCANNING_LABEL: &str = "Scanning file sizes...";
 const UNKNOWN_LABEL: &str = "Unknown file size";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
     Game,
-    Raw,
     Cache,
 }
 
@@ -36,7 +34,6 @@ pub enum Message {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Sizes {
     game: u64,
-    raw: u64,
     cache: u64,
 }
 
@@ -55,22 +52,9 @@ struct Slot {
     banner_handle: Option<task::Handle>,
 }
 
-impl Slot {
-    fn reset(&mut self) {
-        if let Some(handle) = self.delete_handle.take() {
-            handle.abort();
-        }
-        if let Some(handle) = self.banner_handle.take() {
-            handle.abort();
-        }
-        self.phase = Phase::Idle;
-    }
-}
-
 #[derive(Default)]
 pub struct State {
     game: Slot,
-    raw: Slot,
     cache: Slot,
     confirm: Confirm<Target>,
     sizes: Option<Sizes>,
@@ -95,7 +79,6 @@ fn size_hint<'a>(content: impl Into<Element<'a, Message>>, size: Option<u64>, sc
 fn measure() -> Sizes {
     Sizes {
         game: folder_size(Path::new(architecture::GAME)),
-        raw: folder_size(Path::new(RAW)),
         cache: kore::common::dirs::cache_path().map_or(0, |dir| folder_size(&dir)),
     }
 }
@@ -139,7 +122,6 @@ impl State {
     fn slot_mut(&mut self, target: Target) -> &mut Slot {
         match target {
             Target::Game => &mut self.game,
-            Target::Raw => &mut self.raw,
             Target::Cache => &mut self.cache,
         }
     }
@@ -152,11 +134,7 @@ impl State {
                 }
 
                 let path = match target {
-                    Target::Game => {
-                        self.raw.reset();
-                        PathBuf::from(architecture::GAME)
-                    }
-                    Target::Raw => PathBuf::from(RAW),
+                    Target::Game => PathBuf::from(architecture::GAME),
                     Target::Cache => {
                         let Some(cache_dir) = kore::common::dirs::cache_path() else {
                             return Task::none();
@@ -273,15 +251,11 @@ impl State {
 
     pub fn view<'a>(&'a self) -> Element<'a, Message> {
         let game_exists = architecture::game_present();
-        let raw_exists = architecture::has_content(Path::new(RAW));
         let cache_present = kore::common::dirs::cache_path()
             .is_some_and(|dir| architecture::has_content(&dir));
 
-        let raw_can_delete = raw_exists && self.game.phase != Phase::Deleting;
-
         column![
             self.disk_button("game", self.game.phase, Target::Game, game_exists, self.sizes.map(|held| held.game)),
-            self.disk_button("raw", self.raw.phase, Target::Raw, raw_can_delete, self.sizes.map(|held| held.raw)),
             self.cache_button(self.cache.phase, cache_present),
         ].spacing(8).into()
     }

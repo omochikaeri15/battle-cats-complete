@@ -33,10 +33,8 @@ pub(super) struct Held {
 }
 
 impl Ledger {
-    pub(super) fn load(game: &Path) -> Self {
-        let root = root(game);
-
-        cache::read::<Cache>().map(|(_, ledger)| ledger).filter(|ledger| !root.is_empty() && ledger.root == root).unwrap_or_default()
+    pub(super) fn load() -> Self {
+        cache::read::<Cache>().map(|(_, ledger)| ledger).unwrap_or_default()
     }
 
     pub(super) fn save(game: &Path, chunks: Vec<Held>) {

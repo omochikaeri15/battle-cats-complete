@@ -7,6 +7,7 @@ use zstd::stream::read::Decoder;
 
 const FORMAT: u32 = 1;
 const MARK: [u8; 4] = *b"BGL1";
+const LARGEST_CHUNK: u64 = 64 * 1024 * 1024;
 
 #[derive(Deserialize, Clone, Debug)]
 pub(super) struct Manifest {
@@ -51,6 +52,10 @@ impl Manifest {
 
         if let Some(chunk) = manifest.chunks.iter().find(|chunk| !addressed(&chunk.address)) {
             return Err(format!("{} was never published", chunk.name));
+        }
+
+        if let Some(chunk) = manifest.chunks.iter().find(|chunk| chunk.size > LARGEST_CHUNK) {
+            return Err(format!("{} is too large for a chunk", chunk.name));
         }
 
         if manifest.chunks.iter().map(|chunk| chunk.size).sum::<u64>() != manifest.packed
@@ -122,7 +127,7 @@ fn records(reader: &mut impl Read) -> io::Result<Vec<Record>> {
 }
 
 fn addressed(address: &str) -> bool {
-    !address.is_empty() && address.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+    flat(address) && !address.contains(['?', '#', ' ']) && !address.chars().any(char::is_control)
 }
 
 fn flat(name: &str) -> bool {
@@ -241,15 +246,16 @@ mod tests {
             )
         };
 
-        let read = Manifest::read(manifest(1, r#","address":"2xYz""#, 100).as_bytes()).unwrap();
+        let read = Manifest::read(manifest(1, r#","address":"001.chunk""#, 100).as_bytes()).unwrap();
 
         assert_eq!((read.id.as_str(), read.packed, read.chunks.len()), ("abc", 100, 2));
-        assert_eq!(read.chunks[1].address, "2xYz");
+        assert_eq!(read.chunks[1].address, "001.chunk");
 
-        assert!(Manifest::read(manifest(2, r#","address":"2xYz""#, 100).as_bytes()).is_err());
+        assert!(Manifest::read(manifest(2, r#","address":"001.chunk""#, 100).as_bytes()).is_err());
         assert!(Manifest::read(manifest(1, "", 100).as_bytes()).is_err());
-        assert!(Manifest::read(manifest(1, r#","address":"2x/../Yz""#, 100).as_bytes()).is_err());
-        assert!(Manifest::read(manifest(1, r#","address":"2xYz""#, 101).as_bytes()).is_err());
+        assert!(Manifest::read(manifest(1, r#","address":"../001.chunk""#, 100).as_bytes()).is_err());
+        assert!(Manifest::read(manifest(1, r#","address":"001.chunk?x=1""#, 100).as_bytes()).is_err());
+        assert!(Manifest::read(manifest(1, r#","address":"001.chunk""#, 101).as_bytes()).is_err());
         assert!(Manifest::read(b"<html>Sign in</html>").is_err());
     }
 }

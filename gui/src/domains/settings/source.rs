@@ -30,6 +30,7 @@ By accepting this agreement, you must have read, understood, and accepted the fo
 You can accept the agreement by clicking the "Agree" button below. Selecting "Disagree" will close this pop-up.
 "#;
 const POPUP: popup::Spec = popup::Spec::new(popup::Kind::Source, Size::new(460.0, 270.0));
+const INTERRUPTED_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Source, Size::new(460.0, 200.0));
 const TERMS_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Provider, Size::new(560.0, 420.0));
 const TERMS_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
@@ -43,9 +44,8 @@ const PROGRESS_HEIGHT: f32 = 12.0;
 const TITLE_SIZE: f32 = 18.0;
 const BODY_SIZE: f32 = 14.0;
 const SUBTLE_ALPHA: f32 = 0.6;
-const INPUT_WIDTH: f32 = 440.0;
 const MODES: [&str; 2] = ["Prompt", "Ignore"];
-const LINK_HINT: &str = "A Provider link to an asset payload, served through a folder\nChecked on launch, and newer files are offered as a download";
+const LINK_HINT: &str = "An https link to an asset payload, served from a public bucket\nChecked on launch, and newer files are offered as a download";
 const MODE_HINT: &str = "Prompt asks before downloading newer files found on launch\nIgnore never checks on launch";
 
 #[derive(Debug, Clone)]
@@ -65,6 +65,7 @@ pub enum Message {
     Acknowledge,
     Resume,
     Abort,
+    Dismiss,
     Popup(popup::Message),
     BannerExpired,
     Agree,
@@ -89,7 +90,7 @@ enum Status {
     Found(String),
     Installing(Progress),
     Installed,
-    Interrupted(ErrorKind),
+    Interrupted { kind: ErrorKind, kept: bool },
     Failed(ErrorKind),
 }
 
@@ -160,6 +161,16 @@ fn progress(step: Step) -> Progress {
             detail: format!("{} of {}", format_size(done), format_size(total)),
             sealed: false,
         },
+        Step::Unpacking { left, done, total } => Progress {
+            heading: "Writing game files",
+            fraction: if total == 0 { 1.0 } else { done as f32 / total as f32 },
+            detail: match left {
+                0 => "Finishing the last chunk".to_owned(),
+                1 => "1 chunk is still being written to disk".to_owned(),
+                left => format!("{left} chunks are still being written to disk"),
+            },
+            sealed: false,
+        },
         Step::Replacing => Progress {
             heading: "Replacing game files",
             fraction: 1.0,
@@ -169,14 +180,20 @@ fn progress(step: Step) -> Progress {
     }
 }
 
-fn failure(kind: ErrorKind) -> &'static str {
-    match kind {
-        ErrorKind::Link => "That is not a Provider link this app can read",
-        ErrorKind::Missing => "The shared folder could not be found, holds no payload, or is not public",
-        ErrorKind::Network => "The Provider could not be reached, or the download was cut short",
-        ErrorKind::Archive => "The download is not a payload this app can read",
-        ErrorKind::Disk => "The new files could not be written to disk",
-        ErrorKind::Aborted => "The download was cancelled",
+fn resumable(kind: ErrorKind, kept: bool) -> bool {
+    kept && matches!(kind, ErrorKind::Network | ErrorKind::Disk)
+}
+
+fn failure(kind: ErrorKind, kept: bool) -> &'static str {
+    match (kind, kept) {
+        (ErrorKind::Link, _) => "That is not an https link this app can read, so your current \"game\" folder was left as it was until the link is fixed",
+        (ErrorKind::Missing, _) => "Nothing is published at that link, so your current \"game\" folder was left as it was until the link is fixed",
+        (ErrorKind::Network, true) => "The download was cut short, so your current \"game\" folder was left as it was",
+        (ErrorKind::Network, false) => "The download was cut short and nothing could be kept, so your current \"game\" folder was left as it was",
+        (ErrorKind::Archive, _) => "The download is not a payload this app can read and cannot be resumed, so your current \"game\" folder was left as it was",
+        (ErrorKind::Disk, true) => "The new files could not be written to disk, so your current \"game\" folder was left as it was",
+        (ErrorKind::Disk, false) => "The new files could not be written to disk and nothing could be kept, so your current \"game\" folder was left as it was",
+        (ErrorKind::Aborted, _) => "The download was cancelled, so your current \"game\" folder was left as it was",
     }
 }
 
@@ -287,8 +304,17 @@ impl State {
 
                 Task::none()
             }
+            Message::Dismiss => {
+                if matches!(self.status, Status::Interrupted { kind: ErrorKind::Link | ErrorKind::Missing, .. }) {
+                    self.close();
+                } else {
+                    self.settle();
+                }
+
+                Task::none()
+            }
             Message::Resume => {
-                if !matches!(self.status, Status::Interrupted(_)) {
+                if !matches!(self.status, Status::Interrupted { .. }) {
                     return Task::none();
                 }
 
@@ -340,7 +366,7 @@ impl State {
                         return Task::none();
                     }
                     Err(err) => {
-                        self.status = Status::Interrupted(err.kind);
+                        self.status = Status::Interrupted { kind: err.kind, kept: self.kept() };
 
                         return Task::none();
                     }
@@ -413,12 +439,20 @@ impl State {
         }
     }
 
-    fn settle(&mut self) {
+    fn close(&mut self) {
         self.is_open = false;
         self.confirm.clear();
         self.banner.clear();
         self.status = Status::Idle;
+    }
+
+    fn settle(&mut self) {
+        self.close();
         self.partial.lock().unwrap_or_else(PoisonError::into_inner).take();
+    }
+
+    fn kept(&self) -> bool {
+        self.partial.lock().unwrap_or_else(PoisonError::into_inner).is_some()
     }
 
     fn flash(&mut self, status: Status) -> Task<Message> {
@@ -427,7 +461,7 @@ impl State {
     }
 
     fn prompts(&self) -> bool {
-        matches!(self.status, Status::Found(_) | Status::Installing(_) | Status::Installed | Status::Interrupted(_))
+        matches!(self.status, Status::Found(_) | Status::Installing(_) | Status::Installed | Status::Interrupted { .. })
     }
 
     fn install(&mut self, link: String) -> Task<Message> {
@@ -470,7 +504,7 @@ impl State {
         if let Err(err) = spawned {
             error!("Failed to spawn the game data download thread: {}", err);
             watcher::resume();
-            self.status = Status::Interrupted(ErrorKind::Disk);
+            self.status = Status::Interrupted { kind: ErrorKind::Disk, kept: self.kept() };
 
             return Task::none();
         }
@@ -526,9 +560,9 @@ impl State {
     pub fn view<'a>(&'a self, files: &'a FilesSettings) -> Element<'a, Message> {
         let busy = matches!(self.status, Status::Checking | Status::Installing(_));
 
-        let input = text_input("Provider link", &files.source_link)
+        let input = text_input("Source link", &files.source_link)
             .on_input_maybe((!busy).then_some(Message::LinkChanged))
-            .width(Length::Fixed(INPUT_WIDTH))
+            .width(Length::Fixed(theme::STATUS_BUTTON_WIDTH))
             .style(theme::rounded_input);
 
         let linked = !files.source_link.trim().is_empty();
@@ -541,9 +575,9 @@ impl State {
             Status::Found(_) => ("Files Found!", theme::success_button, Some(Message::Show)),
             Status::Installing(_) => ("Downloading Files...", theme::warning_button, Some(Message::Show)),
             Status::Installed => ("Files Updated!", theme::success_status, None),
-            Status::Interrupted(_) => ("Download Failed!", theme::danger_button, Some(Message::Show)),
+            Status::Interrupted { .. } => ("Download Failed!", theme::danger_button, Some(Message::Show)),
             Status::Failed(ErrorKind::Link) => ("Invalid Link!", theme::danger_status, None),
-            Status::Failed(ErrorKind::Missing) => ("Folder Not Found!", theme::danger_status, None),
+            Status::Failed(ErrorKind::Missing) => ("Source Not Found!", theme::danger_status, None),
             Status::Failed(ErrorKind::Network) => ("Failed to Check!", theme::danger_status, None),
             Status::Failed(_) => ("Download Failed!", theme::danger_status, None),
         };
@@ -578,16 +612,18 @@ impl State {
             Status::Found(_) => "New Files Available",
             Status::Installing(_) => "Downloading Files",
             Status::Installed => "Files Updated",
-            Status::Interrupted(_) => "Download Failed",
+            Status::Interrupted { .. } => "Download Failed",
             Status::Idle | Status::Checking | Status::Current | Status::Failed(_) => return None,
         };
 
-        Some(self.popup.view(title, POPUP, window, Message::Popup, move || {
+        let spec = if matches!(self.status, Status::Interrupted { .. }) { INTERRUPTED_POPUP } else { POPUP };
+
+        Some(self.popup.view(title, spec, window, Message::Popup, move || {
             let body = match &self.status {
                 Status::Found(summary) => self.view_found(summary),
                 Status::Installing(progress) => view_installing(progress),
                 Status::Installed => view_installed(),
-                Status::Interrupted(kind) => view_interrupted(*kind),
+                Status::Interrupted { kind, kept } => view_interrupted(*kind, *kept),
                 Status::Idle | Status::Checking | Status::Current | Status::Failed(_) => Space::new().into(),
             };
 
@@ -652,19 +688,25 @@ fn view_installed<'a>() -> Element<'a, Message> {
     .into()
 }
 
-fn view_interrupted<'a>(kind: ErrorKind) -> Element<'a, Message> {
-    let actions = row![
-        theme::sized_button("Resume", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button).on_press(Message::Resume),
-        theme::sized_button("Abort", theme::POPUP_ACTION_BUTTON_WIDTH, theme::danger_button).on_press(Message::Abort),
-    ]
-    .spacing(BUTTON_SPACING);
+fn view_interrupted<'a>(kind: ErrorKind, kept: bool) -> Element<'a, Message> {
+    let (title, actions): (&str, Element<'a, Message>) = if resumable(kind, kept) {
+        let actions = row![
+            theme::sized_button("Resume", theme::POPUP_ACTION_BUTTON_WIDTH, theme::success_button).on_press(Message::Resume),
+            theme::sized_button("Abort", theme::POPUP_ACTION_BUTTON_WIDTH, theme::danger_button).on_press(Message::Abort),
+        ]
+        .spacing(BUTTON_SPACING);
+
+        ("The new game files were not installed", actions.into())
+    } else {
+        let close = theme::sized_button("Close", theme::POPUP_ACTION_BUTTON_WIDTH, theme::danger_button).on_press(Message::Dismiss);
+
+        ("The download cannot continue", close.into())
+    };
 
     column![
-        theme::bold_text("The new game files were not installed").size(TITLE_SIZE),
-        text(failure(kind)).size(BODY_SIZE),
-        subtle_text("Your current \"game\" folder was left as it was"),
+        theme::bold_text(title).size(TITLE_SIZE),
+        text(failure(kind, kept)).size(BODY_SIZE).align_x(Alignment::Center),
         actions,
-        subtle_text("\"Resume\" keeps what was downloaded and retries from the file that failed"),
     ]
     .spacing(CONTENT_SPACING)
     .align_x(Alignment::Center)
