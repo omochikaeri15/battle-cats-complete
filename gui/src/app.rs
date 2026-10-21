@@ -878,6 +878,7 @@ impl BattleCatsApp {
         self.stage_state.refresh_summary(GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.treasure, names: &self.names });
 
         self.stage_state.invalidate_assets(&items, &enemies, stage_coarse, &self.vault);
+        self.editor.forget_enemies(enemies.union(&enemy_data));
 
         self.index_dirty = true;
         self.last_change_at = Some(Instant::now());

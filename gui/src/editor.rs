@@ -954,7 +954,13 @@ impl State {
             bank.relocalize();
         }
 
-        self.ground.forget();
+        self.ground.clear_icons();
+    }
+
+    pub(crate) fn forget_enemies<'a>(&self, ids: impl IntoIterator<Item = &'a u32>) {
+        for id in ids {
+            self.ground.forget(*id);
+        }
     }
 
     pub(crate) fn flush_now(&mut self, vfs: &Vfs) {

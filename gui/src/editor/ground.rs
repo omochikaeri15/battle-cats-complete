@@ -1116,7 +1116,11 @@ impl State {
         }
     }
 
-    pub(super) fn forget(&self) {
+    pub(super) fn forget(&self, id: u32) {
+        self.icons.borrow_mut().remove(&id);
+    }
+
+    pub(super) fn clear_icons(&self) {
         self.icons.borrow_mut().clear();
     }
 
