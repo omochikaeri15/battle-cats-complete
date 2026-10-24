@@ -3,10 +3,12 @@ use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
 use kore::systems::combat::NameBook;
-use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial};
+use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial, FILIBUSTER_MAP};
 use kore::domains::sandbox::{config, ITEMS, TECHS};
+use kore::domains::stage::{navigate, GlobalMapId, StageRegistry};
 use kore::systems::treasure::Catalog;
 use kore::Vfs;
+use nyanko::chapter::Category;
 
 use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume};
 use crate::app::theme;
@@ -50,6 +52,27 @@ impl std::fmt::Display for Part {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.label)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Invaded {
+    slot: u32,
+    label: String,
+}
+
+impl std::fmt::Display for Invaded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.label)
+    }
+}
+
+fn invadable(registry: &StageRegistry, category: Category) -> Vec<Invaded> {
+    let map = GlobalMapId { category, map: FILIBUSTER_MAP };
+
+    navigate::invadable_stages(registry, &map)
+        .into_iter()
+        .map(|stage| Invaded { slot: stage.stage_id, label: stage.name.clone() })
+        .collect()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -104,6 +127,8 @@ pub enum Message {
     CatGod(CatGod),
     StartSpeed(StartSpeed),
     Tutorial(TutorialStep, bool),
+    Filibuster(Invaded),
+    FilibusterOutbreak(Invaded),
 }
 
 #[derive(Default)]
@@ -114,6 +139,8 @@ pub struct State {
     foundations: Vec<Part>,
     loaded: bool,
     treasure: treasure::State,
+    filibuster: Vec<Invaded>,
+    filibuster_outbreak: Vec<Invaded>,
 }
 
 fn typable(entry: &str) -> bool {
@@ -139,6 +166,11 @@ impl State {
         self.styles = offered(&self.parts.styles, |id| self.parts.style_label(id, names));
         self.foundations = offered(&self.parts.foundations, |id| self.parts.foundation_label(id, names));
         self.loaded = true;
+    }
+
+    pub fn set_invadable(&mut self, registry: &StageRegistry) {
+        self.filibuster = invadable(registry, Category::CatsOfTheCosmos);
+        self.filibuster_outbreak = invadable(registry, Category::ZombieOutbreaks);
     }
 
     pub fn parts(&self) -> &Parts {
@@ -175,6 +207,8 @@ impl State {
                     TutorialStep::ShopSeen => tutorial.shop_seen = cleared,
                 }
             }
+            Message::Filibuster(picked) => options.config.invasions.filibuster = picked.slot,
+            Message::FilibusterOutbreak(picked) => options.config.invasions.filibuster_outbreak = picked.slot,
             Message::CatGod(picked) => options.config.cat_god = picked,
             Message::StartSpeed(picked) => options.config.start_speed = picked,
             Message::Castle(entry) => {
@@ -213,6 +247,7 @@ impl State {
             (SandboxPanel::Tech, "Tech"),
             (SandboxPanel::Base, "Base"),
             (SandboxPanel::Items, "Items"),
+            (SandboxPanel::Invasions, "Invasions"),
             (SandboxPanel::Tutorial, "Tutorial"),
         ];
 
@@ -236,6 +271,7 @@ impl State {
             SandboxPanel::Tech => Self::tech(options),
             SandboxPanel::Base => self.base(options),
             SandboxPanel::Items => Self::items(options),
+            SandboxPanel::Invasions => self.invasions(options),
             SandboxPanel::Tutorial => Self::tutorial(options),
         };
 
@@ -286,6 +322,33 @@ impl State {
                     Some(Message::Formation),
                 ),
                 toggle_row(options.vibrate, text("Vibration"), Some(Message::Vibrate)),
+            ]
+                .spacing(ROW_SPACING),
+        )
+    }
+
+    fn invasions<'a>(&'a self, options: &'a SandboxState) -> Element<'a, Message> {
+        let held = |offered: &'a [Invaded], slot: u32| offered.iter().find(|stage| stage.slot == slot);
+        let invasions = &options.config.invasions;
+
+        section(
+            "Filibuster Invasion",
+            Length::Fill,
+            column![
+                combo_row(
+                    "Invasion Stage",
+                    "The Cats of the Cosmos chapter 3 stage the Filibuster Invasion takes over",
+                    self.filibuster.as_slice(),
+                    held(&self.filibuster, invasions.filibuster),
+                    Some(Message::Filibuster),
+                ),
+                combo_row(
+                    "Outbreak Stage",
+                    "The Zombie Outbreaks chapter 3 stage the zombie Filibuster Invasion takes over",
+                    self.filibuster_outbreak.as_slice(),
+                    held(&self.filibuster_outbreak, invasions.filibuster_outbreak),
+                    Some(Message::FilibusterOutbreak),
+                ),
             ]
                 .spacing(ROW_SPACING),
         )

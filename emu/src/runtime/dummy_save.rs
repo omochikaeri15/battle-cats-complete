@@ -1,12 +1,12 @@
 use crate::{
     Fault,
     engine::{
-        AltarReward, AppContext, map_index_of_map_id, map_type_of_map_id, obfuscate_value,
+        AltarReward, AppContext, map_index_of_map_id, map_type_base_id, map_type_of_map_id, obfuscate_value,
         reset_stage_name_tables, set_stage_record,
     },
 };
 
-use super::{CatGod, Setup, fill_dummy_lineup};
+use super::{CatGod, Setup, StageVariant, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
 const POINT_CAP: i32 = 9_999_999;
@@ -29,6 +29,9 @@ const CHAPTER_STAGES: usize = 0x30;
 const STAGE_CLEARED: i32 = 1;
 const TWO_ROWS_UNLOCKED: i32 = 2;
 const MAP_RETURN_POPUP: i32 = 0x4b;
+const MOON_SLOT: i32 = 0x2f;
+const MOON_CHAPTERS: [i32; 9] = [0, 1, 2, 4, 5, 6, 7, 8, 9];
+const ZERO_LEGENDS_TYPE: i32 = -22;
 
 pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     let tutorial = &setup.tutorial;
@@ -124,6 +127,36 @@ pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
         let key = u32::from_le_bytes(ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
 
         ctx.set_block_at(AppContext::STAGES_CLEARED_CHAPTERS + DISCOUNT_CHAPTER * 4, (CHAPTER_CLEARED ^ key).to_le_bytes())?;
+    }
+
+    Ok(())
+}
+
+pub fn seed_stage_variant(ctx: &mut AppContext, variant: StageVariant) -> Result<(), Fault> {
+    let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+    let stage = ctx.i32_at(AppContext::ENTRY_STAGE)?;
+
+    match variant {
+        StageVariant::Plain => {}
+        StageVariant::Outbreak => {
+            ctx.outbreak_active.entry(mode).or_default().insert(stage, true);
+        }
+        StageVariant::Invasion => {
+            let key = u32::from_le_bytes(ctx.block_at::<4>(AppContext::STAGES_CLEARED_CHAPTERS_KEY)?);
+
+            ctx.set_block_at(AppContext::STAGES_CLEARED_CHAPTERS + mode as usize * 4, (CHAPTER_CLEARED ^ key).to_le_bytes())?;
+            ctx.set_block_at::<1>(AppContext::INVASION_STAGE, [stage as u8])?;
+        }
+        StageVariant::ZombieInvasion => {
+            ctx.set_block_at::<1>(AppContext::MAP_NEG15_CLEARED, [1])?;
+            ctx.cleared_map_ids.push(map_type_base_id(ZERO_LEGENDS_TYPE, 0));
+
+            for chapter in MOON_CHAPTERS {
+                ctx.outbreak_cleared.entry(chapter).or_default().insert(MOON_SLOT, true);
+            }
+
+            ctx.set_block_at::<1>(AppContext::INVASION_STAGE, [stage as u8])?;
+        }
     }
 
     Ok(())

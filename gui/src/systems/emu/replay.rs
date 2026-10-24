@@ -1,4 +1,4 @@
-use emu::runtime::{BattleOptions, CatGod, PartLevels, Seeds, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags};
+use emu::runtime::{BattleOptions, CatGod, PartLevels, Seeds, Setup, SetupUnit, StageEntry, StageVariant, TechLevel, TutorialFlags};
 use kore::domains::sandbox::replay::{self as tape, Key};
 
 use super::keys::Action;
@@ -67,6 +67,12 @@ pub fn setup_to(setup: &Setup, map_name: &str, stage_name: &str) -> tape::Setup 
             map_name: map_name.to_owned(),
             stage_name: stage_name.to_owned(),
             dungeon_stage: setup.stage.dungeon_stage,
+            variant: match setup.stage.variant {
+                StageVariant::Plain => tape::Variant::Plain,
+                StageVariant::Outbreak => tape::Variant::Outbreak,
+                StageVariant::Invasion => tape::Variant::Invasion,
+                StageVariant::ZombieInvasion => tape::Variant::ZombieInvasion,
+            },
         },
         lineup: setup
             .lineup
@@ -118,6 +124,12 @@ pub fn setup_from(saved: &tape::Setup) -> Setup {
             layout: saved.stage.layout,
             crown: saved.stage.crown,
             dungeon_stage: saved.stage.dungeon_stage,
+            variant: match saved.stage.variant {
+                tape::Variant::Plain => StageVariant::Plain,
+                tape::Variant::Outbreak => StageVariant::Outbreak,
+                tape::Variant::Invasion => StageVariant::Invasion,
+                tape::Variant::ZombieInvasion => StageVariant::ZombieInvasion,
+            },
         },
         lineup: saved
             .lineup

@@ -33,6 +33,16 @@ pub struct Stage {
     pub map_name: String,
     pub stage_name: String,
     pub dungeon_stage: Option<i32>,
+    pub variant: Variant,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Variant {
+    #[default]
+    Plain,
+    Outbreak,
+    Invasion,
+    ZombieInvasion,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

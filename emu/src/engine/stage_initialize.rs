@@ -1413,7 +1413,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
     load_battle_assets(ctx)?;
     ctx.bg_models.clear();
     ctx.bg_anim_cache.clear();
-    ctx.bg_model_names.clear();
+    ctx.bg_effects.model_names.clear();
 
     let mut index = 0;
 
@@ -1430,7 +1430,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         mamodel_set_single_sheet(ctx.bg_models.entry(name.clone()).or_default(), 1);
-        *ctx.bg_model_names.entry(index).or_default() = name;
+        *ctx.bg_effects.model_names.entry(index).or_default() = name;
         index += 1;
     }
 
@@ -1448,7 +1448,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
             break;
         }
 
-        *ctx.bg_anim_names.entry(index).or_default() = name;
+        *ctx.bg_effects.model_anims.entry(index).or_default() = name;
         index += 1;
     }
 

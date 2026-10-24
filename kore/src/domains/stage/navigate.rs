@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use nyanko::chapter::Category;
+use nyanko::chapter::{Category, map::fixed_invasion_target};
 
 use super::{GlobalMapId, GlobalStageId, Map, Stage, StageRegistry};
 
@@ -40,12 +40,36 @@ pub fn get_stages<'a>(registry: &'a StageRegistry, map_id: &GlobalMapId) -> Vec<
     stages
 }
 const STORY_MOON_SLOT: i32 = 47;
+const INVASION_MARK: &str = "_Invasion";
 
 pub fn map_screen_slot(global_map_id: i32, stage_id: i32) -> i32 {
     match (global_map_id, stage_id) {
         (3001, 49) | (3002, 50) => STORY_MOON_SLOT,
         _ => stage_id,
     }
+}
+
+pub fn is_invasion(registry: &StageRegistry, stage: &GlobalStageId) -> bool {
+    registry.grounds.get(stage).is_some_and(|file| file.contains(INVASION_MARK))
+}
+
+pub fn is_invader(registry: &StageRegistry, map_id: &GlobalMapId) -> bool {
+    let Some(global) = registry.addresses.get(map_id).and_then(|address| address.global) else {
+        return false;
+    };
+
+    fixed_invasion_target(global).is_some() || registry.maps.values().any(|map| map.ex_invasion == Some(global))
+}
+
+pub fn invadable_stages<'a>(registry: &'a StageRegistry, map_id: &GlobalMapId) -> Vec<&'a Stage> {
+    get_stages(registry, map_id)
+        .into_iter()
+        .filter(|stage| {
+            let key = GlobalStageId { category: map_id.category.clone(), map: map_id.map, stage: stage.stage_id };
+
+            !is_invasion(registry, &key)
+        })
+        .collect()
 }
 
 #[cfg(test)]

@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use iced::futures::channel::mpsc;
 use iced::widget::{button, column, container, markdown, opaque, operation, row, scrollable, stack, Space};
 use iced::{task, window, Element, Length, Size, Subscription, Task, Theme};
-use nyanko::files::{Localizable, Param};
+use nyanko::{chapter::Category, files::{Localizable, Param}};
 use rustc_hash::FxHasher;
 use smol::Timer;
 use tracing::{debug, info, trace, warn};
@@ -28,7 +28,7 @@ use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::scanner::{self as stage_scanner, Touch};
-use kore::domains::stage::{navigate::map_screen_slot, GlobalMapId};
+use kore::domains::stage::{navigate::{is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
 use kore::systems::treasure::{Bonus, Catalog};
 use kore::{ContentStore, Evicted, StageStore, Vault};
 
@@ -131,6 +131,8 @@ const LISTS_PATIENCE: Duration = Duration::from_millis(600);
 const FRAMES_BEFORE_SHOW: u8 = 2;
 const SLOW_PASS: Duration = Duration::from_millis(250);
 const LABEL_ROOM: usize = 64;
+const INVASION_TAG: &str = "Invasion";
+const OUTBREAK_TAG: &str = "Outbreak";
 const LISTED_CATS: u8 = 1;
 const LISTED_ENEMIES: u8 = 2;
 const LISTED_STAGES: u8 = 4;
@@ -662,6 +664,7 @@ impl BattleCatsApp {
                 let global_ctx = GlobalContext { param: &self.param, localizable: &self.localizable, vault: &self.vault, treasure: &self.sandbox_treasure, names: &self.names };
 
                 self.stage_state.enter();
+                self.sandbox_state.set_invadable(&self.stage_state.data.registry);
 
                 let entered = self.sandbox_state.enter(&self.app_state, &self.settings, global_ctx).map(Message::Sandbox);
 
@@ -1548,6 +1551,10 @@ impl BattleCatsApp {
                 self.sync_sandbox_rules();
 
                 if stages_loaded {
+                    self.sandbox_state.set_invadable(&self.stage_state.data.registry);
+                }
+
+                if stages_loaded {
                     let mined = self.restock_mining();
 
                     return Task::batch([task, mined, self.reconcile_caches()]);
@@ -2019,10 +2026,35 @@ impl BattleCatsApp {
 
         emu::Label {
             app: self.mods_state.active_mod().unwrap_or_else(|| kore::domains::sandbox::replay::VANILLA_APP.to_owned()),
-            map: map.and_then(|map| data.registry.maps.get(&map)).map(|map| map.name.clone()).unwrap_or_default(),
-            stage: picked.and_then(|picked| data.registry.stages.get(picked)).map(|stage| stage.name.clone()).unwrap_or_default(),
+            map: map.and_then(|map| data.registry.maps.get(&map)).map_or_else(String::new, |map| match map.category {
+                Category::ZombieOutbreaks => format!("{} ({OUTBREAK_TAG})", map.name),
+                _ => map.name.clone(),
+            }),
+            stage: picked.map_or_else(String::new, |picked| {
+                let name = data.registry.stages.get(picked).map(|stage| stage.name.as_str()).unwrap_or_default();
+                let map = GlobalMapId { category: picked.category.clone(), map: picked.map };
+                let invaded = self.invaded_slot(picked).and_then(|slot| {
+                    data.registry.stages.get(&GlobalStageId { category: picked.category.clone(), map: picked.map, stage: slot })
+                });
+
+                match invaded {
+                    Some(invaded) => format!("{} ({INVASION_TAG})", invaded.name),
+                    None if is_invader(&data.registry, &map) => format!("{name} ({INVASION_TAG})"),
+                    None => name.to_owned(),
+                }
+            }),
             keepsakes: Vec::new(),
         }
+    }
+
+    fn invaded_slot(&self, picked: &GlobalStageId) -> Option<u32> {
+        let invasions = &self.app_state.sandbox.config.invasions;
+
+        is_invasion(&self.stage_state.data.registry, picked).then_some(if picked.category == Category::ZombieOutbreaks {
+            invasions.filibuster_outbreak
+        } else {
+            invasions.filibuster
+        })
     }
 
     fn staged_entry(&self) -> Option<::emu::runtime::StageEntry> {
@@ -2030,7 +2062,16 @@ impl BattleCatsApp {
         let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
         let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
         let map_id = i32::try_from(global).ok()?;
-        let layout = map_screen_slot(map_id, i32::try_from(picked.stage).ok()?);
+        let outbreak = picked.category == Category::ZombieOutbreaks;
+        let invaded = self.invaded_slot(picked);
+        let variant = match (outbreak, invaded.is_some()) {
+            (false, false) => ::emu::runtime::StageVariant::Plain,
+            (true, false) => ::emu::runtime::StageVariant::Outbreak,
+            (false, true) => ::emu::runtime::StageVariant::Invasion,
+            (true, true) => ::emu::runtime::StageVariant::ZombieInvasion,
+        };
+        let stage = invaded.unwrap_or(picked.stage);
+        let layout = map_screen_slot(map_id, i32::try_from(stage).ok()?);
         let slot = Lottery::load(&self.vault.vfs).slot_for(map_id, layout);
 
         Some(::emu::runtime::StageEntry {
@@ -2039,6 +2080,7 @@ impl BattleCatsApp {
             layout: slot.map(|_| layout),
             crown: i32::from(self.stage_state.selected_crown),
             dungeon_stage: None,
+            variant,
         })
     }
 

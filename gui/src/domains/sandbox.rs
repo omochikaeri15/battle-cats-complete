@@ -25,6 +25,7 @@ use kore::domains::sandbox::altar::Altars;
 use kore::domains::sandbox::TECHS;
 use kore::domains::sandbox::replay as replay_tape;
 use kore::domains::settings::{ReplaySource, ScannerConfig, Settings};
+use kore::domains::stage::StageRegistry;
 use kore::Vault;
 use nyanko::files::Localizable;
 
@@ -251,6 +252,10 @@ impl State {
         let cap = self.castle.and_then(|castle| self.altars.level_cap(castle, app_state.sandbox.config.altar()));
 
         self.lineup.set_altar(cap);
+    }
+
+    pub(crate) fn set_invadable(&mut self, registry: &StageRegistry) {
+        self.config.set_invadable(registry);
     }
 
     pub(crate) fn set_rules(&mut self, rules: kore::domains::sandbox::rules::Rules, app_state: &AppState) {

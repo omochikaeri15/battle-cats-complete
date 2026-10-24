@@ -35,6 +35,7 @@ const PREFIX_EC: &str = "EC";
 const STORY_PREFIXES: [&str; 4] = [PREFIX_EC, "W", "Space", "Z"];
 const EC_CHAPTERS: [u32; 3] = [0, 1, 2];
 const INVASION: &str = "Invasion";
+const ZOMBIE_INVASION: &str = "_Z_";
 
 type Names = Arc<[Box<str>]>;
 
@@ -468,7 +469,10 @@ fn stage_prefixes(category: &Category) -> Vec<String> {
 }
 
 fn invasion_battleground(globs: &Globs<'_>, category: &Category, map_id: u32) -> Option<Box<str>> {
-    for prefix in stage_prefixes(category) {
+    let zombie = *category == Category::ZombieOutbreaks;
+    let prefixes = if zombie { stage_prefixes(&Category::CatsOfTheCosmos) } else { stage_prefixes(category) };
+
+    for prefix in prefixes {
         if prefix.is_empty() {
             continue;
         }
@@ -488,7 +492,8 @@ fn invasion_battleground(globs: &Globs<'_>, category: &Category, map_id: u32) ->
                 return false;
             };
 
-            map.parse::<u32>().ok() == Some(map_id) && rest.starts_with(INVASION)
+            map.parse::<u32>().ok() == Some(map_id)
+                && rest.strip_prefix(INVASION).is_some_and(|tail| tail.starts_with(ZOMBIE_INVASION) == zombie)
         });
 
         if found.is_some() {

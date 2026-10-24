@@ -873,6 +873,12 @@ impl Driver {
             return false;
         }
 
+        if let Err(fault) = emu::runtime::seed_stage_variant(&mut self.ctx, self.setup.stage.variant) {
+            warn!("emu: stage variant could not be seeded: {fault}");
+
+            return false;
+        }
+
         let prepared = match emu::runtime::is_extra_entry(&self.ctx) {
             Ok(true) => emu::runtime::prepare_extra_entry(&mut self.ctx),
             _ => emu::engine::prepare_battle_entry(&mut self.ctx),

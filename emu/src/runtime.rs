@@ -17,7 +17,7 @@ mod touch_input;
 
 pub use battle_options::{BattleOptions, apply_battle_options, read_battle_options};
 pub use dummy_lineup::{fill_dummy_lineup, fill_dummy_talents, stock_battle_items, usable_items};
-pub use dummy_save::{fill_dummy_cannon_parts, fill_dummy_save, seed_altar_records, seed_cat_god, seed_point_cap, unlock_dummy_combos};
+pub use dummy_save::{fill_dummy_cannon_parts, fill_dummy_save, seed_altar_records, seed_cat_god, seed_point_cap, seed_stage_variant, unlock_dummy_combos};
 pub use inert_draw::InertDraw;
 pub use keys::{
     CONFIRM_BUTTON, LEAVE_BUTTON, Spot, deck_row_hidden, deck_row_swapping, dialog_open, option_menu_open, pinch_latched, queue_back,
@@ -30,7 +30,7 @@ pub use inert_scene::{InertScene, pump_stage_return};
 pub use inert_ui::InertUi;
 pub use relayout::{Layout, layout_snapshot, relatch_battle_rects};
 pub use seeds::{Seeds, plant_seeds};
-pub use setup::{BATTLE_ITEMS, CASTLE_PART, CatGod, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel, TutorialFlags, is_extra_entry, prepare_extra_entry, select_dungeon_stage, select_stage};
+pub use setup::{BATTLE_ITEMS, CASTLE_PART, CatGod, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, StageVariant, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel, TutorialFlags, is_extra_entry, prepare_extra_entry, select_dungeon_stage, select_stage};
 pub use silent_sound::SilentSound;
 pub use stamp::VERSION;
 pub use touch_input::{pump_pinch, pump_touch};

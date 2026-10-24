@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::systems::treasure;
 
+pub const FILIBUSTER_MAP: u32 = 9;
+const BIG_BANG: u32 = 47;
+
 pub const ITEMS: [&str; 6] = ["Speed Up", "Treasure Radar", "Rich Cat", "Cat CPU", "Cat Jobs", "Sniper the Cat"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -107,6 +110,19 @@ impl Default for Tutorial {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Invasions {
+    pub filibuster: u32,
+    pub filibuster_outbreak: u32,
+}
+
+impl Default for Invasions {
+    fn default() -> Self {
+        Self { filibuster: BIG_BANG, filibuster_outbreak: BIG_BANG }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -124,6 +140,7 @@ pub struct Config {
     pub altar_level: String,
     pub cat_god: CatGod,
     pub tutorial: Tutorial,
+    pub invasions: Invasions,
 }
 
 impl Default for Config {
@@ -143,6 +160,7 @@ impl Default for Config {
             altar_level: String::new(),
             cat_god: CatGod::default(),
             tutorial: Tutorial::default(),
+            invasions: Invasions::default(),
         }
     }
 }

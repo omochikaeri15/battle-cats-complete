@@ -32,12 +32,22 @@ const DUNGEON_GROUP: usize = 2;
 const DUNGEON_PACK: i32 = 100;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum StageVariant {
+    #[default]
+    Plain,
+    Outbreak,
+    Invasion,
+    ZombieInvasion,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct StageEntry {
     pub map_id: i32,
     pub stage: i32,
     pub layout: Option<i32>,
     pub crown: i32,
     pub dungeon_stage: Option<i32>,
+    pub variant: StageVariant,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

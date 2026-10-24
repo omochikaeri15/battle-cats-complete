@@ -136,6 +136,7 @@ pub enum SandboxPanel {
     Tech,
     Base,
     Items,
+    Invasions,
     Tutorial,
 }
 
