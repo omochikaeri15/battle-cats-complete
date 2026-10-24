@@ -1267,7 +1267,6 @@ impl BattleCatsApp {
             }
             Message::GraphicsSurveyed(report) => {
                 self.settings.general.graphics_auto = report.auto;
-                self.sandbox_state.set_drawable(!report.software);
                 self.settings_state.set_graphics(report);
 
                 Task::none()
@@ -1790,9 +1789,9 @@ impl BattleCatsApp {
                     let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };
                     let recording = label.is_some();
 
-                    let started = self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
+                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
 
-                    if started && recording {
+                    if recording {
                         let config = self.settings.scanner_config(self.mods_state.active_mod());
 
                         gathering = Some(self.sandbox_state.gather_keepsakes(Arc::clone(&self.vault), lineup, config).map(Message::Sandbox));

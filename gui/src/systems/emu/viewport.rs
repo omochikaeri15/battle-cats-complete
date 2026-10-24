@@ -6,8 +6,10 @@ use std::time::{Duration, Instant};
 
 use iced::wgpu;
 use iced::widget::shader;
-use iced::{Element, Length, Rectangle, mouse};
+use iced::{Element, Rectangle, mouse};
 use tracing::{debug, trace};
+
+use crate::widget::cpu;
 
 use super::assets::{Sheet, SheetCache};
 use super::input::{Touch, TouchQueue};
@@ -429,7 +431,7 @@ pub fn overlay<'a, Message: 'a>(
     let frame = frame.cloned().unwrap_or_default();
     let sheets = sheets.cloned().unwrap_or_default();
     let touches = touches.cloned().unwrap_or_else(super::input::queue);
-    let painted = shader::Shader::new(Viewport {
+    let painted = cpu::shader(Viewport {
         frame,
         sheets,
         canvas: Surface { aspect, surfaced },
@@ -437,9 +439,7 @@ pub fn overlay<'a, Message: 'a>(
         active,
         covered,
         frozen,
-    })
-    .width(Length::Fill)
-    .height(Length::Fill);
+    });
 
     iced::widget::stack![base, painted, above].into()
 }

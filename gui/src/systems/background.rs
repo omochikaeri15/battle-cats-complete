@@ -1,5 +1,6 @@
 mod canvas;
 mod controls;
+mod cpu;
 mod export;
 mod offscreen;
 mod overlay;

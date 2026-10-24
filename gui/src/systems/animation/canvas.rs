@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use iced::mouse;
 use iced::wgpu;
-use iced::widget::shader::{self, Shader};
-use iced::{Element, Event, Length, Point, Rectangle, Vector};
+use iced::widget::shader;
+use iced::{Element, Event, Point, Rectangle, Vector};
 use image::RgbaImage;
 
 use nyanko::graphics::animate::{resolve_frame, FrameData};
@@ -12,7 +12,7 @@ use kore::domains::settings::{Scope, StudioSettings};
 
 use kore::systems::animation::multiply_mat3;
 
-use crate::widget::LINE_PIXELS;
+use crate::widget::{cpu, LINE_PIXELS};
 
 use super::data;
 use super::pipeline::{build_vertices, Painted, Pipeline};
@@ -90,10 +90,7 @@ impl State {
         anim: Option<&'a StudioSettings>,
         picked: Option<usize>,
     ) -> Element<'a, Message> {
-        Shader::new(Viewport { state: self, data, anim, picked })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        cpu::shader(Viewport { state: self, data, anim, picked })
     }
 }
 
@@ -264,11 +261,11 @@ impl<'a> shader::Program<Message> for Viewport<'a> {
     }
 }
 
-struct Scene {
-    image: Option<Arc<RgbaImage>>,
-    parts: Vec<Painted>,
-    pan: Vector,
-    zoom: f32,
+pub(super) struct Scene {
+    pub(super) image: Option<Arc<RgbaImage>>,
+    pub(super) parts: Vec<Painted>,
+    pub(super) pan: Vector,
+    pub(super) zoom: f32,
 }
 
 impl std::fmt::Debug for Scene {

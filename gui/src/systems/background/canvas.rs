@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use iced::mouse;
 use iced::wgpu;
-use iced::widget::shader::{self, Shader};
+use iced::widget::shader;
 use iced::window;
-use iced::{Element, Event, Length, Point, Rectangle, Size, Vector};
+use iced::{Element, Event, Point, Rectangle, Size, Vector};
 use image::RgbaImage;
 
 use nyanko::graphics::backdrop::{Backdrop, Camera, Quad, Screen, Surface};
 
-use crate::widget::LINE_PIXELS;
+use crate::widget::{cpu, LINE_PIXELS};
 
 use super::pipeline::{self, Pipeline, Scene};
 
@@ -122,10 +122,7 @@ impl State {
     }
 
     pub fn view<'a>(&'a self, backdrop: Option<&'a Backdrop>, quads: &Arc<Vec<Quad>>, stamp: u64) -> Element<'a, Message> {
-        Shader::new(Viewport { state: self, backdrop, quads: Arc::clone(quads), stamp })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        cpu::shader(Viewport { state: self, backdrop, quads: Arc::clone(quads), stamp })
     }
 }
 
@@ -218,8 +215,8 @@ impl shader::Program<Message> for Viewport<'_> {
 }
 
 pub struct Painted {
-    quads: Arc<Vec<Quad>>,
-    images: Vec<(Surface, Arc<RgbaImage>)>,
+    pub(super) quads: Arc<Vec<Quad>>,
+    pub(super) images: Vec<(Surface, Arc<RgbaImage>)>,
     stamp: u64,
 }
 

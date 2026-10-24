@@ -6,7 +6,7 @@ use iced::futures::executor::block_on;
 use iced::wgpu;
 use iced::Point;
 use image::RgbaImage;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use nyanko::graphics::animate::{resolve_frame, FrameData};
 use nyanko::graphics::rig::{Animation, Rig};
@@ -32,64 +32,33 @@ pub struct Camera {
 }
 
 pub struct Renderer {
+    gpu: Option<Gpu>,
+    width: u32,
+    height: u32,
+}
+
+struct Gpu {
     device: wgpu::Device,
     queue: wgpu::Queue,
     pipeline: Pipeline,
     target: wgpu::Texture,
     readback: wgpu::Buffer,
-    width: u32,
-    height: u32,
     padded_bytes_per_row: u32,
 }
 
 impl Renderer {
     pub fn new(region_w: f32, region_h: f32) -> Result<Self, String> {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+        let gpu = if crate::widget::cpu::software() {
+            info!("The app is drawn in software, so the export is drawn on the CPU");
+            None
+        } else {
+            Gpu::new(region_w, region_h).inspect_err(|reason| warn!("The export is drawn on the CPU because {reason}")).ok()
+        };
+        let limit = gpu.as_ref().map_or(super::cpu::MAX_DIMENSION, |gpu| gpu.device.limits().max_texture_dimension_2d);
+        let width = (region_w.round() as u32).clamp(1, limit);
+        let height = (region_h.round() as u32).clamp(1, limit);
 
-        let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
-            .map_err(|e| format!("No GPU adapter available for export rendering: {e}"))
-            .inspect_err(|message| error!("{message}"))?;
-
-        let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-            .map_err(|e| format!("Failed to create GPU device for export rendering: {e}"))
-            .inspect_err(|message| error!("{message}"))?;
-
-        let max_dim = device.limits().max_texture_dimension_2d;
-        let width = (region_w.round() as u32).clamp(1, max_dim);
-        let height = (region_h.round() as u32).clamp(1, max_dim);
-
-        let pipeline = Pipeline::create(&device, wgpu::TextureFormat::Rgba8Unorm);
-
-        let target = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("animation_export_target"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-            view_formats: &[],
-        });
-
-        let padded_bytes_per_row = align_bytes_per_row(width);
-
-        let readback = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("animation_export_readback"),
-            size: padded_bytes_per_row as u64 * height as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        Ok(Self {
-            device,
-            queue,
-            pipeline,
-            target,
-            readback,
-            width,
-            height,
-            padded_bytes_per_row,
-        })
+        Ok(Self { gpu, width, height })
     }
 
     pub fn width(&self) -> u32 {
@@ -200,19 +169,24 @@ impl Renderer {
         camera: Camera,
         background: [u8; 4],
     ) -> Result<Vec<u8>, String> {
-        self.pipeline.batches.clear();
-
         let view_proj = export_view_proj(self.width as f32, self.height as f32, camera);
+        let (width, height) = (self.width, self.height);
+
+        let Some(gpu) = self.gpu.as_mut() else {
+            return Ok(super::cpu::render_parts(image, parts, &view_proj, background, width, height));
+        };
+
+        gpu.pipeline.batches.clear();
 
         let mut can_draw = false;
         if let Some(image) = image
             && !parts.is_empty() {
-            self.pipeline.upload_atlas(&self.device, &self.queue, image);
+            gpu.pipeline.upload_atlas(&gpu.device, &gpu.queue, image);
 
             let (vertex_data, index_data, batches) = build_vertices(parts, &view_proj);
-            self.pipeline.batches = batches;
-            self.pipeline.upload_vertices(&self.device, &self.queue, &vertex_data);
-            self.pipeline.upload_indices(&self.device, &self.queue, &index_data);
+            gpu.pipeline.batches = batches;
+            gpu.pipeline.upload_vertices(&gpu.device, &gpu.queue, &vertex_data);
+            gpu.pipeline.upload_indices(&gpu.device, &gpu.queue, &index_data);
             can_draw = true;
         }
 
@@ -223,8 +197,8 @@ impl Renderer {
             a: background[3] as f64 / 255.0,
         };
 
-        let view = self.target.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let view = gpu.target.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = gpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("animation_export"),
         });
 
@@ -247,13 +221,13 @@ impl Renderer {
 
             if can_draw
                 && let (Some(atlas), Some(vertices), Some(indices)) =
-                    (&self.pipeline.atlas, &self.pipeline.vertices, &self.pipeline.indices) {
+                    (&gpu.pipeline.atlas, &gpu.pipeline.vertices, &gpu.pipeline.indices) {
                 pass.set_bind_group(0, &atlas.bind_group, &[]);
                 pass.set_vertex_buffer(0, vertices.slice(..));
                 pass.set_index_buffer(indices.slice(..), wgpu::IndexFormat::Uint32);
 
-                for batch in &self.pipeline.batches {
-                    pass.set_pipeline(&self.pipeline.pipelines[batch.variant]);
+                for batch in &gpu.pipeline.batches {
+                    pass.set_pipeline(&gpu.pipeline.pipelines[batch.variant]);
                     pass.draw_indexed(batch.range.clone(), 0, 0..1);
                 }
             }
@@ -261,35 +235,35 @@ impl Renderer {
 
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
-                texture: &self.target,
+                texture: &gpu.target,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             wgpu::TexelCopyBufferInfo {
-                buffer: &self.readback,
+                buffer: &gpu.readback,
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(self.padded_bytes_per_row),
-                    rows_per_image: Some(self.height),
+                    bytes_per_row: Some(gpu.padded_bytes_per_row),
+                    rows_per_image: Some(height),
                 },
             },
             wgpu::Extent3d {
-                width: self.width,
-                height: self.height,
+                width,
+                height,
                 depth_or_array_layers: 1,
             },
         );
 
-        self.queue.submit([encoder.finish()]);
+        gpu.queue.submit([encoder.finish()]);
 
-        let slice = self.readback.slice(..);
+        let slice = gpu.readback.slice(..);
         let (sender, receiver) = mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
 
-        if let Err(e) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
+        if let Err(e) = gpu.device.poll(wgpu::PollType::wait_indefinitely()) {
             let message = format!("GPU poll failed during export readback: {e}");
             error!("{message}");
             return Err(message);
@@ -311,11 +285,60 @@ impl Renderer {
 
         let pixels = {
             let data = slice.get_mapped_range();
-            unpad_rows_bottom_up(&data, self.width, self.height, self.padded_bytes_per_row)
+            unpad_rows_bottom_up(&data, width, height, gpu.padded_bytes_per_row)
         };
-        self.readback.unmap();
+        gpu.readback.unmap();
 
         Ok(pixels)
+    }
+}
+
+impl Gpu {
+    fn new(region_w: f32, region_h: f32) -> Result<Self, String> {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+
+        let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+            .map_err(|e| format!("No GPU adapter available for export rendering: {e}"))
+            .inspect_err(|message| error!("{message}"))?;
+
+        let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+            .map_err(|e| format!("Failed to create GPU device for export rendering: {e}"))
+            .inspect_err(|message| error!("{message}"))?;
+
+        let max_dim = device.limits().max_texture_dimension_2d;
+        let width = (region_w.round() as u32).clamp(1, max_dim);
+        let height = (region_h.round() as u32).clamp(1, max_dim);
+
+        let pipeline = Pipeline::create(&device, wgpu::TextureFormat::Rgba8Unorm);
+
+        let target = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("animation_export_target"),
+            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+
+        let padded_bytes_per_row = align_bytes_per_row(width);
+
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("animation_export_readback"),
+            size: padded_bytes_per_row as u64 * height as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        Ok(Self {
+            device,
+            queue,
+            pipeline,
+            target,
+            readback,
+            padded_bytes_per_row,
+        })
     }
 }
 

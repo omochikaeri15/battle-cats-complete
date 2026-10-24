@@ -1,4 +1,5 @@
 mod canvas;
+mod cpu;
 pub(crate) mod controls;
 mod data;
 mod diagnostics;

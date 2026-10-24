@@ -27,7 +27,7 @@ const RESTART_REQUIRED: &str = "!! Restart Required !!";
 const RESTART_DETAIL: &str = "The new Graphics Backend applies the next time the app starts";
 const NO_GPU: &str = "!! No GPU Detected !!";
 const NO_GPU_DETAIL: &str = "The app is being drawn on the CPU, so it may run slowly";
-const GRAPHICS_HINT: &str = "Which graphics API draws the app\nAuto picks one that works on this PC\nSoftware cannot draw Sandbox battles";
+const GRAPHICS_HINT: &str = "Which graphics API draws the app\nAuto picks one that works on this PC\nSoftware draws everything on the CPU, which is slower";
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

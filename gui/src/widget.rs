@@ -25,6 +25,7 @@ mod superscript;
 mod toast;
 mod uniform_grid;
 
+pub(crate) mod cpu;
 pub(crate) mod popup;
 pub mod roster_list;
 pub mod statblock_export;

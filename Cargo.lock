@@ -2040,6 +2040,7 @@ dependencies = [
  "directories",
  "emu",
  "iced",
+ "iced_renderer",
  "image",
  "kore",
  "naga",

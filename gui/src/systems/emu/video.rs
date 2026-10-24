@@ -132,7 +132,7 @@ fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, 
         return Err("the replay's battle could not be entered".to_owned());
     }
 
-    let mut canvas = Canvas::new(width, height)?;
+    let mut canvas = Canvas::new(width, height);
     let temp_video = work.join(format!("{TEMP_VIDEO}.{}", job.format.extension()));
     let encoder = Encoder::start(VideoWriter::start(width, height, GAME_FPS, job.format, job.quality, &temp_video)?);
     let mut reel = Reel { driver: &mut driver, log: &log, canvas: &mut canvas, encoder: &encoder, abort: &job.abort, drawn: 0, played: 0 };
@@ -316,6 +316,35 @@ impl Encoder {
 }
 
 struct Canvas {
+    width: u32,
+    height: u32,
+    gpu: Option<Gpu>,
+}
+
+impl Canvas {
+    fn new(width: u32, height: u32) -> Self {
+        let gpu = if crate::widget::cpu::software() {
+            info!("emu: the app is drawn in software, so the video is drawn on the CPU");
+            None
+        } else {
+            Gpu::new(width, height).inspect_err(|reason| warn!("emu: the video is drawn on the CPU because {reason}")).ok()
+        };
+
+        Self { width, height, gpu }
+    }
+
+    fn draw(&mut self, scene: Scene, pixels: &mut Vec<u8>) -> Result<(), String> {
+        let Some(gpu) = self.gpu.as_mut() else {
+            super::cpu::draw(&scene, self.width, self.height, pixels);
+
+            return Ok(());
+        };
+
+        gpu.draw(scene, pixels)
+    }
+}
+
+struct Gpu {
     device: wgpu::Device,
     queue: wgpu::Queue,
     pipeline: Pipeline,
@@ -326,7 +355,7 @@ struct Canvas {
     padded: u32,
 }
 
-impl Canvas {
+impl Gpu {
     fn new(width: u32, height: u32) -> Result<Self, String> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
         let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))

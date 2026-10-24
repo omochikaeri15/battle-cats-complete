@@ -47,7 +47,6 @@ pub(crate) struct Launch {
 #[derive(Clone, Debug)]
 pub struct Report {
     pub cpu: bool,
-    pub software: bool,
     pub auto: AutoGraphics,
 }
 
@@ -165,7 +164,7 @@ pub(crate) fn survey() -> Report {
         _ => launch.auto,
     };
 
-    Report { cpu: active.as_ref().is_none_or(|adapter| adapter.cpu), software: active.is_none(), auto }
+    Report { cpu: active.as_ref().is_none_or(|adapter| adapter.cpu), auto }
 }
 
 pub(crate) fn available() -> Vec<GraphicsBackend> {

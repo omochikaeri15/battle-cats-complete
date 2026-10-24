@@ -1,4 +1,5 @@
 mod assets;
+mod cpu;
 mod diagnostics;
 mod driver;
 mod input;
