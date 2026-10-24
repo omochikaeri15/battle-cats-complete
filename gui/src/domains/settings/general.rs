@@ -6,9 +6,10 @@ use iced::{Alignment, Border, Color, Element, Length, Point, Task, Theme};
 use tracing::debug;
 
 use kore::domains::settings::{lang, nightly};
-use kore::domains::settings::{Settings as CoreSettings, UpdateMode};
+use kore::domains::settings::{GraphicsBackend, Settings as CoreSettings, UpdateMode};
 use kore::systems::treasure::Catalog;
 
+use crate::app::graphics::{self, Report};
 use crate::app::theme;
 use crate::app::{CheckFailure, UpdateStatus};
 use crate::common::fonts;
@@ -22,6 +23,9 @@ use super::{header_section, hover_hint, SECTION_SPACING};
 const ROW_HEIGHT: f32 = 32.0;
 const ROW_WIDTH: f32 = 140.0;
 const DRAG_HIGHLIGHT_ALPHA: f32 = 0.25;
+const RESTART_REQUIRED: &str = "!! Restart Required !!";
+const NO_GPU: &str = "!! No GPU Detected !!";
+const GRAPHICS_HINT: &str = "Which graphics API draws the app\nAuto picks one that works on this PC\nSoftware cannot draw Sandbox battles";
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +57,7 @@ pub enum Message {
     ToggleIgnoreConflicts(bool),
     ToggleIgnoreWatcherFailure(bool),
     UpdateModeSelected(UpdateMode),
+    GraphicsSelected(GraphicsBackend),
     LanguageDragStart(usize),
     LanguageDragMove(Point),
     LanguageDragEnd,
@@ -72,6 +77,8 @@ pub struct State {
     baseline: Vec<String>,
     settled: bool,
     treasure: treasure::State,
+    graphics: Option<Report>,
+    backends: Option<Vec<GraphicsBackend>>,
 
     #[cfg(target_os = "linux")]
     desktop_feedback: Slot<DesktopFeedback>,
@@ -102,6 +109,11 @@ impl State {
             }
             Message::UpdateModeSelected(mode) => {
                 core_settings.general.update_mode = mode;
+                Task::none()
+            }
+            Message::GraphicsSelected(backend) => {
+                debug!(%backend, launched = %graphics::launch().selected, "Graphics backend selected");
+                core_settings.general.graphics = backend;
                 Task::none()
             }
             Message::LanguageDragStart(index) => {
@@ -185,6 +197,25 @@ impl State {
         }
     }
 
+    pub(super) fn set_graphics(&mut self, report: Report) {
+        self.graphics = Some(report);
+    }
+
+    pub(super) fn set_backends(&mut self, available: Vec<GraphicsBackend>) {
+        self.backends = Some(available);
+    }
+
+    fn graphics_notice<'a>(&self, selected: GraphicsBackend) -> Option<Element<'a, Message>> {
+        if selected != graphics::launch().selected {
+            return Some(text(RESTART_REQUIRED).style(|theme: &Theme| iced::widget::text::Style { color: Some(theme.palette().warning) }).into());
+        }
+
+        self.graphics
+            .as_ref()
+            .is_some_and(|report| report.cpu)
+            .then(|| text(NO_GPU).style(|theme: &Theme| iced::widget::text::Style { color: Some(theme.palette().danger) }).into())
+    }
+
     pub fn is_dragging(&self) -> bool {
         !matches!(self.drag, Drag::Idle)
     }
@@ -263,6 +294,19 @@ impl State {
                     }
                 ).style(theme::combo_box).menu_style(theme::combo_box_menu),
             ].spacing(10).align_y(Alignment::Center),
+            column![
+                hover_hint(
+                    row![
+                        text("Graphics Backend"),
+                        pick_list(
+                            graphics::offered(self.backends.as_deref(), core_settings.general.graphics),
+                            Some(core_settings.general.graphics),
+                            Message::GraphicsSelected,
+                        ).style(theme::combo_box).menu_style(theme::combo_box_menu),
+                    ].spacing(10).align_y(Alignment::Center),
+                    GRAPHICS_HINT,
+                ),
+            ].push(self.graphics_notice(core_settings.general.graphics)).spacing(4),
             hover_hint(
                 toggle_row(core_settings.window.fullscreen, text("Fullscreen"), Some(Message::ToggleFullscreen)),
                 "Fills the whole screen with the app\nF11 switches this at any time",

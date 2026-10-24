@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use emu::engine::{DrawSink, Imgcut, Surface};
 
@@ -49,6 +51,12 @@ pub struct Frame {
     pub design_width: f32,
     pub design_height: f32,
     pub letterbox: f32,
+    pub presented: Arc<Presented>,
+}
+
+#[derive(Default)]
+pub struct Presented {
+    pub shown: AtomicBool,
 }
 
 impl Frame {

@@ -3,6 +3,7 @@ use std::ops::Range;
 
 use iced::wgpu;
 use iced::widget::shader;
+use tracing::trace;
 
 use super::assets::Sheet;
 
@@ -77,6 +78,8 @@ pub struct Pipeline {
 
 impl shader::Pipeline for Pipeline {
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Self {
+        trace!(max_texture = device.limits().max_texture_dimension_2d, ?format, "emu: battle renderer created");
+
         let mut pipeline = Self::create(device, format);
 
         pipeline.blank = Some(pipeline.upload(device, queue, 1, 1, &[0xff, 0xff, 0xff, 0xff], 0));
@@ -242,14 +245,16 @@ impl Pipeline {
         Binding { bind_group, stamp }
     }
 
-    pub fn ensure_sheet(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &str, sheet: &Sheet) {
+    pub fn ensure_sheet(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &str, sheet: &Sheet) -> bool {
         if self.sheets.get(name).is_some_and(|held| held.stamp == sheet.stamp) {
-            return;
+            return false;
         }
 
         let binding = self.upload(device, queue, sheet.width, sheet.height, &sheet.pixels, sheet.stamp);
 
         self.sheets.insert(Box::from(name), binding);
+
+        true
     }
 
     pub fn write(

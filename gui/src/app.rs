@@ -25,7 +25,7 @@ use kore::domains::cat::scanner as cat_scanner;
 use kore::domains::enemy::scanner as enemy_scanner;
 use kore::domains::mods as kore_mods;
 use kore::common::architecture;
-use kore::domains::settings::{Settings, UpdateMode};
+use kore::domains::settings::{GraphicsBackend, Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::scanner::{self as stage_scanner, Touch};
 use kore::domains::stage::{navigate::{invaded_stage, is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
@@ -43,6 +43,7 @@ use crate::widget::{fade, nightly_label, popup, slide, smooth_scroll, Slide};
 use state::AppState;
 
 mod errors;
+pub(crate) mod graphics;
 mod logging;
 mod notice;
 pub(crate) mod startup;
@@ -360,6 +361,8 @@ impl ActivePopup {
 #[derive(Clone, Debug)]
 pub enum Message {
     AutoSave,
+    GraphicsSurveyed(graphics::Report),
+    GraphicsListed(Vec<GraphicsBackend>),
     DownloadTick,
     FramePainted,
     ShowWindow,
@@ -405,6 +408,7 @@ pub struct BattleCatsApp {
     pub sidebar_open: bool,
     pub window_size: Size,
     window_measured: bool,
+    backends_listed: bool,
     active_popups: Vec<ActivePopup>,
     notice_popup: popup::State,
     notice_open: bool,
@@ -473,6 +477,7 @@ impl Default for BattleCatsApp {
             sidebar_open: true,
             window_size: Size::new(800.0, 600.0),
             window_measured: false,
+            backends_listed: false,
             active_popups: Vec::new(),
             notice_popup: popup::State::default(),
             notice_open: false,
@@ -688,6 +693,11 @@ impl BattleCatsApp {
                 help::State::content_scrollable_id(),
                 scrollable::AbsoluteOffset { x: 0.0, y: self.help_state.scroll_offset() },
             ),
+            Page::Settings if !self.backends_listed => {
+                self.backends_listed = true;
+
+                Task::perform(smol::unblock(graphics::available), Message::GraphicsListed)
+            }
             _ => Task::none(),
         };
 
@@ -1255,6 +1265,18 @@ impl BattleCatsApp {
                 warn!("First frame never reported; revealing the window on the startup fallback");
                 self.show_window()
             }
+            Message::GraphicsSurveyed(report) => {
+                self.settings.general.graphics_auto = report.auto;
+                self.sandbox_state.set_drawable(!report.software);
+                self.settings_state.set_graphics(report);
+
+                Task::none()
+            }
+            Message::GraphicsListed(available) => {
+                self.settings_state.set_backends(available);
+
+                Task::none()
+            }
             Message::ListsPatience => {
                 if self.window_shown {
                     return Task::none();
@@ -1768,9 +1790,9 @@ impl BattleCatsApp {
                     let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };
                     let recording = label.is_some();
 
-                    self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
+                    let started = self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
 
-                    if recording {
+                    if started && recording {
                         let config = self.settings.scanner_config(self.mods_state.active_mod());
 
                         gathering = Some(self.sandbox_state.gather_keepsakes(Arc::clone(&self.vault), lineup, config).map(Message::Sandbox));

@@ -63,6 +63,7 @@ const CAT_CPU_ITEM: i32 = 3;
 const SNIPER_ITEM: i32 = 5;
 const STATUS_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
 const CUT_LIFETIME: std::time::Duration = std::time::Duration::from_secs(3);
+const UNDRAWABLE: &str = "Battles can't be drawn without a GPU renderer\nPick another Graphics Backend in Settings";
 const REPLAY_TERMINATED: &str = "Replay Terminated!";
 const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
@@ -130,6 +131,7 @@ pub struct State {
     foreign: Option<String>,
     altars: Altars,
     castle: Option<i32>,
+    drawable: bool,
 }
 
 impl Default for State {
@@ -157,6 +159,7 @@ impl Default for State {
             foreign: None,
             altars: Altars::default(),
             castle: None,
+            drawable: true,
         }
     }
 }
@@ -283,6 +286,21 @@ impl State {
     pub(crate) fn adopt_cats(&mut self, cats: &[CatEntry], app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {
         self.config.reload(&ctx.vault.vfs, ctx.names);
         self.lineup.adopt_cats(cats, app_state, ctx).map(Message::Lineup)
+    }
+
+    pub(crate) fn set_drawable(&mut self, drawable: bool) {
+        self.drawable = drawable;
+    }
+
+    fn refuse_undrawable(&mut self) -> bool {
+        if self.drawable {
+            return false;
+        }
+
+        warn!("Sandbox battle refused: the app is drawn by the software renderer, which cannot draw battles");
+        UNDRAWABLE.clone_into(&mut self.status);
+
+        true
     }
 
     pub(crate) fn set_banner_form(&mut self, banner_form: usize) {
@@ -492,6 +510,10 @@ impl State {
     }
 
     pub(crate) fn watch(&mut self, width: f32, height: f32, options: &SandboxState, source: ReplaySource, checked: bool) {
+        if self.refuse_undrawable() {
+            return;
+        }
+
         let Some(reel) = self.replay.reel() else {
             return;
         };
@@ -527,7 +549,11 @@ impl State {
         Task::perform(smol::unblock(move || replay::gather_keepsakes(&vault, save, &config)), move |files| Message::Keepsakes(ticket, files))
     }
 
-    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, label: Option<Label>) {
+    pub(crate) fn start(&mut self, width: f32, height: f32, options: &SandboxState, setup: Setup, label: Option<Label>) -> bool {
+        if self.refuse_undrawable() {
+            return false;
+        }
+
         let session = self.session.get_or_insert_with(Session::new);
 
         session.set_recording(label.is_some());
@@ -544,6 +570,8 @@ impl State {
         session.begin();
         self.status = String::new();
         self.reported = String::new();
+
+        true
     }
 
     pub(crate) fn update(&mut self, message: Message, settings: &mut Settings, app_state: &mut AppState, ctx: GlobalContext<'_>) -> Task<Message> {

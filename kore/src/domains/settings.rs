@@ -262,6 +262,8 @@ pub struct GeneralSettings {
     pub ignore_conflict_errors: bool,
     pub ignore_watcher_failure: bool,
     pub treasures: treasure::Config,
+    pub graphics: GraphicsBackend,
+    pub graphics_auto: AutoGraphics,
 }
 
 impl Default for GeneralSettings {
@@ -274,8 +276,42 @@ impl Default for GeneralSettings {
             ignore_conflict_errors: false,
             ignore_watcher_failure: false,
             treasures: treasure::Config::default(),
+            graphics: GraphicsBackend::default(),
+            graphics_auto: AutoGraphics::default(),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum GraphicsBackend {
+    #[default]
+    Auto,
+    DirectX12,
+    Vulkan,
+    OpenGl,
+    Metal,
+    Software,
+}
+
+impl std::fmt::Display for GraphicsBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Auto => "Auto",
+            Self::DirectX12 => "DirectX 12",
+            Self::Vulkan => "Vulkan",
+            Self::OpenGl => "OpenGL",
+            Self::Metal => "Metal",
+            Self::Software => "Software",
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum AutoGraphics {
+    #[default]
+    Unprobed,
+    Native,
+    Fallback(GraphicsBackend),
 }
 
 #[derive(Serialize, Deserialize, Clone)]

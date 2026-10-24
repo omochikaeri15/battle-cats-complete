@@ -4,6 +4,7 @@ use std::mem;
 use std::ops::Range;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::time::Instant;
 
 use emu::engine::AppContext;
 use emu::Site;
@@ -765,6 +766,8 @@ impl Driver {
 
         self.applied = (width, height);
 
+        trace!(width, height, phone = self.phone, in_battle = self.in_battle(), "emu: screen size applied");
+
         let before = emu::runtime::layout_snapshot(&mut self.ctx);
 
         self.ctx.device_screen_w = width as i32;
@@ -825,13 +828,22 @@ impl Driver {
 
         plant_seeds(&mut self.ctx, self.seeds);
 
+        let mark = Instant::now();
+
         if let Err(fault) = emu::engine::load_misc_data_tables(&mut self.ctx) {
             warn!("emu: text tables failed to load: {fault}");
 
             return false;
         }
 
-        match emu::engine::initialize_game_data(&mut self.ctx) {
+        trace!(ms = mark.elapsed().as_millis(), "emu: text tables loaded");
+
+        let mark = Instant::now();
+        let initialized = emu::engine::initialize_game_data(&mut self.ctx);
+
+        trace!(ms = mark.elapsed().as_millis(), files = self.files.borrow().len(), "emu: game data initialized");
+
+        match initialized {
             Ok(true) => {
                 unlock_dummy_combos(&mut self.ctx);
 
@@ -853,6 +865,10 @@ impl Driver {
     }
 
     pub fn enter_battle(&mut self) -> bool {
+        let mark = Instant::now();
+
+        trace!(map = self.setup.stage.map_id, stage = self.setup.stage.stage, units = self.setup.lineup.len(), "emu: entering the battle");
+
         if let Err(fault) = stock_battle_items(&mut self.ctx, &self.setup) {
             warn!("emu: battle items could not be stocked: {fault}");
         }
@@ -884,9 +900,17 @@ impl Driver {
             _ => emu::engine::prepare_battle_entry(&mut self.ctx),
         };
 
+        trace!(ms = mark.elapsed().as_millis(), outcome = ?prepared, "emu: battle entry prepared");
+
+        let mark = Instant::now();
+
         match prepared {
             Ok(true) => {}
-            Ok(false) => return false,
+            Ok(false) => {
+                warn!("emu: battle entry was refused by the stage data");
+
+                return false;
+            }
             Err(fault) => {
                 warn!("emu: battle entry faulted: {fault}");
 
@@ -906,7 +930,11 @@ impl Driver {
             return false;
         }
 
-        self.in_battle()
+        let entered = self.in_battle();
+
+        trace!(ms = mark.elapsed().as_millis(), entered, scene = ?emu::engine::get_scene_id(&self.ctx), "emu: stage set up");
+
+        entered
     }
 
     fn fade_into_battle(&mut self) -> Result<(), emu::Fault> {

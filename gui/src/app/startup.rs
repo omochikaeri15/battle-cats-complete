@@ -19,7 +19,7 @@ use kore::common::dirs;
 use kore::common::io::json;
 use kore::domains::import;
 use kore::domains::mods;
-use kore::domains::settings::{lang, nightly, ExceptionList, ScannerConfig, Settings, UpdateMode, WindowSettings};
+use kore::domains::settings::{lang, nightly, AutoGraphics, ExceptionList, GraphicsBackend, ScannerConfig, Settings, UpdateMode, WindowSettings};
 #[cfg(target_os = "linux")]
 use kore::domains::settings::desktop;
 use kore::{ContentStore, Vault};
@@ -28,7 +28,7 @@ use crate::domains::{home, settings::{self as gui_settings, source}};
 use crate::widget::popup;
 
 use super::theme::AppTheme;
-use super::{logging, notice, updater, ActivePopup, BattleCatsApp, Message};
+use super::{graphics, logging, notice, updater, ActivePopup, BattleCatsApp, Message};
 
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -51,6 +51,12 @@ pub(crate) fn saved_window() -> (Size, bool) {
     let window = Saved::load().settings.window;
 
     (opening_size(&window), window.fullscreen)
+}
+
+pub(crate) fn saved_graphics() -> (GraphicsBackend, AutoGraphics) {
+    let general = &Saved::load().settings.general;
+
+    (general.graphics, general.graphics_auto)
 }
 
 fn opening_size(window: &WindowSettings) -> Size {
@@ -84,6 +90,11 @@ impl BattleCatsApp {
         let settings_ms = split(&mut phase);
 
         logging::init_logging(app.settings.general.enable_logging);
+        graphics::log_launch();
+
+        if app.settings.general.graphics == GraphicsBackend::Auto {
+            app.settings.general.graphics_auto = graphics::launch().auto;
+        }
 
         if let Some(note) = architecture::anchored() {
             info!("{}", note);
@@ -171,7 +182,9 @@ impl BattleCatsApp {
 
         info!(total_ms = boot.elapsed().as_millis(), "Initialization sequence complete");
 
-        (app, Task::batch([home_task.map(Message::Home), updater_task, source_task, icon_streams, store_task, reveal_fallback]))
+        let graphics_task = Task::perform(smol::unblock(graphics::survey), Message::GraphicsSurveyed);
+
+        (app, Task::batch([home_task.map(Message::Home), updater_task, source_task, icon_streams, store_task, reveal_fallback, graphics_task]))
     }
 
     pub(super) fn spawn_vault_build(&mut self, hydrate: bool) -> Task<Message> {

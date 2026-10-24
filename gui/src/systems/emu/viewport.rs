@@ -1,20 +1,24 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 use iced::wgpu;
 use iced::widget::shader;
 use iced::{Element, Length, Rectangle, mouse};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::assets::{Sheet, SheetCache};
 use super::input::{Touch, TouchQueue};
 use super::pipeline::{Pipeline, Run, Vertex};
-use super::sink::Frame as EmuFrame;
+use super::sink::{Frame as EmuFrame, Presented};
 
 const PIXELS_PER_LINE: f32 = 40.0;
 const SPREAD_PER_LINE: f32 = 28.0;
 const BAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 const PLAY_HEIGHT: f32 = 720.0;
+const SLOW_PREPARE: Duration = Duration::from_millis(50);
 
 struct Fit {
     scale: f32,
@@ -63,6 +67,7 @@ pub struct Scene {
     pub(super) vertices: Vec<Vertex>,
     pub(super) runs: Vec<(Option<Box<str>>, u8, u32, u32)>,
     pub(super) uploads: Vec<(Box<str>, Sheet)>,
+    pub(super) presented: Option<Arc<Presented>>,
 }
 
 impl std::fmt::Debug for Scene {
@@ -70,6 +75,7 @@ impl std::fmt::Debug for Scene {
         f.debug_struct("Scene")
             .field("vertices", &self.vertices.len())
             .field("runs", &self.runs.len())
+            .field("uploads", &self.uploads.len())
             .finish()
     }
 }
@@ -227,6 +233,7 @@ pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, boun
         vertices,
         runs,
         uploads,
+        presented: None,
     }
 }
 
@@ -237,15 +244,18 @@ impl<Message> shader::Program<Message> for Viewport {
     fn draw(&self, _state: &Held, _cursor: mouse::Cursor, bounds: Rectangle) -> Scene {
         let frame = self.frame.borrow();
 
+        let presented = Some(Arc::clone(&frame.presented));
+
         if !self.active || frame.quads.is_empty() || bounds.width <= 0.0 {
             return Scene {
                 vertices: Vec::new(),
                 runs: Vec::new(),
                 uploads: Vec::new(),
+                presented,
             };
         }
 
-        paint(&frame, &self.sheets.borrow(), self.canvas, bounds)
+        Scene { presented, ..paint(&frame, &self.sheets.borrow(), self.canvas, bounds) }
     }
 
     fn update(
@@ -283,6 +293,10 @@ impl<Message> shader::Program<Message> for Viewport {
 
                 return Some(shader::Action::capture());
             }
+        }
+
+        if matches!(event, iced::Event::Mouse(mouse::Event::ButtonPressed(_))) && (self.covered || self.frozen || at.is_none()) {
+            trace!(covered = self.covered, frozen = self.frozen, inside = at.is_some(), ?bounds, "emu: press not handed to the battle");
         }
 
         if !self.covered && !self.frozen && let Some((x, y)) = at {
@@ -346,9 +360,8 @@ impl shader::Primitive for Scene {
         _bounds: &Rectangle,
         _viewport: &shader::Viewport,
     ) {
-        for (name, sheet) in &self.uploads {
-            pipeline.ensure_sheet(device, queue, name, sheet);
-        }
+        let started = Instant::now();
+        let uploaded = self.uploads.iter().filter(|(name, sheet)| pipeline.ensure_sheet(device, queue, name, sheet)).count();
 
         let runs = self
             .runs
@@ -361,6 +374,14 @@ impl shader::Primitive for Scene {
             .collect();
 
         pipeline.write(device, queue, &self.vertices, runs);
+
+        let spent = started.elapsed();
+
+        if uploaded > 0 || spent >= SLOW_PREPARE {
+            let bytes: usize = self.uploads.iter().map(|(_, sheet)| sheet.pixels.len()).sum();
+
+            trace!(uploaded, offered = self.uploads.len(), bytes, quads = self.vertices.len() / 6, ms = spent.as_millis(), "emu: battle frame prepared");
+        }
     }
 
     fn render(
@@ -371,6 +392,12 @@ impl shader::Primitive for Scene {
         clip_bounds: &Rectangle<u32>,
     ) {
         pipeline.draw(encoder, target, clip_bounds);
+
+        if let Some(presented) = &self.presented
+            && !presented.shown.swap(true, Ordering::AcqRel)
+        {
+            trace!(quads = self.vertices.len() / 6, clip = ?clip_bounds, "emu: the closed curtain reached the renderer");
+        }
     }
 }
 

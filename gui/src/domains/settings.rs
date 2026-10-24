@@ -362,6 +362,14 @@ impl State {
         self.general.take_language_change()
     }
 
+    pub(crate) fn set_graphics(&mut self, report: crate::app::graphics::Report) {
+        self.general.set_graphics(report);
+    }
+
+    pub(crate) fn set_backends(&mut self, available: Vec<kore::domains::settings::GraphicsBackend>) {
+        self.general.set_backends(available);
+    }
+
     pub fn keys_popup_open(&self) -> bool {
         self.keys.is_open
     }

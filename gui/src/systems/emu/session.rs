@@ -1,13 +1,14 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use emu::runtime::BattleOptions;
 use kore::Vfs;
 use kore::domains::sandbox::replay as tape;
 use kore::domains::settings::ReplaySource;
-use tracing::warn;
+use tracing::{trace, warn};
 
 use super::diagnostics::Diagnostics;
 use super::driver::{Driver, Label};
@@ -21,6 +22,9 @@ pub(super) const CLOSED_FRAME: i32 = 0xc;
 const LAST_FRAME: i32 = 0x18;
 const FRAME_TIME: Duration = Duration::from_millis(33);
 const STEP_TIME: Duration = Duration::from_millis(30);
+const PRESENT_PATIENCE: Duration = Duration::from_secs(2);
+const LATE_TICK: Duration = Duration::from_millis(250);
+const SLOW_STEP: Duration = Duration::from_millis(100);
 
 pub(super) struct Opened {
     pub(super) save: tape::Save,
@@ -82,6 +86,7 @@ pub struct Session {
     reel: Option<(Reel, ReplaySource)>,
     recording: bool,
     cut: bool,
+    ticked: Instant,
 }
 
 impl Session {
@@ -105,6 +110,7 @@ impl Session {
             reel: None,
             recording: true,
             cut: false,
+            ticked: Instant::now(),
         }
     }
 
@@ -177,6 +183,7 @@ impl Session {
         self.phase = Phase::Covering;
         self.sweep = 0;
         self.started = Instant::now();
+        self.ticked = Instant::now();
         self.entered = false;
         self.failure = None;
     }
@@ -267,6 +274,13 @@ impl Session {
 
     pub fn tick(&mut self, vfs: &Vfs) {
         let elapsed = self.started.elapsed().div_duration_f32(FRAME_TIME) as i32;
+        let gap = self.ticked.elapsed();
+
+        self.ticked = Instant::now();
+
+        if gap >= LATE_TICK && self.phase != Phase::Idle {
+            trace!(phase = ?self.phase, ms = gap.as_millis(), "emu: the sandbox tick arrived late");
+        }
 
         match self.phase {
             Phase::Idle | Phase::Faulted => (),
@@ -283,6 +297,10 @@ impl Session {
                         self.driver.draw_curtain(self.sweep);
                     }
                     self.started = Instant::now();
+
+                    if self.phase == Phase::Loading {
+                        self.await_curtain();
+                    }
                 }
             }
             Phase::Running => {
@@ -298,8 +316,27 @@ impl Session {
                 }
 
                 self.driver.draw_curtain(self.sweep);
+
+                if self.phase == Phase::Loading {
+                    self.started = Instant::now();
+                    self.await_curtain();
+                }
             }
             Phase::Loading => {
+                let waited = self.started.elapsed();
+
+                if !self.frame.borrow().presented.shown.load(Ordering::Acquire) {
+                    if waited < PRESENT_PATIENCE {
+                        return;
+                    }
+
+                    warn!(ms = waited.as_millis(), "emu: the closed curtain never reached the screen; loading the battle anyway");
+                }
+
+                trace!(waited_ms = waited.as_millis(), "emu: loading the battle behind the closed curtain");
+
+                let loading = Instant::now();
+
                 if std::mem::take(&mut self.again) {
                     self.driver.renew();
                 }
@@ -316,17 +353,39 @@ impl Session {
                         }
                     },
                     None => {
+                        let mark = Instant::now();
+
                         self.driver.reindex(vfs);
+
+                        let reindexed = mark.elapsed();
+                        let mark = Instant::now();
 
                         if self.recording {
                             self.driver.arm_recording();
                         }
 
+                        let armed = mark.elapsed();
+                        let mark = Instant::now();
+
                         self.load();
+
+                        let loaded = mark.elapsed();
+                        let mark = Instant::now();
+
                         self.driver.stamp_deck();
                         self.driver.keep_assets();
+
+                        trace!(
+                            reindex_ms = reindexed.as_millis(),
+                            recording_ms = armed.as_millis(),
+                            load_ms = loaded.as_millis(),
+                            keep_ms = mark.elapsed().as_millis(),
+                            "emu: battle load stages"
+                        );
                     }
                 }
+
+                trace!(entered = self.entered, ms = loading.elapsed().as_millis(), failure = ?self.failure, "emu: battle load finished");
 
                 if self.entered {
                     self.phase = Phase::Running;
@@ -385,10 +444,21 @@ impl Session {
         self.started = Instant::now();
     }
 
+    fn await_curtain(&mut self) {
+        self.frame.borrow().presented.shown.store(false, Ordering::Release);
+    }
+
     fn step(&mut self) {
         self.stepped = Instant::now();
 
-        if let Err(reason) = self.driver.advance() {
+        let advanced = self.driver.advance();
+        let spent = self.stepped.elapsed();
+
+        if spent >= SLOW_STEP {
+            trace!(ms = spent.as_millis(), in_battle = self.driver.in_battle(), fading = self.driver.fading(), "emu: slow battle frame");
+        }
+
+        if let Err(reason) = advanced {
             if self.driver.watching() {
                 if self.driver.forgive_scripted() {
                     return;

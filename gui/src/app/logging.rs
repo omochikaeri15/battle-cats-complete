@@ -39,11 +39,11 @@ pub(crate) fn init_logging(enable_logging: bool) {
     let app_dir = dirs::data();
 
     let (log_level, filter_directive, override_file) = if let Some(path) = trace_file {
-        (Level::TRACE, "info,gui=trace,kore=trace,nyanko=trace,zbus=error", Some(path))
+        (Level::TRACE, "info,gui=trace,kore=trace,nyanko=trace,zbus=error,wgpu_core=warn,naga=warn", Some(path))
     } else if let Some(path) = debug_file {
-        (Level::DEBUG, "info,gui=debug,kore=debug,nyanko=debug,zbus=error", Some(path))
+        (Level::DEBUG, "info,gui=debug,kore=debug,nyanko=debug,zbus=error,wgpu_core=warn,naga=warn", Some(path))
     } else if enable_logging {
-        (Level::INFO, "info,zbus=error", None)
+        (Level::INFO, "info,zbus=error,wgpu_core=warn,wgpu_hal=warn,naga=warn", None)
     } else {
         if let Some(dir) = app_dir {
             let _ = fs::remove_file(dir.join(LOG));
@@ -63,15 +63,13 @@ pub(crate) fn init_logging(enable_logging: bool) {
 
     let filter = EnvFilter::new(filter_directive);
 
-    let subscriber = fmt::Subscriber::builder()
+    let _ = fmt::Subscriber::builder()
         .with_file(true)
         .with_line_number(true)
         .with_env_filter(filter)
         .with_writer(writer)
         .with_ansi(false)
-        .finish();
-
-    let _ = tracing::subscriber::set_global_default(subscriber);
+        .try_init();
 
     info!("Tracing initialized at {} level", log_level);
     debug!("Active filter directive: {}", filter_directive);
