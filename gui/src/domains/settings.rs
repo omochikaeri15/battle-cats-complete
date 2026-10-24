@@ -429,6 +429,8 @@ impl State {
 
         let mut layers: Vec<Element<'a, Message>> = vec![main_content.into()];
 
+        layers.extend(self.general.graphics_toasts(core_settings, self.active_tab == Tab::General));
+
         if self.active_tab == Tab::General && self.general.is_dragging() {
             layers.push(
                 mouse_area(Space::new().width(Length::Fill).height(Length::Fill))

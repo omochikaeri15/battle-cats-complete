@@ -14,7 +14,7 @@ use crate::app::theme;
 use crate::app::{CheckFailure, UpdateStatus};
 use crate::common::fonts;
 use crate::systems::treasure;
-use crate::widget::toggle_row;
+use crate::widget::{toast, toggle_row, Tone};
 #[cfg(target_os = "linux")]
 use crate::common::feedback::Slot;
 
@@ -24,7 +24,9 @@ const ROW_HEIGHT: f32 = 32.0;
 const ROW_WIDTH: f32 = 140.0;
 const DRAG_HIGHLIGHT_ALPHA: f32 = 0.25;
 const RESTART_REQUIRED: &str = "!! Restart Required !!";
+const RESTART_DETAIL: &str = "The new Graphics Backend applies the next time the app starts";
 const NO_GPU: &str = "!! No GPU Detected !!";
+const NO_GPU_DETAIL: &str = "The app is being drawn on the CPU, so it may run slowly";
 const GRAPHICS_HINT: &str = "Which graphics API draws the app\nAuto picks one that works on this PC\nSoftware cannot draw Sandbox battles";
 
 #[cfg(target_os = "linux")]
@@ -205,15 +207,12 @@ impl State {
         self.backends = Some(available);
     }
 
-    fn graphics_notice<'a>(&self, selected: GraphicsBackend) -> Option<Element<'a, Message>> {
-        if selected != graphics::launch().selected {
-            return Some(text(RESTART_REQUIRED).style(|theme: &Theme| iced::widget::text::Style { color: Some(theme.palette().warning) }).into());
-        }
+    pub(super) fn graphics_toasts<'a, M: 'a>(&self, core_settings: &CoreSettings, general_tab: bool) -> [Element<'a, M>; 2] {
+        let selected = core_settings.general.graphics;
+        let restart = selected != graphics::launch().selected;
+        let no_gpu = general_tab && !restart && selected != GraphicsBackend::Software && self.graphics.as_ref().is_some_and(|report| report.cpu);
 
-        self.graphics
-            .as_ref()
-            .is_some_and(|report| report.cpu)
-            .then(|| text(NO_GPU).style(|theme: &Theme| iced::widget::text::Style { color: Some(theme.palette().danger) }).into())
+        [toast(RESTART_REQUIRED, Some(RESTART_DETAIL), restart, Tone::Alert), toast(NO_GPU, Some(NO_GPU_DETAIL), no_gpu, Tone::Alert)]
     }
 
     pub fn is_dragging(&self) -> bool {
@@ -294,19 +293,17 @@ impl State {
                     }
                 ).style(theme::combo_box).menu_style(theme::combo_box_menu),
             ].spacing(10).align_y(Alignment::Center),
-            column![
-                hover_hint(
-                    row![
-                        text("Graphics Backend"),
-                        pick_list(
-                            graphics::offered(self.backends.as_deref(), core_settings.general.graphics),
-                            Some(core_settings.general.graphics),
-                            Message::GraphicsSelected,
-                        ).style(theme::combo_box).menu_style(theme::combo_box_menu),
-                    ].spacing(10).align_y(Alignment::Center),
-                    GRAPHICS_HINT,
-                ),
-            ].push(self.graphics_notice(core_settings.general.graphics)).spacing(4),
+            hover_hint(
+                row![
+                    text("Graphics Backend"),
+                    pick_list(
+                        graphics::offered(self.backends.as_deref(), core_settings.general.graphics),
+                        Some(core_settings.general.graphics),
+                        Message::GraphicsSelected,
+                    ).style(theme::combo_box).menu_style(theme::combo_box_menu),
+                ].spacing(10).align_y(Alignment::Center),
+                GRAPHICS_HINT,
+            ),
             hover_hint(
                 toggle_row(core_settings.window.fullscreen, text("Fullscreen"), Some(Message::ToggleFullscreen)),
                 "Fills the whole screen with the app\nF11 switches this at any time",
