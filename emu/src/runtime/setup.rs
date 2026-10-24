@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use crate::{
     Fault,
     engine::{
-        AppContext, altar_recompute, load_map_stage_csv, map_index_of_map_id, map_type_as_index, map_type_of_map_id,
-        texture_cache_load,
+        AppContext, altar_recompute, get_map_type, is_space_map, load_map_stage_csv, load_map_stage_next, map_index_of_map_id,
+        map_type_as_index, map_type_of_map_id, texture_cache_load,
     },
 };
 
@@ -19,6 +19,8 @@ const FREE_MAP_MODE: i32 = 3;
 const EMPIRE_TYPE: i32 = -2;
 const FUTURE_TYPE: i32 = -3;
 const COSMOS_TYPE: i32 = -7;
+const EMPIRE_OUTBREAK_TYPE: i32 = -12;
+const FUTURE_OUTBREAK_TYPE: i32 = -13;
 const FUTURE_MODE: i32 = 4;
 const COSMOS_MODE: i32 = 7;
 const EXTRA_TYPE: i32 = -8;
@@ -38,6 +40,7 @@ pub enum StageVariant {
     Outbreak,
     Invasion,
     ZombieInvasion,
+    ExInvasion,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -188,6 +191,32 @@ pub fn select_dungeon_stage(ctx: &mut AppContext, entry: StageEntry) -> Result<(
         .map_or(0, |row| row[DUNGEON_GROUP].wrapping_mul(DUNGEON_PACK));
 
     ctx.set_i32_at(AppContext::DROP_MAP_STAGES.wrapping_add(slot.wrapping_mul(4)), entry.dungeon_stage.unwrap_or(fallback))
+}
+
+pub fn reload_entry_map(ctx: &mut AppContext) -> Result<bool, Fault> {
+    let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
+
+    if mode == EXTRA_MODE {
+        let map = ctx.i32_at(AppContext::EX_MAP)?;
+
+        return load_map_stage_csv(ctx, map, 0, 1, 0, 1, 1);
+    }
+
+    if mode == FREE_MAP_MODE {
+        return Ok(true);
+    }
+
+    let (map, chapter) = if get_map_type(ctx, 0)? == EMPIRE_TYPE || get_map_type(ctx, 0)? == EMPIRE_OUTBREAK_TYPE {
+        (0, mode)
+    } else if get_map_type(ctx, 0)? == FUTURE_TYPE || get_map_type(ctx, 0)? == FUTURE_OUTBREAK_TYPE {
+        (1, mode.wrapping_sub(FUTURE_MODE))
+    } else if is_space_map(ctx)? {
+        (2, mode.wrapping_sub(COSMOS_MODE))
+    } else {
+        return Ok(true);
+    };
+
+    load_map_stage_next(ctx, map, chapter, 1, 1)
 }
 
 pub fn is_extra_entry(ctx: &AppContext) -> Result<bool, Fault> {

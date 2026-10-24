@@ -873,7 +873,7 @@ impl Driver {
             return false;
         }
 
-        if let Err(fault) = emu::runtime::seed_stage_variant(&mut self.ctx, self.setup.stage.variant) {
+        if let Err(fault) = emu::runtime::seed_stage_variant(&mut self.ctx, self.setup.stage) {
             warn!("emu: stage variant could not be seeded: {fault}");
 
             return false;
@@ -911,6 +911,7 @@ impl Driver {
 
     fn fade_into_battle(&mut self) -> Result<(), emu::Fault> {
         emu::engine::set_scene(&mut self.ctx, TRANSITION_SCENE)?;
+        emu::runtime::reload_entry_map(&mut self.ctx)?;
         self.ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
         self.ctx.set_i32_at(AppContext::CURTAIN_STYLE, CURTAIN_CLOSING)?;
         self.ctx.set_block_at::<1>(AppContext::FADE_STARTED, [0])?;

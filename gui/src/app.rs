@@ -28,7 +28,7 @@ use kore::common::architecture;
 use kore::domains::settings::{Settings, UpdateMode};
 use kore::domains::stage::lottery::Lottery;
 use kore::domains::stage::scanner::{self as stage_scanner, Touch};
-use kore::domains::stage::{navigate::{is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
+use kore::domains::stage::{navigate::{invaded_stage, is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
 use kore::systems::treasure::{Bonus, Catalog};
 use kore::{ContentStore, Evicted, StageStore, Vault};
 
@@ -2061,6 +2061,18 @@ impl BattleCatsApp {
         let picked = self.stage_state.data.selected_stage.as_ref()?;
         let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
         let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
+
+        if let Some(target) = invaded_stage(&self.stage_state.data.registry, picked) {
+            return Some(::emu::runtime::StageEntry {
+                map_id: i32::try_from(target.map_id).ok()?,
+                stage: i32::try_from(target.stage).ok()?,
+                layout: None,
+                crown: i32::from(target.crown),
+                dungeon_stage: None,
+                variant: ::emu::runtime::StageVariant::ExInvasion,
+            });
+        }
+
         let map_id = i32::try_from(global).ok()?;
         let outbreak = picked.category == Category::ZombieOutbreaks;
         let invaded = self.invaded_slot(picked);

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use nyanko::chapter::{Category, map::fixed_invasion_target};
+use nyanko::chapter::{Category, map::{fixed_invasion_target, InvasionTarget}};
 
 use super::{GlobalMapId, GlobalStageId, Map, Stage, StageRegistry};
 
@@ -59,6 +59,18 @@ pub fn is_invader(registry: &StageRegistry, map_id: &GlobalMapId) -> bool {
     };
 
     fixed_invasion_target(global).is_some() || registry.maps.values().any(|map| map.ex_invasion == Some(global))
+}
+
+pub fn invaded_stage(registry: &StageRegistry, stage: &GlobalStageId) -> Option<InvasionTarget> {
+    let map = GlobalMapId { category: stage.category.clone(), map: stage.map };
+    let global = registry.addresses.get(&map)?.global?;
+
+    fixed_invasion_target(global).or_else(|| {
+        let source = registry.maps.values().find(|source| source.ex_invasion == Some(global))?;
+        let key = GlobalMapId { category: source.category.clone(), map: source.map_id };
+
+        Some(InvasionTarget { map_id: registry.addresses.get(&key)?.global?, stage: stage.stage, crown: 0 })
+    })
 }
 
 pub fn invadable_stages<'a>(registry: &'a StageRegistry, map_id: &GlobalMapId) -> Vec<&'a Stage> {

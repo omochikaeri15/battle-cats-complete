@@ -72,6 +72,7 @@ pub fn setup_to(setup: &Setup, map_name: &str, stage_name: &str) -> tape::Setup 
                 StageVariant::Outbreak => tape::Variant::Outbreak,
                 StageVariant::Invasion => tape::Variant::Invasion,
                 StageVariant::ZombieInvasion => tape::Variant::ZombieInvasion,
+                StageVariant::ExInvasion => tape::Variant::ExInvasion,
             },
         },
         lineup: setup
@@ -129,6 +130,7 @@ pub fn setup_from(saved: &tape::Setup) -> Setup {
                 tape::Variant::Outbreak => StageVariant::Outbreak,
                 tape::Variant::Invasion => StageVariant::Invasion,
                 tape::Variant::ZombieInvasion => StageVariant::ZombieInvasion,
+                tape::Variant::ExInvasion => StageVariant::ExInvasion,
             },
         },
         lineup: saved

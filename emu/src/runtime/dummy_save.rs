@@ -1,12 +1,12 @@
 use crate::{
     Fault,
     engine::{
-        AltarReward, AppContext, map_index_of_map_id, map_type_base_id, map_type_of_map_id, obfuscate_value,
-        reset_stage_name_tables, set_stage_record,
+        AltarReward, AppContext, get_map_count, get_stage_count, map_index_of_map_id, map_type_base_id, map_type_of_map_id,
+        obfuscate_value, reset_stage_name_tables, set_stage_record,
     },
 };
 
-use super::{CatGod, Setup, StageVariant, fill_dummy_lineup};
+use super::{CatGod, Setup, StageEntry, StageVariant, fill_dummy_lineup};
 
 const MEDAL_PROGRESS_CAP: i32 = 2_000_000_000;
 const POINT_CAP: i32 = 9_999_999;
@@ -32,6 +32,17 @@ const MAP_RETURN_POPUP: i32 = 0x4b;
 const MOON_SLOT: i32 = 0x2f;
 const MOON_CHAPTERS: [i32; 9] = [0, 1, 2, 4, 5, 6, 7, 8, 9];
 const ZERO_LEGENDS_TYPE: i32 = -22;
+const LEGENDS_TYPE: i32 = 0;
+const UNCANNY_TYPE: i32 = -9;
+const AKU_TYPE: i32 = -19;
+const RELICS_MAP: i32 = 0x30;
+const SACRED_FOREST_MAP: i32 = 0x30;
+const ANCIENT_FOREST_MAP: i32 = 0x23;
+const AKU_MAP: i32 = 0;
+const ELDRITCH_EX_MAP: i32 = 0x1a;
+const ORIGIN_EX_MAP: i32 = 0x45;
+const FACE_EX_MAP: i32 = 0x44;
+const AKU_EX_MAP: i32 = 0x2a;
 
 pub fn fill_dummy_save(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     let tutorial = &setup.tutorial;
@@ -132,11 +143,11 @@ pub fn seed_cat_god(ctx: &mut AppContext, setup: &Setup) -> Result<(), Fault> {
     Ok(())
 }
 
-pub fn seed_stage_variant(ctx: &mut AppContext, variant: StageVariant) -> Result<(), Fault> {
+pub fn seed_stage_variant(ctx: &mut AppContext, entry: StageEntry) -> Result<(), Fault> {
     let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
     let stage = ctx.i32_at(AppContext::ENTRY_STAGE)?;
 
-    match variant {
+    match entry.variant {
         StageVariant::Plain => {}
         StageVariant::Outbreak => {
             ctx.outbreak_active.entry(mode).or_default().insert(stage, true);
@@ -157,9 +168,45 @@ pub fn seed_stage_variant(ctx: &mut AppContext, variant: StageVariant) -> Result
 
             ctx.set_block_at::<1>(AppContext::INVASION_STAGE, [stage as u8])?;
         }
+        StageVariant::ExInvasion => {
+            let map_type = map_type_of_map_id(entry.map_id);
+            let map_index = map_index_of_map_id(entry.map_id);
+
+            match (map_type, map_index) {
+                (LEGENDS_TYPE, RELICS_MAP) => {
+                    ctx.cleared_map_ids.push(map_type_base_id(map_type, map_index));
+                    ctx.set_block_at::<1>(AppContext::EX_REDIRECT_A_BLOCKED, [0])?;
+                }
+                (UNCANNY_TYPE, SACRED_FOREST_MAP) => {
+                    ctx.cleared_map_ids.push(map_type_base_id(map_type, map_index));
+                    ctx.set_i32_at(ex_record(ORIGIN_EX_MAP), 0)?;
+                }
+                (UNCANNY_TYPE, ANCIENT_FOREST_MAP) => {
+                    for map in 0..get_map_count(ctx, UNCANNY_TYPE)? {
+                        ctx.cleared_map_ids.push(map_type_base_id(UNCANNY_TYPE, map));
+                    }
+
+                    ctx.set_block_at::<1>(AppContext::EX_REDIRECT_A_BLOCKED, [1])?;
+                    ctx.set_i32_at(ex_record(ELDRITCH_EX_MAP), 1)?;
+                    ctx.set_i32_at(ex_record(FACE_EX_MAP), 0)?;
+                }
+                (AKU_TYPE, AKU_MAP) => {
+                    for cleared in 0..get_stage_count(ctx, AKU_TYPE, AKU_MAP)? {
+                        set_stage_record(ctx, AKU_TYPE, AKU_MAP, cleared, 0, 1, 0)?;
+                    }
+
+                    ctx.set_i32_at(ex_record(AKU_EX_MAP), 0)?;
+                }
+                _ => ctx.ex_replacement_stages.entry(entry.map_id).or_default().push(stage),
+            }
+        }
     }
 
     Ok(())
+}
+
+fn ex_record(ex_map: i32) -> usize {
+    (i64::from(ex_map) * LEGEND_MAP_STRIDE + AppContext::STAGE_RECORD_NEG8 as i64) as usize
 }
 
 pub fn seed_point_cap(ctx: &mut AppContext) {

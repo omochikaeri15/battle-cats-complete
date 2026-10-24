@@ -43,6 +43,7 @@ pub enum Variant {
     Outbreak,
     Invasion,
     ZombieInvasion,
+    ExInvasion,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
