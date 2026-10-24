@@ -21,7 +21,7 @@ use crate::chapter::Category;
 pub use demoncastle::{DemonCastleDefine, DemonCastleError, DemonCastleLimit};
 pub use dropitem::{DropItem, DropItemEntry, DropItemError};
 pub use ex_option::{ExOption, ExOptionError};
-pub use invasion::fixed_invasion_target;
+pub use invasion::{fixed_invasion_target, InvasionTarget};
 pub use lockskipdata::{LockSkipData, LockSkipDataEntry, LockSkipDataError};
 pub use map_name::{MapName, MapNameError};
 pub use map_option::{MapOption, MapOptionEntry, MapOptionError, ResetType};
