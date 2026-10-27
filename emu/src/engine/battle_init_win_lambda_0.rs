@@ -2,8 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, analytics_named, battle_init_win_lambda_0_0, dialog_close, dialog_set_back_button,
-    dialog_show_kind2, dialog_top, new_button_set_touchable, play_sound, query_localizable,
-    sound_manager, substitute_tokens,
+    dialog_show_kind2, dialog_top, new_button_set_touchable, play_sound, query_localizable, substitute_tokens,
 };
 
 pub fn battle_init_win_lambda_0(
@@ -14,12 +13,12 @@ pub fn battle_init_win_lambda_0(
     match event {
         4 => {}
         3 => {
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
 
             return Ok(());
         }
         0 => {
-            play_sound(sound_manager(ctx)?, 0xa, None);
+            play_sound(ctx, 0xa, None)?;
 
             return Ok(());
         }

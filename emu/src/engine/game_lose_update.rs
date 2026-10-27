@@ -304,7 +304,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, counter)?;
 
             if shown == 0 && ctx.i32_at(AppContext::TUTORIAL_CLEARED)? > 0 {
-                play_sound(sound_manager(ctx)?, 0x2a, None);
+                play_sound(ctx, 0x2a, None)?;
                 counter = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             }
 
@@ -503,7 +503,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if yes_held {
                 if ctx.u8_at(AppContext::CANNON_HELD)? == 0 {
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
                     ctx.set_block_at::<1>(AppContext::CANNON_HELD, [1])?;
                 }
             } else {
@@ -521,7 +521,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if no_held {
                 if ctx.u8_at(AppContext::WORKER_HELD)? == 0 {
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
                     ctx.set_block_at::<1>(AppContext::WORKER_HELD, [1])?;
                 }
             } else {
@@ -542,7 +542,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     AppContext::OUTRO_OK_PRESS,
                     ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
                 )?;
-                play_sound(sound_manager(ctx)?, 0xb, None);
+                play_sound(ctx, 0xb, None)?;
             } else {
                 let no_released = touch_released(ctx)? != 0 && {
                     let x = ctx.i32_at(AppContext::WORKER_RECT)?;
@@ -558,7 +558,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         AppContext::LOSE_NO_PRESS,
                         ctx.i32_at(AppContext::LOSE_NO_PRESS)?.wrapping_add(1),
                     )?;
-                    play_sound(sound_manager(ctx)?, 0xb, None);
+                    play_sound(ctx, 0xb, None)?;
                 }
             }
 
@@ -573,7 +573,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if shop_held {
                 if ctx.u8_at(AppContext::LOSE_SHOP_HELD)? == 0 {
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
                     ctx.set_block_at::<1>(AppContext::LOSE_SHOP_HELD, [1])?;
                 }
             } else {
@@ -597,7 +597,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 return Ok(true);
             }
 
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
             ctx.set_i32_at(
                 AppContext::LOSE_SHOP_PRESS,
                 ctx.i32_at(AppContext::LOSE_SHOP_PRESS)?.wrapping_add(1),
@@ -612,7 +612,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, counter)?;
 
             if shown == 0 && ctx.i32_at(AppContext::TUTORIAL_CLEARED)? > 0 {
-                play_sound(sound_manager(ctx)?, 0x2a, None);
+                play_sound(ctx, 0x2a, None)?;
                 counter = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             }
 
@@ -632,7 +632,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if hovered {
                 if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
                     ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
                 }
             } else {
@@ -658,7 +658,7 @@ pub fn game_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             };
 
             if (released || back_pressed(ctx)? != 0) && !button_bank_busy(&ctx.buttons)? {
-                play_sound(sound_manager(ctx)?, 0xb, None);
+                play_sound(ctx, 0xb, None)?;
                 app_on_draw(ctx)?;
                 ctx.set_i32_at(AppContext::REVIVE_REQUESTED, 0)?;
 

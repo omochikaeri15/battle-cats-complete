@@ -5,8 +5,7 @@ use super::{
     cannon_target_in_range, deck_slot_filled, deploy_unit, get_button_unit_row,
     get_castle_anim_state, get_deck_cooldown, get_effective_deploy_cost, get_max_money, get_money,
     get_worker_level, get_worker_upgrade_cost, get_worker_upgrade_level, is_deploy_blocked,
-    play_sound, recount_deploy_rarities, slot_conjure_ready, slot_deploy_permitted, slot_occupied,
-    sound_manager, upgrade_worker,
+    play_sound, recount_deploy_rarities, slot_conjure_ready, slot_deploy_permitted, slot_occupied, upgrade_worker,
 };
 
 pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
@@ -392,7 +391,7 @@ pub fn cat_cpu_tick(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             add_money(ctx, wallet, price.wrapping_neg())?;
             upgrade_worker(ctx, wallet)?;
             ctx.set_i32_at(AppContext::WORKER_UPGRADE_VFX, 0xe)?;
-            play_sound(sound_manager(ctx)?, 0x13, None);
+            play_sound(ctx, 0x13, None)?;
 
             Ok(())
         }

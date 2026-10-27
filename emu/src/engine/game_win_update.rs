@@ -22,7 +22,7 @@ use super::{
     labyrinth_result_ready, labyrinth_submit, labyrinth_unit_count, map_index_of_map_id,
     map_type_of_map_id, message_layer_clear, message_layer_set, min_i32, new_button_register,
     new_button_set_animated, new_button_set_touchable, play_sound, query_localizable,
-    reward_def_lookup, sound_manager, stage_pair_record, string_format_int,
+    reward_def_lookup, stage_pair_record, string_format_int,
     string_format_rank_comment, substitute_tokens, texture_cache_load, touch_is_down,
     touch_released, ui_node_add_child, ui_node_set_anchor, ui_node_set_sprite, xor_row46_get,
 };
@@ -135,7 +135,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             ctx.set_i32_at(AppContext::OUTRO_PHASE, 5)?;
             ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
-            play_sound(sound_manager(ctx)?, 0x1d, None);
+            play_sound(ctx, 0x1d, None)?;
 
             let mode = ctx.i32_at(AppContext::CHAPTER_MODE)?;
 
@@ -185,7 +185,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let item = *ctx
                     .reward_queue
                     .first()
@@ -290,7 +290,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let text = query_localizable(ctx, b"drop_popup_treasure");
                 let treasure = ctx.i32_at(AppContext::WIN_TREASURE)? as i64 as usize;
                 let first =
@@ -317,7 +317,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 ctx.set_block_at::<1>(AppContext::RANK_POPUP_SHOWN, [1])?;
 
                 let item = ctx.i32_at(AppContext::RANK_REWARD_BASE)?.wrapping_add(6);
@@ -330,7 +330,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 message = {
                     let key = string_format_int(ctx, b"zombie_clear%02d", kind.wrapping_sub(3))?;
 
@@ -443,7 +443,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 message = bonus_popup_text(ctx)?;
                 handler = game_win_update_lambda_7;
             }
@@ -452,7 +452,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 message = query_localizable(ctx, b"Space09_Invasion_stageclear_txt1");
                 handler = game_win_update_lambda_6;
             }
@@ -461,7 +461,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let text = query_localizable(ctx, b"drop_popup_hidden");
                 let key = hidden_drop_key(
                     ctx,
@@ -481,7 +481,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 altar_recompute(ctx)?;
 
                 let text = query_localizable(ctx, b"sealed_release");
@@ -496,7 +496,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let record = stage_pair_record(
                     ctx,
                     *ctx.reward_queue
@@ -547,7 +547,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let food = ctx.item_possession.entry(0x16).or_insert(0);
 
                 *food = food.wrapping_add(0x1e);
@@ -563,7 +563,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 let reward = {
                     let text = query_localizable(ctx, b"backstage_result1");
                     let floor = (*ctx
@@ -675,7 +675,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
                 ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-                play_sound(sound_manager(ctx)?, 0x1d, None);
+                play_sound(ctx, 0x1d, None)?;
                 message = Vec::new();
 
                 let reward = reward_def_lookup(
@@ -837,7 +837,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
         ctx.set_i32_at(AppContext::OUTRO_PHASE, 6)?;
         ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
-        play_sound(sound_manager(ctx)?, 0xb, None);
+        play_sound(ctx, 0xb, None)?;
 
         return Ok(true);
     }
@@ -987,7 +987,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
             if hovered {
                 if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
                     ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
                 }
             } else {
@@ -1037,7 +1037,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                     AppContext::OUTRO_OK_PRESS,
                     ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
                 )?;
-                play_sound(sound_manager(ctx)?, 0xb, None);
+                play_sound(ctx, 0xb, None)?;
 
                 return Ok(true);
             }
@@ -1171,7 +1171,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
     ctx.set_i32_at(AppContext::OUTRO_PHASE, old.wrapping_add(1))?;
 
     if old.wrapping_add(1) == 0x27 {
-        play_sound(sound_manager(ctx)?, 0x2a, None);
+        play_sound(ctx, 0x2a, None)?;
 
         let text = query_localizable(ctx, b"labyrinth_result");
         let rank = labyrinth_rank(ctx)?.to_string().into_bytes();
@@ -1227,7 +1227,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     if hovered {
         if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-            play_sound(sound_manager(ctx)?, 0xa, None);
+            play_sound(ctx, 0xa, None)?;
             ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
         }
     } else {
@@ -1247,7 +1247,7 @@ pub fn game_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         return Ok(true);
     }
 
-    play_sound(sound_manager(ctx)?, 0xb, None);
+    play_sound(ctx, 0xb, None)?;
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
 

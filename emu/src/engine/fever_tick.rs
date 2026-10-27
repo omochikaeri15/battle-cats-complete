@@ -2,7 +2,6 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, get_global_map_id, get_special_rule_params, play_sound, refresh_cat_speeds,
-    sound_manager,
 };
 
 pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
@@ -58,7 +57,7 @@ pub fn fever_tick(ctx: &mut AppContext, points: i32) -> Result<(), Fault> {
     ctx.special_rules.gauge_fill = -1;
 
     refresh_cat_speeds(ctx)?;
-    play_sound(sound_manager(ctx)?, 0xc2, None);
+    play_sound(ctx, 0xc2, None)?;
 
     Ok(())
 }

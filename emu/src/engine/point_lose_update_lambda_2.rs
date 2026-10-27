@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, dialog_close, play_sound, sound_manager};
+use super::{AppContext, dialog_close, play_sound};
 
 pub fn point_lose_update_lambda_2(
     ctx: &mut AppContext,
@@ -20,7 +20,7 @@ pub fn point_lose_update_lambda_2(
             Ok(())
         }
         2 => {
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
 
             dialog_close(ctx, dialog)
         }

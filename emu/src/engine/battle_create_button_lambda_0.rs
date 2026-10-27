@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, battle_check_login_bonus, button_bank_find, mission_tracker_refresh,
-    new_button_set_pressable, new_button_set_touchable, play_sound, sound_manager,
+    new_button_set_pressable, new_button_set_touchable, play_sound,
 };
 
 pub fn battle_create_button_lambda_0(
@@ -33,10 +33,10 @@ pub fn battle_create_button_lambda_0(
             }
         }
         3 => {
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
             new_button_set_pressable(&mut ctx.buttons, button, 0)?;
         }
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

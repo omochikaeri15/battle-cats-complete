@@ -2,8 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, RankingRecord, connecting_indicator_hide, dialog_show_alt, play_sound,
-    query_localizable, ranking_record_rank, request_save_data, scored_map_pays_money,
-    sound_manager, trial_win_update_lambda_0_0,
+    query_localizable, ranking_record_rank, request_save_data, scored_map_pays_money, trial_win_update_lambda_0_0,
 };
 
 pub fn trial_win_update_lambda_0(
@@ -27,7 +26,7 @@ pub fn trial_win_update_lambda_0(
                     0x40
                 };
 
-                play_sound(sound_manager(ctx)?, sound, None);
+                play_sound(ctx, sound, None)?;
             }
 
             request_save_data(ctx)?;

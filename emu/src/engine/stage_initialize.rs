@@ -44,8 +44,8 @@ use super::{
     set_cannon_zombie_permille, set_castle_anim_frame, set_castle_anim_state,
     set_combo_banner_pending, set_deck_cooldown, set_item_selected, set_money, set_point_stage,
     set_powerup, set_stage_unlock, set_worker_level, setup_bg_color, sound_manager,
-    sound_set_channel, spawn_entity, spawn_state_init, stage_entry_row, stage_entry_start_frame,
-    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr, string_format_int,
+    set_sound_kind, spawn_entity, spawn_state_init, stage_entry_row, stage_entry_start_frame,
+    stage_entry_z_max, stage_entry_z_min, stage_not_sealed, std_string_from_cstr, stop_audio, string_format_int,
     string_format_int2, string_format_int2_text, text_texture_cache, validate_map_type,
     vibration_clear,
 };
@@ -655,7 +655,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
 
     ctx.set_i32_at(AppContext::OUTRO_TICKS, 0)?;
     ctx.set_i32_at(AppContext::RANK_REWARD_BASE, 0)?;
-    sound_set_channel(sound_manager(ctx)?, 5, 5);
+    set_sound_kind(sound_manager(ctx)?, 5, 5)?;
     ctx.set_block_at::<1>(AppContext::RANK_POPUP_SHOWN, [0])?;
     ctx.set_block_at::<1>(AppContext::BASE_KILL_BLOCKED, [0])?;
 
@@ -1637,7 +1637,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::TUTORIAL_PAGE, 0)?;
     }
 
-    sound_manager(ctx)?.stop_audio(-1);
+    stop_audio(sound_manager(ctx)?, -1)?;
 
     if ctx.i32_at(AppContext::REVIVE_REQUESTED)? == 0 {
         let keep =
@@ -1680,12 +1680,12 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                         set_bgm_duck(sound_manager(ctx)?, 0);
                     }
                 } else {
-                    sound_manager(ctx)?.stop_audio(-1);
+                    stop_audio(sound_manager(ctx)?, -1)?;
 
                     let next = ctx.i32_at(AppContext::BGM_SWITCH_NEXT)?;
 
                     if next != -1 {
-                        play_sound(sound_manager(ctx)?, next, None);
+                        play_sound(ctx, next, None)?;
                     }
 
                     ctx.set_block_at::<0x10>(
@@ -1996,7 +1996,7 @@ pub fn stage_initialize(ctx: &mut AppContext) -> Result<(), Fault> {
                 let map_id = get_global_map_id(ctx, 0)?;
                 let voice = ctx.map_records.entry(map_id).or_default().start_voice;
 
-                play_sound(sound_manager(ctx)?, voice, None);
+                play_sound(ctx, voice, None)?;
             }
         }
 

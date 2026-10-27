@@ -1,24 +1,26 @@
-use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::any::Any;
+use std::cell::{Cell, RefCell};
 use std::io::Cursor;
 use std::num::NonZero;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use emu::engine::SoundManager;
+use emu::engine::{AudioHost, AudioSource, SoundData};
 use rodio::buffer::SamplesBuffer;
 use rodio::mixer::Mixer;
-use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
-use tracing::warn;
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player, Source};
+use tracing::{debug, warn};
 
 use super::assets::{FileIndex, SharedLedger};
 #[cfg(target_os = "linux")]
 use super::server_audio::ServerLink;
 
-const FULL: i32 = 100;
-pub(super) const EVERY_TRACK: i32 = -1;
-pub(super) const EVERY_EFFECT: i32 = -2;
-pub(super) const EVERYTHING: i32 = -3;
+const BUFFER_VOICES: i32 = 24;
+const STREAM_VOICES: i32 = 2;
+const BUFFER_PRIORITY: i32 = 0;
+const STREAM_PRIORITY: i32 = -1;
+const FILES_DIR: &[u8] = b"files";
+const QUIETEST: f32 = 0.001;
 const CAF_HEADER: usize = 8;
 const CHUNK_HEADER: usize = 12;
 const DESCRIPTION: &[u8; 4] = b"desc";
@@ -33,23 +35,42 @@ pub(super) struct Effect {
     pub(super) samples: Arc<[f32]>,
 }
 
-pub struct Volumes {
-    pub music: i32,
-    pub effects: i32,
+struct EffectData {
+    name: String,
+    effect: Effect,
 }
 
-pub type SharedVolumes = Rc<RefCell<Volumes>>;
+impl SoundData for EffectData {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[derive(Clone)]
+pub(super) enum Clip {
+    Effect { name: String, effect: Effect },
+    Track { name: String, bytes: Arc<[u8]> },
+}
+
+pub(super) trait Playing {
+    fn set_level(&self, level: f32);
+    fn stop(&self);
+    fn busy(&self) -> bool;
+}
+
+pub(super) trait Backend {
+    fn start(&self, clip: &Clip, looped: bool, level: f32) -> Option<Box<dyn Playing>>;
+}
 
 struct Shared {
     output: Option<Output>,
-    voices: RefCell<BTreeMap<i32, Player>>,
 }
 
 pub struct SharedOutput(Rc<Shared>);
 
 impl SharedOutput {
     pub fn open() -> Self {
-        Self(Rc::new(Shared { output: Output::open(), voices: RefCell::new(BTreeMap::new()) }))
+        Self(Rc::new(Shared { output: Output::open() }))
     }
 
     pub fn share(&self) -> Self {
@@ -57,7 +78,7 @@ impl SharedOutput {
     }
 
     pub fn silent() -> Self {
-        Self(Rc::new(Shared { output: None, voices: RefCell::new(BTreeMap::new()) }))
+        Self(Rc::new(Shared { output: None }))
     }
 }
 
@@ -89,107 +110,236 @@ impl Output {
     }
 }
 
-pub struct Speaker {
-    files: Rc<RefCell<FileIndex>>,
-    ledger: SharedLedger,
-    volumes: SharedVolumes,
-    stream: SharedOutput,
-    music: Option<(i32, Player)>,
-    effects: BTreeMap<i32, Effect>,
-    duck: i32,
+pub struct Speaker(pub SharedOutput);
+
+impl Playing for Player {
+    fn set_level(&self, level: f32) {
+        self.set_volume(level);
+    }
+
+    fn stop(&self) {
+        Player::stop(self);
+    }
+
+    fn busy(&self) -> bool {
+        !self.empty()
+    }
 }
 
-impl Speaker {
-    pub fn new(files: Rc<RefCell<FileIndex>>, ledger: SharedLedger, volumes: SharedVolumes, stream: SharedOutput) -> Self {
+impl Backend for Speaker {
+    fn start(&self, clip: &Clip, looped: bool, level: f32) -> Option<Box<dyn Playing>> {
+        let mixer = self.0.0.output.as_ref()?.mixer();
+        let player = Player::connect_new(mixer);
+
+        player.set_volume(level);
+
+        match clip {
+            Clip::Effect { name, effect } => {
+                let (Some(channels), Some(rate)) = (NonZero::new(effect.channels), NonZero::new(effect.rate)) else {
+                    warn!("emu: {name} has no channels or no sample rate");
+
+                    return None;
+                };
+                let source = SamplesBuffer::new(channels, rate, effect.samples.to_vec());
+
+                if looped {
+                    player.append(source.repeat_infinite());
+                } else {
+                    player.append(source);
+                }
+            }
+            Clip::Track { name, bytes } => {
+                let cursor = Cursor::new(Arc::clone(bytes));
+                let decoded = if looped { Decoder::new_looped(cursor).map(|source| player.append(source)) } else { Decoder::new(cursor).map(|source| player.append(source)) };
+
+                if let Err(error) = decoded {
+                    warn!("emu: {name} could not be decoded: {error}");
+
+                    return None;
+                }
+            }
+        }
+
+        Some(Box::new(player))
+    }
+}
+
+struct Voice {
+    clip: Clip,
+    stream: bool,
+    looping: Cell<bool>,
+    level: Cell<f32>,
+    playing: RefCell<Option<Box<dyn Playing>>>,
+    backend: Rc<dyn Backend>,
+    claims: Rc<Cell<i32>>,
+}
+
+impl AudioSource for Voice {
+    fn is_playing(&self) -> bool {
+        self.playing.borrow().as_ref().is_some_and(|playing| playing.busy())
+    }
+
+    fn is_stopped(&self) -> bool {
+        !self.is_playing()
+    }
+
+    fn play(&self) {
+        if self.stream && self.is_playing() {
+            return;
+        }
+
+        self.stop();
+        *self.playing.borrow_mut() = self.backend.start(&self.clip, self.looping.get(), self.level.get());
+    }
+
+    fn set_loop(&self, looping: bool) {
+        self.looping.set(looping);
+    }
+
+    fn set_volume(&self, volume: f32) {
+        let level = if volume > QUIETEST { volume.min(1.0) } else { 0.0 };
+
+        self.level.set(level);
+
+        if let Some(playing) = self.playing.borrow().as_ref() {
+            playing.set_level(level);
+        }
+    }
+
+    fn stop(&self) {
+        if let Some(playing) = self.playing.borrow_mut().take() {
+            playing.stop();
+        }
+    }
+
+    fn priority(&self) -> i32 {
+        if self.stream { STREAM_PRIORITY } else { BUFFER_PRIORITY }
+    }
+}
+
+impl Drop for Voice {
+    fn drop(&mut self) {
+        self.stop();
+        self.claims.set(self.claims.get() - 1);
+    }
+}
+
+pub struct Pool {
+    files: Rc<RefCell<FileIndex>>,
+    ledger: SharedLedger,
+    backend: Rc<dyn Backend>,
+    buffers: Rc<Cell<i32>>,
+    streams: Rc<Cell<i32>>,
+    voices: Vec<Weak<Voice>>,
+}
+
+impl Pool {
+    pub fn new(files: Rc<RefCell<FileIndex>>, ledger: SharedLedger, backend: Rc<dyn Backend>) -> Self {
         Self {
             files,
             ledger,
-            volumes,
-            stream,
-            music: None,
-            effects: BTreeMap::new(),
-            duck: FULL,
+            backend,
+            buffers: Rc::new(Cell::new(0)),
+            streams: Rc::new(Cell::new(0)),
+            voices: Vec::new(),
         }
     }
 
-    fn read(&self, name: &str) -> Option<Vec<u8>> {
-        let source = self.files.borrow().get(name).cloned()?;
+    fn name(path: &[u8]) -> String {
+        let base = path.rsplit(|byte| *byte == b'/').next().unwrap_or(path);
+
+        String::from_utf8_lossy(base).into_owned()
+    }
+
+    fn read(&self, path: &[u8]) -> Option<(String, Vec<u8>)> {
+        let name = Self::name(path);
+        let source = self.files.borrow().get(name.as_str()).cloned()?;
 
         if !source.in_memory() {
-            self.ledger.borrow_mut().note(name, &source.path);
+            self.ledger.borrow_mut().note(&name, &source.path);
         }
 
-        source
+        let bytes = source
             .read()
             .map(|bytes| bytes.to_vec())
             .inspect_err(|error| warn!("emu: {name} could not be read: {error}"))
-            .ok()
+            .ok()?;
+
+        Some((name, bytes))
     }
 
-    fn track(&self, sound_id: i32) -> Option<String> {
-        let files = self.files.borrow();
+    fn claim(&mut self, clip: Clip, stream: bool) -> Option<Rc<dyn AudioSource>> {
+        let (claims, limit) = if stream { (&self.streams, STREAM_VOICES) } else { (&self.buffers, BUFFER_VOICES) };
 
-        track_names(sound_id).into_iter().find(|name| files.contains_key(name.as_str()))
-    }
-
-    fn music_level(&self) -> f32 {
-        (self.duck * self.volumes.borrow().music) as f32 / (FULL * FULL) as f32
-    }
-
-    fn effect(&mut self, sound_id: i32) -> Option<Effect> {
-        if let Some(effect) = self.effects.get(&sound_id) {
-            return Some(effect.clone());
+        if claims.get() >= limit {
+            return None;
         }
 
-        let bytes = effect_names(sound_id).iter().find_map(|name| self.read(name))?;
-        let effect = parse_caf(&bytes)?;
+        claims.set(claims.get() + 1);
 
-        self.effects.insert(sound_id, effect.clone());
+        let voice = Rc::new(Voice {
+            clip,
+            stream,
+            looping: Cell::new(false),
+            level: Cell::new(1.0),
+            playing: RefCell::new(None),
+            backend: Rc::clone(&self.backend),
+            claims: Rc::clone(claims),
+        });
 
-        Some(effect)
-    }
+        self.voices.retain(|held| held.strong_count() > 0);
+        self.voices.push(Rc::downgrade(&voice));
 
-    fn start_music(&mut self, sound_id: i32) {
-        let level = self.music_level();
-
-        self.music = None;
-
-        let Some(stream) = self.stream.0.output.as_ref() else {
-            return;
-        };
-        let Some(bytes) = self.track(sound_id).and_then(|name| self.read(&name)) else {
-            return;
-        };
-        let decoded = match Decoder::new_looped(Cursor::new(bytes)) {
-            Ok(decoded) => decoded,
-            Err(error) => {
-                warn!("emu: track {sound_id} could not be decoded: {error}");
-
-                return;
-            }
-        };
-        let sink = Player::connect_new(stream.mixer());
-
-        sink.set_volume(level);
-        sink.append(decoded);
-        self.music = Some((sound_id, sink));
-    }
-
-    pub fn refresh(&mut self) {
-        let level = self.music_level();
-
-        if let Some((_, sink)) = &self.music {
-            sink.set_volume(level);
-        }
+        Some(voice)
     }
 }
 
-pub(super) fn track_names(sound_id: i32) -> [String; 2] {
-    [format!("snd{sound_id:03}.ogg"), format!("{sound_id:03}.ogg")]
-}
+impl AudioHost for Pool {
+    fn active_sources(&mut self) -> i32 {
+        self.voices.iter().filter_map(Weak::upgrade).filter(|voice| voice.is_playing()).count() as i32
+    }
 
-pub(super) fn effect_names(sound_id: i32) -> [String; 2] {
-    [format!("{sound_id:03}.caf"), format!("snd{sound_id:03}.caf")]
+    fn source_capacity(&mut self) -> i32 {
+        BUFFER_VOICES + STREAM_VOICES
+    }
+
+    fn new_buffer_source(&mut self, data: &Rc<dyn SoundData>) -> Option<Rc<dyn AudioSource>> {
+        let data = data.as_any().downcast_ref::<EffectData>()?;
+        let clip = Clip::Effect { name: data.name.clone(), effect: data.effect.clone() };
+
+        self.claim(clip, false)
+    }
+
+    fn new_stream_source(&mut self, path: &[u8], _source_type: i32) -> Option<Rc<dyn AudioSource>> {
+        let (name, bytes) = self.read(path)?;
+
+        self.claim(Clip::Track { name, bytes: Arc::from(bytes) }, true)
+    }
+
+    fn file_exists(&mut self, path: &[u8]) -> bool {
+        self.files.borrow().contains_key(Self::name(path).as_str())
+    }
+
+    fn files_dir(&mut self) -> Vec<u8> {
+        FILES_DIR.to_vec()
+    }
+
+    fn remove_file(&mut self, path: &[u8]) -> bool {
+        debug!("emu: the game asked to delete {}, which is left in place", String::from_utf8_lossy(path));
+
+        false
+    }
+
+    fn load_sound_data(&mut self, path: &[u8]) -> Option<Rc<dyn SoundData>> {
+        let (name, bytes) = self.read(path)?;
+        let Some(effect) = parse_caf(&bytes) else {
+            warn!("emu: {name} is not a readable caf");
+
+            return None;
+        };
+
+        Some(Rc::new(EffectData { name, effect }))
+    }
 }
 
 pub(super) fn parse_caf(bytes: &[u8]) -> Option<Effect> {
@@ -238,77 +388,4 @@ pub(super) fn parse_caf(bytes: &[u8]) -> Option<Effect> {
     }
 
     None
-}
-
-impl SoundManager for Speaker {
-    fn play_audio(&mut self, sound_id: i32, volume: Option<i32>, is_bgm: bool) {
-        if is_bgm || self.track(sound_id).is_some() {
-            self.duck = volume.unwrap_or(FULL);
-            self.start_music(sound_id);
-
-            return;
-        }
-
-        let Some(effect) = self.effect(sound_id) else {
-            return;
-        };
-        let Some(stream) = self.stream.0.output.as_ref() else {
-            return;
-        };
-        let level = (volume.unwrap_or(FULL) * self.volumes.borrow().effects) as f32 / (FULL * FULL) as f32;
-        let (Some(channels), Some(rate)) = (NonZero::new(effect.channels), NonZero::new(effect.rate)) else {
-            return;
-        };
-        let source = SamplesBuffer::new(channels, rate, effect.samples.to_vec());
-        let voice = Player::connect_new(stream.mixer());
-
-        voice.set_volume(level);
-        voice.append(source);
-        self.stream.0.voices.borrow_mut().insert(sound_id, voice);
-    }
-
-    fn stop_audio(&mut self, sound_id: i32) {
-        let music = matches!(sound_id, EVERY_TRACK | EVERYTHING);
-        let effects = matches!(sound_id, EVERY_EFFECT | EVERYTHING);
-
-        if music || self.music.as_ref().is_some_and(|(held, _)| *held == sound_id) {
-            self.music = None;
-        }
-
-        if effects {
-            self.stream.0.voices.borrow_mut().clear();
-        } else {
-            self.stream.0.voices.borrow_mut().remove(&sound_id);
-        }
-    }
-
-    fn set_bgm_duck(&mut self, percent: i32) {
-        self.duck = percent;
-        self.refresh();
-    }
-
-    fn pause_all(&mut self) {
-        if let Some((_, sink)) = &self.music {
-            sink.pause();
-        }
-    }
-
-    fn set_channel(&mut self, _channel: i32, _value: i32) {}
-
-    fn get_bgm_volume_setting(&mut self) -> i32 {
-        self.volumes.borrow().music
-    }
-
-    fn get_se_volume_setting(&mut self) -> i32 {
-        self.volumes.borrow().effects
-    }
-
-    fn set_bgm_volume_setting(&mut self, percent: i32) {
-        self.volumes.borrow_mut().music = percent;
-        self.refresh();
-    }
-
-    fn set_se_volume_setting(&mut self, percent: i32) {
-        self.volumes.borrow_mut().effects = percent;
-    }
 }

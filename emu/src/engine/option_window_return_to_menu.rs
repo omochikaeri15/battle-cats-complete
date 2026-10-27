@@ -4,7 +4,7 @@ use super::{
     AppContext, map_uses_item_cost, dialog_set_back_button, dialog_show_kind2,
     ex_redirect_check_a, ex_redirect_check_b, get_map_type, is_aku_final_map, is_ex_map_68,
     is_ex_option_target, new_button_node, option_window_return_confirm, play_sound,
-    query_localizable, sound_manager, std_string_from_cstr, ui_node_get_child,
+    query_localizable, std_string_from_cstr, ui_node_get_child,
     ui_node_set_visible,
 };
 
@@ -23,8 +23,8 @@ pub fn option_window_return_to_menu(
     );
 
     match event {
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
+        0 => play_sound(ctx, 0xa, None)?,
+        3 => play_sound(ctx, 0xb, None)?,
         2 => {
             let half = ops::div_2(ctx.i32_at(AppContext::BATTLE_TICKS)?);
             let blink = half

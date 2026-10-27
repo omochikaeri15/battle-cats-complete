@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, dialog_close, play_sound, sound_manager};
+use super::{AppContext, dialog_close, play_sound};
 
 pub fn option_window_vibrate_error(
     ctx: &mut AppContext,
@@ -16,7 +16,7 @@ pub fn option_window_vibrate_error(
         return Ok(());
     }
 
-    play_sound(sound_manager(ctx)?, 0xb, None);
+    play_sound(ctx, 0xb, None)?;
 
     dialog_close(ctx, dialog)
 }

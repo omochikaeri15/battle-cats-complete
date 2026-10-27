@@ -7,7 +7,7 @@ use super::{
     handle_battle_swipe_pinch, hit_test_rect, is_score_stage, labyrinth_active,
     labyrinth_result_ready, new_button_set_touchable, play_sound, point_lose_update_lambda_0,
     point_lose_update_lambda_1, point_lose_update_lambda_2, query_localizable, record_stage_played,
-    request_save_data, reward_def_lookup, sound_manager, substitute_tokens, touch_is_down,
+    request_save_data, reward_def_lookup, substitute_tokens, touch_is_down,
     touch_released, xor_row46_get,
 };
 
@@ -129,7 +129,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
             ctx.set_i32_at(AppContext::REWARD_POP_HOLD, 0)?;
-            play_sound(sound_manager(ctx)?, 0x1d, None);
+            play_sound(ctx, 0x1d, None)?;
 
             let mut message = Vec::new();
             let entry = ctx.reward_queue.first().ok_or(Fault::index_out_of_range(0, 0))?;
@@ -258,7 +258,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
             ctx.set_i32_at(AppContext::REWARD_POP_COUNTER, 0)?;
             ctx.set_i32_at(AppContext::OUTRO_PHASE, 6)?;
             ctx.set_i32_at(AppContext::OUTRO_FRAME, 0)?;
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
 
             Ok(true)
         }
@@ -341,7 +341,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                 if hovered {
                     if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-                        play_sound(sound_manager(ctx)?, 0xa, None);
+                        play_sound(ctx, 0xa, None)?;
                         ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
                     }
                 } else {
@@ -388,7 +388,7 @@ pub fn point_lose_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                         AppContext::OUTRO_OK_PRESS,
                         ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
                     )?;
-                    play_sound(sound_manager(ctx)?, 0xb, None);
+                    play_sound(ctx, 0xb, None)?;
 
                     return Ok(true);
                 }

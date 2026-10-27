@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, Entity, call_rng, play_sound, read_flag, sound_manager};
+use super::{AppContext, Entity, call_rng, play_sound, read_flag};
 
 pub fn set_entity_state(
     ctx: &mut AppContext,
@@ -44,7 +44,7 @@ pub fn set_entity_state(
         {
             stored = 4;
         } else {
-            play_sound(sound_manager(ctx)?, 0x8f, None);
+            play_sound(ctx, 0x8f, None)?;
             stored = 0x15;
         }
     }

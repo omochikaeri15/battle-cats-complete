@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, back_pressed, dialog_button_rect, hit_test_rect, play_sound, sound_manager,
+    AppContext, back_pressed, dialog_button_rect, hit_test_rect, play_sound,
     touch_released,
 };
 
@@ -106,7 +106,7 @@ pub fn dialog_update(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<()
 
                     if hit {
                         if this.hover[slot as usize] == 0 && this.audible[slot as usize] != 0 {
-                            play_sound(sound_manager(ctx)?, 0xa, None);
+                            play_sound(ctx, 0xa, None)?;
 
                             ctx.dialogs
                                 .objects
@@ -132,7 +132,7 @@ pub fn dialog_update(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<()
 
                     if hit_test_rect(ctx, rect[0], rect[1], rect[2], rect[3])? {
                         if this.close_hover == 0 {
-                            play_sound(sound_manager(ctx)?, 0xa, None);
+                            play_sound(ctx, 0xa, None)?;
 
                             ctx.dialogs
                                 .objects

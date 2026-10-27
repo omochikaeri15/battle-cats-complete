@@ -7,7 +7,7 @@ use super::{
     get_cannon_wall_hp_pct, get_cannon_wall_lifetime, get_cannon_wall_offset,
     get_castle_anim_state, get_max_hp, get_pos_x, get_tech_level, is_cannon_target, play_sound,
     set_cannon_countdown, set_cannon_strike_x, set_castle_anim_frame, set_castle_anim_state,
-    set_death_timer, set_hp, set_max_hp, set_pos_x, slot_occupied, sound_manager, spawn_entity,
+    set_death_timer, set_hp, set_max_hp, set_pos_x, slot_occupied, spawn_entity,
 };
 
 pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
@@ -167,14 +167,14 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
                 break 'fired;
             }
 
-            play_sound(sound_manager(ctx)?, sound_id, None);
+            play_sound(ctx, sound_id, None)?;
         }
 
         let recharge = get_cannon_recharge(ctx, 0)?;
 
         set_cannon_countdown(ctx, 0, recharge)?;
         add_cannon_shot_id(ctx, 0, 1)?;
-        play_sound(sound_manager(ctx)?, 0x13, None);
+        play_sound(ctx, 0x13, None)?;
         ctx.set_i32_at(AppContext::UI_TAP_LOCKOUT, 0)?;
         ctx.set_block_at::<1>(AppContext::INPUT_BLOCKED, [0])?;
         ctx.set_i32_at(AppContext::CPU_PENDING_ACTION, 0)?;
@@ -184,7 +184,7 @@ pub fn cannon_fire(ctx: &mut AppContext, manual: u8) -> Result<(), Fault> {
     }
 
     if manual != 0 {
-        play_sound(sound_manager(ctx)?, 0xf, None);
+        play_sound(ctx, 0xf, None)?;
     }
 
     Ok(())

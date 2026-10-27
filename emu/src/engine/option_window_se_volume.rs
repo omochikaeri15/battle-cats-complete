@@ -25,14 +25,14 @@ pub fn option_window_se_volume(
 
             let volume = option_step_volume(ctx, next)?;
 
-            set_se_volume_setting(sound_manager(ctx)?, volume);
+            set_se_volume_setting(sound_manager(ctx)?, volume)?;
 
             0xb
         }
         _ => return Ok(()),
     };
 
-    play_sound(sound_manager(ctx)?, sound, None);
+    play_sound(ctx, sound, None)?;
 
     Ok(())
 }

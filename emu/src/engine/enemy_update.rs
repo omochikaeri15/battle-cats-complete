@@ -22,7 +22,7 @@ use super::{
     set_first_bounty_pct, set_frame_damage, set_hp, set_metal_killer_vfx, set_prev_curse_timer,
     set_prev_freeze_timer, set_prev_slow_timer, set_prev_weaken_timer, set_proc_badge,
     set_revive_timer, set_savage_blow_vfx, set_score_hit_mask, set_shield_hp, set_shield_state,
-    set_shield_vfx, set_shield_vfx_frame, set_toxic_vfx, slot_occupied, sound_manager,
+    set_shield_vfx, set_shield_vfx_frame, set_toxic_vfx, slot_occupied,
     spawn_warp_tick, std_map_int_maanim_subscript_2, std_map_int_vector_erase,
     std_map_int_vector_subscript, std_vector_int_push_back, std_vector_int_push_back_2,
 };
@@ -320,7 +320,7 @@ pub fn enemy_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                 }
 
                 if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? == 0 || get_battle_status(ctx)? != 4 {
-                    play_sound(sound_manager(ctx)?, 0x17, None);
+                    play_sound(ctx, 0x17, None)?;
                 }
 
                 if is_zombie(ctx, faction, slot as i32)?

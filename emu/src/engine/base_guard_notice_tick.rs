@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, get_anim_len, is_boss_guarding_base, play_sound, sound_manager};
+use super::{AppContext, get_anim_len, is_boss_guarding_base, play_sound};
 
 pub fn base_guard_notice_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     let guarding = is_boss_guarding_base(ctx)?;
@@ -18,7 +18,7 @@ pub fn base_guard_notice_tick(ctx: &mut AppContext) -> Result<(), Fault> {
     {
         ctx.set_i32_at(AppContext::BASE_GUARD_NOTICE, 3)?;
         ctx.set_i32_at(AppContext::BASE_GUARD_NOTICE_FRAME, 1)?;
-        play_sound(sound_manager(ctx)?, 0x46, None);
+        play_sound(ctx, 0x46, None)?;
 
         return Ok(());
     }
@@ -30,7 +30,7 @@ pub fn base_guard_notice_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::BASE_GUARD_NOTICE_FRAME, next)?;
 
         if frame == 0 {
-            play_sound(sound_manager(ctx)?, 0x46, None);
+            play_sound(ctx, 0x46, None)?;
 
             return Ok(());
         }
@@ -49,7 +49,7 @@ pub fn base_guard_notice_tick(ctx: &mut AppContext) -> Result<(), Fault> {
         ctx.set_i32_at(AppContext::BASE_GUARD_NOTICE_FRAME, next)?;
 
         if frame == 0 {
-            play_sound(sound_manager(ctx)?, 0x47, None);
+            play_sound(ctx, 0x47, None)?;
 
             return Ok(());
         }

@@ -6,10 +6,10 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Instant;
 
-use emu::engine::AppContext;
+use emu::engine::{AppContext, set_bgm_volume_setting, set_se_volume_setting, sound_manager, sound_pause_all};
 use emu::Site;
 use emu::runtime::{
-    BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options,
+    BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options, preload_sounds,
     VERSION, set_limits, fill_dummy_cannon_parts, fill_dummy_save, fill_dummy_talents, plant_seeds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, seed_point_cap, stock_battle_items, unlock_dummy_combos,
 };
 use kore::Vfs;
@@ -22,8 +22,8 @@ use super::input::{Touch, TouchQueue};
 use super::keys::{Action, Keys, LEAVE_AFTER};
 use super::replay;
 use super::sink::{Frame, Recorder};
-use super::sound::{SharedOutput, SharedVolumes, Speaker, Volumes};
-use super::soundtrack::{Listener, SharedLog};
+use super::sound::{Backend, Pool, SharedOutput, Speaker};
+use super::soundtrack::{SharedLog, SoundTape};
 use super::text::{Formatter, LABEL_PREFIX};
 
 const CURTAIN_CLOSING: i32 = 1;
@@ -65,7 +65,6 @@ pub struct Driver {
     sheets: Rc<RefCell<SheetCache>>,
     files: Rc<RefCell<FileIndex>>,
     touches: TouchQueue,
-    volumes: SharedVolumes,
     output: SharedOutput,
     options: BattleOptions,
     setup: Setup,
@@ -186,10 +185,6 @@ impl Driver {
         let frame = Rc::new(RefCell::new(Frame::default()));
         let sheets: Rc<RefCell<SheetCache>> = Rc::new(RefCell::new(SheetCache::new()));
         let files: Rc<RefCell<FileIndex>> = Rc::new(RefCell::new(FileIndex::new()));
-        let volumes: SharedVolumes = Rc::new(RefCell::new(Volumes {
-            music: FULL_VOLUME,
-            effects: FULL_VOLUME,
-        }));
         let profile = Rc::new(DeviceProfile::default());
         let returning = Rc::new(Cell::new(false));
 
@@ -201,7 +196,6 @@ impl Driver {
             sheets,
             files,
             touches: super::input::queue(),
-            volumes,
             output,
             options: BattleOptions {
                 music: FULL_VOLUME,
@@ -259,15 +253,12 @@ impl Driver {
         ctx.set_platform(Box::new(InertPlatform {
             profile: Rc::clone(&self.profile),
         }));
-        match &self.listener {
-            Some(log) => ctx.set_sound(Box::new(Listener::new(Rc::clone(log), Rc::clone(&self.files)))),
-            None => ctx.set_sound(Box::new(Speaker::new(
-                Rc::clone(&self.files),
-                Rc::clone(&self.ledger),
-                Rc::clone(&self.volumes),
-                self.output.share(),
-            ))),
-        }
+        let backend: Rc<dyn Backend> = match &self.listener {
+            Some(log) => Rc::new(SoundTape::new(Rc::clone(log))),
+            None => Rc::new(Speaker(self.output.share())),
+        };
+
+        ctx.set_audio(Box::new(Pool::new(Rc::clone(&self.files), Rc::clone(&self.ledger), backend)));
         ctx.set_meta(Box::new(InertMeta));
         ctx.set_scene_host(Box::new(InertScene {
             returning: Rc::clone(&self.returning),
@@ -845,6 +836,10 @@ impl Driver {
 
         match initialized {
             Ok(true) => {
+                if let Err(fault) = preload_sounds(&mut self.ctx) {
+                    warn!("emu: sound effects failed to load: {fault}");
+                }
+
                 unlock_dummy_combos(&mut self.ctx);
 
                 fill_dummy_talents(&mut self.ctx, &self.setup);
@@ -1162,19 +1157,20 @@ impl Driver {
     }
 
     pub fn silence(&mut self) {
-        if let Some(sound) = self.ctx.sound() {
-            sound.pause_all();
+        if let Err(fault) = sound_manager(&mut self.ctx).and_then(sound_pause_all) {
+            warn!("emu: sound could not be paused: {fault}");
         }
     }
 
     pub fn set_volumes(&mut self, music: i32, effects: i32) {
-        *self.volumes.borrow_mut() = Volumes { music, effects };
+        let applied = sound_manager(&mut self.ctx).and_then(|mgr| {
+            set_bgm_volume_setting(mgr, music);
+            set_se_volume_setting(mgr, effects)
+        });
 
-        let Some(sound) = self.ctx.sound() else {
-            return;
-        };
-
-        sound.set_bgm_duck(FULL_VOLUME);
+        if let Err(fault) = applied {
+            warn!("emu: sound volumes could not be applied: {fault}");
+        }
     }
 
     pub fn set_options(&mut self, options: BattleOptions) {

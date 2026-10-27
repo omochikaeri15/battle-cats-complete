@@ -12,7 +12,7 @@ pub fn tutorial_popup_update(ctx: &mut AppContext) -> Result<(), Fault> {
     ctx.set_i32_at(AppContext::TUTORIAL_TIMER, timer.wrapping_add(1))?;
 
     if timer == 0 {
-        play_sound(sound_manager(ctx)?, 0x2a, None);
+        play_sound(ctx, 0x2a, None)?;
     }
 
     ctx.set_i32_at(AppContext::TUTORIAL_PRESS_TICKS, ctx.i32_at(AppContext::TUTORIAL_PRESS_TICKS)?.wrapping_add(1))?;
@@ -413,7 +413,7 @@ pub fn tutorial_popup_update(ctx: &mut AppContext) -> Result<(), Fault> {
             ctx.set_block_at::<1>(AppContext::TUTORIAL_BUTTON_HELD, [0])?;
         } else if ctx.u8_at(AppContext::TUTORIAL_BUTTON_HELD)? == 0 {
             ctx.set_block_at::<1>(AppContext::TUTORIAL_BUTTON_HELD, [1])?;
-            play_sound(sound_manager(ctx)?, 0xa, None);
+            play_sound(ctx, 0xa, None)?;
         }
 
         let released = touch_released(ctx)?;
@@ -437,7 +437,7 @@ pub fn tutorial_popup_update(ctx: &mut AppContext) -> Result<(), Fault> {
 
         if (released != 0 && hit) || back != 0 {
             ctx.set_i32_at(AppContext::CAT_GOD_GLOW_TIMER, ctx.i32_at(AppContext::CAT_GOD_GLOW_TIMER)?.wrapping_add(1))?;
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
         }
 
         return Ok(());

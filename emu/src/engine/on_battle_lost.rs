@@ -9,7 +9,7 @@ use super::{
     get_stage_score, is_reward_claimed, is_score_stage, labyrinth_active, log_analytics_event,
     map_type_base_id, map_uses_item_cost, mission_progress, play_sound, point_reward_analytics,
     record_stage_played, scored_map_pays_money, set_auto_camera_mode, set_battle_status,
-    set_fever_fade_out, set_reward_claimed, set_stage_record, sound_manager, stage_stamina_cost,
+    set_fever_fade_out, set_reward_claimed, set_stage_record, sound_manager, stage_stamina_cost, stop_audio,
     treasure_gauge_add, treasure_gauge_full, treasure_gauge_unlocked, validate_map_type,
     vibration_reset, web_popup_request,
 };
@@ -57,7 +57,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
     }
 
     set_auto_camera_mode(ctx, 1)?;
-    sound_manager(ctx)?.stop_audio(-1);
+    stop_audio(sound_manager(ctx)?, -1)?;
     vibration_reset(ctx)?;
 
     if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? != 0
@@ -70,7 +70,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
             0x39
         };
 
-        play_sound(sound_manager(ctx)?, sound, None);
+        play_sound(ctx, sound, None)?;
     } else {
         let map_id = get_global_map_id(ctx, 0)?;
         let mut sound = 9;
@@ -112,7 +112,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
                                 .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
                             if voice != -1 {
-                                play_sound(sound_manager(ctx)?, voice, None);
+                                play_sound(ctx, voice, None)?;
                             }
 
                             index += 1;
@@ -138,7 +138,7 @@ pub fn on_battle_lost(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         if !silent {
-            play_sound(sound_manager(ctx)?, sound, None);
+            play_sound(ctx, sound, None)?;
         }
 
         defeat_counter_bump(ctx)?;

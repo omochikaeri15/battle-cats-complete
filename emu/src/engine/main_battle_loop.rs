@@ -56,7 +56,7 @@ use super::{
     slot_has_flagged_orb, slot_occupied, sniper_update, sound_manager, spawn_entity,
     stage_entry_base_trigger, stage_entry_count, stage_entry_is_boss, stage_stamina_cost,
     stat_has_recharge_cut, std_map_int_int_subscript, std_map_int_map_int_subscript,
-    std_shared_ptr_texture_assign, std_shared_ptr_texture_reset, std_string_from_cstr, surge_update,
+    std_shared_ptr_texture_assign, std_shared_ptr_texture_reset, std_string_from_cstr, stop_audio, surge_update,
     text_texture_cache, touch_began, touch_is_down, touch_released, toxic_vfx_tick,
     treasure_gauge_add, trial_win_update, turn_on_proc_badge, unit_info_select, update_keep_awake,
     upgrade_worker, validate_map_type, vibration_reset, vibration_tick, wave_apply_hits,
@@ -146,7 +146,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                     ctx.set_i32_at(AppContext::UNIT_INFO_SLOT, slot as i32)?;
                     unit_info_select(ctx, slot as i32)?;
-                    play_sound(sound_manager(ctx)?, 0xa, None);
+                    play_sound(ctx, 0xa, None)?;
 
                     break 'frame;
                 }
@@ -941,7 +941,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 && hit_test_rect(ctx, rx, ry, rw, rh)?
                             {
                                 if ctx.u8_at(AppContext::CANNON_HELD)? == 0 {
-                                    play_sound(sound_manager(ctx)?, 0xa, None);
+                                    play_sound(ctx, 0xa, None)?;
                                     ctx.set_block_at::<1>(AppContext::CANNON_HELD, [1])?;
                                 }
                             } else {
@@ -960,7 +960,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 && hit_test_rect(ctx, rx, ry, rw, rh)?
                             {
                                 if ctx.u8_at(AppContext::WORKER_HELD)? == 0 {
-                                    play_sound(sound_manager(ctx)?, 0xa, None);
+                                    play_sound(ctx, 0xa, None)?;
                                     ctx.set_block_at::<1>(AppContext::WORKER_HELD, [1])?;
                                 }
                             } else {
@@ -977,7 +977,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         if touch_is_down(ctx)? != 0 && hit_test_rect(ctx, px, py, pw, ph)? {
                             if ctx.u8_at(AppContext::PAUSE_HELD)? == 0 {
-                                play_sound(sound_manager(ctx)?, 0xa, None);
+                                play_sound(ctx, 0xa, None)?;
                                 ctx.set_block_at::<1>(AppContext::PAUSE_HELD, [1])?;
                             }
                         } else {
@@ -1028,9 +1028,9 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 add_money(ctx, wallet, cost.wrapping_neg())?;
                                 upgrade_worker(ctx, wallet)?;
                                 ctx.set_i32_at(AppContext::WORKER_UPGRADE_VFX, 0xe)?;
-                                play_sound(sound_manager(ctx)?, 0x13, None);
+                                play_sound(ctx, 0x13, None)?;
                             } else {
-                                play_sound(sound_manager(ctx)?, 0xf, None);
+                                play_sound(ctx, 0xf, None)?;
                             }
 
                             break 'input;
@@ -1041,7 +1041,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             || back_pressed(ctx)? != 0;
 
                         if pause_tapped && ctx.u8_at(AppContext::INPUT_BLOCKED)? == 0 {
-                            play_sound(sound_manager(ctx)?, 0xb, None);
+                            play_sound(ctx, 0xb, None)?;
                             ctx.set_i32_at(AppContext::UI_TAP_LOCKOUT, 0)?;
                             ctx.set_block_at::<1>(AppContext::INPUT_BLOCKED, [0])?;
                             ctx.set_i32_at(
@@ -1086,7 +1086,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         }
 
                         if item_tapped {
-                            play_sound(sound_manager(ctx)?, 0xb, None);
+                            play_sound(ctx, 0xb, None)?;
 
                             break 'input;
                         }
@@ -1113,7 +1113,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                             if ctx.i32_at(AppContext::CAT_GOD_AVAILABLE)? > 0 {
                                 ctx.set_i32_at(AppContext::UI_TAP_LOCKOUT, 0)?;
                                 ctx.set_block_at::<1>(AppContext::INPUT_BLOCKED, [0])?;
-                                play_sound(sound_manager(ctx)?, 0xb, None);
+                                play_sound(ctx, 0xb, None)?;
                                 ctx.set_i32_at(
                                     AppContext::CAT_GOD_BUTTON_PRESS,
                                     ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?
@@ -1178,7 +1178,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                             AppContext::DECK_BUTTON_PRESSED.wrapping_add(button);
 
                                         if ctx.u8_at(pressed)? == 0 {
-                                            play_sound(sound_manager(ctx)?, 0xa, None);
+                                            play_sound(ctx, 0xa, None)?;
                                             ctx.set_block_at::<1>(pressed, [1])?;
 
                                             let unit_id = get_button_unit_id(ctx, 0, index)?;
@@ -1579,15 +1579,15 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         break 'finish;
                                     }
 
-                                    sound_manager(ctx)?.stop_audio(-1);
+                                    stop_audio(sound_manager(ctx)?, -1)?;
 
                                     let pays = scored_map_pays_money(ctx)?;
 
                                     play_sound(
-                                        sound_manager(ctx)?,
+                                        ctx,
                                         if pays { 0xbd } else { 0x39 },
                                         None,
-                                    );
+                                    )?;
                                     vibration_reset(ctx)?;
                                     ctx.set_i32_at(AppContext::LOSE_TIP_SHOWN, 0)?;
 
@@ -2498,7 +2498,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     base_shake_start(ctx, 1);
                                 }
 
-                                play_sound(sound_manager(ctx)?, 0x2d, None);
+                                play_sound(ctx, 0x2d, None)?;
 
                                 for target in 1..0x33i32 {
                                     if !is_touchable_thunk(ctx, 0, target, -1)? {
@@ -3315,7 +3315,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                             1,
                                         )?;
                                         turn_on_proc_badge(ctx, faction, slot, 3)?;
-                                        play_sound(sound_manager(ctx)?, 0x32, None);
+                                        play_sound(ctx, 0x32, None)?;
                                     }
                                 }
 
@@ -3566,7 +3566,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     ],
                                 )?;
                                 ctx.set_i32_at(AppContext::BGM_BOSS_PHASE, 1)?;
-                                sound_manager(ctx)?.stop_audio(-1);
+                                stop_audio(sound_manager(ctx)?, -1)?;
                             }
 
                             for button in 0..10i32 {
@@ -3640,11 +3640,11 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
 
                         if get_battle_status(ctx)? == 0 {
                             if hit_sound == 2 {
-                                play_sound(sound_manager(ctx)?, 0x16, None);
+                                play_sound(ctx, 0x16, None)?;
                             } else if hit_sound == 1 {
                                 let variant = call_rng(ctx, 2).wrapping_add(0x14);
 
-                                play_sound(sound_manager(ctx)?, variant, None);
+                                play_sound(ctx, variant, None)?;
                             }
 
                             for faction in 0..2i32 {
@@ -3667,7 +3667,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         }
 
                                         if first && get_deck_cooldown(ctx, wallet, button)? == 0 {
-                                            play_sound(sound_manager(ctx)?, 0x1b, None);
+                                            play_sound(ctx, 0x1b, None)?;
                                         }
                                     }
 
@@ -3753,7 +3753,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         ctx.set_i32_at(countdown, left.wrapping_sub(1))?;
 
                                         if left.wrapping_sub(1) == 0 && first {
-                                            play_sound(sound_manager(ctx)?, 0x1c, None);
+                                            play_sound(ctx, 0x1c, None)?;
                                         }
                                     }
                                 }
@@ -3826,7 +3826,7 @@ pub fn main_battle_loop(ctx: &mut AppContext) -> Result<bool, Fault> {
                         ctx.set_i32_at(AppContext::BGM_SWITCH_FRAME, frame)?;
 
                         if frame == ctx.i32_at(AppContext::BGM_SWITCH_FRAMES)? {
-                            sound_manager(ctx)?.stop_audio(-1);
+                            stop_audio(sound_manager(ctx)?, -1)?;
 
                             if ctx.i32_at(AppContext::BGM_SWITCH_NEXT)? != -1 {
                                 bgm_player_switch(ctx, 0, 1)?;

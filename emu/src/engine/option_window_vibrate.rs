@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, dialog_set_back_button, dialog_show, has_vibrator, new_button_node,
-    option_window_vibrate_error, play_sound, query_localizable, sound_manager, ui_node_set_cut,
+    option_window_vibrate_error, play_sound, query_localizable, ui_node_set_cut,
     vibration_sample,
 };
 
@@ -10,7 +10,7 @@ pub fn option_window_vibrate(ctx: &mut AppContext, button: i32, event: i32) -> R
     match event {
         3 => {
             if has_vibrator(ctx)? != 0 {
-                play_sound(sound_manager(ctx)?, 0xb, None);
+                play_sound(ctx, 0xb, None)?;
 
                 let enabled = ctx.u8_at(AppContext::VIBRATION_ENABLED)?;
 
@@ -25,7 +25,7 @@ pub fn option_window_vibrate(ctx: &mut AppContext, button: i32, event: i32) -> R
 
                 ui_node_set_cut(new_button_node(&mut ctx.buttons, button)?, cut)?;
             } else {
-                play_sound(sound_manager(ctx)?, 0xf, None);
+                play_sound(ctx, 0xf, None)?;
 
                 let text = query_localizable(ctx, b"vibration_error_popup");
                 let dialog =
@@ -34,7 +34,7 @@ pub fn option_window_vibrate(ctx: &mut AppContext, button: i32, event: i32) -> R
                 dialog_set_back_button(ctx, dialog, 0)?;
             }
         }
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

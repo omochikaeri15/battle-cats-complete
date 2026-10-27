@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, StageRecordRow,
+    AppContext, ENTITY_BASE, ENTITY_STRIDE, Entity, FACTION_STRIDE, FormatArg, StageRecordRow, stop_audio,
     TreasureRow, UNIT_BUY, UNIT_BUY_STRIDE, ad_prepare, add_resource, add_stage_record,
     add_stage_unlock, add_stages_cleared, aku_timer_set, altar_stage_value, analytics_named,
     analytics_nekokan_get, battle_init_win_lambda_0, breadcrumb, breadcrumb_with,
@@ -81,7 +81,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
 
     if cleared == 0 {
         set_auto_camera_mode(ctx, 2)?;
-        sound_manager(ctx)?.stop_audio(-1);
+        stop_audio(sound_manager(ctx)?, -1)?;
         vibration_reset(ctx)?;
     }
 
@@ -89,7 +89,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
         let map_id = get_global_map_id(ctx, 0)?;
 
         if !ctx.map_records.contains_key(&map_id) {
-            play_sound(sound_manager(ctx)?, 8, None);
+            play_sound(ctx, 8, None)?;
 
             break 'voice;
         }
@@ -103,7 +103,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             .victory_voices
             .is_empty()
         {
-            play_sound(sound_manager(ctx)?, 8, None);
+            play_sound(ctx, 8, None)?;
 
             break 'voice;
         }
@@ -149,7 +149,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
                     .ok_or(Fault::index_out_of_range(index as i64, 0))?;
 
                 if voice != -1 {
-                    play_sound(sound_manager(ctx)?, voice, None);
+                    play_sound(ctx, voice, None)?;
                 }
 
                 index += 1;
@@ -173,7 +173,7 @@ pub fn battle_init_win(ctx: &mut AppContext, cleared: u8) -> Result<(), Fault> {
             .ok_or(Fault::out_of_range())?;
 
         if voice != -1 {
-            play_sound(sound_manager(ctx)?, voice, None);
+            play_sound(ctx, voice, None)?;
         }
     }
 

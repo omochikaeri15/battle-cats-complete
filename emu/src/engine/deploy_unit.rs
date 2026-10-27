@@ -12,7 +12,7 @@ use super::{
     level_cell_base, max_i32, min_i32, orb_deploy_condition, play_sound, set_attack_end_mode,
     set_attacks_remaining, set_boss_wave_immune, set_conjure_deck_slot, set_deck_cooldown,
     set_dodge_chance, set_dodge_duration, set_entity_state, set_paid_cost, set_pos_x,
-    slot_conjure_ready, slot_deploy_permitted, slot_occupied, sound_manager, spawn_entity,
+    slot_conjure_ready, slot_deploy_permitted, slot_occupied, spawn_entity,
     stage_not_sealed, stat_conjure_unit_id,
 };
 
@@ -158,7 +158,7 @@ pub fn deploy_unit(
 
                     if last == -1 {
                         if fail_sound != 0 {
-                            play_sound(sound_manager(ctx)?, 0xf, None);
+                            play_sound(ctx, 0xf, None)?;
                         }
 
                         return Ok(());
@@ -173,7 +173,7 @@ pub fn deploy_unit(
                     set_conjure_deck_slot(ctx, faction, last, slot)?;
 
                     if !announced {
-                        play_sound(sound_manager(ctx)?, 0xa2, None);
+                        play_sound(ctx, 0xa2, None)?;
                         announced = true;
                     }
 
@@ -199,7 +199,7 @@ pub fn deploy_unit(
 
                 if last < 0 {
                     if fail_sound != 0 {
-                        play_sound(sound_manager(ctx)?, 0xf, None);
+                        play_sound(ctx, 0xf, None)?;
                     }
 
                     return Ok(());
@@ -324,7 +324,7 @@ pub fn deploy_unit(
 
             if spawned < 0 {
                 if fail_sound != 0 {
-                    play_sound(sound_manager(ctx)?, 0xf, None);
+                    play_sound(ctx, 0xf, None)?;
                 }
 
                 return Ok(());
@@ -428,12 +428,12 @@ pub fn deploy_unit(
             set_deck_cooldown(ctx, wallet, slot, recharge, 1)?;
         }
 
-        play_sound(sound_manager(ctx)?, 0x13, None);
+        play_sound(ctx, 0x13, None)?;
 
         return add_medal_progress(ctx, 0, ops::div_100(cost as i64) as i32);
     }
 
-    play_sound(sound_manager(ctx)?, 0xf, None);
+    play_sound(ctx, 0xf, None)?;
 
     Ok(())
 }

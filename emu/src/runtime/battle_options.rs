@@ -16,7 +16,7 @@ pub struct BattleOptions {
 
 pub fn apply_battle_options(ctx: &mut AppContext, options: BattleOptions) -> Result<(), Fault> {
     set_bgm_volume_setting(sound_manager(ctx)?, options.music);
-    set_se_volume_setting(sound_manager(ctx)?, options.effects);
+    set_se_volume_setting(sound_manager(ctx)?, options.effects)?;
     ctx.set_block_at::<1>(AppContext::DECK_TWO_LINES, [options.two_rows as u8])?;
     ctx.set_block_at::<1>(AppContext::VIBRATION_ENABLED, [options.vibrate as u8])
 }

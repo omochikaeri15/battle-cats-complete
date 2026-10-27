@@ -4,7 +4,7 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, new_button_register, new_button_set_back_key, option_menu_close,
-    option_window_unit_info_back, play_sound, sound_manager, ui_node_add_child,
+    option_window_unit_info_back, play_sound, ui_node_add_child,
     ui_node_set_anchor, ui_node_set_panel, ui_node_set_sprite, unit_info_select,
 };
 
@@ -64,8 +64,8 @@ pub fn option_window_unit_info(
 
             new_button_set_back_key(&mut ctx.buttons, back, 1)?;
         }
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        3 => play_sound(ctx, 0xb, None)?,
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

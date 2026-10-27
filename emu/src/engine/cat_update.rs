@@ -19,7 +19,7 @@ use super::{
     set_drain_pct, set_entity_frame, set_entity_state, set_frame_damage, set_metal_killer_vfx,
     set_prev_curse_timer, set_prev_freeze_timer, set_prev_slow_timer, set_prev_weaken_timer,
     set_proc_badge, set_savage_blow_vfx, set_score_hit_mask, set_toxic_vfx, slot_occupied,
-    sound_manager, spawn_warp_tick, std_map_int_maanim_subscript_2,
+    sound_manager, spawn_warp_tick, std_map_int_maanim_subscript_2, stop_audio,
 };
 
 #[derive(Default)]
@@ -88,7 +88,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         if get_castle_anim_frame(ctx, faction)? >= 0x11 {
                             set_castle_anim_state(ctx, faction, 2)?;
                             set_castle_anim_frame(ctx, faction, 0)?;
-                            sound_manager(ctx)?.stop_audio(0x19);
+                            stop_audio(sound_manager(ctx)?, 0x19)?;
                         }
 
                         break 'castle;
@@ -133,7 +133,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                             }
 
                             if firing {
-                                play_sound(sound_manager(ctx)?, sound_id, None);
+                                play_sound(ctx, sound_id, None)?;
                             }
                         }
 
@@ -198,7 +198,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         if frame > get_anim_len(&ctx.base_anims[1])? {
                             set_castle_anim_state(ctx, 0, 5)?;
                             set_castle_anim_frame(ctx, 0, 0)?;
-                            play_sound(sound_manager(ctx)?, 0x24, None);
+                            play_sound(ctx, 0x24, None)?;
                         }
 
                         break 'castle;
@@ -210,7 +210,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         if frame > get_anim_len(&ctx.base_anims[1])? {
                             set_castle_anim_state(ctx, 0, 8)?;
                             set_castle_anim_frame(ctx, 0, 0)?;
-                            play_sound(sound_manager(ctx)?, 0x53, None);
+                            play_sound(ctx, 0x53, None)?;
                         }
 
                         break 'castle;
@@ -234,7 +234,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         if get_castle_anim_frame(ctx, faction)? >= 0x11 {
                             set_castle_anim_state(ctx, faction, 0xa)?;
                             set_castle_anim_frame(ctx, faction, 0)?;
-                            sound_manager(ctx)?.stop_audio(0x54);
+                            stop_audio(sound_manager(ctx)?, 0x54)?;
                         }
 
                         break 'castle;
@@ -242,7 +242,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
                         add_castle_anim_frame(ctx, faction, 1)?;
 
                         if get_castle_anim_frame(ctx, faction)? == 5 {
-                            play_sound(sound_manager(ctx)?, 0x56, None);
+                            play_sound(ctx, 0x56, None)?;
 
                             break 'castle;
                         }
@@ -760,7 +760,7 @@ pub fn cat_update(ctx: &mut AppContext, faction: i32) -> Result<(), Fault> {
             }
 
             if ctx.u8_at(AppContext::SCORE_MODE_FLAG)? == 0 || get_battle_status(ctx)? != 4 {
-                play_sound(sound_manager(ctx)?, 0x18, None);
+                play_sound(ctx, 0x18, None)?;
             }
 
             set_entity_state(ctx, faction, slot as i32, 4)?;

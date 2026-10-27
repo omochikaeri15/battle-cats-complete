@@ -1,5 +1,5 @@
 use super::SoundManager;
 
-pub fn get_bgm_volume_setting(mgr: &mut dyn SoundManager) -> i32 {
-    mgr.get_bgm_volume_setting()
+pub fn get_bgm_volume_setting(mgr: &mut SoundManager) -> i32 {
+    mgr.bgm_volume
 }

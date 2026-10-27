@@ -11,7 +11,7 @@ use super::{
     notification_schedule, record_stage_played, request_save_data, reset_hud_corner_rects,
     scene_background_setup, scene_transition_tick, set_battle_status, set_cannon_countdown,
     set_deck_cooldown, set_entity_state, set_hp, set_item_selected, set_money,
-    set_powerup_available, set_scene, set_worker_level, sound_manager, validate_map_type,
+    set_powerup_available, set_scene, set_worker_level, sound_manager, stop_audio, validate_map_type,
     vibration_clear,
 };
 
@@ -55,7 +55,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
             }
 
             if frame == 0xa && started != 0 && get_scene_id(ctx)? == 0x62 {
-                sound_manager(ctx)?.stop_audio(-1);
+                stop_audio(sound_manager(ctx)?, -1)?;
             }
 
             let current = ctx.i32_at(AppContext::FADE_FRAME)?;
@@ -660,7 +660,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
                         .map_ui_reset();
-                    sound_manager(ctx)?.stop_audio(-1);
+                    stop_audio(sound_manager(ctx)?, -1)?;
                     ctx.scene_host()
                         .ok_or(Fault::host_missing())?
                         .map_bgm_start(0);
@@ -814,7 +814,7 @@ pub fn fade_update(ctx: &mut AppContext, style: i32) -> Result<bool, Fault> {
                 ctx.scene_host()
                     .ok_or(Fault::host_missing())?
                     .map_ui_reset();
-                sound_manager(ctx)?.stop_audio(-1);
+                stop_audio(sound_manager(ctx)?, -1)?;
                 ctx.scene_host()
                     .ok_or(Fault::host_missing())?
                     .map_bgm_start(0);

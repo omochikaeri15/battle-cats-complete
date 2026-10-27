@@ -2,7 +2,7 @@ use crate::{Fault, ops};
 
 use super::{
     AppContext, CANNON_SHOT_SPACING, WaveRecord, WaveSprite, get_anim_len, get_battle_status,
-    get_setting, play_sound, sound_manager,
+    get_setting, play_sound,
 };
 
 pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -56,7 +56,7 @@ pub fn wave_update(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         if get_battle_status(ctx)? == 0 {
-            play_sound(sound_manager(ctx)?, 0x1a, None);
+            play_sound(ctx, 0x1a, None)?;
         }
 
         let length = if ctx.u8_at(record.wrapping_add(WaveRecord::MINI))? != 0 {

@@ -1,8 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, labyrinth_result_ready, labyrinth_set_result_ready, new_button_node, play_sound,
-    sound_manager, ui_node_set_cut,
+    AppContext, labyrinth_result_ready, labyrinth_set_result_ready, new_button_node, play_sound, ui_node_set_cut,
 };
 
 pub fn game_win_update_lambda_17(
@@ -12,7 +11,7 @@ pub fn game_win_update_lambda_17(
 ) -> Result<(), Fault> {
     match event {
         3 => {
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
 
             if labyrinth_result_ready(ctx)? {
                 labyrinth_set_result_ready(ctx, 0)?;
@@ -23,7 +22,7 @@ pub fn game_win_update_lambda_17(
             }
         }
         0 => {
-            play_sound(sound_manager(ctx)?, 0xa, None);
+            play_sound(ctx, 0xa, None)?;
 
             Ok(())
         }

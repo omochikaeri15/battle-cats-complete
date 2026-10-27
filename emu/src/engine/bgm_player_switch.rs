@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, bgm_player_pick, get_global_map_id, play_sound, sound_manager};
+use super::{AppContext, bgm_player_pick, get_global_map_id, play_sound, sound_manager, stop_audio};
 
 #[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct MapRecord {
@@ -18,8 +18,8 @@ pub fn bgm_player_switch(ctx: &mut AppContext, boss: i32, keep_playing: u8) -> R
     }
 
     if boss == 1 {
-        sound_manager(ctx)?.stop_audio(-1);
-        play_sound(sound_manager(ctx)?, 0x22, None);
+        stop_audio(sound_manager(ctx)?, -1)?;
+        play_sound(ctx, 0x22, None)?;
         ctx.set_block_at::<1>(AppContext::BGM_PENDING, [0])?;
         ctx.set_block_at::<8>(AppContext::BGM_DELAY_FRAME, [0; 8])?;
 
@@ -27,7 +27,7 @@ pub fn bgm_player_switch(ctx: &mut AppContext, boss: i32, keep_playing: u8) -> R
     }
 
     if keep_playing == 0 {
-        sound_manager(ctx)?.stop_audio(-1);
+        stop_audio(sound_manager(ctx)?, -1)?;
 
         let map_id = get_global_map_id(ctx, 0)?;
         let delay = ctx
@@ -52,7 +52,7 @@ pub fn bgm_player_switch(ctx: &mut AppContext, boss: i32, keep_playing: u8) -> R
         return Ok(());
     }
 
-    play_sound(sound_manager(ctx)?, music, None);
+    play_sound(ctx, music, None)?;
 
     Ok(())
 }

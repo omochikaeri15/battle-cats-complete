@@ -1,7 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, dialog_close, new_button_set_touchable, play_sound, show_rewarded_ad, sound_manager,
+    AppContext, dialog_close, new_button_set_touchable, play_sound, show_rewarded_ad, sound_manager, sound_pause_all,
 };
 
 pub fn battle_init_win_lambda_0_0(
@@ -15,7 +15,7 @@ pub fn battle_init_win_lambda_0_0(
             return Ok(());
         }
 
-        play_sound(sound_manager(ctx)?, 0xb, None);
+        play_sound(ctx, 0xb, None)?;
 
         return dialog_close(ctx, dialog);
     }
@@ -29,7 +29,7 @@ pub fn battle_init_win_lambda_0_0(
             ctx.set_block_at::<1>(AppContext::OUTRO_VIDEO_BUTTON, [0])?;
 
             if ctx.ad_button_cleared != 0 {
-                sound_manager(ctx)?.pause_all();
+                sound_pause_all(sound_manager(ctx)?)?;
             }
 
             show_rewarded_ad(ctx, 0)?;

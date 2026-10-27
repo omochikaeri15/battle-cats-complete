@@ -119,7 +119,7 @@ fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, 
 
     fs::create_dir_all(EXPORTS).map_err(|failure| format!("the exports folder could not be created: {failure}"))?;
 
-    let log = Rc::new(RefCell::new(SoundLog::new(save.options.music, save.options.effects)));
+    let log = Rc::new(RefCell::new(SoundLog::new()));
     let mut driver = Driver::headless(Rc::clone(&log));
 
     driver.arm_playback(&save, frames, faults, index.clone());
@@ -160,7 +160,7 @@ fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, 
 
     let temp_audio = work.join(TEMP_AUDIO);
 
-    soundtrack::mix(&log.borrow(), &index, drawn, &temp_audio, &|ratio| emit(VideoEvent::Sound(ratio * MIX_SHARE)), &job.abort)
+    soundtrack::mix(&log.borrow(), drawn, &temp_audio, &|ratio| emit(VideoEvent::Sound(ratio * MIX_SHARE)), &job.abort)
         .map_err(|failure| format!("the replay's sound could not be written: {failure}"))?;
 
     if job.abort.load(Ordering::Relaxed) {

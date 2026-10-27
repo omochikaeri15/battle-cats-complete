@@ -11,7 +11,8 @@ mod inert_ui;
 mod relayout;
 mod seeds;
 mod setup;
-mod silent_sound;
+mod silent_audio;
+mod sound_preload;
 mod stamp;
 mod touch_input;
 
@@ -31,6 +32,7 @@ pub use inert_ui::InertUi;
 pub use relayout::{Layout, layout_snapshot, relatch_battle_rects};
 pub use seeds::{Seeds, plant_seeds};
 pub use setup::{BATTLE_ITEMS, CASTLE_PART, CatGod, DECK_SLOTS, PartLevels, Setup, SetupUnit, StageEntry, StageVariant, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel, TutorialFlags, is_extra_entry, prepare_extra_entry, reload_entry_map, select_dungeon_stage, select_stage};
-pub use silent_sound::SilentSound;
+pub use silent_audio::SilentAudio;
+pub use sound_preload::preload_sounds;
 pub use stamp::VERSION;
 pub use touch_input::{pump_pinch, pump_touch};

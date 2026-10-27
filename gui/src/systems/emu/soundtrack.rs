@@ -7,41 +7,33 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use emu::engine::SoundManager;
 use rodio::{Decoder, Source};
 use tracing::warn;
 
-use super::assets::FileIndex;
-use super::sound::{effect_names, parse_caf, track_names, EVERYTHING, EVERY_EFFECT, EVERY_TRACK};
+use super::sound::{Backend, Clip, Playing};
 
 pub(super) const RATE: u32 = 48_000;
-const FULL: i32 = 100;
 pub(super) const GAME_FPS: u32 = 30;
 const SAMPLES_PER_FRAME: usize = (RATE / GAME_FPS) as usize;
 const CHANNELS: usize = 2;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 enum Heard {
-    Music { id: i32, duck: i32 },
-    Effect { id: i32, volume: i32 },
-    Stop(i32),
-    Duck(i32),
-    Pause,
-    MusicVolume(i32),
-    EffectVolume(i32),
+    Start { voice: u32, samples: Arc<[f32]>, looped: bool, level: f32 },
+    Level { voice: u32, level: f32 },
+    Stop { voice: u32 },
 }
 
+#[derive(Default)]
 pub struct SoundLog {
     pub frame: u32,
     heard: Vec<(u32, Heard)>,
-    opening: (i32, i32),
-    music: i32,
-    effects: i32,
+    next: u32,
 }
 
 impl SoundLog {
-    pub fn new(music: i32, effects: i32) -> Self {
-        Self { frame: 0, heard: Vec::new(), opening: (music, effects), music, effects }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     fn push(&mut self, heard: Heard) {
@@ -51,68 +43,78 @@ impl SoundLog {
 
 pub type SharedLog = Rc<RefCell<SoundLog>>;
 
-pub struct Listener {
+pub struct SoundTape {
     log: SharedLog,
-    files: Rc<RefCell<FileIndex>>,
+    decoded: RefCell<BTreeMap<String, Arc<[f32]>>>,
 }
 
-impl Listener {
-    pub fn new(log: SharedLog, files: Rc<RefCell<FileIndex>>) -> Self {
-        Self { log, files }
+impl SoundTape {
+    pub fn new(log: SharedLog) -> Self {
+        Self { log, decoded: RefCell::new(BTreeMap::new()) }
     }
 
-    fn is_track(&self, sound_id: i32) -> bool {
-        let files = self.files.borrow();
-
-        track_names(sound_id).iter().any(|name| files.contains_key(name.as_str()))
-    }
-}
-
-impl SoundManager for Listener {
-    fn play_audio(&mut self, sound_id: i32, volume: Option<i32>, is_bgm: bool) {
-        let heard = if is_bgm || self.is_track(sound_id) {
-            Heard::Music { id: sound_id, duck: volume.unwrap_or(FULL) }
-        } else {
-            Heard::Effect { id: sound_id, volume: volume.unwrap_or(FULL) }
+    fn samples(&self, clip: &Clip) -> Option<Arc<[f32]>> {
+        let name = match clip {
+            Clip::Effect { name, .. } | Clip::Track { name, .. } => name,
         };
 
-        self.log.borrow_mut().push(heard);
+        if let Some(held) = self.decoded.borrow().get(name) {
+            return Some(Arc::clone(held));
+        }
+
+        let decoded: Arc<[f32]> = match clip {
+            Clip::Effect { effect, .. } => Arc::from(to_stereo(&effect.samples, usize::from(effect.channels), effect.rate)),
+            Clip::Track { bytes, .. } => {
+                let decoder = Decoder::new(Cursor::new(Arc::clone(bytes)))
+                    .inspect_err(|error| warn!("emu: {name} could not be decoded for the video: {error}"))
+                    .ok()?;
+                let channels = usize::from(decoder.channels().get());
+                let rate = decoder.sample_rate().get();
+                let samples: Vec<f32> = decoder.collect();
+
+                Arc::from(to_stereo(&samples, channels, rate))
+            }
+        };
+
+        self.decoded.borrow_mut().insert(name.clone(), Arc::clone(&decoded));
+
+        Some(decoded)
+    }
+}
+
+struct Taped {
+    log: SharedLog,
+    voice: u32,
+    started: u32,
+    frames: u32,
+    looped: bool,
+}
+
+impl Playing for Taped {
+    fn set_level(&self, level: f32) {
+        self.log.borrow_mut().push(Heard::Level { voice: self.voice, level });
     }
 
-    fn stop_audio(&mut self, sound_id: i32) {
-        self.log.borrow_mut().push(Heard::Stop(sound_id));
+    fn stop(&self) {
+        self.log.borrow_mut().push(Heard::Stop { voice: self.voice });
     }
 
-    fn set_bgm_duck(&mut self, percent: i32) {
-        self.log.borrow_mut().push(Heard::Duck(percent));
+    fn busy(&self) -> bool {
+        self.looped || self.log.borrow().frame.saturating_sub(self.started) < self.frames
     }
+}
 
-    fn pause_all(&mut self) {
-        self.log.borrow_mut().push(Heard::Pause);
-    }
-
-    fn set_channel(&mut self, _channel: i32, _value: i32) {}
-
-    fn get_bgm_volume_setting(&mut self) -> i32 {
-        self.log.borrow().music
-    }
-
-    fn get_se_volume_setting(&mut self) -> i32 {
-        self.log.borrow().effects
-    }
-
-    fn set_bgm_volume_setting(&mut self, percent: i32) {
+impl Backend for SoundTape {
+    fn start(&self, clip: &Clip, looped: bool, level: f32) -> Option<Box<dyn Playing>> {
+        let samples = self.samples(clip)?;
+        let frames = samples.len().div_ceil(SAMPLES_PER_FRAME * CHANNELS) as u32;
         let mut log = self.log.borrow_mut();
+        let voice = log.next;
 
-        log.music = percent;
-        log.push(Heard::MusicVolume(percent));
-    }
+        log.next += 1;
+        log.push(Heard::Start { voice, samples, looped, level });
 
-    fn set_se_volume_setting(&mut self, percent: i32) {
-        let mut log = self.log.borrow_mut();
-
-        log.effects = percent;
-        log.push(Heard::EffectVolume(percent));
+        Some(Box::new(Taped { log: Rc::clone(&self.log), voice, started: log.frame, frames, looped }))
     }
 }
 
@@ -142,66 +144,16 @@ fn to_stereo(samples: &[f32], channels: usize, rate: u32) -> Vec<f32> {
     out
 }
 
-struct Library<'a> {
-    files: &'a FileIndex,
-    tracks: BTreeMap<i32, Option<Arc<[f32]>>>,
-    effects: BTreeMap<i32, Option<Arc<[f32]>>>,
-}
-
-impl Library<'_> {
-    fn read(&self, name: &str) -> Option<Vec<u8>> {
-        let source = self.files.get(name)?;
-
-        source.read().map(|bytes| bytes.to_vec()).inspect_err(|error| warn!("emu: {name} could not be read for the video: {error}")).ok()
-    }
-
-    fn track(&mut self, sound_id: i32) -> Option<Arc<[f32]>> {
-        if let Some(held) = self.tracks.get(&sound_id) {
-            return held.clone();
-        }
-
-        let decoded = track_names(sound_id).iter().find_map(|name| self.read(name)).and_then(|bytes| {
-            let decoder = Decoder::new(Cursor::new(bytes)).inspect_err(|error| warn!("emu: track {sound_id} could not be decoded: {error}")).ok()?;
-            let channels = usize::from(decoder.channels().get());
-            let rate = decoder.sample_rate().get();
-            let samples: Vec<f32> = decoder.collect();
-
-            Some(Arc::from(to_stereo(&samples, channels, rate)))
-        });
-
-        self.tracks.insert(sound_id, decoded.clone());
-        decoded
-    }
-
-    fn effect(&mut self, sound_id: i32) -> Option<Arc<[f32]>> {
-        if let Some(held) = self.effects.get(&sound_id) {
-            return held.clone();
-        }
-
-        let decoded = effect_names(sound_id)
-            .iter()
-            .find_map(|name| self.read(name))
-            .and_then(|bytes| parse_caf(&bytes))
-            .map(|effect| Arc::from(to_stereo(&effect.samples, usize::from(effect.channels), effect.rate)));
-
-        self.effects.insert(sound_id, decoded.clone());
-        decoded
-    }
-}
-
 struct Voice {
     samples: Arc<[f32]>,
     at: usize,
     level: f32,
+    looped: bool,
 }
 
-pub fn mix(log: &SoundLog, files: &FileIndex, frames: u32, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> io::Result<()> {
-    let mut library = Library { files, tracks: BTreeMap::new(), effects: BTreeMap::new() };
-    let mut song: Option<(i32, Voice)> = None;
-    let mut voices: BTreeMap<i32, Voice> = BTreeMap::new();
-    let ((mut music, mut effects), mut duck) = (log.opening, FULL);
+pub fn mix(log: &SoundLog, frames: u32, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> io::Result<()> {
+    let mut voices: BTreeMap<u32, Voice> = BTreeMap::new();
     let mut heard = log.heard.iter().peekable();
-    let song_level = |duck: i32, music: i32| (duck * music) as f32 / (FULL * FULL) as f32;
     let mut file = BufWriter::new(File::create(out)?);
 
     file.write_all(&header(frames as usize * SAMPLES_PER_FRAME * CHANNELS))?;
@@ -219,43 +171,28 @@ pub fn mix(log: &SoundLog, files: &FileIndex, frames: u32, out: &Path, emit: &dy
         }
 
         while let Some((_, event)) = heard.next_if(|(at, _)| *at <= frame) {
-            match *event {
-                Heard::Music { id, duck: level } => {
-                    duck = level;
-                    song = library.track(id).map(|samples| (id, Voice { samples, at: 0, level: song_level(duck, music) }));
+            match event {
+                Heard::Start { voice, samples, looped, level } => {
+                    voices.insert(*voice, Voice { samples: Arc::clone(samples), at: 0, level: *level, looped: *looped });
                 }
-                Heard::Effect { id, volume } => {
-                    if let Some(samples) = library.effect(id) {
-                        voices.insert(id, Voice { samples, at: 0, level: (volume * effects) as f32 / (FULL * FULL) as f32 });
+                Heard::Level { voice, level } => {
+                    if let Some(held) = voices.get_mut(voice) {
+                        held.level = *level;
                     }
                 }
-                Heard::Stop(id) => {
-                    if matches!(id, EVERY_TRACK | EVERYTHING) || song.as_ref().is_some_and(|(held, _)| *held == id) {
-                        song = None;
-                    }
-
-                    if matches!(id, EVERY_EFFECT | EVERYTHING) {
-                        voices.clear();
-                    } else {
-                        voices.remove(&id);
-                    }
+                Heard::Stop { voice } => {
+                    voices.remove(voice);
                 }
-                Heard::Duck(level) => duck = level,
-                Heard::Pause => song = None,
-                Heard::MusicVolume(level) => music = level,
-                Heard::EffectVolume(level) => effects = level,
-            }
-
-            if let Some((_, voice)) = song.as_mut() {
-                voice.level = song_level(duck, music);
             }
         }
 
         block.fill(0.0);
 
-        if let Some((_, voice)) = song.as_mut()
-            && !voice.samples.is_empty()
-        {
+        voices.retain(|_, voice| {
+            if voice.samples.is_empty() {
+                return false;
+            }
+
             let mut filled = 0;
 
             while filled < block.len() {
@@ -267,19 +204,20 @@ pub fn mix(log: &SoundLog, files: &FileIndex, frames: u32, out: &Path, emit: &dy
                 }
 
                 filled += taken;
-                voice.at = (voice.at + taken) % voice.samples.len();
+                voice.at += taken;
+
+                if voice.at < voice.samples.len() {
+                    continue;
+                }
+
+                if !voice.looped {
+                    return false;
+                }
+
+                voice.at = 0;
             }
-        }
 
-        voices.retain(|_, voice| {
-            let source = voice.samples.get(voice.at..).unwrap_or_default();
-
-            for (slot, sample) in block.iter_mut().zip(source) {
-                *slot += sample * voice.level;
-            }
-
-            voice.at += block.len();
-            voice.at < voice.samples.len()
+            true
         });
 
         bytes.clear();

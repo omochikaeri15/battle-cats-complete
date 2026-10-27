@@ -581,7 +581,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                         [0],
                                     )?;
                                 } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + miracle)? == 0 {
-                                    play_sound(sound_manager(ctx)?, 0xa, None);
+                                    play_sound(ctx, 0xa, None)?;
                                     ctx.set_block_at::<1>(
                                         AppContext::CAT_GOD_HOVER + miracle,
                                         [1],
@@ -604,7 +604,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             if !held {
                                 ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO, [0])?;
                             } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO)? == 0 {
-                                play_sound(sound_manager(ctx)?, 0xa, None);
+                                play_sound(ctx, 0xa, None)?;
                                 ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::INTRO, [1])?;
                             }
 
@@ -621,7 +621,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     };
 
                                     if pressed {
-                                        play_sound(sound_manager(ctx)?, 0xb, None);
+                                        play_sound(ctx, 0xb, None)?;
                                         ctx.set_i32_at(
                                             AppContext::CAT_GOD_PRESSES + miracle * 4,
                                             ctx.i32_at(AppContext::CAT_GOD_PRESSES + miracle * 4)?
@@ -642,7 +642,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                     hit_test_rect(ctx, x, y, width, height)?
                                 }
                             {
-                                play_sound(sound_manager(ctx)?, 0xb, None);
+                                play_sound(ctx, 0xb, None)?;
                                 counter = Some(AppContext::CAT_GOD_PRESSES + 0xc);
                             }
                         }
@@ -660,7 +660,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         if !held {
                             ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM, [0])?;
                         } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM)? == 0 {
-                            play_sound(sound_manager(ctx)?, 0xa, None);
+                            play_sound(ctx, 0xa, None)?;
                             ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CONFIRM, [1])?;
                         }
 
@@ -678,7 +678,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             if !held {
                                 ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::BACK, [0])?;
                             } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::BACK)? == 0 {
-                                play_sound(sound_manager(ctx)?, 0xa, None);
+                                play_sound(ctx, 0xa, None)?;
                                 ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::BACK, [1])?;
                             }
                         }
@@ -707,7 +707,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                                 if food >= price { 0xe } else { 0xf }
                             };
 
-                            play_sound(sound_manager(ctx)?, sound, None);
+                            play_sound(ctx, sound, None)?;
                             counter = Some(AppContext::CAT_GOD_PRESSES + 0x14);
                         } else if touch_released(ctx)? != 0 {
                             let rect = AppContext::CAT_GOD_BACK_RECT;
@@ -718,7 +718,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                             let hit = hit_test_rect(ctx, x, y, width, height)?;
 
                             if hit && ctx.i32_at(AppContext::CAT_GOD_INTRO_STEP)? >= 4 {
-                                play_sound(sound_manager(ctx)?, 0xb, None);
+                                play_sound(ctx, 0xb, None)?;
                                 counter = Some(AppContext::CAT_GOD_PRESSES + 0x18);
                             }
                         }
@@ -742,7 +742,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         if !held {
                             ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE, [0])?;
                         } else if ctx.u8_at(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE)? == 0 {
-                            play_sound(sound_manager(ctx)?, 0xa, None);
+                            play_sound(ctx, 0xa, None)?;
                             ctx.set_block_at::<1>(AppContext::CAT_GOD_HOVER + CatGodButton::CLOSE, [1])?;
                         }
 
@@ -758,7 +758,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         if !shop_held {
                             ctx.set_block_at::<1>(AppContext::LOSE_SHOP_HELD, [0])?;
                         } else if ctx.u8_at(AppContext::LOSE_SHOP_HELD)? == 0 {
-                            play_sound(sound_manager(ctx)?, 0xa, None);
+                            play_sound(ctx, 0xa, None)?;
                             ctx.set_block_at::<1>(AppContext::LOSE_SHOP_HELD, [1])?;
                         }
 
@@ -772,7 +772,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         };
 
                         if closed || back_pressed(ctx)? != 0 {
-                            play_sound(sound_manager(ctx)?, 0xb, None);
+                            play_sound(ctx, 0xb, None)?;
                             ctx.set_i32_at(
                                 AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4,
                                 ctx.i32_at(AppContext::CAT_GOD_PRESSES + CatGodButton::CLOSE * 4)?
@@ -790,7 +790,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         };
 
                         if shop {
-                            play_sound(sound_manager(ctx)?, 0xb, None);
+                            play_sound(ctx, 0xb, None)?;
                             ctx.set_i32_at(
                                 AppContext::LOSE_SHOP_PRESS,
                                 ctx.i32_at(AppContext::LOSE_SHOP_PRESS)?.wrapping_add(1),
@@ -998,19 +998,19 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         if frame == 0 {
             if selected == 0 {
-                play_sound(sound_manager(ctx)?, 0x23, None);
+                play_sound(ctx, 0x23, None)?;
             }
 
             if ctx.i32_at(AppContext::CAT_GOD_SELECTED)? == 1 {
-                play_sound(sound_manager(ctx)?, 0x26, None);
+                play_sound(ctx, 0x26, None)?;
             }
 
             if ctx.i32_at(AppContext::CAT_GOD_SELECTED)? == 2 {
-                play_sound(sound_manager(ctx)?, 0x27, None);
+                play_sound(ctx, 0x27, None)?;
             }
 
             if ctx.i32_at(AppContext::CAT_GOD_SELECTED)? == 3 {
-                play_sound(sound_manager(ctx)?, 0x28, None);
+                play_sound(ctx, 0x28, None)?;
             }
         }
 
@@ -1062,7 +1062,7 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         ctx.set_i32_at(at, old.wrapping_add(1))?;
 
                         if old == 0 {
-                            play_sound(sound_manager(ctx)?, 0x24, None);
+                            play_sound(ctx, 0x24, None)?;
                         }
 
                         ctx.i32_at(at)?
@@ -1070,14 +1070,14 @@ pub fn cat_god_menu_input(ctx: &mut AppContext) -> Result<bool, Fault> {
                         let current = ctx.i32_at(at)?;
 
                         if current == 1 {
-                            play_sound(sound_manager(ctx)?, 0x24, None);
+                            play_sound(ctx, 0x24, None)?;
                         }
 
                         ctx.i32_at(at)?
                     };
 
                     let current = if current == 0x20 {
-                        play_sound(sound_manager(ctx)?, 0x25, None);
+                        play_sound(ctx, 0x25, None)?;
                         ctx.i32_at(at)?
                     } else {
                         current

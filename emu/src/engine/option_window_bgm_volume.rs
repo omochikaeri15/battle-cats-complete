@@ -32,7 +32,7 @@ pub fn option_window_bgm_volume(
         _ => return Ok(()),
     };
 
-    play_sound(sound_manager(ctx)?, sound, None);
+    play_sound(ctx, sound, None)?;
 
     Ok(())
 }

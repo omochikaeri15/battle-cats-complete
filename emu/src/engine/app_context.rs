@@ -7,13 +7,13 @@ use std::{
 use crate::{Entropy, Fault};
 
 use super::{
-    AdRewardRow, AltarReward, AssetSource, BaseShake, BattleEventLatch, BgEffects,
+    AdRewardRow, AltarReward, AssetSource, AudioHost, BaseShake, BattleEventLatch, BgEffects,
     BuiltDeckRecord, ButtonBank, CannonGrowthStep, CannonPart, CastleRecipeEntry, CastleRecipeUnlockRow, CastleRow, CatseyeStep, ChangeCondition, CharaGroup, ComboStore,
     CounterSurgeEvent, DailyLoginGrade, DialogManager, DojoChestRow, DrawSink, EffectSprite, Enigma, EventGatyaGroup, EventItemStore,
     ExGroup, ExplosionEvent, FixedLineupStore, GatyaChanceAnimation, GatyaDataSet, HiddenData, GamatotoBonus, GamatotoCollabo, GamatotoSpecialDrop, Imgcut, ItemPackRow, ItemShopRow, LabyrinthFloor, LineupRecord, Maanim,
     Mamodel, MapLayout, Medal, MapOption, OfficersClubRow, OrbEffectStore, MapRecord, MapStageShortcut, MatatabiRow, MetaHost, OrbStore, Platform, RankingRecord, ReleasePoint,
     DropItemRow, EventDisplayRow, MissionConditionSetting, MissionData, MissionGatyaSetting, MissionLimitOption, MissionMonthly,
-    PointEventReward, RealmsRngTable, RecommendedLevelup, SceneHost, ScreenMetrics, SheetTable, SoundManager, SoundState, SpecialRuleStore,
+    PointEventReward, RealmsRngTable, RecommendedLevelup, SceneHost, ScreenMetrics, SheetTable, SoundManager, SpecialRuleStore,
     StagePairRecord, StageRestriction, SurgeEvent, TextBlock, TextRenderer, Texture, TreasureGauge, TreasureStore,
     UiHost, UnlockGroup, VibrationStore, UnlockPopupRow, WebPopupEntry, ZombieLotteryRow,
 };
@@ -1154,7 +1154,7 @@ pub struct AppContext {
     pub map_layouts: BTreeMap<i32, MapLayout>,
     pub vibration: VibrationStore,
     pub daily_login_grades: BTreeMap<i32, DailyLoginGrade>,
-    pub sound_state: SoundState,
+    pub sound_manager: SoundManager,
     pub change_conditions: BTreeMap<i32, ChangeCondition>,
     pub score_bonus_maps: BTreeMap<i32, ScoreBonusMap>,
     pub hidden_data: HiddenData,
@@ -1517,7 +1517,7 @@ pub struct AppContext {
     pub toxic_vfx_anim: Maanim,
     pub metal_killer_vfx_anim: Maanim,
     pub drain_vfx_anim: Maanim,
-    sound: Option<Box<dyn SoundManager>>,
+    audio: Option<Box<dyn AudioHost>>,
     text: Option<Box<dyn TextRenderer>>,
     platform: Option<Box<dyn Platform>>,
     ui: Option<Box<dyn UiHost>>,
@@ -2004,6 +2004,7 @@ impl AppContext {
     pub const MENU_PICKED: usize = 0x4494c8;
     pub const MENU_TEXTURE_PAGE: usize = 0x4494a0;
     pub const MENU_ANCHOR: usize = 0x4494d0;
+    pub const EVENT_DISPLAY_ID: usize = 0x4494d8;
     pub const MAP_RETURN_FLAG: usize = 0x340370;
     pub const HUD_STATE: usize = 0x32fed8;
     pub const SWIPE_STATE: usize = 0x32e078;
@@ -2294,7 +2295,7 @@ impl AppContext {
             map_layouts: BTreeMap::new(),
             vibration: VibrationStore::default(),
             daily_login_grades: BTreeMap::new(),
-            sound_state: SoundState::default(),
+            sound_manager: SoundManager::default(),
             change_conditions: BTreeMap::new(),
             score_bonus_maps: BTreeMap::new(),
             hidden_data: HiddenData::default(),
@@ -2658,7 +2659,7 @@ impl AppContext {
             toxic_vfx_anim: Default::default(),
             metal_killer_vfx_anim: Default::default(),
             drain_vfx_anim: Default::default(),
-            sound: None,
+            audio: None,
             text: None,
             platform: None,
             ui: None,
@@ -2699,8 +2700,8 @@ impl AppContext {
             .wrapping_add(FACTION_FLAGS)
     }
 
-    pub fn sound(&mut self) -> Option<&mut (dyn SoundManager + 'static)> {
-        self.sound.as_deref_mut()
+    pub fn audio(&mut self) -> Option<&mut (dyn AudioHost + 'static)> {
+        self.audio.as_deref_mut()
     }
 
     pub fn platform(&mut self) -> Option<&mut (dyn Platform + 'static)> {
@@ -2751,8 +2752,8 @@ impl AppContext {
         self.ui = Some(ui);
     }
 
-    pub fn set_sound(&mut self, sound: Box<dyn SoundManager>) {
-        self.sound = Some(sound);
+    pub fn set_audio(&mut self, audio: Box<dyn AudioHost>) {
+        self.audio = Some(audio);
     }
 
     pub fn rng_state(&self) -> u32 {

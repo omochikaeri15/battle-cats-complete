@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, analytics_named, button_bank_find, new_button_set_touchable, play_sound,
-    show_rewarded_ad, sound_manager,
+    show_rewarded_ad,
 };
 
 pub fn game_lose_update_lambda_1(
@@ -20,8 +20,8 @@ pub fn game_lose_update_lambda_1(
             analytics_named(ctx, 0x66, b"BattleContinue", b"")?;
             show_rewarded_ad(ctx, 1)?;
         }
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        3 => play_sound(ctx, 0xb, None)?,
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

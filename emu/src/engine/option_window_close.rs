@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, new_button_node, option_menu_close, play_sound, sound_manager, ui_node_get_child,
+    AppContext, new_button_node, option_menu_close, play_sound, ui_node_get_child,
     ui_node_set_visible, update_keep_awake,
 };
 
@@ -16,8 +16,8 @@ pub fn option_window_close(ctx: &mut AppContext, button: i32, event: i32) -> Res
     );
 
     match event {
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
+        0 => play_sound(ctx, 0xa, None)?,
+        3 => play_sound(ctx, 0xb, None)?,
         2 => {
             let half = ops::div_2(ctx.i32_at(AppContext::BATTLE_TICKS)?);
             let blink = half.wrapping_sub(ops::div_2(half).wrapping_mul(2));

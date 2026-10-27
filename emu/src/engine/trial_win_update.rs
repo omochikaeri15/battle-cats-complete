@@ -5,7 +5,7 @@ use super::{
     connecting_indicator_show, dialog_close, dialog_show_alt, dialog_top, get_auto_camera_mode,
     get_drawable_width, get_map_type, handle_battle_swipe_pinch, has_inquiry_code, hit_test_rect,
     labyrinth_active, new_button_set_touchable, play_sound, query_localizable, ranking_name_by_id,
-    ranking_rank_by_id, ranking_status_by_id, ranking_submit_score, sound_manager,
+    ranking_rank_by_id, ranking_status_by_id, ranking_submit_score,
     string_format_rank_comment, texture_cache_load, touch_is_down, touch_released,
     trial_win_update_lambda_1,
 };
@@ -138,7 +138,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
         if hovered {
             if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-                play_sound(sound_manager(ctx)?, 0xa, None);
+                play_sound(ctx, 0xa, None)?;
                 ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
             }
         } else {
@@ -161,7 +161,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
                 AppContext::OUTRO_OK_PRESS,
                 ctx.i32_at(AppContext::OUTRO_OK_PRESS)?.wrapping_add(1),
             )?;
-            play_sound(sound_manager(ctx)?, 0xb, None);
+            play_sound(ctx, 0xb, None)?;
 
             return Ok(true);
         }
@@ -318,7 +318,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
 
     if hovered {
         if ctx.u8_at(AppContext::DECK_BUTTON_PRESSED)? == 0 {
-            play_sound(sound_manager(ctx)?, 0xa, None);
+            play_sound(ctx, 0xa, None)?;
             ctx.set_block_at::<1>(AppContext::DECK_BUTTON_PRESSED, [1])?;
         }
     } else {
@@ -338,7 +338,7 @@ pub fn trial_win_update(ctx: &mut AppContext) -> Result<bool, Fault> {
         return Ok(true);
     }
 
-    play_sound(sound_manager(ctx)?, 0xb, None);
+    play_sound(ctx, 0xb, None)?;
     ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [1])?;
     ctx.set_i32_at(AppContext::CURTAIN_STYLE, 1)?;
 

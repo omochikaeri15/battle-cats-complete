@@ -2,7 +2,6 @@ use crate::Fault;
 
 use super::{
     AppContext, battle_check_login_bonus, dialog_close, option_window_set_touchable, play_sound,
-    sound_manager,
 };
 
 pub fn option_window_return_confirm(
@@ -19,7 +18,7 @@ pub fn option_window_return_confirm(
         return Ok(());
     }
 
-    play_sound(sound_manager(ctx)?, 0xb, None);
+    play_sound(ctx, 0xb, None)?;
     dialog_close(ctx, dialog)?;
 
     match button {

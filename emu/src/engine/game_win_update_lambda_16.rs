@@ -1,6 +1,6 @@
 use crate::Fault;
 
-use super::{AppContext, dialog_close, mission_tracker_refresh, play_sound, sound_manager};
+use super::{AppContext, dialog_close, mission_tracker_refresh, play_sound};
 
 pub fn game_win_update_lambda_16(
     ctx: &mut AppContext,
@@ -13,7 +13,7 @@ pub fn game_win_update_lambda_16(
     }
 
     dialog_close(ctx, dialog)?;
-    play_sound(sound_manager(ctx)?, 0xb, None);
+    play_sound(ctx, 0xb, None)?;
 
     if button != 0 {
         return ctx.set_block_at::<1>(AppContext::EX_OFFERED, [0]);

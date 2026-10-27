@@ -1,8 +1,7 @@
 use crate::Fault;
 
 use super::{
-    AppContext, new_button_set_enabled, option_window_build, option_window_build_alt, play_sound,
-    sound_manager, vibration_clear,
+    AppContext, new_button_set_enabled, option_window_build, option_window_build_alt, play_sound, vibration_clear,
 };
 
 pub fn option_window_unit_info_back(
@@ -31,8 +30,8 @@ pub fn option_window_unit_info_back(
 
             new_button_set_enabled(&mut ctx.buttons, button, 0)?;
         }
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        3 => play_sound(ctx, 0xb, None)?,
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

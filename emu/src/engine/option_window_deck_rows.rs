@@ -1,7 +1,7 @@
 use crate::{Fault, ops};
 
 use super::{
-    AppContext, new_button_node, new_button_set_pos, play_sound, sound_manager, ui_node_set_cut,
+    AppContext, new_button_node, new_button_set_pos, play_sound, ui_node_set_cut,
 };
 
 pub fn option_window_deck_rows(
@@ -30,8 +30,8 @@ pub fn option_window_deck_rows(
 
             new_button_set_pos(&mut ctx.buttons, button, shift.wrapping_add(x), y)?;
         }
-        3 => play_sound(sound_manager(ctx)?, 0xb, None),
-        0 => play_sound(sound_manager(ctx)?, 0xa, None),
+        3 => play_sound(ctx, 0xb, None)?,
+        0 => play_sound(ctx, 0xa, None)?,
         _ => {}
     }
 

@@ -2,7 +2,7 @@ use crate::Fault;
 
 use super::{
     AppContext, ProcRolls, SurgeEvent, abs_i32, call_rng, get_anim_len, get_metal_killer_pct,
-    get_pos_x, get_setting, play_sound, roll_procs, sound_manager,
+    get_pos_x, get_setting, play_sound, roll_procs,
 };
 
 pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
@@ -33,7 +33,7 @@ pub fn counter_surge_update(ctx: &mut AppContext) -> Result<(), Fault> {
             .frame;
 
         if before == get_setting(&ctx.settings, b"battle_demon_summon_se_frame", 0)? {
-            play_sound(sound_manager(ctx)?, 0x9f, None);
+            play_sound(ctx, 0x9f, None)?;
         }
 
         let event = ctx
