@@ -1,13 +1,18 @@
 use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
+use std::thread;
+use std::time::Duration;
 
 use serde::Deserialize;
+use tracing::warn;
 use zstd::stream::read::Decoder;
 
 const FORMAT: u32 = 1;
 const MARK: [u8; 4] = *b"BGL1";
 const LARGEST_CHUNK: u64 = 64 * 1024 * 1024;
+const WRITE_TRIES: u32 = 5;
+const WRITE_PAUSE: Duration = Duration::from_millis(200);
 
 #[derive(Deserialize, Clone, Debug)]
 pub(super) struct Manifest {
@@ -68,7 +73,7 @@ impl Manifest {
     }
 }
 
-pub(super) fn unpack(source: impl Read, staged: &Path) -> Result<Vec<(String, u64)>, Fault> {
+pub(super) fn unpack(source: impl Read, game: &Path) -> Result<Vec<(String, u64)>, Fault> {
     let mut decoder = Decoder::new(source).map_err(Fault::Stream)?;
     let records = records(&mut decoder).map_err(Fault::Stream)?;
     let mut data = Vec::new();
@@ -83,7 +88,7 @@ pub(super) fn unpack(source: impl Read, staged: &Path) -> Result<Vec<(String, u6
         }
 
         for name in record.names {
-            fs::write(staged.join(&name), &data).map_err(Fault::Disk)?;
+            land(&game.join(&name), &data).map_err(Fault::Disk)?;
             files.push((name, record.size));
         }
     }
@@ -93,6 +98,22 @@ pub(super) fn unpack(source: impl Read, staged: &Path) -> Result<Vec<(String, u6
     }
 
     Ok(files)
+}
+
+fn land(path: &Path, data: &[u8]) -> io::Result<()> {
+    let mut tries = 1;
+
+    loop {
+        match fs::write(path, data) {
+            Ok(()) => return Ok(()),
+            Err(err) if tries >= WRITE_TRIES => return Err(err),
+            Err(err) => {
+                warn!("{} is held by something, trying again: {}", path.display(), err);
+                thread::sleep(WRITE_PAUSE);
+                tries += 1;
+            }
+        }
+    }
 }
 
 fn records(reader: &mut impl Read) -> io::Result<Vec<Record>> {
@@ -186,36 +207,36 @@ mod tests {
     // One stored blob can stand for several identical files, and each name has to get its own copy.
     #[test]
     fn a_chunk_lands_every_name_it_lists() {
-        let staged = folder("lands");
+        let game = folder("lands");
         let packed = chunk(&[(&["unit001.csv", "unit002.csv"], b"1,2,3\n"), (&["000_f.png"], &[7u8; 5000]), (&["empty.tsv"], b"")]);
 
-        let landed = unpack(&packed[..], &staged).unwrap();
+        let landed = unpack(&packed[..], &game).unwrap();
 
         assert_eq!(landed.len(), 4);
         assert_eq!(landed[1], ("unit002.csv".to_owned(), 6));
-        assert_eq!(fs::read(staged.join("unit001.csv")).unwrap(), b"1,2,3\n");
-        assert_eq!(fs::read(staged.join("unit002.csv")).unwrap(), b"1,2,3\n");
-        assert_eq!(fs::read(staged.join("000_f.png")).unwrap(), vec![7u8; 5000]);
-        assert!(fs::read(staged.join("empty.tsv")).unwrap().is_empty());
+        assert_eq!(fs::read(game.join("unit001.csv")).unwrap(), b"1,2,3\n");
+        assert_eq!(fs::read(game.join("unit002.csv")).unwrap(), b"1,2,3\n");
+        assert_eq!(fs::read(game.join("000_f.png")).unwrap(), vec![7u8; 5000]);
+        assert!(fs::read(game.join("empty.tsv")).unwrap().is_empty());
 
-        let _ = fs::remove_dir_all(&staged);
+        let _ = fs::remove_dir_all(&game);
     }
 
-    // The payload comes off the internet, so a name must never be able to climb out of the staging folder.
+    // The payload comes off the internet, so a name must never be able to climb out of the game folder.
     #[test]
     fn a_name_that_leaves_the_folder_is_refused_before_anything_is_written() {
         let root = folder("escape");
-        let staged = root.join("staged");
+        let game = root.join("game");
 
-        fs::create_dir_all(&staged).unwrap();
+        fs::create_dir_all(&game).unwrap();
 
         for name in ["../escaped.csv", "cats/unit.csv", "..", "C:evil.csv", ""] {
             let packed = chunk(&[(&["fine.csv"], b"ok"), (&[name], b"bad")]);
 
-            assert!(matches!(unpack(&packed[..], &staged), Err(Fault::Stream(_))), "{name:?} slipped through");
+            assert!(matches!(unpack(&packed[..], &game), Err(Fault::Stream(_))), "{name:?} slipped through");
         }
 
-        assert_eq!(fs::read_dir(&staged).unwrap().count(), 0);
+        assert_eq!(fs::read_dir(&game).unwrap().count(), 0);
         assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
 
         let _ = fs::remove_dir_all(&root);
@@ -223,17 +244,17 @@ mod tests {
 
     #[test]
     fn a_chunk_cut_short_or_padded_is_a_stream_fault() {
-        let staged = folder("cut");
+        let game = folder("cut");
         let packed = chunk(&[(&["000_f.png"], &[9u8; 70_000])]);
         let mut padded = chunk(&[(&["a.csv"], b"1")]);
 
         padded.extend_from_slice(&zstd::encode_all(&b"extra"[..], 3).unwrap());
 
-        assert!(matches!(unpack(&packed[..packed.len() / 2], &staged), Err(Fault::Stream(_))));
-        assert!(matches!(unpack(&padded[..], &staged), Err(Fault::Stream(_))));
-        assert!(matches!(unpack(&b"not a chunk at all"[..], &staged), Err(Fault::Stream(_))));
+        assert!(matches!(unpack(&packed[..packed.len() / 2], &game), Err(Fault::Stream(_))));
+        assert!(matches!(unpack(&padded[..], &game), Err(Fault::Stream(_))));
+        assert!(matches!(unpack(&b"not a chunk at all"[..], &game), Err(Fault::Stream(_))));
 
-        let _ = fs::remove_dir_all(&staged);
+        let _ = fs::remove_dir_all(&game);
     }
 
     #[test]

@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::fmt;
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex, PoisonError};
 use std::thread;
@@ -18,7 +18,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, warn};
 
-use crate::common::architecture::{self, Workspace};
+use crate::common::architecture;
 use crate::common::job::Ticker;
 
 use ledger::{Held, Ledger};
@@ -27,10 +27,6 @@ use payload::{Chunk, Fault, Manifest};
 const AGENT: &str = concat!("BattleCatsComplete/", env!("CARGO_PKG_VERSION"));
 const SCHEME: &str = "https://";
 const MANIFEST: &str = "manifest.json";
-const RETIRED: &str = "retired";
-const STRANDED: &str = "game.previous";
-const SHIFT_TRIES: u32 = 5;
-const SHIFT_PAUSE: Duration = Duration::from_millis(200);
 const TIMEOUT: Duration = Duration::from_secs(8);
 const STALL_FLOOR: Duration = Duration::from_secs(30);
 const SLOWEST_BYTES_PER_SEC: u64 = 32 * 1024;
@@ -79,31 +75,22 @@ impl fmt::Display for Error {
 pub struct Failure {
     pub error: Error,
     pub partial: Option<Partial>,
+    pub touched: bool,
 }
 
 pub struct Partial {
     id: String,
-    workspace: Workspace,
     landed: Vec<Held>,
 }
 
 impl Partial {
-    fn new(id: &str) -> Result<Self, Error> {
-        let workspace = Workspace::claim("source").map_err(disk)?;
-
-        fs::create_dir_all(workspace.path().join(architecture::GAME)).map_err(disk)?;
-
-        Ok(Self { id: id.to_owned(), workspace, landed: Vec::new() })
+    fn new(id: &str) -> Self {
+        Self { id: id.to_owned(), landed: Vec::new() }
     }
 
-    fn staged(&self) -> PathBuf {
-        self.workspace.path().join(architecture::GAME)
-    }
-
-    fn intact(self) -> Option<Self> {
-        let staged = self.staged();
+    fn intact(self, game: &Path) -> Option<Self> {
         let whole = self.landed.iter().flat_map(|held| &held.files).all(|(name, size)| {
-            fs::metadata(staged.join(name)).is_ok_and(|meta| meta.is_file() && meta.len() == *size)
+            fs::metadata(game.join(name)).is_ok_and(|meta| meta.is_file() && meta.len() == *size)
         });
 
         whole.then_some(self)
@@ -402,42 +389,47 @@ fn retry<T>(mut step: impl FnMut() -> Result<T, Error>) -> Result<T, Error> {
 fn fetch(link: &str, partial: Option<Partial>, emit: &(impl Fn(Step) + Sync), abort: &AtomicBool) -> Result<Stamp, Failure> {
     let (stamp, manifest, ledger, base) = match inspect(link) {
         Ok(found) => found,
-        Err(error) => return Err(Failure { error, partial }),
+        Err(error) => return Err(Failure { error, partial, touched: false }),
     };
     let game = Path::new(architecture::GAME);
     let (mut held, wanted) = ledger.split(game, &manifest.chunks);
     let mut partial = match partial {
-        Some(partial) if partial.id == stamp.id => partial,
+        Some(partial) if partial.id == stamp.id => partial.intact(game).unwrap_or_else(|| {
+            info!("Files from the interrupted download were changed since, starting the download over");
+
+            Partial::new(&stamp.id)
+        }),
         Some(_) => {
             info!("The game data source was republished, starting the download over");
 
-            Partial::new(&stamp.id).map_err(|error| Failure { error, partial: None })?
+            Partial::new(&stamp.id)
         }
-        None => Partial::new(&stamp.id).map_err(|error| Failure { error, partial: None })?,
+        None => Partial::new(&stamp.id),
     };
-    let staged = partial.staged();
     let (wanted, resumed) = outstanding(wanted, &partial.landed);
 
     info!(payload = stamp.id, chunks = manifest.chunks.len(), kept = held.len(), landed = partial.landed.len(), "Downloading game data from its source");
-    debug!(wanted = wanted.len(), bytes = wanted.iter().map(|chunk| chunk.size).sum::<u64>(), resumed, staged = %staged.display(), "Chunks still to fetch");
+    debug!(wanted = wanted.len(), bytes = wanted.iter().map(|chunk| chunk.size).sum::<u64>(), resumed, "Chunks still to fetch");
 
-    let keep: HashSet<OsString> = held.iter().flat_map(|held| held.files.iter().map(|(name, _)| OsString::from(name))).collect();
+    if let Err(err) = fs::create_dir_all(game) {
+        return Err(Failure { error: disk(err), partial: Some(partial), touched: false });
+    }
 
-    if let Err(error) = download(&base, &wanted, &staged, resumed, &mut partial.landed, emit, abort) {
+    if let Err(error) = download(&base, &wanted, game, resumed, &mut partial.landed, emit, abort) {
         let partial = (error.kind != ErrorKind::Aborted).then_some(partial);
 
-        return Err(Failure { error, partial });
+        return Err(Failure { error, partial, touched: true });
     }
 
     emit(Step::Replacing);
 
-    if let Err(error) = replace(game, &staged, &partial.workspace.path().join(RETIRED), &keep) {
-        return Err(Failure { error, partial: partial.intact() });
-    }
-
     held.extend(partial.landed);
+
+    let current: HashSet<OsString> = held.iter().flat_map(|held| &held.files).filter_map(|(name, _)| top(name)).collect();
+
     Ledger::save(game, held);
-    info!("Game data replaced from its source");
+    sweep(game, &current);
+    info!("Game data installed from its source");
 
     Ok(stamp)
 }
@@ -452,7 +444,7 @@ fn outstanding<'a>(wanted: Vec<&'a Chunk>, landed: &[Held]) -> (Vec<&'a Chunk>, 
 fn download(
     base: &str,
     chunks: &[&Chunk],
-    staged: &Path,
+    game: &Path,
     resumed: u64,
     landed: &mut Vec<Held>,
     emit: &(impl Fn(Step) + Sync),
@@ -485,7 +477,7 @@ fn download(
                 break;
             };
 
-            match pull(&client, base, chunk, staged, &tally, &lanes[index]) {
+            match pull(&client, base, chunk, game, &tally, &lanes[index]) {
                 Ok(files) => fresh.lock().unwrap_or_else(PoisonError::into_inner).push(Held { name: chunk.name.clone(), files }),
                 Err(err) => {
                     if !tally.halted() {
@@ -598,14 +590,14 @@ fn pull<E: Fn(Step) + Sync>(
     client: &Client,
     base: &str,
     chunk: &Chunk,
-    staged: &Path,
+    game: &Path,
     tally: &Tally<E>,
     lane: &Lane,
 ) -> Result<Vec<(String, u64)>, Error> {
     let mut tries = 1;
 
     loop {
-        match attempt(client, base, chunk, staged, tally, lane, tries) {
+        match attempt(client, base, chunk, game, tally, lane, tries) {
             Err(err) if err.kind == ErrorKind::Network && tries < PULL_TRIES && !tally.halted() => {
                 warn!("{} was cut off, trying again: {}", chunk.name, err);
                 tally.pause(PULL_PAUSE);
@@ -620,7 +612,7 @@ fn attempt<E: Fn(Step) + Sync>(
     client: &Client,
     base: &str,
     chunk: &Chunk,
-    staged: &Path,
+    game: &Path,
     tally: &Tally<E>,
     lane: &Lane,
     tries: u32,
@@ -631,7 +623,7 @@ fn attempt<E: Fn(Step) + Sync>(
     lane.wrote.store(0, Ordering::Relaxed);
     lane.busy.store(true, Ordering::Relaxed);
 
-    let outcome = transfer(client, base, chunk, staged, tally, lane);
+    let outcome = transfer(client, base, chunk, game, tally, lane);
     let taken = lane.taken.load(Ordering::Relaxed);
     let elapsed = started.elapsed();
     let rate = taken as f64 / 1024.0 / elapsed.as_secs_f64().max(0.001);
@@ -659,7 +651,7 @@ fn transfer<E: Fn(Step) + Sync>(
     client: &Client,
     base: &str,
     chunk: &Chunk,
-    staged: &Path,
+    game: &Path,
     tally: &Tally<E>,
     lane: &Lane,
 ) -> Result<Vec<(String, u64)>, Error> {
@@ -682,7 +674,7 @@ fn transfer<E: Fn(Step) + Sync>(
             tally.writers.enter();
 
             let started = Instant::now();
-            let unpacked = match payload::unpack(&body[..], staged) {
+            let unpacked = match payload::unpack(&body[..], game) {
                 Ok(files) if files.len() as u64 == chunk.files => Ok(files),
                 Ok(_) => Err(malformed(format!("{} does not match the manifest", chunk.name))),
                 Err(Fault::Disk(err)) => Err(disk(err)),
@@ -709,80 +701,33 @@ fn transfer<E: Fn(Step) + Sync>(
     outcome
 }
 
-fn replace(game: &Path, staged: &Path, retired: &Path, keep: &HashSet<OsString>) -> Result<(), Error> {
-    fs::create_dir_all(game).map_err(disk)?;
-    fs::create_dir_all(retired).map_err(disk)?;
+fn sweep(game: &Path, current: &HashSet<OsString>) {
+    let started = Instant::now();
+    let Ok(names) = children(game).inspect_err(|err| warn!("The game folder could not be listed to clear out old files: {}", err)) else {
+        return;
+    };
+    let stale: Vec<OsString> = names.into_iter().filter(|name| !current.contains(name)).collect();
+    let left = stale
+        .iter()
+        .filter(|name| discard(&game.join(name)).inspect_err(|err| warn!("{} could not be cleared out: {}", name.to_string_lossy(), err)).is_err())
+        .count();
 
-    let held: Vec<OsString> = children(game)?.into_iter().filter(|name| !keep.contains(name)).collect();
-    let fresh = children(staged)?;
+    debug!(stale = stale.len(), left, ms = started.elapsed().as_millis(), "Cleared out what the new payload no longer holds");
+}
 
-    for (index, name) in held.iter().enumerate() {
-        let Err(err) = shift(&game.join(name), &retired.join(name)) else {
-            continue;
-        };
-
-        restore(&held[..index], retired, game);
-
-        return Err(disk(err));
-    }
-
-    for (index, name) in fresh.iter().enumerate() {
-        let Err(err) = shift(&staged.join(name), &game.join(name)) else {
-            continue;
-        };
-
-        let stuck = fresh[..index].iter().filter(|name| !put_back(name, game, staged)).count();
-
-        if stuck == 0 {
-            restore(&held, retired, game);
-        } else {
-            strand(retired);
-        }
-
-        return Err(disk(err));
-    }
-
-    Ok(())
+fn top(name: &str) -> Option<OsString> {
+    Path::new(name).components().next().map(|part| part.as_os_str().to_owned())
 }
 
 fn children(folder: &Path) -> Result<Vec<OsString>, Error> {
     fs::read_dir(folder).map_err(disk)?.map(|entry| entry.map(|entry| entry.file_name()).map_err(disk)).collect()
 }
 
-fn shift(from: &Path, to: &Path) -> io::Result<()> {
-    let mut tries = 1;
-
-    loop {
-        match fs::rename(from, to) {
-            Ok(()) => return Ok(()),
-            Err(err) if tries >= SHIFT_TRIES => return Err(err),
-            Err(err) => {
-                warn!("{} is held by something, trying again: {}", from.display(), err);
-                thread::sleep(SHIFT_PAUSE);
-                tries += 1;
-            }
-        }
-    }
-}
-
-fn put_back(name: &OsString, from: &Path, to: &Path) -> bool {
-    shift(&from.join(name), &to.join(name))
-        .inspect_err(|err| error!("{} could not be moved back out of {}: {}", name.to_string_lossy(), from.display(), err))
-        .is_ok()
-}
-
-fn restore(names: &[OsString], retired: &Path, game: &Path) {
-    let lost = names.iter().filter(|name| !put_back(name, retired, game)).count();
-
-    if lost > 0 {
-        strand(retired);
-    }
-}
-
-fn strand(retired: &Path) {
-    match fs::rename(retired, STRANDED) {
-        Ok(()) => error!("The previous game data could not all be put back, what is left of it was kept in {}", STRANDED),
-        Err(err) => error!("The previous game data could not be put back or kept aside from {}: {}", retired.display(), err),
+fn discard(path: &Path) -> io::Result<()> {
+    if fs::symlink_metadata(path)?.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
     }
 }
 
@@ -941,29 +886,25 @@ mod tests {
 
     // The folder itself has to stay put: the file watcher holds it, and a fresh folder would go unwatched.
     #[test]
-    fn a_swap_changes_what_the_folder_holds_and_keeps_the_folder() {
-        let root = std::env::temp_dir().join(format!("bcc-source-swap-{}", std::process::id()));
-        let (game, staged, retired) = (root.join("game"), root.join("staged"), root.join("retired"));
-        let _ = fs::remove_dir_all(&root);
+    fn a_sweep_clears_out_what_the_payload_dropped_and_keeps_the_folder() {
+        let game = std::env::temp_dir().join(format!("bcc-source-sweep-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&game);
 
         fs::create_dir_all(game.join("cats")).unwrap();
         fs::write(game.join("cats/old.csv"), "old").unwrap();
         fs::write(game.join("gone.txt"), "gone").unwrap();
         fs::write(game.join("kept.png"), "kept").unwrap();
-        fs::create_dir_all(&staged).unwrap();
-        fs::write(staged.join("new.csv"), "new").unwrap();
+        fs::write(game.join("new.csv"), "new").unwrap();
 
         let before = (identity(&game), identity(&game.join("kept.png")));
-        replace(&game, &staged, &retired, &HashSet::from([OsString::from("kept.png")])).unwrap();
+        let current: HashSet<OsString> = ["kept.png", "new.csv"].into_iter().filter_map(top).collect();
 
-        assert_eq!(fs::read_to_string(game.join("new.csv")).unwrap(), "new");
+        sweep(&game, &current);
+
         assert!(!game.join("cats").exists() && !game.join("gone.txt").exists());
-        assert!(retired.join("cats/old.csv").exists() && retired.join("gone.txt").exists());
-
-        // A file from a chunk that did not change is never moved, only what is around it.
+        assert_eq!(fs::read_to_string(game.join("new.csv")).unwrap(), "new");
         assert_eq!((identity(&game), identity(&game.join("kept.png"))), before);
-        assert!(!retired.join("kept.png").exists());
 
-        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&game);
     }
 }

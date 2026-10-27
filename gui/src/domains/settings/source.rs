@@ -61,7 +61,7 @@ pub enum Message {
     IgnoreExpired,
     Cancel,
     Stepped(Step),
-    Finished(Result<Stamp, source::Error>),
+    Finished { result: Result<Stamp, source::Error>, touched: bool },
     Acknowledge,
     Resume,
     Abort,
@@ -172,9 +172,9 @@ fn progress(step: Step) -> Progress {
             sealed: false,
         },
         Step::Replacing => Progress {
-            heading: "Replacing game files",
+            heading: "Finishing up",
             fraction: 1.0,
-            detail: "Swapping in the new \"game\" folder".to_owned(),
+            detail: "Clearing out files the new \"game\" folder no longer needs".to_owned(),
             sealed: true,
         },
     }
@@ -188,12 +188,12 @@ fn failure(kind: ErrorKind, kept: bool) -> &'static str {
     match (kind, kept) {
         (ErrorKind::Link, _) => "That is not an https link this app can read, so your current \"game\" folder was left as it was until the link is fixed",
         (ErrorKind::Missing, _) => "Nothing is published at that link, so your current \"game\" folder was left as it was until the link is fixed",
-        (ErrorKind::Network, true) => "The download was cut short, so your current \"game\" folder was left as it was",
-        (ErrorKind::Network, false) => "The download was cut short and nothing could be kept, so your current \"game\" folder was left as it was",
-        (ErrorKind::Archive, _) => "The download is not a payload this app can read and cannot be resumed, so your current \"game\" folder was left as it was",
-        (ErrorKind::Disk, true) => "The new files could not be written to disk, so your current \"game\" folder was left as it was",
-        (ErrorKind::Disk, false) => "The new files could not be written to disk and nothing could be kept, so your current \"game\" folder was left as it was",
-        (ErrorKind::Aborted, _) => "The download was cancelled, so your current \"game\" folder was left as it was",
+        (ErrorKind::Network, true) => "The download was cut short, the files that already arrived are kept in your \"game\" folder for when it resumes",
+        (ErrorKind::Network, false) => "The download was cut short, the next download fetches whatever your \"game\" folder is still missing",
+        (ErrorKind::Archive, _) => "The download is not a payload this app can read and cannot be resumed, the next download fetches whatever your \"game\" folder is still missing",
+        (ErrorKind::Disk, true) => "The new files could not be written to disk, the files that already arrived are kept in your \"game\" folder for when it resumes",
+        (ErrorKind::Disk, false) => "The new files could not be written to disk, the next download fetches whatever your \"game\" folder is still missing",
+        (ErrorKind::Aborted, _) => "The download was cancelled, the next download fetches whatever your \"game\" folder is still missing",
     }
 }
 
@@ -350,13 +350,13 @@ impl State {
 
                 Task::none()
             }
-            Message::Finished(result) => {
+            Message::Finished { result, touched } => {
                 watcher::resume();
+                self.refreshed = touched;
 
                 let landed = match result {
                     Ok(stamp) => {
                         core_settings.files.source_stamp = Some(stamp);
-                        self.refreshed = true;
 
                         Status::Installed
                     }
@@ -485,20 +485,19 @@ impl State {
                 &abort,
             );
 
-            let result = match result {
-                Ok(stamp) => {
-                    import::forget_imports();
+            let touched = result.as_ref().map_or_else(|failure| failure.touched, |_| true);
 
-                    Ok(stamp)
-                }
-                Err(failure) => {
-                    *slot.lock().unwrap_or_else(PoisonError::into_inner) = failure.partial;
+            if touched {
+                import::forget_imports();
+            }
 
-                    Err(failure.error)
-                }
-            };
+            let result = result.map_err(|failure| {
+                *slot.lock().unwrap_or_else(PoisonError::into_inner) = failure.partial;
 
-            let _ = tx.unbounded_send(Message::Finished(result));
+                failure.error
+            });
+
+            let _ = tx.unbounded_send(Message::Finished { result, touched });
         });
 
         if let Err(err) = spawned {

@@ -900,14 +900,13 @@ const TIP_PADDING: f32 = 6.0;
 const COMMON_WIDTH: usize = 10;
 const FIRST_ENEMY: i32 = 0;
 
-const SEEDS: [(usize, i32); 8] = [
+const SEEDS: [(usize, i32); 7] = [
     (ENEMY_ID, FIRST_ENEMY),
     (AMOUNT, 1),
     (SPAWN_COLUMN, 2),
     (RESPAWN_MIN, 2),
     (RESPAWN_MAX, 2),
     (BASE_COLUMN, 100),
-    (LAYER_MIN, 9),
     (LAYER_MAX, 9),
 ];
 const DOJO_FLOOR: i32 = 100;
