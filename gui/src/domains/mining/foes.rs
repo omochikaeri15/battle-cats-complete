@@ -10,7 +10,7 @@ impl State {
                 let cards: Vec<Element<'a, Message>> =
                     self.ready.foes_new.iter().map(|id| self.view_foe(*id, None, roster)).collect();
 
-                uniform_grid(cards, CARD_SPACING).columns(cards_per_row(width, LEVEL_MIN_WIDTH)).into()
+                uniform_grid(cards, CARD_SPACING).columns(cards_per_row(width, FOE_MIN_WIDTH)).into()
             }));
         }
 

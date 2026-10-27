@@ -31,7 +31,7 @@ use kore::domains::enemy::scanner::{self as enemy_scanner, EnemyEntry};
 use kore::domains::stage::{GlobalMapId, GlobalStageId, StageRegistry};
 use nyanko::chapter::Category;
 use kore::domains::import;
-use kore::domains::mining::{self, changes, enemies, forms, levels, localized, stages, talents, units, Build, Diff, Status};
+use kore::domains::mining::{self, changes, enemies, forms, localized, stages, talents, units, Build, Diff, Status};
 
 use kore::domains::settings::{ScannerConfig, Settings};
 use kore::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
@@ -75,7 +75,7 @@ const SCROLL_ID: &str = "mining_body";
 const SCROLLBAR_RESERVE: f32 = 24.0;
 const CARD_PADDING: f32 = 12.0;
 const UNIT_MIN_WIDTH: f32 = 440.0;
-const LEVEL_MIN_WIDTH: f32 = 420.0;
+const FOE_MIN_WIDTH: f32 = 420.0;
 const STAGE_MIN_WIDTH: f32 = 300.0;
 const META_MIN_WIDTH: f32 = 340.0;
 const NAME_MIN_WIDTH: f32 = 240.0;
@@ -283,7 +283,6 @@ pub struct State {
     folds: HashMap<(Tab, &'static str), bool>,
     tag: u64,
     lands: stages::Report,
-    levels_raised: Vec<levels::Raised>,
     promoted: Vec<u32>,
     debuts: HashSet<u32>,
     listed: Vec<u32>,
@@ -334,7 +333,6 @@ impl Default for State {
             folds: HashMap::new(),
             tag: 0,
             lands: stages::Report::default(),
-            levels_raised: Vec::new(),
             promoted: Vec::new(),
             debuts: HashSet::new(),
             listed: Vec::new(),
@@ -499,12 +497,6 @@ impl State {
                 all
             })
         });
-
-        self.levels_raised = self
-            .diff
-            .as_ref()
-            .and_then(|held| held.file(cat_files::UNIT_BUY))
-            .map_or_else(Vec::new, levels::read);
 
         let scope = Scope { cats, foes, registry, global, settings };
 
@@ -681,14 +673,6 @@ impl State {
             talents = (0..report.finds.len()).collect();
         }
 
-        let raised: Vec<usize> = self
-            .levels_raised
-            .iter()
-            .enumerate()
-            .filter(|(_, held)| !self.arrived(held.cat_id) && listable.contains(&held.cat_id))
-            .map(|(slot, _)| slot)
-            .collect();
-
         let mut foes_new: Vec<u32> = self.arrivals().into_iter().filter(|id| sighted.contains(id)).collect();
 
         foes_new.sort_unstable();
@@ -731,10 +715,6 @@ impl State {
         shots.extend(changed.iter().filter_map(|(slot, _)| self.changes.get(*slot)).map(|held| (held.cat_id, held.form)));
         shots.extend(unlocked.iter().filter_map(|(slot, _)| self.forms.get(*slot)).map(|held| (held.cat_id, held.form)));
 
-        shots.extend(raised.iter().filter_map(|slot| self.levels_raised.get(*slot)).map(|held| {
-            (held.cat_id, self.entry(cats, held.cat_id).map_or(FIRST_FORM, top_form))
-        }));
-
         if let Some(report) = &self.report {
             shots.extend(talents.iter().filter_map(|slot| report.finds.get(*slot)).map(|find| {
                 let form = self
@@ -768,7 +748,6 @@ impl State {
             changed,
             unlocked,
             talents,
-            raised,
             art,
             foe_art,
             foes_new,
@@ -1030,7 +1009,6 @@ impl State {
             || !self.ready.changed.is_empty()
             || !self.ready.unlocked.is_empty()
             || !self.ready.talents.is_empty()
-            || !self.ready.raised.is_empty()
     }
 
     fn surged(&self, enemy_id: u32) -> bool {

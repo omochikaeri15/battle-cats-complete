@@ -42,7 +42,6 @@ pub(super) struct Ready {
     pub(super) changed: Vec<(usize, forms::Diff)>,
     pub(super) unlocked: Vec<(usize, forms::Diff)>,
     pub(super) talents: Vec<usize>,
-    pub(super) raised: Vec<usize>,
     pub(super) art: HashMap<(u32, usize), PathBuf>,
     pub(super) foe_art: HashMap<u32, PathBuf>,
     pub(super) foes_new: Vec<u32>,

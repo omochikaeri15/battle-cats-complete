@@ -365,22 +365,6 @@ impl State {
             }));
         }
 
-        if !self.ready.raised.is_empty() {
-            listed = true;
-
-            body = body.push(self.view_fold(Tab::Cats, "Levels", self.ready.raised.len(), Horizontal::Left, || {
-                let cards: Vec<Element<'a, Message>> = self
-                    .ready
-                    .raised
-                    .iter()
-                    .filter_map(|slot| self.levels_raised.get(*slot))
-                    .map(|entry| self.view_raised(entry, cats))
-                    .collect();
-
-                uniform_grid(cards, CARD_SPACING).columns(cards_per_row(width, LEVEL_MIN_WIDTH)).into()
-            }));
-        }
-
         if !listed {
             return notice("No ore available, import a game data to see its diff");
         }
@@ -445,37 +429,6 @@ impl State {
         ));
 
         container(card).padding(CARD_PADDING).width(Length::Shrink).style(theme::card_container).into()
-    }
-
-    fn view_raised<'a>(&'a self, raised: &'a levels::Raised, cats: &'a [CatEntry]) -> Element<'a, Message> {
-        let cat = cats.iter().find(|entry| entry.id == raised.cat_id);
-        let form = cat.map_or(FIRST_FORM, top_form);
-        let rarity = cat.map_or_else(|| "??".to_string(), |entry| (STAT_RARITY.formatter)(entry.unitbuy.rarity));
-
-        let identity = button(self.view_identity(cat, form, raised.cat_id))
-            .padding(0)
-            .style(button::text)
-            .on_press_maybe(cat.map(|_| Message::OpenUnit(raised.cat_id)));
-
-        let header = row![
-            light_box(identity, Length::Fixed(UNIT_BOX_HEIGHT)),
-            light_box(strong(format!("ID: {}", raised.cat_id), UNIT_NAME_SIZE), Length::Fixed(UNIT_BOX_HEIGHT)),
-            light_box(strong(rarity, UNIT_NAME_SIZE), Length::Fixed(UNIT_BOX_HEIGHT)),
-        ]
-        .spacing(CELL_SPACING)
-        .align_y(Vertical::Center);
-
-        let reading = row![
-            strong(raised.before.label(), UNIT_NAME_SIZE),
-            strong(ARROW, UNIT_NAME_SIZE),
-            strong(raised.after.label(), UNIT_NAME_SIZE),
-        ]
-        .spacing(VALUE_LABEL_GAP)
-        .align_y(Vertical::Center);
-
-        let card = column![header, rule::horizontal(1), reading].spacing(10).width(Length::Fill);
-
-        container(card).padding(CARD_PADDING).width(Length::Fill).style(theme::card_container).into()
     }
 
     pub(super) fn view_identity<'a>(&'a self, cat: Option<&'a CatEntry>, form: usize, id: u32) -> Element<'a, Message> {
