@@ -9,6 +9,8 @@ const NYANKO_BRANCH: &str = "main";
 const NYANKO_MANIFEST: &str = "data/Cargo.toml";
 const NYANKO_TAG_PREFIX: &str = "v";
 const APP_REMOTE: &str = "origin";
+const APP_RELEASE_BRANCH: &str = "main";
+const APP_DEV_BRANCH: &str = "dev";
 const APP_MANIFEST: &str = "Cargo.toml";
 const APP_LOCKFILE: &str = "Cargo.lock";
 const APP_TAG_PREFIX: &str = "v";
@@ -155,18 +157,18 @@ fn ship() {
         run_git(&[&["commit", "-m", &tag, "--"][..], &release_files].concat());
     }
 
-    println!("> Checking out main and pulling latest changes...");
-    run_git(&["checkout", "main"]);
+    println!("> Checking out {APP_RELEASE_BRANCH} and pulling latest changes...");
+    run_git(&["checkout", APP_RELEASE_BRANCH]);
     run_git(&["pull"]);
 
-    println!("> Merging nightly into main...");
-    run_git(&["merge", "nightly"]);
+    println!("> Merging {APP_DEV_BRANCH} into {APP_RELEASE_BRANCH}...");
+    run_git(&["merge", APP_DEV_BRANCH]);
 
-    println!("> Pushing main to remote...");
+    println!("> Pushing {APP_RELEASE_BRANCH} to remote...");
     run_git(&["push"]);
 
-    println!("> Returning to nightly branch...");
-    run_git(&["checkout", "nightly"]);
+    println!("> Returning to {APP_DEV_BRANCH} branch...");
+    run_git(&["checkout", APP_DEV_BRANCH]);
 
     println!("{tag} shipped! The release workflow builds and publishes it with {CHANGELOG} as the notes.");
 }
