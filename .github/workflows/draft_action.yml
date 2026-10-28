@@ -26,28 +26,23 @@ jobs:
           AVATAR_URL="https://github.com/${{ github.actor }}.png"
 
           COMMITS_JSON=$(echo "$COMMITS_JSON" | jq '
-            [ .[] | select((.message | split("\n")[0] | test("^Merge (branch|remote-tracking branch|pull request) ")) | not) ]
+            [ .[] | select(.distinct) | select((.message | split("\n")[0] | test("^Merge (branch|remote-tracking branch|pull request) ")) | not) ]
           ')
 
-          COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
-
-          if [ "$COMMIT_COUNT" -ne 1 ]; then
+          if [ "$(echo "$COMMITS_JSON" | jq 'length')" -eq 0 ]; then
             exit 0
           fi
 
-          MSG=$(echo "$COMMITS_JSON" | jq -r '.[0].message | split("\n")[0]')
-          SUMMARY_BODY="**${BRANCH} ::** ${MSG}"
-
-          PAYLOAD=$(jq -n \
+          PAYLOAD=$(echo "$COMMITS_JSON" | jq -c \
             --arg username "$USERNAME" \
             --arg avatar_url "$AVATAR_URL" \
             --arg repo "$REPO_NAME" \
-            --arg body "$SUMMARY_BODY" \
+            --arg branch "$BRANCH" \
             '{
               embeds: [{
                 author: { name: $username, icon_url: $avatar_url },
                 title: $repo,
-                description: $body,
+                description: ([ .[] | "**" + $branch + " ::** " + (.message | split("\n")[0]) ] | join("\n") | .[0:4096]),
                 color: 3066993
               }]
             }')
