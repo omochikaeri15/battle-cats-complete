@@ -230,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    fn a_skipped_part_leaves_its_neighbours_on_their_own_indices() {
+    fn a_skipped_part_leaves_its_neighbors_on_their_own_indices() {
         let rig = rig();
         let mapped = resolve(&rig, None, 0, None).unwrap();
         let indices: Vec<usize> = mapped.iter().map(|entry| entry.part).collect();

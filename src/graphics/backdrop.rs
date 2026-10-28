@@ -945,11 +945,11 @@ impl Backdrop {
         let lift = (self.world.letterbox / 2).wrapping_mul(100).wrapping_add(0xc350);
         let lift = lift.checked_div(self.world.min_zoom).unwrap_or(0);
         let top = 0x1e0i32.wrapping_sub(lift) as f32;
-        let centre = ((self.world.width.wrapping_add(-DESIGN_WIDTH) as f64) * 0.5) as f32;
+        let center = ((self.world.width.wrapping_add(-DESIGN_WIDTH) as f64) * 0.5) as f32;
         let scale = self.world.min_zoom.wrapping_mul(100) as f32 / 10000.0;
         let zero = 0.0f32 * scale;
         let back = ((DESIGN_WIDTH.wrapping_sub(self.world.width) as f64) * 0.5) as f32;
-        let across = back * scale + zero * -520.0 + centre;
+        let across = back * scale + zero * -520.0 + center;
         let down = back * zero + -520.0 * scale + 520.0;
         let x = (left * scale + zero * top + across) * 1000.0 / self.world.min_zoom as f32 + half as f32;
         let y = (-(zero * left + scale * top + down)).floor();

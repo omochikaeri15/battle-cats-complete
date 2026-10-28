@@ -111,7 +111,7 @@ pub enum Error {
     Localizable(LocalizableError),
     /// A parameter file could not be parsed.
     Param(ParamError),
-    /// The item catalogue could not be parsed.
+    /// The item catalog could not be parsed.
     GatyaItemBuy(GatyaItemBuyError),
     /// A localized item text table could not be parsed.
     GatyaItemName(GatyaItemNameError),

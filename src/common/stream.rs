@@ -1,6 +1,6 @@
 //! The engine's own reader for its comma delimited animation files.
 //!
-//! The three animation loaders share one text stream, and its behaviour decides
+//! The three animation loaders share one text stream, and its behavior decides
 //! what a malformed file parses to. It addresses a row by column index rather
 //! than by a moving cursor, reads a missing column as zero rather than as an
 //! error, refills its cell buffer only when a line was actually there, and takes
