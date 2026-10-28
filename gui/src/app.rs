@@ -1267,6 +1267,7 @@ impl BattleCatsApp {
             }
             Message::GraphicsSurveyed(report) => {
                 self.settings.general.graphics_auto = report.auto;
+                self.app_state.sandbox.settle_display(report.cpu);
                 self.settings_state.set_graphics(report);
 
                 Task::none()

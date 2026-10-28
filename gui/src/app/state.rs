@@ -102,6 +102,7 @@ impl std::fmt::Display for SandboxVolume {
 pub(crate) const QUALITY_RANGE: std::ops::RangeInclusive<u8> = 15..=100;
 pub(crate) const QUALITY_STEP: u8 = 5;
 const QUALITY_PRESETS: [u8; 6] = [15, 25, 35, 50, 70, 100];
+const CPU_QUALITY: u8 = 35;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum SandboxDevice {
@@ -180,8 +181,8 @@ pub(crate) struct SandboxState {
     pub vibrate: bool,
     pub device: SandboxDevice,
     pub usable_items: [bool; 6],
-    pub image_quality: u8,
-    pub scaling: SandboxScaling,
+    pub image_quality: Option<u8>,
+    pub scaling: Option<SandboxScaling>,
 }
 
 impl Default for SandboxState {
@@ -200,15 +201,26 @@ impl Default for SandboxState {
             vibrate: false,
             device: SandboxDevice::default(),
             usable_items: [true; 6],
-            image_quality: *QUALITY_RANGE.end(),
-            scaling: SandboxScaling::default(),
+            image_quality: None,
+            scaling: None,
         }
     }
 }
 
 impl SandboxState {
     pub fn quality(&self) -> u8 {
-        self.image_quality.clamp(*QUALITY_RANGE.start(), *QUALITY_RANGE.end())
+        self.image_quality.unwrap_or(*QUALITY_RANGE.end()).clamp(*QUALITY_RANGE.start(), *QUALITY_RANGE.end())
+    }
+
+    pub fn scaling(&self) -> SandboxScaling {
+        self.scaling.unwrap_or_default()
+    }
+
+    pub fn settle_display(&mut self, cpu: bool) {
+        let (quality, scaling) = if cpu { (CPU_QUALITY, SandboxScaling::Pad) } else { (*QUALITY_RANGE.end(), SandboxScaling::Stretch) };
+
+        self.image_quality.get_or_insert(quality);
+        self.scaling.get_or_insert(scaling);
     }
 
     pub fn render_scale(&self) -> f32 {
@@ -220,13 +232,13 @@ impl SandboxState {
     }
 
     pub fn padded(&self) -> bool {
-        !self.native() && self.scaling == SandboxScaling::Pad
+        !self.native() && self.scaling() == SandboxScaling::Pad
     }
 
     pub fn cycle_quality(&mut self) {
         let current = self.quality();
 
-        self.image_quality = QUALITY_PRESETS.into_iter().find(|preset| *preset > current).unwrap_or(*QUALITY_RANGE.start());
+        self.image_quality = Some(QUALITY_PRESETS.into_iter().find(|preset| *preset > current).unwrap_or(*QUALITY_RANGE.start()));
     }
 }
 
@@ -414,5 +426,22 @@ mod tests {
         let held: AnimState = serde_json::from_str(r#"{"placement":"Bare"}"#).expect("it loads");
 
         assert_eq!(held.placement, Placement::Bare, "a deliberate choice still round-trips");
+    }
+
+    #[test]
+    fn hardware_defaults_fill_in_once_and_never_override_a_choice() {
+        // A fresh install drawn on the CPU starts low and padded.
+        let mut fresh = SandboxState::default();
+        fresh.settle_display(true);
+        assert_eq!((fresh.quality(), fresh.scaling()), (35, SandboxScaling::Pad));
+
+        // Settling again on better hardware later must not undo the first pick.
+        fresh.settle_display(false);
+        assert_eq!((fresh.quality(), fresh.scaling()), (35, SandboxScaling::Pad));
+
+        // A save from before this existed already holds a choice, so it is left alone.
+        let mut saved: SandboxState = serde_json::from_str(r#"{"image_quality":100,"scaling":"Stretch"}"#).expect("it loads");
+        saved.settle_display(true);
+        assert_eq!((saved.quality(), saved.scaling()), (100, SandboxScaling::Stretch));
     }
 }

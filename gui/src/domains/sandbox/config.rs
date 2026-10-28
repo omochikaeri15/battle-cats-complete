@@ -212,8 +212,8 @@ impl State {
             Message::Music(volume) => options.music_volume = volume.percent(),
             Message::Effects(volume) => options.effects_volume = volume.percent(),
             Message::Formation(formation) => options.two_rows = formation == Formation::Double,
-            Message::Quality(quality) => options.image_quality = quality,
-            Message::Scaling(scaling) => options.scaling = scaling,
+            Message::Quality(quality) => options.image_quality = Some(quality),
+            Message::Scaling(scaling) => options.scaling = Some(scaling),
             Message::Vibrate(enabled) => options.vibrate = enabled,
             Message::Treasure(message) => self.treasure.update(message, &mut options.config.treasure),
             Message::Tech(index, entry) => {
@@ -322,7 +322,7 @@ impl State {
         let scaling = if options.native() {
             combo_row("Scaling", NATIVE_HINT, [NATIVE], Some(NATIVE), None::<fn(&'static str) -> Message>)
         } else {
-            combo_row("Scaling", SCALING_HINT, SandboxScaling::ALL, Some(options.scaling), Some(Message::Scaling))
+            combo_row("Scaling", SCALING_HINT, SandboxScaling::ALL, Some(options.scaling()), Some(Message::Scaling))
         };
 
         column![
