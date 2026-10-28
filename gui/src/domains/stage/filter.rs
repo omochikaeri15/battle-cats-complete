@@ -660,7 +660,7 @@ fn cost_type_label(cost_type: Option<CostType>) -> &'static str {
     }
 }
 
-fn labelled<'a>(label: &'a str, control: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+fn labeled<'a>(label: &'a str, control: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     row![
         text(label).width(Length::Fixed(COST_LABEL_WIDTH)),
         control.into(),
@@ -670,7 +670,7 @@ fn labelled<'a>(label: &'a str, control: impl Into<Element<'a, Message>>) -> Ele
 fn cost_fields(filter_state: &StageFilterState) -> Element<'_, Message> {
     let cost = &filter_state.cost;
 
-    let type_row = labelled(
+    let type_row = labeled(
         "Type:",
         pick_list(COST_TYPES, Some(cost_type_label(cost.cost_type)), |choice| {
             Message::CostTypeChanged(match choice {
@@ -689,7 +689,7 @@ fn cost_fields(filter_state: &StageFilterState) -> Element<'_, Message> {
         Some(CostType::Item) => Some(range_pairs([Range::ItemCost, Range::ItemId], filter_state)),
         Some(CostType::Catamin) => Some(row![
             range_field(Range::CataminCost, &cost.catamin_cost),
-            labelled(
+            labeled(
                 "Grade:",
                 pick_list(GRADES, Some(cost.catamin_grade.map_or("Any", grade_label)), |choice| {
                     Message::CataminGradeChanged(match choice {

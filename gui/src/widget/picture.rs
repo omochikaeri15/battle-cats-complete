@@ -55,9 +55,9 @@ fn dilate(pixels: &mut RgbaImage) {
                         continue;
                     }
 
-                    let neighbour = (ny as u32 * width + nx as u32) as usize;
+                    let neighbor = (ny as u32 * width + nx as u32) as usize;
 
-                    if !known.get(neighbour).copied().unwrap_or(false) {
+                    if !known.get(neighbor).copied().unwrap_or(false) {
                         continue;
                     }
 
@@ -204,7 +204,7 @@ impl Source {
 pub enum Message {
     Moved { center: Vector, zoom: f32 },
     Framed(Outline),
-    Cancelled,
+    Canceled,
     Picked(Point),
 }
 
@@ -447,7 +447,7 @@ impl Widget<Message, Theme, iced::Renderer> for Canvas<'_> {
                     .and_then(|(origin, settled)| self.framed(bounds, origin, settled))
                     .filter(|outline| outline.width * outline.height >= MIN_FRAME_AREA);
 
-                shell.publish(drawn.map_or(Message::Cancelled, Message::Framed));
+                shell.publish(drawn.map_or(Message::Canceled, Message::Framed));
                 shell.capture_event();
             }
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {

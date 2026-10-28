@@ -231,7 +231,7 @@ fn chooser<'a>(names: &Names, vfs: &Vfs, index: usize, hunt: &str) -> Element<'a
 
     for choice in names.choices(vfs).into_iter().filter(|choice| choice.matches(wanted)) {
         if used == CHOOSER_COLUMNS {
-            rows = rows.push(centred(line.into()));
+            rows = rows.push(centered(line.into()));
             line = Row::new().spacing(ROW_GAP).align_y(Vertical::Center);
             used = 0;
         }
@@ -240,7 +240,7 @@ fn chooser<'a>(names: &Names, vfs: &Vfs, index: usize, hunt: &str) -> Element<'a
         used += 1;
     }
 
-    scrolled(rows.push(centred(line.into())))
+    scrolled(rows.push(centered(line.into())))
 }
 
 fn striped<'a>(content: Element<'a, Message>, index: usize) -> Element<'a, Message> {
@@ -268,7 +268,7 @@ fn headings<'a>(widths: &[f32; HEADINGS.len()]) -> Element<'a, Message> {
         .into()
 }
 
-fn centred<'a>(content: Element<'a, Message>) -> Element<'a, Message> {
+fn centered<'a>(content: Element<'a, Message>) -> Element<'a, Message> {
     container(content).width(Length::Fill).center_x(Length::Fill).into()
 }
 
@@ -284,7 +284,7 @@ fn talent_row<'a>(
     let ability = draft.reads_at(base + ABILITY).unwrap_or_default();
     let named = draft.reads_at(base + NAME_ID).unwrap_or(-1);
 
-    let skills = cards::options(catalogue(glossary), Skill::of(ability, glossary), move |pick: Skill| {
+    let skills = cards::options(catalog(glossary), Skill::of(ability, glossary), move |pick: Skill| {
         Message::Picked(base + ABILITY, pick.id)
     });
     let skills = disclaimed(skills, ability, glossary);
@@ -523,7 +523,7 @@ pub(super) struct Skill {
 
 impl Skill {
     fn of(id: i32, glossary: &NameBook) -> Skill {
-        catalogue(glossary).into_iter().find(|skill| skill.id == id).unwrap_or(Skill { id, name: None })
+        catalog(glossary).into_iter().find(|skill| skill.id == id).unwrap_or(Skill { id, name: None })
     }
 }
 
@@ -536,7 +536,7 @@ impl fmt::Display for Skill {
     }
 }
 
-static CATALOGUE: LazyLock<Vec<Skill>> = LazyLock::new(|| {
+static CATALOG: LazyLock<Vec<Skill>> = LazyLock::new(|| {
     let mut listed = vec![Skill { id: 0, name: Some("None".to_owned()) }];
 
     listed.extend((1..=u8::MAX).filter_map(|id| {
@@ -549,8 +549,8 @@ static CATALOGUE: LazyLock<Vec<Skill>> = LazyLock::new(|| {
     listed
 });
 
-fn catalogue(glossary: &NameBook) -> Vec<Skill> {
-    CATALOGUE
+fn catalog(glossary: &NameBook) -> Vec<Skill> {
+    CATALOG
         .iter()
         .map(|skill| {
             let named = u8::try_from(skill.id).ok().filter(|id| *id > 0).and_then(|id| {
@@ -601,7 +601,7 @@ impl Names {
         }
 
         let mut ruler = Ruler::new(Font::DEFAULT, cards::INPUT_SIZE);
-        let widest = catalogue(glossary)
+        let widest = catalog(glossary)
             .iter()
             .map(|skill| ruler.width(&skill.to_string()))
             .fold(0.0, f32::max);
@@ -793,7 +793,7 @@ mod tests {
 
     #[test]
     fn every_talent_ability_resolves_to_a_name() {
-        let listed = &*super::CATALOGUE;
+        let listed = &*super::CATALOG;
 
         assert!(listed.len() > 1, "nyanko publishes no talent abilities, so the picker would be empty");
 

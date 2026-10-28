@@ -19,7 +19,7 @@ use crate::widget::{hover_hint, popup, smooth_scroll};
 
 use super::disk::format_size;
 
-const ACKNOWLEDGEMENT: &str = r#"
+const ACKNOWLEDGMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding the use of a Provider.
 By accepting this agreement, you must have read, understood, and accepted the following facts about Providers:
 
@@ -122,14 +122,14 @@ impl Default for State {
             refreshed: false,
             terms_open: false,
             terms_popup: popup::State::default(),
-            terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
+            terms: crate::common::markdown::parse(ACKNOWLEDGMENT),
             pending: None,
         }
     }
 }
 
 fn agreement() -> String {
-    digest::hash(&[ACKNOWLEDGEMENT])
+    digest::hash(&[ACKNOWLEDGMENT])
 }
 
 fn uploaded(modified: &str) -> &str {
@@ -193,7 +193,7 @@ fn failure(kind: ErrorKind, kept: bool) -> &'static str {
         (ErrorKind::Archive, _) => "The download is not a payload this app can read and cannot be resumed, the next download fetches whatever your \"game\" folder is still missing",
         (ErrorKind::Disk, true) => "The new files could not be written to disk, the files that already arrived are kept in your \"game\" folder for when it resumes",
         (ErrorKind::Disk, false) => "The new files could not be written to disk, the next download fetches whatever your \"game\" folder is still missing",
-        (ErrorKind::Aborted, _) => "The download was cancelled, the next download fetches whatever your \"game\" folder is still missing",
+        (ErrorKind::Aborted, _) => "The download was canceled, the next download fetches whatever your \"game\" folder is still missing",
     }
 }
 
@@ -527,7 +527,7 @@ impl State {
 
     pub(super) fn terms_view(&self, window: Size, ui_theme: Theme) -> Option<Element<'_, Message>> {
         self.terms_open.then(|| {
-            self.terms_popup.view("Acknowledgement", TERMS_POPUP, window, Message::Terms, move || self.terms_content(&ui_theme), None)
+            self.terms_popup.view("Acknowledgment", TERMS_POPUP, window, Message::Terms, move || self.terms_content(&ui_theme), None)
         })
     }
 

@@ -240,9 +240,9 @@ mod tests {
     // One pack name shipped by several regions stays a single entry, holding a
     // checksum per region, with each file naming the region that actually won it.
     // A workspace that already holds the exact bytes an import is about to write must be
-    // recognised, so a manifest-less re-import records the placement without rewriting the file.
+    // recognized, so a manifest-less re-import records the placement without rewriting the file.
     #[test]
-    fn a_file_already_holding_the_winning_bytes_is_recognised() {
+    fn a_file_already_holding_the_winning_bytes_is_recognized() {
         let directory = std::env::temp_dir().join("bcc-holds-probe");
         fs::create_dir_all(&directory).expect("probe dir");
 

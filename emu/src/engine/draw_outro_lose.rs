@@ -71,14 +71,14 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
         let popup = ctx.scene_img005_sheet.clone();
         let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
         let grow = *POPUP_GROW_TABLE
             .get(step as i64 as usize)
             .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
         let span = grow.wrapping_mul(0x2b2);
         let rise = grow.wrapping_mul(0xe5);
-        let x = ops::div_neg_200(span).wrapping_add(centre);
+        let x = ops::div_neg_200(span).wrapping_add(center);
         let y = ops::div_neg_200(rise).wrapping_add(0x1b8);
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
@@ -112,9 +112,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
                     }
 
                     let text = ctx.label_texts.get(index + 2).copied().flatten().ok_or(Fault::null_pointer())?;
-                    let centre = ops::div_2(get_drawable_width(ctx)?);
+                    let center = ops::div_2(get_drawable_width(ctx)?);
 
-                    draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
+                    draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), center, down, 1);
 
                     down = down.wrapping_add(0x24);
                 }
@@ -181,14 +181,14 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
 
     let popup = ctx.scene_img005_sheet.clone();
     let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-    let centre = ops::div_2(get_drawable_width(ctx)?);
+    let center = ops::div_2(get_drawable_width(ctx)?);
     let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
     let grow = *POPUP_GROW_TABLE
         .get(step as i64 as usize)
         .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
     let span = grow.wrapping_mul(0x2b2);
     let rise = grow.wrapping_mul(0xe5);
-    let x = ops::div_neg_200(span).wrapping_add(centre);
+    let x = ops::div_neg_200(span).wrapping_add(center);
     let y = ops::div_neg_200(rise).wrapping_add(0x1ce);
 
     draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
@@ -222,9 +222,9 @@ pub fn draw_outro_lose(ctx: &mut AppContext) -> Result<(), Fault> {
         }
 
         let text = ctx.label_texts.get(line).copied().flatten().ok_or(Fault::null_pointer())?;
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
 
-        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), centre, down, 1);
+        draw_surface_aligned(draw_context(&mut ctx.draw)?, Surface::Label(&text), center, down, 1);
 
         down = down.wrapping_add(0x24);
     }

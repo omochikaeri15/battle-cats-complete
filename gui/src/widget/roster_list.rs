@@ -427,7 +427,7 @@ mod tests {
     }
 
     // A filtered-away anchor has nowhere to land, so the offset is left for the
-    // row window to clamp rather than guessing at a neighbour.
+    // row window to clamp rather than guessing at a neighbor.
     #[test]
     fn a_vanished_anchor_leaves_the_offset_untouched() {
         assert_eq!(anchored_offset(&[10, 11, 12], &[10, 12], ROW_PITCH), None);

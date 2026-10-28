@@ -433,7 +433,7 @@ pub(crate) struct Channels {
     pub(crate) part: usize,
     pub(crate) label: String,
     pub(crate) present: Vec<(i32, usize)>,
-    pub(crate) channelled: bool,
+    pub(crate) channeled: bool,
     pub(crate) locatable: bool,
 }
 
@@ -979,7 +979,7 @@ impl State {
             part,
             label: format!("Part {}", part),
             present,
-            channelled: session.draft.is_some(),
+            channeled: session.draft.is_some(),
             locatable: session.viewer.reachable(part),
         })
     }
@@ -1340,7 +1340,7 @@ impl State {
 
                 atlas.persist_if_dirty()
             }
-            Message::Picture(picture::Message::Cancelled) => {
+            Message::Picture(picture::Message::Canceled) => {
                 session.framing = None;
                 session.redraw();
 
@@ -1365,9 +1365,9 @@ impl State {
             }
             Message::Find(at) => {
                 if let Some(atlas) = session.atlas.as_ref()
-                    && let Some(centre) = atlas.find(at)
+                    && let Some(center) = atlas.find(at)
                 {
-                    session.picture.focus(&atlas.source, centre);
+                    session.picture.focus(&atlas.source, center);
                 }
 
                 Task::none()
@@ -2555,14 +2555,14 @@ impl Session {
             return None;
         }
 
-        let travelled = at.y - TREE_TOP + self.scroll;
+        let traveled = at.y - TREE_TOP + self.scroll;
 
-        if travelled < 0.0 {
+        if traveled < 0.0 {
             return None;
         }
 
-        let row = ((travelled / ROW_HEIGHT).floor() as usize).min(self.rows.len() - 1);
-        let within = (travelled - row as f32 * ROW_HEIGHT) / ROW_HEIGHT;
+        let row = ((traveled / ROW_HEIGHT).floor() as usize).min(self.rows.len() - 1);
+        let within = (traveled - row as f32 * ROW_HEIGHT) / ROW_HEIGHT;
 
         let Cargo::Part(part) = cargo else {
             return self.rehome(row).map(|_| Landing::Onto(row));
@@ -3178,7 +3178,7 @@ mod tests {
     #[test]
     fn the_segment_spans_the_key_we_left_and_the_one_we_are_reaching() {
         // Both rows light up; the lighter one is the key being left and carries the
-        // weaker tint, so the pair reads in the direction the pose is travelling.
+        // weaker tint, so the pair reads in the direction the pose is traveling.
         assert_eq!(spanned(0, Some(0), 3), Some(Span::Head));
         assert_eq!(spanned(1, Some(0), 3), Some(Span::Tail));
         assert_eq!(spanned(2, Some(0), 3), None);

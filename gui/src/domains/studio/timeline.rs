@@ -179,11 +179,11 @@ impl State {
         picked: Option<usize>,
     ) -> Element<'_, Message> {
         let Some(part) = part else {
-            return framed(plain(), centred(NO_PART_NOTICE));
+            return framed(plain(), centered(NO_PART_NOTICE));
         };
 
         if lanes.is_empty() {
-            return framed(plain(), centred(NO_CHANNEL_NOTICE));
+            return framed(plain(), centered(NO_CHANNEL_NOTICE));
         }
 
         let window = self.window(part, cadence, &lanes);
@@ -290,7 +290,7 @@ fn resting(cadence: Cadence, lanes: &[Lane]) -> Window {
 }
 
 pub(super) fn vacant<'a>(notice: &'a str) -> Element<'a, Message> {
-    framed(plain(), centred(notice))
+    framed(plain(), centered(notice))
 }
 
 fn plain<'a>() -> Element<'a, Message> {

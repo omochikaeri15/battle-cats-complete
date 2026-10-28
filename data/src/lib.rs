@@ -22,7 +22,7 @@
 //!   plus the registry that recognizes which abilities an entity carries.
 //! - [`chapter`] covers the level content: chapters, maps, and stages.
 //! - [`files`] holds the game-wide tables no single domain owns: the tuning
-//!   constants, the string dictionary, and the item catalogue.
+//!   constants, the string dictionary, and the item catalog.
 //! - [`common`] holds the text handling, column tables, and regional conventions
 //!   the other modules share.
 //! - [`graphics`] parses animation rigs and resolves them into renderer-ready

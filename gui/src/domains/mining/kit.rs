@@ -148,7 +148,7 @@ pub(super) fn ledger_rule<'a>() -> Element<'a, Message> {
         .into()
 }
 
-pub(super) fn labelled<'a>(title: &'static str, body: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+pub(super) fn labeled<'a>(title: &'static str, body: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     column![strong(title, HEADER_TEXT_SIZE).color(CHIP_TEXT), body.into()].spacing(4).width(Length::Fill).into()
 }
 
@@ -276,7 +276,7 @@ mod tests {
 
     // Surge and friends report a spawn width that reads as noise on a diff card.
     #[test]
-    fn the_spawn_width_line_is_dropped_but_its_neighbours_survive() {
+    fn the_spawn_width_line_is_dropped_but_its_neighbors_survive() {
         assert!(ignored("Width: 400"));
         assert!(!ignored("Range: 400~800"));
         assert!(!ignored("Chance: 0% (+30%) \u{2192} 30%"));

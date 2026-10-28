@@ -344,7 +344,7 @@ impl ActivePopup {
             Self::StudioOnion => popup::Kind::StudioOnion,
             Self::StudioShipout => popup::Kind::StudioShipout,
             Self::StudioExport => popup::Kind::Animator,
-            Self::SandboxAcknowledge => popup::Kind::Acknowledgement,
+            Self::SandboxAcknowledge => popup::Kind::Acknowledgment,
             Self::SandboxFault => popup::Kind::Fault,
             Self::SandboxFilter => popup::Kind::SandboxFilter,
             Self::SandboxUnit => popup::Kind::SandboxUnit,

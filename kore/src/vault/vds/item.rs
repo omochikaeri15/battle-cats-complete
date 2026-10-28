@@ -12,7 +12,7 @@ use super::Slot;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct ItemStore {
-    catalogue: Slot<Vec<GatyaItemBuy>>,
+    catalog: Slot<Vec<GatyaItemBuy>>,
     lines: Slot<HashMap<u32, usize>>,
     names: Slot<Vec<GatyaItemName>>,
 }
@@ -20,7 +20,7 @@ pub struct ItemStore {
 impl Clone for ItemStore {
     fn clone(&self) -> Self {
         Self {
-            catalogue: super::snapshot(&self.catalogue),
+            catalog: super::snapshot(&self.catalog),
             lines: super::snapshot(&self.lines),
             names: super::snapshot(&self.names),
         }
@@ -28,8 +28,8 @@ impl Clone for ItemStore {
 }
 
 impl ItemStore {
-    pub fn catalogue(&self, vfs: &Vfs) -> Arc<Vec<GatyaItemBuy>> {
-        super::cached(&self.catalogue, || {
+    pub fn catalog(&self, vfs: &Vfs) -> Arc<Vec<GatyaItemBuy>> {
+        super::cached(&self.catalog, || {
             super::parsed(vfs, GATYA_ITEM_BUY, |bytes| GatyaItemBuy::parse(bytes, None)).unwrap_or_default()
         })
     }
@@ -63,7 +63,7 @@ impl ItemStore {
 
     fn lines(&self, vfs: &Vfs) -> Arc<HashMap<u32, usize>> {
         super::cached(&self.lines, || {
-            self.catalogue(vfs)
+            self.catalog(vfs)
                 .iter()
                 .enumerate()
                 .filter_map(|(line, row)| u32::try_from(row.stage_drop_item_id).ok().map(|id| (id, line)))
@@ -84,13 +84,13 @@ impl ItemStore {
     pub fn icon_index(&self, vfs: &Vfs, item_id: u32) -> Option<u32> {
         let line = self.line(vfs, item_id)?;
 
-        self.catalogue(vfs).get(line).and_then(|row| u32::try_from(row.icon_index(line)).ok())
+        self.catalog(vfs).get(line).and_then(|row| u32::try_from(row.icon_index(line)).ok())
     }
 
     pub(super) fn evict(&self, filename: &str) {
         match filename {
             GATYA_ITEM_BUY => {
-                super::reset(&self.catalogue);
+                super::reset(&self.catalog);
                 super::reset(&self.lines);
             }
             GATYA_ITEM_NAME => super::reset(&self.names),
@@ -99,7 +99,7 @@ impl ItemStore {
     }
 
     pub(super) fn clear(&self) {
-        super::reset(&self.catalogue);
+        super::reset(&self.catalog);
         super::reset(&self.lines);
         super::reset(&self.names);
     }

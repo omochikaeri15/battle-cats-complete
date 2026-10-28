@@ -340,7 +340,7 @@ pub fn probe(link: &str) -> Result<Stamp, Error> {
 
 pub fn install(link: &str, partial: Option<Partial>, emit: impl Fn(Step) + Sync, abort: &AtomicBool) -> Result<Stamp, Failure> {
     fetch(link, partial, &emit, abort).inspect_err(|failure| match failure.error.kind {
-        ErrorKind::Aborted => warn!("Game data download was cancelled"),
+        ErrorKind::Aborted => warn!("Game data download was canceled"),
         _ if failure.partial.is_some() => error!("Game data download stopped and can be resumed: {}", failure.error),
         _ => error!("Game data could not be installed from its source: {}", failure.error),
     })
@@ -809,7 +809,7 @@ fn disk(err: io::Error) -> Error {
 }
 
 fn aborted() -> Error {
-    Error::new(ErrorKind::Aborted, "the download was cancelled".to_owned())
+    Error::new(ErrorKind::Aborted, "the download was canceled".to_owned())
 }
 
 #[cfg(test)]

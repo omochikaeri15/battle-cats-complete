@@ -113,7 +113,7 @@ Parts can be posed directly in the viewer. Left click selects a part and reveals
 
 The `Option` column picks what the Gizmo writes. This is disabled and forced to `Model` when no animation is loaded.
 
-A root part, one with no parent, ignores its model X and Y; the game reads those columns only for a part that has a parent. The two fields are greyed in the table and the Gizmo refuses the drag on `Model`, pointing you at `Channel` instead. A part the offset row is pinned to cannot be moved on either setting, as covered under Offset.
+A root part, one with no parent, ignores its model X and Y; the game reads those columns only for a part that has a parent. The two fields are grayed in the table and the Gizmo refuses the drag on `Model`, pointing you at `Channel` instead. A part the offset row is pinned to cannot be moved on either setting, as covered under Offset.
 
 ### Channel
 Writes to the selected animation, keyframing the current frame only. If the part has no channel for the property, one is created. This is the default option.

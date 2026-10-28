@@ -100,7 +100,7 @@ pub(super) fn rule(index: usize, field: Option<&str>, cells: &[i32]) -> Rule {
 // The reward block past nyanko's five published stage columns. Its length and meaning are
 // decided by the row's own contents, so the walk is a mirror of `extract_treasure_drops` and
 // `extract_timed_scores` and is pinned against nyanko by a probe test. Anything those two
-// never read stays unlabelled and opaque rather than being given a name we invented.
+// never read stays unlabeled and opaque rather than being given a name we invented.
 fn tail(index: usize, cells: &[i32]) -> Option<(Cow<'static, str>, Rule)> {
     let column = index.checked_sub(MAP_STAGE_LEAD)?;
     let row = cells.get(MAP_STAGE_LEAD..)?;
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(held.header.cost_type, CostType::Energy, "nyanko agrees the absent column is Energy");
     }
 
-    // Each labelled reward cell is given a value of its own and the row handed to nyanko, so
+    // Each labeled reward cell is given a value of its own and the row handed to nyanko, so
     // the name the card shows is checked against the field nyanko actually parses it into
     // rather than against a reading of its extractor.
     fn probe(row: &[i32]) -> Vec<(String, i32)> {

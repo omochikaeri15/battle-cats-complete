@@ -1551,7 +1551,7 @@ fn item_buy_targets(app: &BattleCatsApp, item: Option<u32>) -> Vec<LevelTarget> 
     }]
 }
 
-// The name file has no header, so an item's catalogue line is its line here outright --
+// The name file has no header, so an item's catalog line is its line here outright --
 // nyanko's own `icon_index` doc states that pairing.
 fn item_name_target(app: &BattleCatsApp, item: Option<u32>) -> Option<ProseTarget> {
     if scene(app) != Page::Stages {

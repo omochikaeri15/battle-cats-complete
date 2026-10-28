@@ -135,9 +135,9 @@ pub fn dialog_draw(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<(), 
 
         let rect = dialog_button_rect(&this, ids[slot]);
         let dim = if this.lit[slot] == 0 {
-            this.dimmable[slot] != 0 || this.greyed[slot] != 0
+            this.dimmable[slot] != 0 || this.grayed[slot] != 0
         } else {
-            this.greyed[slot] != 0
+            this.grayed[slot] != 0
         };
 
         if dim {
@@ -221,9 +221,9 @@ pub fn dialog_draw(ctx: &mut AppContext, dialog: u64, is_top: u8) -> Result<(), 
         }
 
         let restore = if this.lit[slot] == 0 {
-            this.dimmable[slot] != 0 || this.greyed[slot] != 0
+            this.dimmable[slot] != 0 || this.grayed[slot] != 0
         } else {
-            this.greyed[slot] != 0
+            this.grayed[slot] != 0
         };
 
         if restore {

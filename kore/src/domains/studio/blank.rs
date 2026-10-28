@@ -110,7 +110,7 @@ mod tests {
 
         assert_eq!(bottom, 0.0, "its feet rest on the origin");
         assert_eq!(top, -(BOX_SPAN as f32));
-        assert_eq!((left, right), (-(BOX_SPAN as f32) / 2.0, BOX_SPAN as f32 / 2.0), "centred on it");
+        assert_eq!((left, right), (-(BOX_SPAN as f32) / 2.0, BOX_SPAN as f32 / 2.0), "centered on it");
     }
 
     #[test]

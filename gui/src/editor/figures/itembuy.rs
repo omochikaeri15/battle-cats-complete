@@ -6,7 +6,7 @@ use super::{Draft, Message};
 pub(crate) const ITEM_ID_COLUMN: usize = 3;
 
 const NOTICE: &str = concat!(
-    "One row per catalogue item, shared by every stage that drops it. The row's position ",
+    "One row per catalog item, shared by every stage that drops it. The row's position ",
     "below the header is the line its name sits on in GatyaitemName",
 );
 

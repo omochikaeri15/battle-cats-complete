@@ -1503,7 +1503,7 @@ mod trait_tests {
     // The subtraits sit in Headline1 beside abilities that are not traits at all, so the
     // group alone cannot answer this.
     #[test]
-    fn the_subtraits_count_as_traits_and_their_neighbours_do_not() {
+    fn the_subtraits_count_as_traits_and_their_neighbors_do_not() {
         for identity in [Identity::TraitStarredAlien, Identity::TraitBehemoth, Identity::TraitColossus, Identity::TraitSage] {
             assert!(is_trait(identity), "{:?} is a subtrait", identity);
             assert!(!matches!(super::get_display_def(identity).group, DisplayGroup::Trait));

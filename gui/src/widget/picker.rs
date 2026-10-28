@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn a_long_name_loses_its_centre_but_keeps_both_ends_and_the_extension() {
+    fn a_long_name_loses_its_center_but_keeps_both_ends_and_the_extension() {
         let long = "a_really_very_long_spritesheet_name.imgcut";
         let cut = fitted(long, BUTTON_WIDTH);
 
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn a_name_with_no_room_for_a_head_is_cut_from_the_start() {
-        // Once the budget past the extension is a single glyph, the centre elision
+        // Once the budget past the extension is a single glyph, the center elision
         // degenerates into a start elision on its own.
         let cut = fitted("an_extremely_long_name.mamodel", 90.0);
 

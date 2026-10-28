@@ -72,12 +72,12 @@ const NO_EFFECT: &str = "None";
 const ANCHOR_HINT: &str = "The unit whose page this combo was opened from always stays in it";
 
 pub(super) fn view<'a>(draft: &'a Draft, frame: Frame<'a>) -> Element<'a, Message> {
-    let Frame { width, height, offset, armed, removing, cats, catalogue, vault, picker, hunt, .. } =
+    let Frame { width, height, offset, armed, removing, cats, catalog, vault, picker, hunt, .. } =
         frame;
 
     if let Some(index) = picker {
         let top = column![back(), cards::hunt(hunt, width, HUNT_PLACEHOLDER)];
-        let listing = chooser(catalogue, cats, index, hunt, width, height, offset);
+        let listing = chooser(catalog, cats, index, hunt, width, height, offset);
 
         return cards::shell(Some(top.into()), listing, cards::footer(vec![cards::sync(armed)]));
     }
@@ -98,8 +98,8 @@ pub(super) fn view<'a>(draft: &'a Draft, frame: Frame<'a>) -> Element<'a, Messag
 
     let effects = Row::new()
         .spacing(ROW_GAP)
-        .push(picked(draft, catalogue, vault, EFFECT, NO_EFFECT, EFFECT_SPAN))
-        .push(picked(draft, catalogue, vault, POWER, NO_EFFECT, POWER_SPAN));
+        .push(picked(draft, catalog, vault, EFFECT, NO_EFFECT, EFFECT_SPAN))
+        .push(picked(draft, catalog, vault, POWER, NO_EFFECT, POWER_SPAN));
 
     let body = column![effects, slots(draft, cats, draft.anchor())].spacing(ROW_GAP);
 
@@ -116,9 +116,9 @@ fn heading<'a>(draft: &'a Draft, vault: &Vault) -> Element<'a, Message> {
         .iter()
         .find(|option| option.raw == aimed(draft))
         .cloned()
-        .unwrap_or_else(|| Labelled { raw: ABSENT, text: NEW_COMBO.to_owned() });
+        .unwrap_or_else(|| Labeled { raw: ABSENT, text: NEW_COMBO.to_owned() });
 
-    let chooser = cards::options(held, current, |pick: Labelled| Message::Aimed(addressed(pick.raw)));
+    let chooser = cards::options(held, current, |pick: Labeled| Message::Aimed(addressed(pick.raw)));
 
     cards::header(container(chooser).width(Length::Fill).center_x(Length::Fill))
 }
@@ -135,8 +135,8 @@ fn addressed(raw: i32) -> Address {
     usize::try_from(raw).map_or(Address::Appended, Address::Line)
 }
 
-fn listing(draft: &Draft, vault: &Vault) -> Vec<Labelled> {
-    let mut held = vec![Labelled { raw: ABSENT, text: NEW_COMBO.to_owned() }];
+fn listing(draft: &Draft, vault: &Vault) -> Vec<Labeled> {
+    let mut held = vec![Labeled { raw: ABSENT, text: NEW_COMBO.to_owned() }];
 
     let Some((unit, form)) = draft.anchor() else {
         return held;
@@ -152,13 +152,13 @@ fn listing(draft: &Draft, vault: &Vault) -> Vec<Labelled> {
     held.extend(
         combo::combo_lines(vault, id, reached)
             .into_iter()
-            .filter_map(|line| Some(Labelled { raw: i32::try_from(line).ok()?, text: titled(&rows, &names, line) })),
+            .filter_map(|line| Some(Labeled { raw: i32::try_from(line).ok()?, text: titled(&rows, &names, line) })),
     );
 
     let current = aimed(draft);
 
     if current >= 0 && !held.iter().any(|option| option.raw == current) {
-        held.push(Labelled { raw: current, text: named(draft, &names) });
+        held.push(Labeled { raw: current, text: named(draft, &names) });
     }
 
     held
@@ -192,7 +192,7 @@ fn keyed(series: i32, combo_id: i32) -> String {
 
 fn picked<'a>(
     draft: &'a Draft,
-    catalogue: &Catalogue,
+    catalog: &Catalog,
     vault: &Vault,
     field: &'static str,
     absent: &'static str,
@@ -202,13 +202,13 @@ fn picked<'a>(
         return Space::new().into();
     };
 
-    let options = offerable(draft, catalogue, vault, field, absent);
+    let options = offerable(draft, catalog, vault, field, absent);
     let current = draft.reads_at(index).unwrap_or(ABSENT);
     let chosen = options.iter().find(|option| option.raw == current).cloned();
 
     let control: Element<'_, Message> = match chosen {
         Some(chosen) => {
-            cards::options(options, chosen, move |pick: Labelled| Message::Picked(index, pick.raw))
+            cards::options(options, chosen, move |pick: Labeled| Message::Picked(index, pick.raw))
         }
         None => cards::number(draft, index),
     };
@@ -218,12 +218,12 @@ fn picked<'a>(
 
 fn offerable(
     draft: &Draft,
-    catalogue: &Catalogue,
+    catalog: &Catalog,
     vault: &Vault,
     field: &'static str,
     absent: &'static str,
-) -> Vec<Labelled> {
-    let offered = catalogue.texts(vault, field, absent);
+) -> Vec<Labeled> {
+    let offered = catalog.texts(vault, field, absent);
 
     if field != POWER {
         return offered;
@@ -233,7 +233,7 @@ fn offerable(
     let params = vault.vds.cats.combo_params(&vault.vfs);
 
     let Some(row) = usize::try_from(effect).ok().and_then(|index| params.get(index)) else {
-        return vec![Labelled { raw: ABSENT, text: absent.to_owned() }];
+        return vec![Labeled { raw: ABSENT, text: absent.to_owned() }];
     };
 
     offered
@@ -338,7 +338,7 @@ fn back<'a>() -> Element<'a, Message> {
 }
 
 fn chooser<'a>(
-    catalogue: &'a Catalogue,
+    catalog: &'a Catalog,
     cats: &'a [CatEntry],
     index: usize,
     hunt: &str,
@@ -346,7 +346,7 @@ fn chooser<'a>(
     height: f32,
     offset: f32,
 ) -> Element<'a, Message> {
-    let shown = catalogue.shown(cats, hunt);
+    let shown = catalog.shown(cats, hunt);
     let per_row = (((cards::usable(width) + TILE_GAP) / TILE_PITCH).floor() as usize).max(1);
     let rows = shown.div_ceil(per_row);
     let viewport = (height - CHROME).max(TILE_PITCH);
@@ -354,7 +354,7 @@ fn chooser<'a>(
     let RowWindow { range, pad_before, pad_after } =
         row_window::compute_with(rows, viewport, offset, TILE, TILE_GAP);
 
-    let visible = catalogue.window(range.start * per_row..range.end * per_row);
+    let visible = catalog.window(range.start * per_row..range.end * per_row);
 
     let mut stack = Column::new().spacing(TILE_GAP).align_x(Horizontal::Center);
 
@@ -370,7 +370,7 @@ fn chooser<'a>(
         let mut line = Row::new().spacing(TILE_GAP).align_y(Vertical::Center);
 
         for entry in chunk {
-            line = line.push(tile(catalogue, entry, index));
+            line = line.push(tile(catalog, entry, index));
         }
 
         stack = stack.push(line);
@@ -388,8 +388,8 @@ fn chooser<'a>(
     smooth_scroll(area).into()
 }
 
-fn tile<'a>(catalogue: &Catalogue, entry: &Entry, index: usize) -> Element<'a, Message> {
-    let face: Element<'_, Message> = match catalogue.handle(&entry.path) {
+fn tile<'a>(catalog: &Catalog, entry: &Entry, index: usize) -> Element<'a, Message> {
+    let face: Element<'_, Message> = match catalog.handle(&entry.path) {
         Some(handle) => iced_image(handle)
             .content_fit(ContentFit::Contain)
             .width(Length::Fill)
@@ -432,26 +432,26 @@ pub(super) struct Entry {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub(super) struct Labelled {
+pub(super) struct Labeled {
     raw: i32,
     text: String,
 }
 
-impl fmt::Display for Labelled {
+impl fmt::Display for Labeled {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.text)
     }
 }
 
 #[derive(Default)]
-pub(super) struct Catalogue {
+pub(super) struct Catalog {
     listed: RefCell<Option<(usize, Vec<Entry>)>>,
     matched: RefCell<Option<(String, Vec<usize>)>>,
-    texts: RefCell<FxHashMap<&'static str, Vec<Labelled>>>,
+    texts: RefCell<FxHashMap<&'static str, Vec<Labeled>>>,
     images: RefCell<FxHashMap<PathBuf, Option<Handle>>>,
 }
 
-impl Catalogue {
+impl Catalog {
     pub(super) fn forget(&self) {
         self.listed.borrow_mut().take();
         self.matched.borrow_mut().take();
@@ -529,7 +529,7 @@ impl Catalogue {
             .collect()
     }
 
-    fn texts(&self, vault: &Vault, field: &'static str, absent: &'static str) -> Vec<Labelled> {
+    fn texts(&self, vault: &Vault, field: &'static str, absent: &'static str) -> Vec<Labeled> {
         if let Some(cached) = self.texts.borrow().get(field) {
             return cached.clone();
         }
@@ -539,12 +539,12 @@ impl Catalogue {
             _ => vault.vds.cats.combo_effects(&vault.vfs),
         };
 
-        let mut options = vec![Labelled { raw: ABSENT, text: absent.to_owned() }];
+        let mut options = vec![Labeled { raw: ABSENT, text: absent.to_owned() }];
 
         options.extend(table.iter().enumerate().filter_map(|(line, entry)| {
             let text = entry.as_deref()?.trim();
 
-            (!text.is_empty()).then(|| Labelled { raw: line as i32, text: text.to_owned() })
+            (!text.is_empty()).then(|| Labeled { raw: line as i32, text: text.to_owned() })
         }));
 
         self.texts.borrow_mut().insert(field, options.clone());

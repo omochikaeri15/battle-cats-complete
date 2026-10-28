@@ -1272,7 +1272,7 @@ mod tests {
     }
 
     #[test]
-    fn the_last_key_bounds_itself_rather_than_repeating_its_neighbour() {
+    fn the_last_key_bounds_itself_rather_than_repeating_its_neighbor() {
         // The strip marks it alone, having nothing to reach towards, and the bound matches.
         let keys = keys(&[0, 10, 25]);
 

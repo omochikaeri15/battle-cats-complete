@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn a_quad_split_into_two_triangles_covers_every_pixel_once() {
-        // The diagonal runs straight through pixel centres; drawing it twice would show up as a bright seam.
+        // The diagonal runs straight through pixel centers; drawing it twice would show up as a bright seam.
         let mut pixels = vec![0u8; 8 * 8 * 4];
 
         draw(&mut pixels, 8, 8, &quad([0.25; 4]), &[Batch { texture: None, blend: 1, alpha: Alpha::Blended, range: 0..6 }]);

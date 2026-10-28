@@ -2,7 +2,7 @@
 //!
 //! A unit file belongs to a unit and a stage file to a stage, but the engine
 //! also ships tables that address the whole game: the tuning constants in
-//! [`Param`], the string dictionary in [`Localizable`], and the item catalogue
+//! [`Param`], the string dictionary in [`Localizable`], and the item catalog
 //! in [`GatyaItemBuy`] with its localized text in [`GatyaItemName`]. This module
 //! re-exports each of those and every error type behind them, so callers never
 //! reach into the internal submodule layout.

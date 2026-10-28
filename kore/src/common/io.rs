@@ -176,7 +176,7 @@ mod tests {
         fs::write(dir.join("Uni000_f01.png"), "unrelated\n").expect("seed");
 
         // The name we want is already on disk: there is nothing to correct, and the file
-        // sitting there must not be replaced by a neighbour.
+        // sitting there must not be replaced by a neighbor.
         recase(&dir.join("uni000_f00.png"));
 
         // A different name entirely is not a stray spelling of this one.

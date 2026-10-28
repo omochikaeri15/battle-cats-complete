@@ -15,14 +15,14 @@ pub fn image_sprite_draw(
     if sprite.visible != 0 {
         let sheet = sprite.sheet.clone();
         let sheet = sheet.as_deref().ok_or(Fault::null_pointer())?;
-        let labelled = sheet.whole != 0;
-        let saved = if labelled {
+        let labeled = sheet.whole != 0;
+        let saved = if labeled {
             draw_context(&mut ctx.draw)?.tint()
         } else {
             draw_context(&mut ctx.draw)?.color()
         };
 
-        if labelled {
+        if labeled {
             set_tint(
                 draw_context(&mut ctx.draw)?,
                 sprite.color[0],
@@ -57,7 +57,7 @@ pub fn image_sprite_draw(
             sprite.cut[3],
         );
 
-        if labelled {
+        if labeled {
             set_tint(
                 draw_context(&mut ctx.draw)?,
                 saved[0],

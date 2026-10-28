@@ -1138,12 +1138,12 @@ mod onion_tests {
     }
 
     #[test]
-    fn a_half_typed_colour_pads_with_zeros_so_it_shows_at_once() {
+    fn a_half_typed_color_pads_with_zeros_so_it_shows_at_once() {
         assert_eq!(inked("#ff0000"), Some([1.0, 0.0, 0.0]));
         assert_eq!(inked("ff0000"), Some([1.0, 0.0, 0.0]));
         assert_eq!(inked("  0000ff "), Some([0.0, 0.0, 1.0]));
 
-        // Every prefix of a red is already some colour, so typing recolours as you go.
+        // Every prefix of a red is already some color, so typing recolors as you go.
         assert_eq!(inked("f"), Some([240.0 / 255.0, 0.0, 0.0]), "one digit already reads bright");
         assert_eq!(inked("ff"), Some([1.0, 0.0, 0.0]));
         assert_eq!(inked("ff00"), Some([1.0, 0.0, 0.0]));
@@ -1151,17 +1151,17 @@ mod onion_tests {
         assert_eq!(inked(""), None);
         assert_eq!(inked("nope"), None);
         assert_eq!(inked("#gggggg"), None);
-        assert_eq!(inked("ff00000"), None, "seven digits is not a colour");
+        assert_eq!(inked("ff00000"), None, "seven digits is not a color");
     }
 
     #[test]
-    fn a_colour_becomes_a_tint_at_double_gain() {
+    fn a_color_becomes_a_tint_at_double_gain() {
         assert_eq!(washed("#ff0000"), [2.0, 0.0, 0.0, 1.0]);
-        let grey = 128.0 / 255.0 * 2.0;
+        let gray = 128.0 / 255.0 * 2.0;
 
-        assert_eq!(washed("#808080"), [grey, grey, grey, 1.0]);
+        assert_eq!(washed("#808080"), [gray, gray, gray, 1.0]);
 
-        // Alpha is a presence flag, so only a missing colour reads as untinted.
+        // Alpha is a presence flag, so only a missing color reads as untinted.
         assert_eq!(washed(""), [0.0, 0.0, 0.0, 0.0]);
         assert_eq!(washed("nope"), [0.0, 0.0, 0.0, 0.0]);
     }

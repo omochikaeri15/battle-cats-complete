@@ -364,7 +364,7 @@ mod tests {
     const DUMP: &str = "  Package [jp.co.ponos.battlecatsen] (a1b2):\n    versionCode=1505000 minSdk=24 targetSdk=33\n    versionName=15.5.0\n    dataDir=/data/user/0/jp.co.ponos.battlecatsen\n";
 
     #[test]
-    fn a_dump_yields_the_version_pair_without_its_neighbours() {
+    fn a_dump_yields_the_version_pair_without_its_neighbors() {
         assert_eq!(field(DUMP, "versionName="), Some("15.5.0".to_string()));
         assert_eq!(field(DUMP, "versionCode="), Some("1505000".to_string()));
         assert_eq!(field(DUMP, "splitName="), None);

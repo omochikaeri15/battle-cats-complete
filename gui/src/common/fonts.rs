@@ -69,9 +69,9 @@ mod tests {
                 let middle = metrics.advance_width(glyph) / upem / 2.0;
 
                 assert!((lead - TRIANGLE_LEAD).abs() < 0.001, "{marker} leads at {lead}");
-                assert!((middle - TRIANGLE_MIDDLE).abs() < 0.001, "{marker} centres at {middle}");
+                assert!((middle - TRIANGLE_MIDDLE).abs() < 0.001, "{marker} centers at {middle}");
 
-                // A tree row centres the whole ascent-to-descent block, not the ink, so
+                // A tree row centers the whole ascent-to-descent block, not the ink, so
                 // ink drawn off that block's middle sits visibly low however the line
                 // height is set — the row cancels it out. Every glyph in this font is
                 // built around 348.5, and the arrows have to keep to it.
@@ -87,7 +87,7 @@ mod tests {
 
                 // TRIANGLE_GAP is held off the ink on both axes — sideways from the shut
                 // arrow's edge, downwards from the open arrow's apex — so the guides can
-                // only keep an even clearance while the ink stays square about its centre.
+                // only keep an even clearance while the ink stays square about its center.
                 let across = (ink.max.x - ink.min.x) / 2.0 / upem;
                 let down = (ink.max.y - ink.min.y) / 2.0 / upem;
 

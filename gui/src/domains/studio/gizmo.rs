@@ -135,9 +135,9 @@ struct Gizmo {
 impl Gizmo {
     fn seat(&self, bounds: Rectangle) -> impl Fn(f32, f32) -> Point + '_ {
         let (pan, zoom) = self.camera;
-        let centre = Point::new(bounds.width / 2.0, bounds.height / 2.0);
+        let center = Point::new(bounds.width / 2.0, bounds.height / 2.0);
 
-        move |x, y| Point::new(centre.x + (x + pan.x) * zoom, centre.y + (y + pan.y) * zoom)
+        move |x, y| Point::new(center.x + (x + pan.x) * zoom, center.y + (y + pan.y) * zoom)
     }
 
     fn held(&self, bounds: Rectangle) -> Option<([Point; 4], Point)> {
@@ -221,9 +221,9 @@ pub(super) fn reachable(quad: &[Point; 4], origin: Point, at: Point) -> bool {
     }
 
     let Some((across, down)) = coords(quad, at) else {
-        let centre = centroid(quad);
+        let center = centroid(quad);
 
-        return (at.x - centre.x).hypot(at.y - centre.y) <= GRAB;
+        return (at.x - center.x).hypot(at.y - center.y) <= GRAB;
     };
 
     let over = |ratio: f32, reach: f32| (if ratio < 0.0 { -ratio } else { ratio - 1.0 }).max(0.0) * reach;
@@ -293,8 +293,8 @@ fn tracked(ring: &Ring, from: Point, at: Point) -> f32 {
     walked + (adrift.abs() - ring.slack).clamp(0.0, BLEED) * adrift.signum()
 }
 
-fn turn_at(centre: Point, at: Point) -> f32 {
-    (at.y - centre.y).atan2(at.x - centre.x)
+fn turn_at(center: Point, at: Point) -> f32 {
+    (at.y - center.y).atan2(at.x - center.x)
 }
 
 fn wrapped(mut angle: f32) -> f32 {
@@ -693,7 +693,7 @@ mod tests {
     #[test]
     fn the_knob_leaves_the_box_where_the_origin_axis_crosses_the_edge() {
         // The lever runs from the part's own origin through the top edge's midpoint and
-        // out. A centred origin leaves through the top; only the crossing matters.
+        // out. A centered origin leaves through the top; only the crossing matters.
         let (exit, knob) = lever(&quad(), middle());
 
         assert_eq!(exit, Point::new(50.0, 0.0));

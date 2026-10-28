@@ -1076,8 +1076,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     if !skip_button {
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let centre = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
-        let origin = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x41) as f64;
+        let center = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let origin = center.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x41) as f64;
         let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
         let sink = ctx
             .i32_at(AppContext::LETTERBOX_SHIFT)?
@@ -1093,8 +1093,8 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let centre = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
-        let origin = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x26) as f64;
+        let center = ops::div_10(ops::div_2(ctx.i32_at(AppContext::STAGE_LENGTH)?).wrapping_sub(ctx.i32_at(AppContext::CAMERA_X)?));
+        let origin = center.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x26) as f64;
         let x = ops::cvttsd2si(get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64 * 0.5 + origin);
         let press = ctx.i32_at(AppContext::CAT_GOD_BUTTON_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
@@ -1197,10 +1197,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let y = ops::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let pitch = imgcut_get_sprite_cut(digits, 0xe)?[2].wrapping_add(-1);
         let span = digit_count(ctx.i32_at(AppContext::SCORE_SHOWN)?).wrapping_mul(pitch);
-        let x = centre.wrapping_sub(ops::div_2(span)).wrapping_add(0x64);
+        let x = center.wrapping_sub(ops::div_2(span)).wrapping_add(0x64);
         let zoom = ctx.i32_at(AppContext::SCORE_ZOOM)? as f32 / 100.0;
         let shown = ctx.i32_at(AppContext::SCORE_SHOWN)?;
 
@@ -1237,9 +1237,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let lift = ctx.i32_at(AppContext::DECK_BAR_SLIDE)?.wrapping_add(ctx.i32_at(AppContext::LETTERBOX_SHIFT)?);
         let y = ops::div_2(imgcut_get_sprite_cut(digits, 0xe)?[3]).wrapping_sub(lift).wrapping_add(0x11);
         let score = get_stage_score(ctx.event_items.as_ref().ok_or(Fault::null_pointer())?);
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let pitch = imgcut_get_sprite_cut(digits, 0xe)?[2].wrapping_add(-1);
-        let x = centre.wrapping_sub(ops::div_2(digit_count(score).wrapping_mul(pitch))).wrapping_add(0x64);
+        let x = center.wrapping_sub(ops::div_2(digit_count(score).wrapping_mul(pitch))).wrapping_add(0x64);
 
         draw_number_plain(draw_context(&mut ctx.draw)?, digits, 0xe, score, 0, x as f32, y as f32, -1.0, 0, 5, 0)?;
 
@@ -1606,9 +1606,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
                         ctx.ability_icons = abilities;
 
-                        let centre = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
+                        let center = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
 
-                        draw_unit_info_panel(ctx, unit, form, centre, 0x9f)?;
+                        draw_unit_info_panel(ctx, unit, form, center, 0x9f)?;
                     }
                 }
             }
@@ -1616,10 +1616,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
     }
 
     if ctx.u8_at(AppContext::CAT_GOD_MENU_IS_OPEN)? == 0 && ctx.i32_at(AppContext::OUTRO_PHASE)? == 7 && flag == 0 {
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0xbe);
+        let x = center.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0xbe);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
         let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x280);
@@ -1636,10 +1636,10 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             3,
         );
 
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let press = ctx.i32_at(AppContext::OUTRO_OK_PRESS)?;
         let bounce = *BUTTON_PRESS_BOUNCE.get(press as i64 as usize).ok_or(Fault::index_out_of_range(press as i64, BUTTON_PRESS_BOUNCE.len() as i64))?;
-        let x = centre.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x7f);
+        let x = center.wrapping_sub(ops::div_2(bounce)).wrapping_add(-0x7f);
         let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
         let top = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?.wrapping_sub(ops::div_2(bounce));
         let y = top.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x289);
@@ -1672,7 +1672,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
         let bottom = ctx.i32_at(AppContext::OUTRO_OK_RECT + Rect::HEIGHT)?;
 
         if hit_test_rect(ctx, left, top, right, bottom)? && ctx.u8_at(AppContext::OUTRO_BUTTON_LOCK)? == 0 {
-            let centre = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
+            let center = ops::div_2(get_drawable_width(ctx)?).wrapping_add(-0xbe);
             let slide = ctx.i32_at(AppContext::OUTRO_OK_SLIDE)?;
             let shift = ctx.i32_at(AppContext::LETTERBOX_SHIFT)?;
             let y = shift.wrapping_sub(get_bottom_inset_logical(ctx)?.wrapping_add(slide)).wrapping_add(0x280);
@@ -1683,7 +1683,7 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
             draw_cut_scaled(
                 draw_context(&mut ctx.draw)?,
                 ctx.img101_sheet.as_deref().ok_or(Fault::null_pointer())?,
-                centre,
+                center,
                 y,
                 0x17d,
                 0x48,
@@ -1829,9 +1829,9 @@ pub fn main_draw(ctx: &mut AppContext, flag: u8) -> Result<(), Fault> {
 
         ctx.ability_icons = abilities;
 
-        let centre = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
+        let center = ops::cvttsd2si(get_drawable_width(ctx)? as f64 * 0.5);
 
-        draw_unit_info_panel(ctx, unit, form, centre, 0x9f)?;
+        draw_unit_info_panel(ctx, unit, form, center, 0x9f)?;
 
         let button = button_bank_find(&ctx.buttons, 0x3ef).ok_or(Fault::null_pointer())?;
 

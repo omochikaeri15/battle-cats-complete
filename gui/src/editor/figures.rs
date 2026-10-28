@@ -460,7 +460,7 @@ pub(super) struct Frame<'a> {
     used: Marks,
     cats: &'a [CatEntry],
     names: &'a talents::Names,
-    catalogue: &'a combos::Catalogue,
+    catalog: &'a combos::Catalog,
     vault: &'a Vault,
     glossary: &'a NameBook,
     picker: Option<usize>,
@@ -476,7 +476,7 @@ pub(super) struct State {
     confirm: Slot<Intent>,
     pinned: Option<Address>,
     names: talents::Names,
-    catalogue: combos::Catalogue,
+    catalog: combos::Catalog,
     picker: Option<usize>,
     hunt: String,
 }
@@ -528,7 +528,7 @@ impl State {
 
     pub(super) fn relocalize(&self) {
         self.names.forget();
-        self.catalogue.forget();
+        self.catalog.forget();
     }
 
     pub(super) fn drafting(&self) -> bool {
@@ -752,7 +752,7 @@ impl State {
             used,
             cats,
             names: &self.names,
-            catalogue: &self.catalogue,
+            catalog: &self.catalog,
             vault,
             glossary,
             picker: self.picker,
@@ -2107,7 +2107,7 @@ mod append_tests {
     // The empty entry is the only way to make a combo now, so editing it has to write the
     // row, give it a live key and re-address the popup onto it without a further click.
     #[test]
-    fn editing_the_empty_entry_materialises_a_combo_and_selects_it() {
+    fn editing_the_empty_entry_materializes_a_combo_and_selects_it() {
         let root = std::env::temp_dir().join(format!("bcc-combo-new-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).expect("scratch");
@@ -2142,7 +2142,7 @@ mod append_tests {
         let written = fs::read_to_string(&file).expect("read back");
         let lines: Vec<&str> = written.lines().collect();
 
-        assert_eq!(lines.len(), 2, "the edit materialised the row");
+        assert_eq!(lines.len(), 2, "the edit materialized the row");
         assert!(lines[1].starts_with("3067,6,"), "with the next key in its series: {:?}", lines[1]);
 
         let _ = fs::remove_dir_all(&root);

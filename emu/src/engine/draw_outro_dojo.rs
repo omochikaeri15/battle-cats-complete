@@ -92,8 +92,8 @@ pub fn draw_outro_dojo(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
         let width = imgcut_get_sprite_cut(plate, 0)?[2].wrapping_mul(0x86);
         let height = imgcut_get_sprite_cut(plate, 0)?[3].wrapping_mul(0x86);
-        let centre = ops::div_2(get_drawable_width(ctx)?);
-        let left = centre.wrapping_add(ops::div_neg_200(width));
+        let center = ops::div_2(get_drawable_width(ctx)?);
+        let left = center.wrapping_add(ops::div_neg_200(width));
 
         draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, left, 0x32, ops::div_100(width), ops::div_100(height), 0);
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0xff, 0xff);

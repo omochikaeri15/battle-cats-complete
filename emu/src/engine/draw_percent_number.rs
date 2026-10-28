@@ -54,19 +54,19 @@ pub fn draw_percent_number(
     let start = half.wrapping_add(edge).wrapping_add(0x2a);
     let span = places.wrapping_mul(11);
     let mark = imgcut_get_sprite_cut(sheet, 0x10)?[2];
-    let centre = ops::div_2(span.wrapping_add(mark).wrapping_add(1))
+    let center = ops::div_2(span.wrapping_add(mark).wrapping_add(1))
         .wrapping_add(start)
         .wrapping_sub(imgcut_get_sprite_cut(sheet, 0x10)?[2]);
 
     draw_cut(
         draw_context(&mut ctx.draw)?,
         sheet,
-        centre,
+        center,
         y.wrapping_add(rise).wrapping_add(-1),
         0x10,
     );
 
-    let tail = centre.wrapping_add(-1);
+    let tail = center.wrapping_add(-1);
 
     draw_number_plain(
         draw_context(&mut ctx.draw)?,

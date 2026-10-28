@@ -49,8 +49,8 @@ fn fall(marker: f32) -> f32 {
     (fonts::TRIANGLE_REACH + fonts::TRIANGLE_GAP) * marker - LINE
 }
 
-fn snap(centre: f32) -> f32 {
-    (centre - LINE * 0.5).round()
+fn snap(center: f32) -> f32 {
+    (center - LINE * 0.5).round()
 }
 
 pub(crate) fn branches(guide: Guide, depth: u16, indent: f32, height: f32, marker: f32) -> Branches {
@@ -226,18 +226,18 @@ mod tests {
         assert!(read[4].trunks & 1 == 0, "C is the last child, so c has nothing to carry");
     }
 
-    // The elbow has to meet the arrow at its middle, not below it. A 21px row centres
+    // The elbow has to meet the arrow at its middle, not below it. A 21px row centers
     // on 10.5, and rounding that outright put the line a whole pixel low against a
     // 7px triangle — the arrow looked like it was being pointed at from underneath.
     #[test]
-    fn the_line_lands_on_the_centre_it_is_given() {
-        for (centre, size) in [(10.5, 18.0), (12.0, 22.0)] {
-            let drawn = snap(centre) + LINE * 0.5;
+    fn the_line_lands_on_the_center_it_is_given() {
+        for (center, size) in [(10.5, 18.0), (12.0, 22.0)] {
+            let drawn = snap(center) + LINE * 0.5;
 
-            assert!((drawn - centre).abs() <= LINE * 0.5, "{size}px marker: line at {drawn} for centre {centre}");
+            assert!((drawn - center).abs() <= LINE * 0.5, "{size}px marker: line at {drawn} for center {center}");
         }
 
-        assert_eq!(snap(10.5), 10.0, "an odd row has a pixel dead on its centre");
+        assert_eq!(snap(10.5), 10.0, "an odd row has a pixel dead on its center");
     }
 
     // The open arrow tapers to a point, and because its ink box is square it is exactly

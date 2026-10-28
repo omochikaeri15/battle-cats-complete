@@ -497,7 +497,7 @@ impl State {
             Message::Overlay(msg) => {
                 match msg {
                     overlay::Message::Selected(region) => self.export.set_region(region),
-                    overlay::Message::Cancelled => {}
+                    overlay::Message::Canceled => {}
                 }
                 self.overlay.selecting = false;
                 self.export_open = true;

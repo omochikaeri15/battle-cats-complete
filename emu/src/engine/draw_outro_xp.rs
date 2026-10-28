@@ -222,14 +222,14 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         if chapter != 3 && chapter != 0x63 {
             let popup = ctx.scene_img005_sheet.clone();
             let popup = popup.as_deref().ok_or(Fault::null_pointer())?;
-            let centre = ops::div_2(get_drawable_width(ctx)?);
+            let center = ops::div_2(get_drawable_width(ctx)?);
             let step = ctx.i32_at(AppContext::REWARD_POP_COUNTER)?;
             let grow = *POPUP_GROW_TABLE
                 .get(step as i64 as usize)
                 .ok_or(Fault::index_out_of_range(step as i64, POPUP_GROW_TABLE.len() as i64))?;
             let span = grow.wrapping_mul(0x2b2);
             let rise = grow.wrapping_mul(0xb3);
-            let x = ops::div_neg_200(span).wrapping_add(centre);
+            let x = ops::div_neg_200(span).wrapping_add(center);
             let y = ops::div_neg_200(rise).wrapping_add(0x1ea);
 
             draw_cut_scaled(draw_context(&mut ctx.draw)?, popup, x, y, ops::div_100(span), ops::div_100(rise), 0);
@@ -254,26 +254,26 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
     }
 
     if get_map_type(ctx, 0)? == -0x15 && ctx.i32_at(AppContext::OUTRO_PHASE)? >= 0x26 {
-        let centre = ops::div_2(get_drawable_width(ctx)?);
+        let center = ops::div_2(get_drawable_width(ctx)?);
         let plate = ctx.outro_event_sheets[1].clone();
         let plate = plate.as_deref().ok_or(Fault::null_pointer())?;
 
-        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, centre.wrapping_add(-0x151), 0x37, 0x2a2, 0x123, 0);
+        draw_cut_scaled(draw_context(&mut ctx.draw)?, plate, center.wrapping_add(-0x151), 0x37, 0x2a2, 0x123, 0);
         set_tint(draw_context(&mut ctx.draw)?, 0, 0, 0xff, 0xff);
 
         let title = ctx.outro_event_sheets[2].clone();
         let title = title.as_deref().ok_or(Fault::null_pointer())?;
 
-        draw_surface(draw_context(&mut ctx.draw)?, Surface::Sheet(title), centre.wrapping_add(-0x121), 0x5b);
+        draw_surface(draw_context(&mut ctx.draw)?, Surface::Sheet(title), center.wrapping_add(-0x121), 0x5b);
 
         let panel = ctx.outro_event_sheets[0].clone();
         let panel = panel.as_deref().ok_or(Fault::null_pointer())?;
-        let inset = centre.wrapping_add(-0x94);
+        let inset = center.wrapping_add(-0x94);
 
         draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0xb5, 0x9b, 0x25, 1.0, 0x11, 0x12)?;
         draw_panel(draw_context(&mut ctx.draw)?, panel, inset, 0xf0, 0x9b, 0x25, 1.0, 0x11, 0x12)?;
 
-        let caption = centre.wrapping_add(-0x115);
+        let caption = center.wrapping_add(-0x115);
 
         draw_cut(draw_context(&mut ctx.draw)?, panel, caption, 0xb7, 4);
 
@@ -286,7 +286,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let reach = imgcut_get_sprite_cut(panel, marker)?[2].wrapping_add(span);
         let tail = imgcut_get_sprite_cut(panel, 0xb)?[2];
         let anchor = ops::div_2(reach.wrapping_add(tail).wrapping_add(8))
-            .wrapping_add(centre)
+            .wrapping_add(center)
             .wrapping_add(-0x46)
             .wrapping_sub(imgcut_get_sprite_cut(panel, 0xb)?[2]);
 
@@ -307,7 +307,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let span = places.wrapping_mul(14);
         let mark = imgcut_get_sprite_cut(small, 0x7c)?[2];
         let anchor = ops::div_2(span.wrapping_add(mark).wrapping_add(4))
-            .wrapping_add(centre)
+            .wrapping_add(center)
             .wrapping_add(-0x46)
             .wrapping_sub(imgcut_get_sprite_cut(small, 0x7c)?[2]);
 
@@ -320,7 +320,7 @@ pub fn draw_outro_xp(ctx: &mut AppContext, hidden: u8) -> Result<(), Fault> {
         let small = ctx.img001_second_sheet.clone();
         let small = small.as_deref().ok_or(Fault::null_pointer())?;
 
-        draw_labyrinth_gauge(ctx, gauge, small, centre.wrapping_add(0x13), 0x64, floor)?;
+        draw_labyrinth_gauge(ctx, gauge, small, center.wrapping_add(0x13), 0x64, floor)?;
     }
 
     if dialog_top(ctx).is_some() {

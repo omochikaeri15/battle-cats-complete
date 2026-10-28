@@ -1,4 +1,4 @@
-//! Parsing of the item catalogue.
+//! Parsing of the item catalog.
 //!
 //! The engine declares one item per row of `Gatyaitembuy.csv`, below a single
 //! header line, and writes that item's localized name on the matching line of
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::common::columns::{self, Column};
 use crate::common::file::{self, Separator};
 
-/// Represents errors that can occur while parsing the item catalogue.
+/// Represents errors that can occur while parsing the item catalog.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum GatyaItemBuyError {
@@ -24,7 +24,7 @@ pub enum GatyaItemBuyError {
 impl fmt::Display for GatyaItemBuyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyFile => write!(f, "The provided file bytes contained no valid item catalogue data."),
+            Self::EmptyFile => write!(f, "The provided file bytes contained no valid item catalog data."),
         }
     }
 }
@@ -130,7 +130,7 @@ impl GatyaItemBuy {
 
     /// The `gatyaitemD` sprite the engine draws for this item.
     ///
-    /// A row that names no sprite defers to its own line in the catalogue, which
+    /// A row that names no sprite defers to its own line in the catalog, which
     /// the caller holds as the row's position in the parsed vector.
     ///
     /// # Arguments
@@ -161,7 +161,7 @@ impl GatyaItemBuy {
         row
     }
 
-    /// Parses the item catalogue into one row per item.
+    /// Parses the item catalog into one row per item.
     ///
     /// The header line the file opens with is dropped, so a row's position in
     /// the returned vector is the line its localized name occupies in
@@ -220,7 +220,7 @@ mod tests {
 
     const HEADER: &str = "Rarity,reflectORstorage,Price,stageDropItemID,quantity,SeverID,category,index,srcItemID,mainMenuType,gatyaTicketID,imgID,comment";
 
-    /// Line 1 of a real `Gatyaitembuy.csv`, the first catalogue row.
+    /// Line 1 of a real `Gatyaitembuy.csv`, the first catalog row.
     const FIRST_ROW: &str = "1,0,1000,0,1,0,3,0,-1,0,-1,-1,スピードアップ";
 
     /// Line 28 of the same file, where the drop identifier and the line diverge.

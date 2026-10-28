@@ -132,7 +132,7 @@ mod tests {
 
     #[derive(Default, Serialize)]
     struct OldItemStore {
-        catalogue: Option<u8>,
+        catalog: Option<u8>,
         lines: Option<u8>,
         names: Option<u8>,
     }

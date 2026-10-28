@@ -37,7 +37,7 @@ use crate::systems::emu::SheetCache;
 use crate::common::{digest, feedback::Slot};
 use crate::widget::{headline, popup, smooth_scroll, toast, Tone};
 
-const ACKNOWLEDGEMENT: &str = r#"
+const ACKNOWLEDGMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
 By accepting this agreement, you must have read, understood, and accepted the following facts about Sandbox:
 
@@ -48,7 +48,7 @@ By accepting this agreement, you must have read, understood, and accepted the fo
 
 You can accept the agreement by clicking the "Agree" button below. Selecting "Disagree" will redirect you to the Home menu.
 "#;
-const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgement, Size::new(560.0, 435.0));
+const ACKNOWLEDGE_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Acknowledgment, Size::new(560.0, 435.0));
 const FAULT_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Fault, Size::new(460.0, 260.0));
 const DIAGNOSTICS_POPUP: popup::Spec = popup::Spec::new(popup::Kind::Diagnostics, Size::new(520.0, 360.0));
 const VERSION_POPUP: popup::Spec = popup::Spec::new(popup::Kind::ReplayVersion, Size::new(460.0, 372.0));
@@ -147,7 +147,7 @@ impl Default for State {
             diagnosing: false,
             probe: None,
             readout: Readout::default(),
-            terms: crate::common::markdown::parse(ACKNOWLEDGEMENT),
+            terms: crate::common::markdown::parse(ACKNOWLEDGMENT),
             status: String::new(),
             reported: String::new(),
             cut: Slot::default(),
@@ -215,7 +215,7 @@ fn game_key(event: iced::Event, _status: iced::event::Status, _window: iced::win
 }
 
 fn agreement() -> String {
-    digest::hash(&[ACKNOWLEDGEMENT])
+    digest::hash(&[ACKNOWLEDGMENT])
 }
 
 impl Message {
@@ -968,7 +968,7 @@ impl State {
 
     pub fn prompt_view(&self, window: Size, ui_theme: Theme) -> Option<Element<'_, Message>> {
         self.prompt_open.then(|| {
-            self.prompt.view("Acknowledgement", ACKNOWLEDGE_POPUP, window, Message::Popup, move || self.prompt_content(&ui_theme), None)
+            self.prompt.view("Acknowledgment", ACKNOWLEDGE_POPUP, window, Message::Popup, move || self.prompt_content(&ui_theme), None)
         })
     }
 

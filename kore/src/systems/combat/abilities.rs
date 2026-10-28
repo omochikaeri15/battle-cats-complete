@@ -40,7 +40,7 @@ pub fn collect_ability_data(ctx: &RenderContext<'_>) -> AbilityGroups {
 
         let attrs = (pure_def.attributes)(ctx.final_stats);
 
-        if attrs.is_empty() || !levelled(pure_def.identity, ctx.final_stats) { continue; }
+        if attrs.is_empty() || !leveled(pure_def.identity, ctx.final_stats) { continue; }
 
         let format_ctx = FormatContext {
             value: attrs.first().map_or(AttrValue::Finite(0), |(_, value, _)| *value),
@@ -128,7 +128,7 @@ fn frames(value: AttrValue) -> i32 {
     }
 }
 
-fn levelled(identity: Identity, stats: &Entity) -> bool {
+fn leveled(identity: Identity, stats: &Entity) -> bool {
     match identity {
         Identity::WaveAttack | Identity::MiniWave => stats.wave_level != 0,
         Identity::SurgeAttack | Identity::MiniSurge => stats.surge_level != 0,

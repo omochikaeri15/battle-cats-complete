@@ -753,7 +753,7 @@ mod tests {
     #[test]
     fn a_count_larger_than_the_rows_present_writes_back_the_rows_it_had() {
         // 17 modder files declare one; nyanko repeats the last row it read to fill the
-        // gap, and materialising those repeats would rewrite a file nobody edited.
+        // gap, and materializing those repeats would rewrite a file nobody edited.
         let truncated = "[modelanim:model]\n1\n4\n-1,0,0,0,0,0,0,0,1000,1000,0,1000,0,body\n";
 
         assert_eq!(round_trip(truncated), truncated);

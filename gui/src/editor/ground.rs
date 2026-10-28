@@ -1882,7 +1882,7 @@ mod tests {
     // A new row is written in file units, so the seeds go through the same scale the
     // editor shows them at: a spawn of 2 frames is a stored 1, because that column is Double.
     // The buffer prefix lets a half-typed value sit in the field without being committed
-    // and normalised under the cursor, the way it does in the figures editor.
+    // and normalized under the cursor, the way it does in the figures editor.
     // The header and config rows are seated ahead of the spawns, so a file that opens
     // straight into its config still leaves the spawn rows starting at the same place.
     #[test]
@@ -2149,7 +2149,7 @@ mod tests {
         );
     }
 
-    // The seat is a function of how far the cursor has travelled from the grab, not a
+    // The seat is a function of how far the cursor has traveled from the grab, not a
     // running tally, so wandering up and coming back lands the row where the cursor is.
     // Past the ends of the list the hold lets go rather than following from a distance.
     #[test]

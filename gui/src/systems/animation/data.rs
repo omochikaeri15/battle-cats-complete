@@ -921,9 +921,9 @@ mod tests {
 
         assert!(!loose.showcasable(), "no role resolved means we do not know what any motion is");
 
-        let modelled = seeded("modelled", vec![motion(Some(Role::Walk), None)]);
+        let modeled = seeded("modeled", vec![motion(Some(Role::Walk), None)]);
 
-        assert!(!modelled.showcasable(), "a role with no file on disk cannot be loaded either");
+        assert!(!modeled.showcasable(), "a role with no file on disk cannot be loaded either");
     }
 
     #[test]

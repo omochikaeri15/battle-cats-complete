@@ -97,7 +97,7 @@ mod tests {
     use super::*;
 
     // Empire of Cats reuses stage 47's name for 48, 49 and 50, and only there. Getting
-    // this wrong renames a neighbouring stage rather than failing, so it is pinned.
+    // this wrong renames a neighboring stage rather than failing, so it is pinned.
     #[test]
     fn the_story_chapters_read_one_name_per_line() {
         assert_eq!(stage_name_address("EC", 0, 12), (12, 0));

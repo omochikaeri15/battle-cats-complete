@@ -277,7 +277,7 @@ impl Renderer {
                 return Err(message);
             }
             Err(_) => {
-                let message = "Export readback mapping was never signalled".to_string();
+                let message = "Export readback mapping was never signaled".to_string();
                 error!("{message}");
                 return Err(message);
             }

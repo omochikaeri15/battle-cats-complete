@@ -23,7 +23,7 @@ impl State {
         let (side, stage): (Element<'_, Message>, Element<'_, Message>) = match self.mode {
             Mode::Atlas => (
                 column![vacant_cuts(), vacant_slices()].spacing(GAP).height(Length::Fill).into(),
-                stack![console_card(centred(NO_SET_HINT)), console_edge()].into(),
+                stack![console_card(centered(NO_SET_HINT)), console_edge()].into(),
             ),
             Mode::Entity => {
                 let shown = match self.readout {
@@ -32,7 +32,7 @@ impl State {
                 };
 
                 (
-                    column![console_card(centred(NO_SET_NOTICE)), vacant_keys()]
+                    column![console_card(centered(NO_SET_NOTICE)), vacant_keys()]
                         .spacing(GAP)
                         .height(Length::Fill)
                         .into(),
@@ -181,10 +181,10 @@ impl Session {
     }
 
     fn side(&self, shipping: Shipping) -> Element<'_, Message> {
-        let channelled =
+        let channeled =
             self.focus == Focus::Curve && self.draft.as_ref().is_some_and(|draft| draft.track.is_some());
 
-        let body = match (self.mode, channelled) {
+        let body = match (self.mode, channeled) {
             (Mode::Atlas, _) => column![self.loaders(), self.cuts()],
             (Mode::Entity, true) => column![self.tree(), self.keys()],
             (Mode::Entity, false) => column![self.tree(), self.fields()],
@@ -199,7 +199,7 @@ impl Session {
                 .picture
                 .view_outlined(&atlas.source, &atlas.outlines, self.framing.is_some())
                 .map(Message::Picture),
-            None => centred(NO_ATLAS_NOTICE),
+            None => centered(NO_ATLAS_NOTICE),
         };
 
         let framing = self.framing.is_some();
@@ -990,7 +990,7 @@ pub(super) fn console_card<'a>(body: impl Into<Element<'a, Message>>) -> Element
         .into()
 }
 
-pub(super) fn centred<'a>(notice: &'a str) -> Element<'a, Message> {
+pub(super) fn centered<'a>(notice: &'a str) -> Element<'a, Message> {
     container(theme::centered_text(notice).size(LABEL_SIZE))
         .width(Length::Fill)
         .height(Length::Fill)
@@ -1142,13 +1142,13 @@ pub(super) fn vacant_cuts<'a>() -> Element<'a, Message> {
 }
 
 pub(super) fn vacant_slices<'a>() -> Element<'a, Message> {
-    let table = console_card(column![cuts_header(0.0), centred(NO_SET_NOTICE)].width(Length::Fill));
+    let table = console_card(column![cuts_header(0.0), centered(NO_SET_NOTICE)].width(Length::Fill));
 
     column![table, footer_button("Add Cut", None)].spacing(ROW_GAP).height(Length::Fill).into()
 }
 
 pub(super) fn vacant_keys<'a>() -> Element<'a, Message> {
-    let table = console_card(column![keys_header(0.0), centred(NO_SET_HINT)].width(Length::Fill));
+    let table = console_card(column![keys_header(0.0), centered(NO_SET_HINT)].width(Length::Fill));
 
     column![table, footer_button("Add Keyframe", None)].spacing(ROW_GAP).height(Length::Fill).into()
 }

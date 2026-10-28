@@ -19,7 +19,7 @@ pub struct State {
 #[derive(Debug, Clone)]
 pub enum Message {
     Selected(Region),
-    Cancelled,
+    Canceled,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -129,7 +129,7 @@ impl canvas::Program<Message> for Selector {
                         h: (b.y - a.y).abs(),
                     })
                 } else {
-                    Message::Cancelled
+                    Message::Canceled
                 };
 
                 Some(canvas::Action::publish(message).and_capture())

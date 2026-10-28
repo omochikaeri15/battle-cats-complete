@@ -698,7 +698,7 @@ mod tests {
 
     // Which unit a file belongs to cannot depend on the folder layout the user picked.
     #[test]
-    fn unit_files_are_recognised_under_either_structure() {
+    fn unit_files_are_recognized_under_either_structure() {
         use super::super::units::{Home, Kind, Role, Unit};
 
         let flat = AssetRouter::new(Path::new("game"), ImportStructure::Flat).expect("router");

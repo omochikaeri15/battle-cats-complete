@@ -47,7 +47,7 @@ pub struct Dialog {
     pub lit: [u8; 3],
     pub visible: [u8; 3],
     pub dimmable: [u8; 3],
-    pub greyed: [u8; 3],
+    pub grayed: [u8; 3],
     pub audible: [u8; 3],
     pub close_hover: u8,
     pub button: i32,
@@ -311,7 +311,7 @@ pub fn dialog_new(
     this.visible = [1; 3];
     this.lit = [1; 3];
     this.dimmable = [1; 3];
-    this.greyed = [0; 3];
+    this.grayed = [0; 3];
     this.hover = [0; 3];
     this.close_hover = 0;
     this.button = -1;

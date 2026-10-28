@@ -133,11 +133,11 @@ fn ledger<'a>(
             lines = lines.push(dark_box(change_row(change), Length::Shrink));
         }
 
-        panel = panel.push(labelled("Statistics", lines));
+        panel = panel.push(labeled("Statistics", lines));
     }
 
     if !abilities.is_empty() {
-        panel = panel.push(labelled("Abilities", ability_groups(abilities, icons)));
+        panel = panel.push(labeled("Abilities", ability_groups(abilities, icons)));
     }
 
     Some(

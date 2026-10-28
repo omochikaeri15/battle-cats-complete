@@ -721,9 +721,9 @@ mod tests {
         };
 
         let motions = set.motions(FrameCount::Automatic).motions;
-        let labelled: Vec<String> = motions.iter().map(Motion::label).collect();
+        let labeled: Vec<String> = motions.iter().map(Motion::label).collect();
 
-        assert_eq!(labelled, vec!["044_f00", "044_f02", "044_f_zombie00", "Model"]);
+        assert_eq!(labeled, vec!["044_f00", "044_f02", "044_f_zombie00", "Model"]);
         assert!(motions.iter().all(|motion| motion.role.is_none()), "no motion claims a role");
 
         // Slots are what pinned a motion to a fixed grid cell; without them the buttons
@@ -772,7 +772,7 @@ mod tests {
 
     #[test]
     fn a_renamed_track_reports_the_label_its_motion_will_carry() {
-        // Renaming in place to a recognised slot renames the button too, so re-selecting
+        // Renaming in place to a recognized slot renames the button too, so re-selecting
         // by the old file stem loses the animation the user was editing.
         let seat = |at: &str| Set {
             model: Some(PathBuf::from("game/cats/001/c/anim/001_c.mamodel")),

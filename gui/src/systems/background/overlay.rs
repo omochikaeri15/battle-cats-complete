@@ -22,7 +22,7 @@ pub struct State {
 #[derive(Debug, Clone)]
 pub enum Message {
     Selected(Camera),
-    Cancelled,
+    Canceled,
 }
 
 impl State {
@@ -103,7 +103,7 @@ impl canvas::Program<Message> for Selector {
                         [scene_bottom_right[0] - scene_top_left[0], scene_bottom_right[1] - scene_top_left[1]],
                     ))
                 } else {
-                    Message::Cancelled
+                    Message::Canceled
                 };
 
                 Some(canvas::Action::publish(message).and_capture())

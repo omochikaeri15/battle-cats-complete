@@ -270,7 +270,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_localized_table_is_recognised_only_in_its_own_family() {
+    fn a_localized_table_is_recognized_only_in_its_own_family() {
         assert_eq!(explanation("Unit_Explanation301_ko.csv"), Some((300, "ko".to_string())));
         assert_eq!(explanation("Unit_Explanation301.csv"), Some((300, String::new())));
         assert!(explanation("Unit_Explanation0.csv").is_none(), "there is no unit before the first");

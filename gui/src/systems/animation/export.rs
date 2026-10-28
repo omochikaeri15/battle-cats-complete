@@ -1682,7 +1682,7 @@ mod tests {
         assert_eq!(
             held.exporter.export_mode,
             ExportMode::Manual,
-            "and the mode it can no longer honour is dropped",
+            "and the mode it can no longer honor is dropped",
         );
     }
 }

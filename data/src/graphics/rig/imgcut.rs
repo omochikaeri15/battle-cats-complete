@@ -88,11 +88,11 @@ pub struct SpriteSheet {
     /// whenever the sprite inside it is not itself rectangular. Those corners
     /// cost nothing while the part is unrotated and inflate its measured extent
     /// as soon as it turns, so a consumer measuring a rotated part wants this
-    /// instead. The points address pixel corners rather than pixel centres, so
+    /// instead. The points address pixel corners rather than pixel centers, so
     /// the right edge of a cut's visible pixels reads as `x + width` in the same
     /// atlas pixel space as [`SpriteCut`].
     ///
-    /// A hull is held to sixty-four points by merging neighbouring columns
+    /// A hull is held to sixty-four points by merging neighboring columns
     /// before it is built, so a cut whose outline is finer than that reports a
     /// bound enclosing its visible pixels rather than their exact hull.
     pub hull: Vec<Vec<(i32, i32)>>,

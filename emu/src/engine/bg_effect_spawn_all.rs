@@ -27,11 +27,11 @@ pub fn bg_effect_spawn_all(ctx: &mut AppContext) -> Result<(), Fault> {
     let zoom = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?;
     let lift = ops::idiv(lift, zoom).ok_or(Fault::divide(zoom as i64))?;
     let top = 0x1e0i32.wrapping_sub(lift) as f32;
-    let centre = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5) as f32;
+    let center = ((get_drawable_width(ctx)?.wrapping_add(-0x3c0) as f64) * 0.5) as f32;
     let scale = ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)?.wrapping_mul(100) as f32 / 10000.0;
     let zero = 0.0f32 * scale;
     let back = ((0x3c0i32.wrapping_sub(get_drawable_width(ctx)?) as f64) * 0.5) as f32;
-    let across = back * scale + zero * -520.0 + centre;
+    let across = back * scale + zero * -520.0 + center;
     let down = back * zero + -520.0 * scale + 520.0;
     let x = (left * scale + zero * top + across) * 1000.0
         / ctx.i32_at(AppContext::CAMERA_MIN_ZOOM)? as f32

@@ -65,11 +65,11 @@ impl Verb {
         }
     }
 
-    fn label(self, name: &str, mount: &Mount<'_>, labelling: Labelling) -> String {
-        match labelling {
-            Labelling::Verbose => self.flat(name, mount.name),
-            Labelling::Terse => self.nested().to_owned(),
-            Labelling::Named => name.to_owned(),
+    fn label(self, name: &str, mount: &Mount<'_>, labeling: Labeling) -> String {
+        match labeling {
+            Labeling::Verbose => self.flat(name, mount.name),
+            Labeling::Terse => self.nested().to_owned(),
+            Labeling::Named => name.to_owned(),
         }
     }
 }
@@ -117,7 +117,7 @@ impl Style {
 }
 
 #[derive(Clone, Copy)]
-enum Labelling {
+enum Labeling {
     Verbose,
     Terse,
     Named,
@@ -279,7 +279,7 @@ fn channels(target: &studio::Channels) -> Vec<Item> {
         .map(|kind| (kind, authoring::kind_label(kind).to_owned()))
         .collect();
 
-    let adding = match (target.channelled, absent.as_slice()) {
+    let adding = match (target.channeled, absent.as_slice()) {
         (false, _) => Item::disabled(format!("Add channel to \"{subject}\""), NO_MOTION_NOTICE),
         (_, []) => Item::disabled(format!("Add channel to \"{subject}\""), EVERY_CHANNEL_NOTICE),
         (_, [(kind, label)]) => Item::new(
@@ -480,13 +480,13 @@ impl Payload<'_> {
 
     fn flat(&self, plans: &mut [Option<prose::Plan>]) -> Vec<Item> {
         if let [only] = self.scopes.as_slice() {
-            return self.bare(0, only, plans, Labelling::Verbose);
+            return self.bare(0, only, plans, Labeling::Verbose);
         }
 
         let mut columns: Vec<(Verb, Vec<Item>)> = Vec::new();
 
         for (at, scope) in self.scopes.iter().enumerate() {
-            for (verb, item) in self.verbs(at, scope, plans, Labelling::Named) {
+            for (verb, item) in self.verbs(at, scope, plans, Labeling::Named) {
                 match columns.iter_mut().find(|(known, _)| *known == verb) {
                     Some((_, listed)) => listed.push(item),
                     None => columns.push((verb, vec![item])),
@@ -514,14 +514,14 @@ impl Payload<'_> {
 
     fn nested(&self, plans: &mut [Option<prose::Plan>]) -> Item {
         let children = match self.scopes.as_slice() {
-            [only] => self.bare(0, only, plans, Labelling::Terse),
+            [only] => self.bare(0, only, plans, Labeling::Terse),
             scopes => {
                 let mut per_file = Vec::with_capacity(scopes.len());
 
                 for (at, scope) in scopes.iter().enumerate() {
                     per_file.push(Item::list(
                         scope.name.to_owned(),
-                        self.bare(at, scope, plans, Labelling::Terse),
+                        self.bare(at, scope, plans, Labeling::Terse),
                     ));
                 }
 
@@ -537,9 +537,9 @@ impl Payload<'_> {
         at: usize,
         scope: &Scope<'_>,
         plans: &mut [Option<prose::Plan>],
-        labelling: Labelling,
+        labeling: Labeling,
     ) -> Vec<Item> {
-        self.verbs(at, scope, plans, labelling).into_iter().map(|(_, item)| item).collect()
+        self.verbs(at, scope, plans, labeling).into_iter().map(|(_, item)| item).collect()
     }
 
     fn subject(&self) -> String {
@@ -556,14 +556,14 @@ impl Payload<'_> {
         at: usize,
         scope: &Scope<'_>,
         plans: &mut [Option<prose::Plan>],
-        labelling: Labelling,
+        labeling: Labeling,
     ) -> Vec<(Verb, Item)> {
         let mut items = Vec::new();
         let target_mod = self.mount.target.map(str::to_owned);
 
         match self.primary {
             Primary::Unsupported(verb) => {
-                items.push((verb, Item::unsupported(verb.label(scope.name, &self.mount, labelling))));
+                items.push((verb, Item::unsupported(verb.label(scope.name, &self.mount, labeling))));
             }
             Primary::Ground(target) => {
                 let plan = ground::plan(
@@ -576,7 +576,7 @@ impl Payload<'_> {
                 items.push((
                     Verb::Edit,
                     self.mount.item(
-                        Verb::Edit.label(scope.name, &self.mount, labelling),
+                        Verb::Edit.label(scope.name, &self.mount, labeling),
                         Action::EditGround(plan),
                         Confirm::Never,
                     ),
@@ -587,7 +587,7 @@ impl Payload<'_> {
                     items.push((
                         Verb::Edit,
                         self.mount.item(
-                            Verb::Edit.label(scope.name, &self.mount, labelling),
+                            Verb::Edit.label(scope.name, &self.mount, labeling),
                             Action::EditFigures(plan),
                             Confirm::Never,
                         ),
@@ -597,7 +597,7 @@ impl Payload<'_> {
             Primary::Animation(target) => {
                 let plan = super::anim_plan(target, self.mount.target.map(str::to_owned));
                 let item =
-                    Item::new(Verb::Edit.label(scope.name, &self.mount, labelling), Action::EditAnimation(plan));
+                    Item::new(Verb::Edit.label(scope.name, &self.mount, labeling), Action::EditAnimation(plan));
 
                 let item = match (self.mount.target, self.mount.locked) {
                     (None, false) => item.confirming(),
@@ -606,11 +606,11 @@ impl Payload<'_> {
 
                 items.push((Verb::Edit, item));
             }
-            Primary::Replace => items.push((Verb::Replace, replace(scope, &self.mount, labelling))),
+            Primary::Replace => items.push((Verb::Replace, replace(scope, &self.mount, labeling))),
             Primary::Cat(cat) => items.push((
                 Verb::Edit,
                 self.mount.item(
-                    Verb::Edit.label(scope.name, &self.mount, labelling),
+                    Verb::Edit.label(scope.name, &self.mount, labeling),
                     Action::EditFigures(cat_plan(cat, target_mod, self.values)),
                     Confirm::Never,
                 ),
@@ -618,7 +618,7 @@ impl Payload<'_> {
             Primary::Enemy(enemy) => items.push((
                 Verb::Edit,
                 self.mount.item(
-                    Verb::Edit.label(scope.name, &self.mount, labelling),
+                    Verb::Edit.label(scope.name, &self.mount, labeling),
                     Action::EditFigures(enemy_plan(enemy, target_mod, self.values)),
                     Confirm::Never,
                 ),
@@ -628,7 +628,7 @@ impl Payload<'_> {
                     items.push((
                         Verb::Edit,
                         self.mount.item(
-                            Verb::Edit.label(scope.name, &self.mount, labelling),
+                            Verb::Edit.label(scope.name, &self.mount, labeling),
                             Action::EditProse(plan),
                             Confirm::Never,
                         ),
@@ -637,17 +637,17 @@ impl Payload<'_> {
             }
         }
 
-        items.push((Verb::Open, open(scope, &self.mount, labelling)));
-        items.push((Verb::Find, find(scope, &self.mount, labelling)));
-        items.extend(sync(scope, &self.mount, labelling).map(|item| (Verb::Sync, item)));
-        items.push((Verb::Delete, delete(scope, &self.mount, labelling)));
+        items.push((Verb::Open, open(scope, &self.mount, labeling)));
+        items.push((Verb::Find, find(scope, &self.mount, labeling)));
+        items.extend(sync(scope, &self.mount, labeling).map(|item| (Verb::Sync, item)));
+        items.push((Verb::Delete, delete(scope, &self.mount, labeling)));
 
         items
     }
 }
 
-fn open(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
-    let label = Verb::Open.label(scope.name, mount, labelling);
+fn open(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Open.label(scope.name, mount, labeling);
 
     let Some(path) = scope.present else {
         return Item::disabled(label, absent(mount));
@@ -659,8 +659,8 @@ fn open(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
     }
 }
 
-fn find(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
-    let label = Verb::Find.label(scope.name, mount, labelling);
+fn find(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Find.label(scope.name, mount, labeling);
 
     let Some(path) = scope.present else {
         return Item::disabled(label, absent(mount));
@@ -669,8 +669,8 @@ fn find(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
     Item::new(label, Action::Find { source: path.to_path_buf() })
 }
 
-fn replace(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
-    let label = Verb::Replace.label(scope.name, mount, labelling);
+fn replace(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Replace.label(scope.name, mount, labeling);
 
     if mount.locked {
         return Item::disabled(label, LOCKED_NOTICE);
@@ -694,11 +694,11 @@ fn replace(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
     if scope.present.is_some() { item.confirming() } else { item }
 }
 
-fn sync(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Option<Item> {
+fn sync(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Option<Item> {
     let active = mount.target?;
     let game = scope.source?;
 
-    let label = Verb::Sync.label(scope.name, mount, labelling);
+    let label = Verb::Sync.label(scope.name, mount, labeling);
 
     let item = Item::new(
         label,
@@ -712,8 +712,8 @@ fn sync(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Option<It
     Some(if scope.present.is_some() { item.confirming() } else { item })
 }
 
-fn delete(scope: &Scope<'_>, mount: &Mount<'_>, labelling: Labelling) -> Item {
-    let label = Verb::Delete.label(scope.name, mount, labelling);
+fn delete(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Delete.label(scope.name, mount, labeling);
 
     if mount.locked {
         return Item::disabled(label, LOCKED_NOTICE);
@@ -814,11 +814,11 @@ fn files(items: &mut Vec<Item>, file: &FileTarget) {
         ));
     }
 
-    items.push(open(&scope, &browsing, Labelling::Verbose));
-    items.push(find(&scope, &browsing, Labelling::Verbose));
+    items.push(open(&scope, &browsing, Labeling::Verbose));
+    items.push(find(&scope, &browsing, Labeling::Verbose));
 
     if file.mount != architecture::GAME {
-        items.extend(sync(&scope, &mount, Labelling::Verbose));
+        items.extend(sync(&scope, &mount, Labeling::Verbose));
         items.push(discard(file));
 
         return;

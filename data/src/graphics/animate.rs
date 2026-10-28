@@ -176,7 +176,7 @@ mod tests {
         vec![Keyframe { frame: 0, value, ease: 0, ease_power: 0 }]
     }
 
-    fn centre(frames: &[FrameData], index: usize) -> (f32, f32) {
+    fn center(frames: &[FrameData], index: usize) -> (f32, f32) {
         let vertices = frames[index].vertices;
         let x = vertices.iter().step_by(2).sum::<f32>() / 4.0;
         let y = vertices.iter().skip(1).step_by(2).sum::<f32>() / 4.0;
@@ -199,8 +199,8 @@ mod tests {
         let resting = resolve_frame(&rig, Some(&anim), 0, Some(0));
         let turned = resolve_frame(&rig, Some(&anim), 15, Some(0));
 
-        assert_eq!(centre(&resting, 0), (0.0, -32.0));
-        assert_eq!(centre(&turned, 0), (0.0, 32.0));
+        assert_eq!(center(&resting, 0), (0.0, -32.0));
+        assert_eq!(center(&turned, 0), (0.0, 32.0));
     }
 
     #[test]
@@ -210,8 +210,8 @@ mod tests {
         let root = resolve_frame(&rig(parts.clone(), vec![align(0)]), None, 0, Some(0));
         let child = resolve_frame(&rig(parts, vec![align(1)]), None, 0, Some(0));
 
-        assert_eq!(centre(&root, 1), (100.0, -32.0));
-        assert_eq!(centre(&child, 1), (0.0, -32.0));
+        assert_eq!(center(&root, 1), (100.0, -32.0));
+        assert_eq!(center(&child, 1), (0.0, -32.0));
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
 
         let frames = resolve_frame(&rig, Some(&anim), 0, Some(0));
 
-        assert_eq!(centre(&frames, 0), (0.0, -32.0));
+        assert_eq!(center(&frames, 0), (0.0, -32.0));
     }
 
     #[test]
@@ -231,6 +231,6 @@ mod tests {
 
         let frames = resolve_frame(&rig, Some(&anim), 0, Some(0));
 
-        assert_eq!(centre(&frames, 0), (0.0, -64.0));
+        assert_eq!(center(&frames, 0), (0.0, -64.0));
     }
 }

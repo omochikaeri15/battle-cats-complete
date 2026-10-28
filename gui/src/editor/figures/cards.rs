@@ -59,7 +59,7 @@ pub(super) fn grid<'a>(
     shown: &[usize],
     dim_from: Option<usize>,
 ) -> Element<'a, Message> {
-    let area = scrollable(centred(lay(draft, width, shown, dim_from)))
+    let area = scrollable(centered(lay(draft, width, shown, dim_from)))
         .id(grid_id(draft.schema().subject()))
         .on_scroll(|viewport| Message::Scrolled(viewport.absolute_offset().y))
         .width(Length::Fill)
@@ -72,7 +72,7 @@ pub(super) fn band<'a>(draft: &'a Draft, width: f32, shown: &[usize]) -> Element
     container(lay(draft, width, shown, None)).width(Length::Fill).center_x(Length::Fill).into()
 }
 
-fn centred<'a>(rows: Column<'a, Message>) -> Container<'a, Message> {
+fn centered<'a>(rows: Column<'a, Message>) -> Container<'a, Message> {
     container(rows)
         .width(Length::Fill)
         .center_x(Length::Fill)

@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn a_row_lands_without_disturbing_its_neighbours() {
+    fn a_row_lands_without_disturbing_its_neighbors() {
         let body = "a\nb\nc\n";
 
         assert_eq!(with_line(body, 1, "x"), "a\nx\nb\nc\n");

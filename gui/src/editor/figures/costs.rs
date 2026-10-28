@@ -78,7 +78,7 @@ fn curves<'a>(draft: &'a Draft, width: f32, used: Marks) -> Element<'a, Message>
         placed += 1;
     }
 
-    centred(rows.push(line).into())
+    centered(rows.push(line).into())
 }
 
 fn curve_key<'a>(id: u32, current: bool, referenced: bool) -> Element<'a, Message> {
@@ -132,7 +132,7 @@ fn headings<'a>() -> Element<'a, Message> {
         .padding(ROW_PADDING)
         .style(theme::zebra_table_header);
 
-    centred(framed.into())
+    centered(framed.into())
 }
 
 fn step<'a>(
@@ -173,10 +173,10 @@ fn striped<'a>(content: Element<'a, Message>, index: usize) -> Element<'a, Messa
         .padding(ROW_PADDING)
         .style(move |theme: &Theme| theme::zebra_table_row(theme, index));
 
-    centred(framed.into())
+    centered(framed.into())
 }
 
-fn centred<'a>(content: Element<'a, Message>) -> Element<'a, Message> {
+fn centered<'a>(content: Element<'a, Message>) -> Element<'a, Message> {
     container(content).width(Length::Fill).center_x(Length::Fill).into()
 }
 

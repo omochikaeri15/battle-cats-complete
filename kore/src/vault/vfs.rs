@@ -1421,7 +1421,7 @@ mod tests {
     fn a_contested_copy_is_still_tracked_so_a_mod_need_not_remount() {
         // indexed() deliberately says no for a contested name, and the mods page
         // used that to decide a deletion was surgical. It fell back to re-walking
-        // the whole mod, so the removal has to be recognisable some other way.
+        // the whole mod, so the removal has to be recognizable some other way.
         let scratch = Scratch::new("tracked");
         let root = &scratch.0;
         let patch = root.join("patch");
