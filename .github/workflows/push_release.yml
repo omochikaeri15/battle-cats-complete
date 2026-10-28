@@ -1,12 +1,13 @@
-name: Build & Draft Release
+name: Build & Publish Release
 
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'Cargo.toml'
-      - 'gui/Cargo.toml'
   workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -47,7 +48,7 @@ jobs:
   build-windows:
     name: Build Windows (x64)
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -81,7 +82,7 @@ jobs:
   build-linux:
     name: Build Linux (${{ matrix.flavor }})
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -130,7 +131,7 @@ jobs:
   build-macos:
     name: Build MacOS (${{ matrix.flavor }})
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -173,23 +174,25 @@ jobs:
           retention-days: 1
 
   create-release:
-    name: Create Release Draft
+    name: Publish Release
     needs: [check-version, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v4
 
       - name: List artifacts (Verification)
         run: ls -R
 
-      - name: Create Release Draft
+      - name: Publish Release
         env:
           GITHUB_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
         run: |
           gh release create "v${{ needs.check-version.outputs.app_version }}" \
             --repo "${{ github.repository }}" \
             --title "v${{ needs.check-version.outputs.app_version }}" \
-            --draft \
+            --notes-file CHANGELOG.md \
             windows-x64-build/bcc_windows_x64.zip \
             linux-x64-build/bcc_linux_x64.zip \
             linux-arm-build/bcc_linux_arm.zip \
