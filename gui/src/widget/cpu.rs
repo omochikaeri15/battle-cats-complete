@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use iced::advanced::image::Handle;
 use iced::widget::canvas::{self, Canvas, Geometry};
@@ -13,11 +14,13 @@ use iced::widget::stack;
 use iced::{mouse, Element, Event, Length, Rectangle, Theme};
 use image::RgbaImage;
 use rustc_hash::FxHasher;
-use tracing::info;
+use tracing::{info, trace};
 
 pub(crate) use raster::{Alpha, Vertex};
 
 static SOFTWARE: AtomicBool = AtomicBool::new(false);
+
+const SLOW_RASTER: Duration = Duration::from_millis(33);
 
 pub(crate) fn software() -> bool {
     SOFTWARE.load(Ordering::Relaxed)
@@ -109,6 +112,10 @@ impl Plan {
 
 pub(crate) trait Rasterize {
     fn plan(&self, bounds: Rectangle) -> Option<Plan>;
+
+    fn scale(&self) -> f32 {
+        1.0
+    }
 }
 
 #[derive(Default)]
@@ -135,22 +142,32 @@ where
     fn draw(&self, state: &Self::State, renderer: &iced::Renderer, _theme: &Theme, bounds: Rectangle, cursor: mouse::Cursor) -> Vec<Geometry> {
         witness(renderer);
 
-        let (width, height) = (bounds.width.round() as u32, bounds.height.round() as u32);
-
-        if width == 0 || height == 0 {
+        if bounds.width.round() < 1.0 || bounds.height.round() < 1.0 {
             return Vec::new();
         }
 
-        let Some(plan) = self.program.draw(&state.inner, cursor, bounds).plan(bounds) else {
+        let primitive = self.program.draw(&state.inner, cursor, bounds);
+        let scale = primitive.scale().min(1.0);
+        let (width, height) = ((bounds.width * scale).round().max(1.0) as u32, (bounds.height * scale).round().max(1.0) as u32);
+
+        let Some(plan) = primitive.plan(bounds) else {
             return Vec::new();
         };
         let key = plan.key(width, height);
         let mut painted = state.painted.borrow_mut();
 
         if painted.as_ref().is_none_or(|(held, _)| *held != key) {
+            let started = Instant::now();
             let mut pixels = plan.render(width, height, [0; 4]);
 
             raster::straighten(&mut pixels);
+
+            let spent = started.elapsed();
+
+            if spent >= SLOW_RASTER {
+                trace!(width, height, scale, ms = spent.as_millis(), "software viewer frame was slow to rasterize");
+            }
+
             *painted = Some((key, Handle::from_rgba(width, height, pixels)));
         }
 

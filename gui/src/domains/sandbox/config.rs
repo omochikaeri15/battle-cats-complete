@@ -1,4 +1,5 @@
-use iced::widget::{column, container, scrollable, text, Column};
+use iced::alignment::Vertical;
+use iced::widget::{column, container, row, scrollable, slider, text, Column};
 use iced::{Element, Length};
 
 use kore::domains::sandbox::base::{self, Parts};
@@ -10,7 +11,7 @@ use kore::systems::treasure::Catalog;
 use kore::Vfs;
 use nyanko::chapter::Category;
 
-use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume};
+use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume, QUALITY_RANGE, QUALITY_STEP};
 use crate::app::theme;
 use crate::systems::treasure;
 use crate::widget::{combo_row, entry_row, hover_hint, list_row, section, smooth_scroll, toggle_row};
@@ -22,6 +23,9 @@ const TAB_SPACING: f32 = 4.0;
 const TAB_SIZE: f32 = 14.0;
 const NO_CAP: &str = "None";
 const LEVEL_DIGITS: usize = 6;
+const QUALITY_WIDTH: f32 = 160.0;
+const QUALITY_SPACING: f32 = 10.0;
+const QUALITY_HINT: &str = "The resolution the battle is drawn at before it is stretched to fill the window.\nLower draws fewer pixels, trading sharpness for speed on weaker hardware.\nThe Cycle Image Quality key steps through 15, 25, 35, 50, 70 and 100%, then back to 15%, mid-battle";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Formation {
@@ -116,6 +120,7 @@ pub enum Message {
     Music(SandboxVolume),
     Effects(SandboxVolume),
     Formation(Formation),
+    Quality(u8),
     Vibrate(bool),
     Treasure(treasure::Message),
     Tech(usize, String),
@@ -184,6 +189,7 @@ impl State {
             Message::Music(volume) => options.music_volume = volume.percent(),
             Message::Effects(volume) => options.effects_volume = volume.percent(),
             Message::Formation(formation) => options.two_rows = formation == Formation::Double,
+            Message::Quality(quality) => options.image_quality = quality,
             Message::Vibrate(enabled) => options.vibrate = enabled,
             Message::Treasure(message) => self.treasure.update(message, &mut options.config.treasure),
             Message::Tech(index, entry) => {
@@ -321,6 +327,13 @@ impl State {
                     Some(formation),
                     Some(Message::Formation),
                 ),
+                row![
+                    hover_hint(text("Image Quality"), QUALITY_HINT),
+                    slider(QUALITY_RANGE, options.quality(), Message::Quality).step(QUALITY_STEP).width(Length::Fixed(QUALITY_WIDTH)),
+                    text(format!("{}%", options.quality())),
+                ]
+                    .spacing(QUALITY_SPACING)
+                    .align_y(Vertical::Center),
                 toggle_row(options.vibrate, text("Vibration"), Some(Message::Vibrate)),
             ]
                 .spacing(ROW_SPACING),

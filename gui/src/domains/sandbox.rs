@@ -35,7 +35,7 @@ use crate::domains::{cat, stage};
 use crate::systems::emu::{Action, Diagnostics, Frame as EmuFrame, Label, Occupant, Session, Vitals};
 use crate::systems::emu::SheetCache;
 use crate::common::{digest, feedback::Slot};
-use crate::widget::{headline, popup, smooth_scroll};
+use crate::widget::{headline, popup, smooth_scroll, toast, Tone};
 
 const ACKNOWLEDGEMENT: &str = r#"
 The purpose of this agreement is to ensure that you, the User, are aware of the potential quirks regarding Sandbox.
@@ -64,6 +64,7 @@ const SNIPER_ITEM: i32 = 5;
 const STATUS_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
 const CUT_LIFETIME: std::time::Duration = std::time::Duration::from_secs(3);
 const REPLAY_TERMINATED: &str = "Replay Terminated!";
+const QUALITY_LIFETIME: std::time::Duration = std::time::Duration::from_secs(2);
 const RESTART_WINDOW: std::time::Duration = std::time::Duration::from_millis(400);
 const BODY_PADDING: f32 = 20.0;
 const SCROLLBAR_GAP: f32 = 8.0;
@@ -98,6 +99,7 @@ pub enum Message {
     Key(String, bool),
     StatusExpired,
     CutExpired,
+    QualityExpired,
     Replay(replay::Message),
     Watch(bool),
     VersionPopup(popup::Message),
@@ -120,6 +122,8 @@ pub struct State {
     status: String,
     reported: String,
     cut: Slot<()>,
+    quality: Slot<()>,
+    quality_notice: String,
     session: Option<Session>,
     tapped: Option<std::time::Instant>,
     lineup: lineup::State,
@@ -147,6 +151,8 @@ impl Default for State {
             status: String::new(),
             reported: String::new(),
             cut: Slot::default(),
+            quality: Slot::default(),
+            quality_notice: String::new(),
             session: None,
             tapped: None,
             lineup: lineup::State::new(0),
@@ -645,6 +651,11 @@ impl State {
 
                 Task::none()
             }
+            Message::QualityExpired => {
+                self.quality.expire();
+
+                Task::none()
+            }
             Message::StatusExpired => {
                 self.status.clear();
 
@@ -658,7 +669,7 @@ impl State {
                     return Task::none();
                 };
 
-                if session.watching() && !matches!(bind, Bind::Pause | Bind::Diagnostics) {
+                if session.watching() && !matches!(bind, Bind::Pause | Bind::Diagnostics | Bind::Quality) {
                     return Task::none();
                 }
 
@@ -680,6 +691,16 @@ impl State {
                         }
 
                         return Task::none();
+                    }
+                    Bind::Quality => {
+                        if !pressed {
+                            return Task::none();
+                        }
+
+                        app_state.sandbox.cycle_quality();
+                        self.quality_notice = format!("Image Quality {}%", app_state.sandbox.quality());
+
+                        return self.quality.set_after((), Message::QualityExpired, QUALITY_LIFETIME);
                     }
                     Bind::Restart => {
                         if pressed {
@@ -866,6 +887,10 @@ impl State {
 
     pub fn cut_toast(&self) -> Element<'_, Message> {
         headline(REPLAY_TERMINATED, self.cut.is_set())
+    }
+
+    pub fn quality_toast(&self) -> Element<'_, Message> {
+        toast(&self.quality_notice, None, self.quality.is_set(), Tone::Hint)
     }
 
     pub fn fault_open(&self) -> bool {

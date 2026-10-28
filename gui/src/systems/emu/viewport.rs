@@ -48,6 +48,7 @@ fn fit(bounds: Rectangle, design_width: f32, aspect: Option<f32>) -> Fit {
 pub(super) struct Surface {
     pub aspect: Option<f32>,
     pub surfaced: bool,
+    pub scale: f32,
 }
 
 pub struct Viewport {
@@ -70,6 +71,7 @@ pub struct Scene {
     pub(super) runs: Vec<(Option<Box<str>>, u8, u32, u32)>,
     pub(super) uploads: Vec<(Box<str>, Sheet)>,
     pub(super) presented: Option<Arc<Presented>>,
+    pub(super) scale: f32,
 }
 
 impl std::fmt::Debug for Scene {
@@ -78,12 +80,13 @@ impl std::fmt::Debug for Scene {
             .field("vertices", &self.vertices.len())
             .field("runs", &self.runs.len())
             .field("uploads", &self.uploads.len())
+            .field("scale", &self.scale)
             .finish()
     }
 }
 
 pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, bounds: Rectangle) -> Scene {
-    let Surface { aspect, surfaced } = canvas;
+    let Surface { aspect, surfaced, scale: resolution } = canvas;
     let design_width = frame.design_width;
     let design_height = frame.design_height;
     let letterbox = frame.letterbox;
@@ -236,6 +239,7 @@ pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, boun
         runs,
         uploads,
         presented: None,
+        scale: if surfaced { resolution } else { 1.0 },
     }
 }
 
@@ -254,6 +258,7 @@ impl<Message> shader::Program<Message> for Viewport {
                 runs: Vec::new(),
                 uploads: Vec::new(),
                 presented,
+                scale: 1.0,
             };
         }
 
@@ -360,9 +365,12 @@ impl shader::Primitive for Scene {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         _bounds: &Rectangle,
-        _viewport: &shader::Viewport,
+        viewport: &shader::Viewport,
     ) {
         let started = Instant::now();
+
+        pipeline.reduce(device, self.scale, viewport.physical_size());
+
         let uploaded = self.uploads.iter().filter(|(name, sheet)| pipeline.ensure_sheet(device, queue, name, sheet)).count();
 
         let runs = self
@@ -411,6 +419,7 @@ pub struct Feed<'a> {
     pub frozen: bool,
     pub aspect: Option<f32>,
     pub surfaced: bool,
+    pub scale: f32,
 }
 
 pub fn overlay<'a, Message: 'a>(
@@ -426,6 +435,7 @@ pub fn overlay<'a, Message: 'a>(
         frozen,
         aspect,
         surfaced,
+        scale,
     } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
@@ -434,7 +444,7 @@ pub fn overlay<'a, Message: 'a>(
     let painted = cpu::shader(Viewport {
         frame,
         sheets,
-        canvas: Surface { aspect, surfaced },
+        canvas: Surface { aspect, surfaced, scale },
         touches,
         active,
         covered,

@@ -37,6 +37,10 @@ impl Rasterize for Scene {
 
         Some(plan(self))
     }
+
+    fn scale(&self) -> f32 {
+        self.scale
+    }
 }
 
 pub(super) fn draw(scene: &Scene, width: u32, height: u32, pixels: &mut Vec<u8>) {

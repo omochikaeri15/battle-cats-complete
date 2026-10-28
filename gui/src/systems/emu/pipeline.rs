@@ -37,7 +37,28 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let texel = textureSample(sheet, sheet_sampler, input.uv);
     return texel * input.color;
 }
+
+struct PresentOutput {
+    @builtin(position) clip: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+}
+
+@vertex
+fn vs_present(@builtin(vertex_index) index: u32) -> PresentOutput {
+    let corner = vec2<f32>(f32((index << 1u) & 2u), f32(index & 2u));
+    var out: PresentOutput;
+    out.clip = vec4<f32>(corner * 2.0 - 1.0, 0.0, 1.0);
+    out.uv = vec2<f32>(corner.x, 1.0 - corner.y);
+    return out;
+}
+
+@fragment
+fn fs_present(input: PresentOutput) -> @location(0) vec4<f32> {
+    return textureSample(sheet, sheet_sampler, input.uv);
+}
 ";
+
+const CLEARED: wgpu::Color = wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };
 
 const BLENDS: [(wgpu::BlendFactor, wgpu::BlendFactor); 4] = [
     (wgpu::BlendFactor::One, wgpu::BlendFactor::OneMinusSrcAlpha),
@@ -65,8 +86,17 @@ struct Binding {
     stamp: u64,
 }
 
+struct Reduced {
+    view: wgpu::TextureView,
+    bind_group: wgpu::BindGroup,
+    width: u32,
+    height: u32,
+}
+
 pub struct Pipeline {
     pipelines: [wgpu::RenderPipeline; 4],
+    present: wgpu::RenderPipeline,
+    format: wgpu::TextureFormat,
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
     sheets: BTreeMap<Box<str>, Binding>,
@@ -74,6 +104,7 @@ pub struct Pipeline {
     vertices: Option<wgpu::Buffer>,
     capacity: u64,
     runs: Vec<Run>,
+    reduced: Option<Reduced>,
 }
 
 impl shader::Pipeline for Pipeline {
@@ -166,6 +197,35 @@ impl Pipeline {
             })
         });
 
+        let present = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("emu_battle_present"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some("vs_present"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &module,
+                entry_point: Some("fs_present"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::COLOR,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                ..wgpu::PrimitiveState::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("emu_battle"),
             mag_filter: wgpu::FilterMode::Linear,
@@ -175,6 +235,8 @@ impl Pipeline {
 
         Self {
             pipelines,
+            present,
+            format,
             layout,
             sampler,
             sheets: BTreeMap::new(),
@@ -182,6 +244,7 @@ impl Pipeline {
             vertices: None,
             capacity: 0,
             runs: Vec::new(),
+            reduced: None,
         }
     }
 
@@ -245,6 +308,51 @@ impl Pipeline {
         Binding { bind_group, stamp }
     }
 
+    pub fn reduce(&mut self, device: &wgpu::Device, scale: f32, full: iced::Size<u32>) {
+        if scale >= 1.0 {
+            self.reduced = None;
+
+            return;
+        }
+
+        let width = ((full.width as f32 * scale).round() as u32).max(1);
+        let height = ((full.height as f32 * scale).round() as u32).max(1);
+
+        if self.reduced.as_ref().is_some_and(|held| held.width == width && held.height == height) {
+            return;
+        }
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("emu_battle_reduced"),
+            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: self.format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("emu_battle_reduced"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+            ],
+        });
+
+        trace!(width, height, scale, "emu: battle drawn at a reduced resolution");
+
+        self.reduced = Some(Reduced { view, bind_group, width, height });
+    }
+
     pub fn ensure_sheet(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, name: &str, sheet: &Sheet) -> bool {
         if self.sheets.get(name).is_some_and(|held| held.stamp == sheet.stamp) {
             return false;
@@ -301,23 +409,48 @@ impl Pipeline {
             return;
         }
 
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let Some(reduced) = &self.reduced else {
+            let mut pass = Self::pass(encoder, target, wgpu::LoadOp::Load);
+
+            pass.set_scissor_rect(clip.x, clip.y, clip.width, clip.height);
+            self.paint(&mut pass, buffer);
+
+            return;
+        };
+
+        {
+            let mut pass = Self::pass(encoder, &reduced.view, wgpu::LoadOp::Clear(CLEARED));
+
+            self.paint(&mut pass, buffer);
+        }
+
+        let mut pass = Self::pass(encoder, target, wgpu::LoadOp::Load);
+
+        pass.set_scissor_rect(clip.x, clip.y, clip.width, clip.height);
+        pass.set_pipeline(&self.present);
+        pass.set_bind_group(0, &reduced.bind_group, &[]);
+        pass.draw(0..3, 0..1);
+    }
+
+    fn pass<'a>(encoder: &'a mut wgpu::CommandEncoder, view: &'a wgpu::TextureView, load: wgpu::LoadOp<wgpu::Color>) -> wgpu::RenderPass<'a> {
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("emu_battle"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
+                view,
                 depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
+                    load,
                     store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,
-        });
+        })
+    }
 
-        pass.set_scissor_rect(clip.x, clip.y, clip.width, clip.height);
+    fn paint(&self, pass: &mut wgpu::RenderPass<'_>, buffer: &wgpu::Buffer) {
         pass.set_vertex_buffer(0, buffer.slice(..));
 
         for run in &self.runs {

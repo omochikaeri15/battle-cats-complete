@@ -1994,6 +1994,7 @@ impl BattleCatsApp {
             self.sandbox_state.diagnostics_view(self.window_size),
             self.sandbox_state.fault_view(self.window_size),
             Some(self.sandbox_state.cut_toast()),
+            Some(self.sandbox_state.quality_toast()),
         ]
             .into_iter()
             .map(|view| view.map_or_else(|| Space::new().into(), |view| view.map(Message::Sandbox)))
@@ -2010,6 +2011,7 @@ impl BattleCatsApp {
                 frozen: self.sandbox_state.frozen(),
                 aspect: self.sandbox_state.aspect(),
                 surfaced: self.sandbox_state.surfaced(),
+                scale: self.app_state.sandbox.render_scale(),
             },
         )
     }

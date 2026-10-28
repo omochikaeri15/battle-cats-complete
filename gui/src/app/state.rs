@@ -99,6 +99,10 @@ impl std::fmt::Display for SandboxVolume {
     }
 }
 
+pub(crate) const QUALITY_RANGE: std::ops::RangeInclusive<u8> = 15..=100;
+pub(crate) const QUALITY_STEP: u8 = 5;
+const QUALITY_PRESETS: [u8; 6] = [15, 25, 35, 50, 70, 100];
+
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum SandboxDevice {
     #[default]
@@ -156,6 +160,7 @@ pub(crate) struct SandboxState {
     pub vibrate: bool,
     pub device: SandboxDevice,
     pub usable_items: [bool; 6],
+    pub image_quality: u8,
 }
 
 impl Default for SandboxState {
@@ -174,7 +179,24 @@ impl Default for SandboxState {
             vibrate: false,
             device: SandboxDevice::default(),
             usable_items: [true; 6],
+            image_quality: *QUALITY_RANGE.end(),
         }
+    }
+}
+
+impl SandboxState {
+    pub fn quality(&self) -> u8 {
+        self.image_quality.clamp(*QUALITY_RANGE.start(), *QUALITY_RANGE.end())
+    }
+
+    pub fn render_scale(&self) -> f32 {
+        f32::from(self.quality()) / f32::from(*QUALITY_RANGE.end())
+    }
+
+    pub fn cycle_quality(&mut self) {
+        let current = self.quality();
+
+        self.image_quality = QUALITY_PRESETS.into_iter().find(|preset| *preset > current).unwrap_or(*QUALITY_RANGE.start());
     }
 }
 
