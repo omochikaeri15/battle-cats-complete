@@ -195,7 +195,7 @@ struct Reel<'a> {
 impl Reel<'_> {
     fn shoot(&mut self) -> Result<(), String> {
         let bounds = Rectangle { x: 0.0, y: 0.0, width: self.canvas.width as f32, height: self.canvas.height as f32 };
-        let canvas = Surface { aspect: Some(self.driver.frame_aspect()), surfaced: true, scale: 1.0 };
+        let canvas = Surface { aspect: Some(self.driver.frame_aspect()), surfaced: true, scale: 1.0, padded: false };
         let scene = paint(&self.driver.frame().borrow(), &self.driver.sheets().borrow(), canvas, bounds);
         let mut pixels = self.encoder.spare();
 

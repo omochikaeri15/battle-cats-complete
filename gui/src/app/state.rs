@@ -124,6 +124,26 @@ impl std::fmt::Display for SandboxDevice {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum SandboxScaling {
+    #[default]
+    Stretch,
+    Pad,
+}
+
+impl SandboxScaling {
+    pub const ALL: [Self; 2] = [Self::Stretch, Self::Pad];
+}
+
+impl std::fmt::Display for SandboxScaling {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Stretch => "Stretch",
+            Self::Pad => "Pad",
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum SandboxTab {
     #[default]
     Lineup,
@@ -161,6 +181,7 @@ pub(crate) struct SandboxState {
     pub device: SandboxDevice,
     pub usable_items: [bool; 6],
     pub image_quality: u8,
+    pub scaling: SandboxScaling,
 }
 
 impl Default for SandboxState {
@@ -180,6 +201,7 @@ impl Default for SandboxState {
             device: SandboxDevice::default(),
             usable_items: [true; 6],
             image_quality: *QUALITY_RANGE.end(),
+            scaling: SandboxScaling::default(),
         }
     }
 }
@@ -191,6 +213,14 @@ impl SandboxState {
 
     pub fn render_scale(&self) -> f32 {
         f32::from(self.quality()) / f32::from(*QUALITY_RANGE.end())
+    }
+
+    pub fn native(&self) -> bool {
+        self.quality() >= *QUALITY_RANGE.end()
+    }
+
+    pub fn padded(&self) -> bool {
+        !self.native() && self.scaling == SandboxScaling::Pad
     }
 
     pub fn cycle_quality(&mut self) {

@@ -11,7 +11,7 @@ use kore::systems::treasure::Catalog;
 use kore::Vfs;
 use nyanko::chapter::Category;
 
-use crate::app::state::{SandboxDevice, SandboxPanel, SandboxState, SandboxVolume, QUALITY_RANGE, QUALITY_STEP};
+use crate::app::state::{SandboxScaling, SandboxDevice, SandboxPanel, SandboxState, SandboxVolume, QUALITY_RANGE, QUALITY_STEP};
 use crate::app::theme;
 use crate::systems::treasure;
 use crate::widget::{combo_row, entry_row, hover_hint, list_row, section, smooth_scroll, toggle_row};
@@ -25,7 +25,10 @@ const NO_CAP: &str = "None";
 const LEVEL_DIGITS: usize = 6;
 const QUALITY_WIDTH: f32 = 160.0;
 const QUALITY_SPACING: f32 = 10.0;
-const QUALITY_HINT: &str = "The resolution the battle is drawn at before it is stretched to fill the window.\nLower draws fewer pixels, trading sharpness for speed on weaker hardware.\nThe Cycle Image Quality key steps through 15, 25, 35, 50, 70 and 100%, then back to 15%, mid-battle";
+const QUALITY_HINT: &str = "The resolution the battle is drawn at.\nLower draws fewer pixels, trading sharpness for speed on weaker hardware.\nThe Cycle Image Quality key steps through 15, 25, 35, 50, 70 and 100%, then back to 15%, mid-battle";
+const SCALING_HINT: &str = "How a battle drawn below 100% quality fills the window.\nStretch: scaled up to fill the window\nPad: shown at its drawn size in the middle of the window";
+const NATIVE_HINT: &str = "No scaling options for native game size";
+const NATIVE: &str = "Native";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Formation {
@@ -42,6 +45,25 @@ impl std::fmt::Display for Formation {
         f.write_str(match self {
             Self::Single => "One Row",
             Self::Double => "Two Rows",
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Vibration {
+    On,
+    Off,
+}
+
+impl Vibration {
+    const ALL: [Self; 2] = [Self::On, Self::Off];
+}
+
+impl std::fmt::Display for Vibration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::On => "On",
+            Self::Off => "Off",
         })
     }
 }
@@ -121,6 +143,7 @@ pub enum Message {
     Effects(SandboxVolume),
     Formation(Formation),
     Quality(u8),
+    Scaling(SandboxScaling),
     Vibrate(bool),
     Treasure(treasure::Message),
     Tech(usize, String),
@@ -190,6 +213,7 @@ impl State {
             Message::Effects(volume) => options.effects_volume = volume.percent(),
             Message::Formation(formation) => options.two_rows = formation == Formation::Double,
             Message::Quality(quality) => options.image_quality = quality,
+            Message::Scaling(scaling) => options.scaling = scaling,
             Message::Vibrate(enabled) => options.vibrate = enabled,
             Message::Treasure(message) => self.treasure.update(message, &mut options.config.treasure),
             Message::Tech(index, entry) => {
@@ -294,50 +318,74 @@ impl State {
 
     fn settings(options: &SandboxState) -> Element<'_, Message> {
         let formation = if options.two_rows { Formation::Double } else { Formation::Single };
+        let vibration = if options.vibrate { Vibration::On } else { Vibration::Off };
+        let scaling = if options.native() {
+            combo_row("Scaling", NATIVE_HINT, [NATIVE], Some(NATIVE), None::<fn(&'static str) -> Message>)
+        } else {
+            combo_row("Scaling", SCALING_HINT, SandboxScaling::ALL, Some(options.scaling), Some(Message::Scaling))
+        };
 
-        section(
-            "Settings",
-            Length::Fill,
-            column![
-                combo_row(
-                    "Device",
-                    "Phone insets the battle controls from the screen edges like a notched phone",
-                    SandboxDevice::ALL,
-                    Some(options.device),
-                    Some(Message::Device),
-                ),
-                combo_row(
-                    "Music Volume",
-                    "The four volume steps the battle settings cycle through",
-                    SandboxVolume::ALL,
-                    Some(SandboxVolume::nearest(options.music_volume)),
-                    Some(Message::Music),
-                ),
-                combo_row(
-                    "Sound Volume",
-                    "The four volume steps the battle settings cycle through",
-                    SandboxVolume::ALL,
-                    Some(SandboxVolume::nearest(options.effects_volume)),
-                    Some(Message::Effects),
-                ),
-                combo_row(
-                    "Formation",
-                    "Whether the deck shows one row of five at a time or both rows at once",
-                    Formation::ALL,
-                    Some(formation),
-                    Some(Message::Formation),
-                ),
-                row![
-                    hover_hint(text("Image Quality"), QUALITY_HINT),
-                    slider(QUALITY_RANGE, options.quality(), Message::Quality).step(QUALITY_STEP).width(Length::Fixed(QUALITY_WIDTH)),
-                    text(format!("{}%", options.quality())),
+        column![
+            section(
+                "Game",
+                Length::Fill,
+                column![
+                    combo_row(
+                        "Music Volume",
+                        "The four volume steps the battle settings cycle through",
+                        SandboxVolume::ALL,
+                        Some(SandboxVolume::nearest(options.music_volume)),
+                        Some(Message::Music),
+                    ),
+                    combo_row(
+                        "Sound Volume",
+                        "The four volume steps the battle settings cycle through",
+                        SandboxVolume::ALL,
+                        Some(SandboxVolume::nearest(options.effects_volume)),
+                        Some(Message::Effects),
+                    ),
+                    combo_row(
+                        "Vibration",
+                        "Whether the battle settings show vibration as switched on",
+                        Vibration::ALL,
+                        Some(vibration),
+                        Some(|picked| Message::Vibrate(picked == Vibration::On)),
+                    ),
+                    combo_row(
+                        "Formation",
+                        "Whether the deck shows one row of five at a time or both rows at once",
+                        Formation::ALL,
+                        Some(formation),
+                        Some(Message::Formation),
+                    ),
                 ]
-                    .spacing(QUALITY_SPACING)
-                    .align_y(Vertical::Center),
-                toggle_row(options.vibrate, text("Vibration"), Some(Message::Vibrate)),
-            ]
-                .spacing(ROW_SPACING),
-        )
+                    .spacing(ROW_SPACING),
+            ),
+            section(
+                "Device",
+                Length::Fill,
+                column![
+                    combo_row(
+                        "Type",
+                        "Phone insets the battle controls from the screen edges like a notched phone",
+                        SandboxDevice::ALL,
+                        Some(options.device),
+                        Some(Message::Device),
+                    ),
+                    scaling,
+                    row![
+                        hover_hint(text("Quality"), QUALITY_HINT),
+                        slider(QUALITY_RANGE, options.quality(), Message::Quality).step(QUALITY_STEP).width(Length::Fixed(QUALITY_WIDTH)),
+                        text(format!("{}%", options.quality())),
+                    ]
+                        .spacing(QUALITY_SPACING)
+                        .align_y(Vertical::Center),
+                ]
+                    .spacing(ROW_SPACING),
+            ),
+        ]
+            .spacing(PANEL_PADDING)
+            .into()
     }
 
     fn invasions<'a>(&'a self, options: &'a SandboxState) -> Element<'a, Message> {

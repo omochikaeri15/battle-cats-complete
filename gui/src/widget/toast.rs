@@ -34,6 +34,7 @@ const HEADLINE: Scale = Scale {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Tone {
     Alert,
+    Info,
     Hint,
 }
 
@@ -62,6 +63,7 @@ fn build<'a, Message: 'a>(message: &'a str, detail: Option<&'a str>, showing: bo
         .padding(Padding { top: OVERHANG + scale.padding_top, right: scale.padding_x, bottom: scale.padding_bottom, left: scale.padding_x })
         .style(match tone {
             Tone::Alert => theme::notice_banner,
+            Tone::Info => theme::info_banner,
             Tone::Hint => theme::hint_banner,
         });
 
@@ -70,9 +72,7 @@ fn build<'a, Message: 'a>(message: &'a str, detail: Option<&'a str>, showing: bo
         .height(Length::Fill)
         .align_x(Horizontal::Center)
         .align_y(Vertical::Top)
-        .padding(Padding::default().top(match tone {
-            Tone::Alert => -OVERHANG,
-            Tone::Hint => 0.0,
-        }))
+        .padding(Padding::default().top(-OVERHANG))
+        .clip(true)
         .into()
 }

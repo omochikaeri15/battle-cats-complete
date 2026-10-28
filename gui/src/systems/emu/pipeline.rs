@@ -101,10 +101,12 @@ pub struct Pipeline {
     sampler: wgpu::Sampler,
     sheets: BTreeMap<Box<str>, Binding>,
     blank: Option<Binding>,
+    void: Option<Binding>,
     vertices: Option<wgpu::Buffer>,
     capacity: u64,
     runs: Vec<Run>,
     reduced: Option<Reduced>,
+    inset: Option<(f32, f32)>,
 }
 
 impl shader::Pipeline for Pipeline {
@@ -114,6 +116,7 @@ impl shader::Pipeline for Pipeline {
         let mut pipeline = Self::create(device, format);
 
         pipeline.blank = Some(pipeline.upload(device, queue, 1, 1, &[0xff, 0xff, 0xff, 0xff], 0));
+        pipeline.void = Some(pipeline.upload(device, queue, 1, 1, &[0, 0, 0, 0xff], 0));
         pipeline
     }
 }
@@ -241,10 +244,12 @@ impl Pipeline {
             sampler,
             sheets: BTreeMap::new(),
             blank: None,
+            void: None,
             vertices: None,
             capacity: 0,
             runs: Vec::new(),
             reduced: None,
+            inset: None,
         }
     }
 
@@ -308,15 +313,18 @@ impl Pipeline {
         Binding { bind_group, stamp }
     }
 
-    pub fn reduce(&mut self, device: &wgpu::Device, scale: f32, full: iced::Size<u32>) {
+    pub fn reduce(&mut self, device: &wgpu::Device, scale: f32, padded: bool, full: iced::Size<u32>) {
         if scale >= 1.0 {
             self.reduced = None;
+            self.inset = None;
 
             return;
         }
 
         let width = ((full.width as f32 * scale).round() as u32).max(1);
         let height = ((full.height as f32 * scale).round() as u32).max(1);
+
+        self.inset = padded.then(|| (full.width.saturating_sub(width) / 2, full.height.saturating_sub(height) / 2)).map(|(left, top)| (left as f32, top as f32));
 
         if self.reduced.as_ref().is_some_and(|held| held.width == width && held.height == height) {
             return;
@@ -428,6 +436,15 @@ impl Pipeline {
 
         pass.set_scissor_rect(clip.x, clip.y, clip.width, clip.height);
         pass.set_pipeline(&self.present);
+
+        if let Some((left, top)) = self.inset
+            && let Some(void) = &self.void
+        {
+            pass.set_bind_group(0, &void.bind_group, &[]);
+            pass.draw(0..3, 0..1);
+            pass.set_viewport(left, top, reduced.width as f32, reduced.height as f32, 0.0, 1.0);
+        }
+
         pass.set_bind_group(0, &reduced.bind_group, &[]);
         pass.draw(0..3, 0..1);
     }

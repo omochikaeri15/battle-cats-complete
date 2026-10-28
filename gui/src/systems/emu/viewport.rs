@@ -49,6 +49,18 @@ pub(super) struct Surface {
     pub aspect: Option<f32>,
     pub surfaced: bool,
     pub scale: f32,
+    pub padded: bool,
+}
+
+impl Surface {
+    fn inset(self, bounds: Rectangle) -> Option<(f32, f32)> {
+        (self.surfaced && self.padded && self.scale < 1.0)
+            .then(|| ((bounds.width * (1.0 - self.scale) / 2.0).round(), (bounds.height * (1.0 - self.scale) / 2.0).round()))
+    }
+
+    fn unpad(self, x: f32, y: f32, bounds: Rectangle) -> (f32, f32) {
+        self.inset(bounds).map_or((x, y), |(left, top)| ((x - left) / self.scale, (y - top) / self.scale))
+    }
 }
 
 pub struct Viewport {
@@ -72,6 +84,7 @@ pub struct Scene {
     pub(super) uploads: Vec<(Box<str>, Sheet)>,
     pub(super) presented: Option<Arc<Presented>>,
     pub(super) scale: f32,
+    pub(super) padded: bool,
 }
 
 impl std::fmt::Debug for Scene {
@@ -81,12 +94,13 @@ impl std::fmt::Debug for Scene {
             .field("runs", &self.runs.len())
             .field("uploads", &self.uploads.len())
             .field("scale", &self.scale)
+            .field("padded", &self.padded)
             .finish()
     }
 }
 
 pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, bounds: Rectangle) -> Scene {
-    let Surface { aspect, surfaced, scale: resolution } = canvas;
+    let Surface { aspect, surfaced, scale: resolution, padded } = canvas;
     let design_width = frame.design_width;
     let design_height = frame.design_height;
     let letterbox = frame.letterbox;
@@ -240,6 +254,7 @@ pub(super) fn paint(frame: &EmuFrame, sheets: &SheetCache, canvas: Surface, boun
         uploads,
         presented: None,
         scale: if surfaced { resolution } else { 1.0 },
+        padded: surfaced && padded,
     }
 }
 
@@ -259,6 +274,7 @@ impl<Message> shader::Program<Message> for Viewport {
                 uploads: Vec::new(),
                 presented,
                 scale: 1.0,
+                padded: false,
             };
         }
 
@@ -276,7 +292,11 @@ impl<Message> shader::Program<Message> for Viewport {
             return None;
         }
 
-        let at = cursor.position_in(bounds).map(|point| (point.x.round() as i32, point.y.round() as i32));
+        let at = cursor
+            .position_in(bounds)
+            .map(|point| self.canvas.unpad(point.x, point.y, bounds))
+            .filter(|(x, y)| (0.0..=bounds.width).contains(x) && (0.0..=bounds.height).contains(y))
+            .map(|(x, y)| (x.round() as i32, y.round() as i32));
 
         if state.pressed {
             let lifted = matches!(
@@ -293,8 +313,9 @@ impl<Message> shader::Program<Message> for Viewport {
             }
 
             if let iced::Event::Mouse(mouse::Event::CursorMoved { position }) = event {
-                let x = (position.x - bounds.x).clamp(0.0, bounds.width).round() as i32;
-                let y = (position.y - bounds.y).clamp(0.0, bounds.height).round() as i32;
+                let (x, y) = self.canvas.unpad(position.x - bounds.x, position.y - bounds.y, bounds);
+                let x = x.clamp(0.0, bounds.width).round() as i32;
+                let y = y.clamp(0.0, bounds.height).round() as i32;
 
                 self.touches.borrow_mut().push(Touch::Moved { x, y });
 
@@ -369,7 +390,7 @@ impl shader::Primitive for Scene {
     ) {
         let started = Instant::now();
 
-        pipeline.reduce(device, self.scale, viewport.physical_size());
+        pipeline.reduce(device, self.scale, self.padded, viewport.physical_size());
 
         let uploaded = self.uploads.iter().filter(|(name, sheet)| pipeline.ensure_sheet(device, queue, name, sheet)).count();
 
@@ -420,6 +441,7 @@ pub struct Feed<'a> {
     pub aspect: Option<f32>,
     pub surfaced: bool,
     pub scale: f32,
+    pub padded: bool,
 }
 
 pub fn overlay<'a, Message: 'a>(
@@ -436,6 +458,7 @@ pub fn overlay<'a, Message: 'a>(
         aspect,
         surfaced,
         scale,
+        padded,
     } = feed;
     let active = frame.is_some_and(|frame| !frame.borrow().quads.is_empty());
     let frame = frame.cloned().unwrap_or_default();
@@ -444,7 +467,7 @@ pub fn overlay<'a, Message: 'a>(
     let painted = cpu::shader(Viewport {
         frame,
         sheets,
-        canvas: Surface { aspect, surfaced, scale },
+        canvas: Surface { aspect, surfaced, scale, padded },
         touches,
         active,
         covered,

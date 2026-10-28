@@ -2012,6 +2012,7 @@ impl BattleCatsApp {
                 aspect: self.sandbox_state.aspect(),
                 surfaced: self.sandbox_state.surfaced(),
                 scale: self.app_state.sandbox.render_scale(),
+                padded: self.app_state.sandbox.padded(),
             },
         )
     }

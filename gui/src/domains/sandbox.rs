@@ -890,7 +890,7 @@ impl State {
     }
 
     pub fn quality_toast(&self) -> Element<'_, Message> {
-        toast(&self.quality_notice, None, self.quality.is_set(), Tone::Hint)
+        toast(&self.quality_notice, None, self.quality.is_set(), Tone::Info)
     }
 
     pub fn fault_open(&self) -> bool {

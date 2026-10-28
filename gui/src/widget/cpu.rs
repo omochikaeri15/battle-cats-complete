@@ -11,7 +11,7 @@ use iced::advanced::image::Handle;
 use iced::widget::canvas::{self, Canvas, Geometry};
 use iced::widget::shader::{self, Shader};
 use iced::widget::stack;
-use iced::{mouse, Element, Event, Length, Rectangle, Theme};
+use iced::{mouse, Color, Element, Event, Length, Point, Rectangle, Size, Theme};
 use image::RgbaImage;
 use rustc_hash::FxHasher;
 use tracing::{info, trace};
@@ -116,6 +116,10 @@ pub(crate) trait Rasterize {
     fn scale(&self) -> f32 {
         1.0
     }
+
+    fn padded(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Default)]
@@ -148,6 +152,7 @@ where
 
         let primitive = self.program.draw(&state.inner, cursor, bounds);
         let scale = primitive.scale().min(1.0);
+        let padded = primitive.padded();
         let (width, height) = ((bounds.width * scale).round().max(1.0) as u32, (bounds.height * scale).round().max(1.0) as u32);
 
         let Some(plan) = primitive.plan(bounds) else {
@@ -176,7 +181,15 @@ where
         };
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
-        frame.draw_image(Rectangle::with_size(bounds.size()), handle);
+        if padded && scale < 1.0 {
+            let drawn = Size::new(width as f32, height as f32);
+            let corner = Point::new(((bounds.width - drawn.width) / 2.0).round(), ((bounds.height - drawn.height) / 2.0).round());
+
+            frame.fill_rectangle(Point::ORIGIN, bounds.size(), Color::BLACK);
+            frame.draw_image(Rectangle::new(corner, drawn), handle);
+        } else {
+            frame.draw_image(Rectangle::with_size(bounds.size()), handle);
+        }
 
         vec![frame.into_geometry()]
     }

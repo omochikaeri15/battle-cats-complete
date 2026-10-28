@@ -626,6 +626,7 @@ pub fn mock_console_container(theme: &Theme) -> container::Style {
 const NOTICE_ALPHA: f32 = 220.0 / 255.0;
 const HINT_BANNER_ALPHA: f32 = 160.0 / 255.0;
 const HINT_BANNER_SHADE: f32 = 0.15;
+const INFO_BORDER_LIGHTEN: f32 = 0.25;
 const NOTICE_SHADE: f32 = 0.0;
 
 pub fn plain_editor(theme: &Theme, status: text_editor::Status) -> text_editor::Style {
@@ -655,6 +656,15 @@ pub fn hint_banner(theme: &Theme) -> container::Style {
             radius: Radius { top_left: 0.0, top_right: 0.0, bottom_left: RADIUS_LG, bottom_right: RADIUS_LG },
         },
         ..container::Style::default()
+    }
+}
+
+pub fn info_banner(theme: &Theme) -> container::Style {
+    let hint = hint_banner(theme);
+
+    container::Style {
+        border: Border { color: lighten_color(theme.extended_palette().background.strong.color, INFO_BORDER_LIGHTEN), ..hint.border },
+        ..hint
     }
 }
 
