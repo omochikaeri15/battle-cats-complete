@@ -2,9 +2,9 @@
 resolver = "2"
 members = [
     "data",
-    "emu",
-    "kore",
-    "gui",
+    "crates/emu",
+    "crates/kore",
+    "crates/desktop",
     "xtask",
 ]
 
