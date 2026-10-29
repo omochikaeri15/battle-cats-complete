@@ -2,11 +2,11 @@ use std::env;
 use std::fs;
 use std::process::{Command, exit};
 
-const NYANKO_PREFIX: &str = "data";
+const NYANKO_PREFIX: &str = "crates/data";
 const NYANKO_REMOTE: &str = "nyanko";
 const NYANKO_URL: &str = "git@github.com:omochikaeri15/nyanko.git";
 const NYANKO_BRANCH: &str = "main";
-const NYANKO_MANIFEST: &str = "data/Cargo.toml";
+const NYANKO_MANIFEST: &str = "crates/data/Cargo.toml";
 const NYANKO_TAG_PREFIX: &str = "v";
 const APP_REMOTE: &str = "origin";
 const APP_RELEASE_BRANCH: &str = "main";
