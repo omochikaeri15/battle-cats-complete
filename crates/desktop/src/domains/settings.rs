@@ -13,11 +13,11 @@ use iced::widget::{
 };
 use iced::{Alignment, Element, Length, Size, Task, Theme};
 
-use kore::domains::cat::files as cat_files;
-use kore::systems::treasure::Catalog;
-use kore::domains::sandbox::keybind::Bind;
-use kore::domains::settings::{lang, nightly, ContextScope, EditorMode, ReplaySource, Utf8Mode};
-use kore::domains::settings::{
+use kokoro::domains::cat::files as cat_files;
+use kokoro::systems::treasure::Catalog;
+use kokoro::domains::sandbox::keybind::Bind;
+use kokoro::domains::settings::{lang, nightly, ContextScope, EditorMode, ReplaySource, Utf8Mode};
+use kokoro::domains::settings::{
     ExportBehavior, FrameCount, ImportStructure, ScrubBehavior, Settings as CoreSettings,
     SidebarBehavior,
 };
@@ -366,7 +366,7 @@ impl State {
         self.general.set_graphics(report);
     }
 
-    pub(crate) fn set_backends(&mut self, available: Vec<kore::domains::settings::GraphicsBackend>) {
+    pub(crate) fn set_backends(&mut self, available: Vec<kokoro::domains::settings::GraphicsBackend>) {
         self.general.set_backends(available);
     }
 
@@ -840,7 +840,7 @@ impl State {
     }
 
     fn view_about<'a>(&'a self) -> Element<'a, Message> {
-        let license_text = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../kore/assets/licenses.txt"));
+        let license_text = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../kokoro/assets/licenses.txt"));
 
         let header = column![
             text("About Battle Cats Complete").size(32),

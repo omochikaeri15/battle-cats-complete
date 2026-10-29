@@ -7,7 +7,7 @@ use iced::window;
 use iced::{Element, Event, Point, Rectangle, Size, Vector};
 use image::RgbaImage;
 
-use nyanko::graphics::backdrop::{Backdrop, Camera, Quad, Screen, Surface};
+use codex::graphics::backdrop::{Backdrop, Camera, Quad, Screen, Surface};
 
 use crate::widget::{cpu, LINE_PIXELS};
 

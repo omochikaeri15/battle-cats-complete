@@ -6,7 +6,7 @@ use iced::widget::{container, operation, responsive, row, scrollable, space, tex
 use iced::{widget, Element, Font, Length, Padding, Size, Task};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use kore::Vfs;
+use kokoro::Vfs;
 
 use crate::app::theme;
 use crate::common::{fonts, glyphs};

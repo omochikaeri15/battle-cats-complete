@@ -14,26 +14,26 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::rc::Rc;
 
-use emu::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags, VERSION};
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::sandbox::config::CatGod;
-use kore::systems::treasure::{Bonus, Catalog};
-use kore::domains::sandbox::keybind::Bind;
-use kore::domains::sandbox::altar::Altars;
-use kore::domains::sandbox::TECHS;
-use kore::domains::sandbox::replay as replay_tape;
-use kore::domains::settings::{ReplaySource, ScannerConfig, Settings};
-use kore::domains::stage::StageRegistry;
-use kore::Vault;
-use nyanko::files::Localizable;
+use emulator::runtime::{BattleOptions, CASTLE_PART, Setup, SetupUnit, StageEntry, TechLevel, TutorialFlags, VERSION};
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::sandbox::config::CatGod;
+use kokoro::systems::treasure::{Bonus, Catalog};
+use kokoro::domains::sandbox::keybind::Bind;
+use kokoro::domains::sandbox::altar::Altars;
+use kokoro::domains::sandbox::TECHS;
+use kokoro::domains::sandbox::replay as replay_tape;
+use kokoro::domains::settings::{ReplaySource, ScannerConfig, Settings};
+use kokoro::domains::stage::StageRegistry;
+use kokoro::Vault;
+use codex::files::Localizable;
 
 use crate::app::state::{AppState, SandboxDevice, SandboxState, SandboxTab, SandboxVolume};
 use crate::app::theme;
 use crate::domains::{cat, stage};
-use crate::systems::emu::{Action, Diagnostics, Frame as EmuFrame, Label, Occupant, Session, Vitals};
-use crate::systems::emu::SheetCache;
+use crate::systems::host::{Action, Diagnostics, Frame as EmuFrame, Label, Occupant, Session, Vitals};
+use crate::systems::host::SheetCache;
 use crate::common::{digest, feedback::Slot};
 use crate::widget::{headline, popup, smooth_scroll, toast, Tone};
 
@@ -219,7 +219,7 @@ fn agreement() -> String {
 }
 
 impl Message {
-    pub(crate) fn dropping(cell: kore::domains::sandbox::Cell) -> Self {
+    pub(crate) fn dropping(cell: kokoro::domains::sandbox::Cell) -> Self {
         Self::Lineup(lineup::Message::Drop(cell))
     }
 
@@ -264,7 +264,7 @@ impl State {
         self.config.set_invadable(registry);
     }
 
-    pub(crate) fn set_rules(&mut self, rules: kore::domains::sandbox::rules::Rules, app_state: &AppState) {
+    pub(crate) fn set_rules(&mut self, rules: kokoro::domains::sandbox::rules::Rules, app_state: &AppState) {
         self.lineup.set_rules(rules, app_state);
     }
 
@@ -395,9 +395,9 @@ impl State {
 
         setup.altar = options.config.altar();
         setup.cat_god = match options.config.cat_god {
-            CatGod::Absent => ::emu::runtime::CatGod::Absent,
-            CatGod::Present => ::emu::runtime::CatGod::Present,
-            CatGod::Discounted => ::emu::runtime::CatGod::Discounted,
+            CatGod::Absent => emulator::runtime::CatGod::Absent,
+            CatGod::Present => emulator::runtime::CatGod::Present,
+            CatGod::Discounted => emulator::runtime::CatGod::Discounted,
         };
 
         for (item, off) in options.config.items_off.iter().enumerate() {
@@ -447,7 +447,7 @@ impl State {
         self.session.as_ref().map(Session::sheets)
     }
 
-    pub fn curtain_touches(&self) -> Option<&crate::systems::emu::TouchQueue> {
+    pub fn curtain_touches(&self) -> Option<&crate::systems::host::TouchQueue> {
         self.session.as_ref().map(Session::touches)
     }
 

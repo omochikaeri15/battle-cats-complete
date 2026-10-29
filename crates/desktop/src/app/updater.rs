@@ -16,7 +16,7 @@ use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 use self_update::{cargo_crate_version, version, Download, Extract, TempDir};
 use tracing::{error, info, warn};
 
-use kore::common::{github, platform, process};
+use kokoro::common::{github, platform, process};
 
 use crate::common::feedback::CONFIRM_SHORT_LABEL;
 use crate::widget::popup;
@@ -355,7 +355,7 @@ pub(crate) fn restart_app() {
 fn asset_candidates() -> [String; 2] {
     [
         format!("bcc_{}.zip", platform::suffix()),
-        format!("bcc_gui_{}={}_{}.zip", cargo_crate_version!(), kore::VERSION, platform::suffix()),
+        format!("bcc_gui_{}={}_{}.zip", cargo_crate_version!(), kokoro::VERSION, platform::suffix()),
     ]
 }
 

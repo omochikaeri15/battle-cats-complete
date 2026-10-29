@@ -5,11 +5,11 @@ use std::sync::Arc;
 use iced::alignment::Horizontal;
 use iced::widget::{column, container, row, text_input};
 use iced::{Element, Length, Task};
-use nyanko::chapter::stage::Background;
+use codex::chapter::stage::Background;
 use tracing::warn;
 
-use kore::domains::utilities::background::{self as builder, Catalog, Loaded, Names, Overrides, DEFAULT_SEED};
-use kore::Vault;
+use kokoro::domains::utilities::background::{self as builder, Catalog, Loaded, Names, Overrides, DEFAULT_SEED};
+use kokoro::Vault;
 
 use crate::app::state::BackgroundState;
 use crate::app::theme;

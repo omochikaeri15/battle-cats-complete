@@ -65,11 +65,11 @@ jobs:
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release (GUI)
-        run: cargo build -p gui --release --verbose
+        run: cargo build -p desktop --release --verbose
 
       - name: Rename and Zip (Windows)
         run: |
-          move target\release\gui.exe "${{ env.BIN_NAME }}.exe"
+          move target\release\desktop.exe "${{ env.BIN_NAME }}.exe"
           Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows_x64.zip
 
       - name: Upload Windows Artifact
@@ -113,11 +113,11 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release (GUI)
-        run: cargo build -p gui --release --verbose
+        run: cargo build -p desktop --release --verbose
 
       - name: Prepare and Zip (Linux)
         run: |
-          mv target/release/gui "${{ env.BIN_NAME }}"
+          mv target/release/desktop "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
           zip "${{ matrix.asset }}" "${{ env.BIN_NAME }}"
 
@@ -158,11 +158,11 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release (GUI)
-        run: cargo build -p gui --release --verbose --target ${{ matrix.target }}
+        run: cargo build -p desktop --release --verbose --target ${{ matrix.target }}
 
       - name: Prepare and Zip (Mac)
         run: |
-          mv "target/${{ matrix.target }}/release/gui" "${{ env.BIN_NAME }}"
+          mv "target/${{ matrix.target }}/release/desktop" "${{ env.BIN_NAME }}"
           chmod +x "${{ env.BIN_NAME }}"
           zip "bcc_mac_${{ matrix.flavor }}.zip" "${{ env.BIN_NAME }}"
 

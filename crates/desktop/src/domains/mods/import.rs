@@ -7,12 +7,12 @@ use iced::widget::{column, container, pick_list, row, rule, scrollable, space, t
 use iced::{Element, Length, Padding, Size, Task, Theme};
 use tracing::{info, warn};
 
-use kore::systems::addons::adb::mods as adb_mods;
-use kore::systems::addons::paths::{self, Presence};
-use kore::common::job::{JobEvent, JobOutcome};
-use kore::domains::mods::import::{self, ModImportTab, ModPackType};
-use kore::domains::mods::ModDataState;
-use kore::domains::settings::Settings;
+use kokoro::systems::addons::adb::mods as adb_mods;
+use kokoro::systems::addons::paths::{self, Presence};
+use kokoro::common::job::{JobEvent, JobOutcome};
+use kokoro::domains::mods::import::{self, ModImportTab, ModPackType};
+use kokoro::domains::mods::ModDataState;
+use kokoro::domains::settings::Settings;
 
 use crate::app::theme;
 use crate::common::dialog;

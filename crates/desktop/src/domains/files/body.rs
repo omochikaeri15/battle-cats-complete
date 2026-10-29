@@ -7,9 +7,9 @@ use iced::widget::{button, column, container, operation, responsive, scrollable,
 use iced::{widget, Element, Font, Length, Padding, Size, Task, Theme};
 use tracing::warn;
 
-use kore::common::preview::{self, Preview, Stamp};
-use kore::domains::settings::Utf8Mode;
-use kore::Vfs;
+use kokoro::common::preview::{self, Preview, Stamp};
+use kokoro::domains::settings::Utf8Mode;
+use kokoro::Vfs;
 
 use crate::app::theme;
 use crate::common::fonts;

@@ -23,15 +23,15 @@ use std::sync::{Arc, LazyLock};
 
 use iced::widget::{operation, scrollable};
 use iced::{Element, Size, Task};
-use nyanko::combat::Separator;
-use nyanko::common;
+use codex::combat::Separator;
+use codex::common;
 use tracing::warn;
 
-use kore::common::preview::{self, Stamp};
-use kore::systems::combat::NameBook;
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::{mods, settings::EditorMode};
-use kore::{Vault, Vfs};
+use kokoro::common::preview::{self, Stamp};
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::{mods, settings::EditorMode};
+use kokoro::{Vault, Vfs};
 
 use crate::common::feedback::Slot;
 use crate::widget::popup;
@@ -1506,9 +1506,9 @@ pub(super) fn plan(
 mod tests {
     use std::path::Path;
 
-    use kore::common::preview::{self, Stamp};
-    use kore::domains::settings::EditorMode;
-    use kore::Vfs;
+    use kokoro::common::preview::{self, Stamp};
+    use kokoro::domains::settings::EditorMode;
+    use kokoro::Vfs;
 
     use super::resolved::{self, Rule};
     use super::schema::{self, Subject};
@@ -1634,7 +1634,7 @@ mod tests {
             for field in [super::schema::combo_unit(slot), super::schema::combo_form(slot)] {
                 assert!(
                     schema.index_of(&field).is_some(),
-                    "combo: the slot view addresses {field}, which nyanko no longer publishes",
+                    "combo: the slot view addresses {field}, which codex no longer publishes",
                 );
             }
         }
@@ -1671,11 +1671,11 @@ mod tests {
     #[test]
     fn resolved_leaves_a_value_it_cannot_represent_alone() {
         use super::resolved::{self, Face, Rule};
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         let schema = schema::of(Subject::Cat);
         let Some(index) = schema.index_of("boss_wave_immune") else {
-            panic!("nyanko no longer publishes boss_wave_immune");
+            panic!("codex no longer publishes boss_wave_immune");
         };
 
         let rule = resolved::rule(Subject::Cat, index, schema.field(index), &[]);
@@ -1788,7 +1788,7 @@ mod tests {
     fn typing_below_a_floor_without_buffering_snaps_immediately() {
         let schema = schema::of(Subject::Cat);
         let Some(index) = schema.index_of("cooldown") else {
-            panic!("nyanko no longer publishes cooldown");
+            panic!("codex no longer publishes cooldown");
         };
 
         let mut draft = bare_draft(Subject::Cat, index, 100);
@@ -1808,7 +1808,7 @@ mod tests {
     fn a_buffer_marked_cooldown_edit_defers_the_floor_and_the_scale() {
         let schema = schema::of(Subject::Cat);
         let Some(index) = schema.index_of("cooldown") else {
-            panic!("nyanko no longer publishes cooldown");
+            panic!("codex no longer publishes cooldown");
         };
 
         let mut draft = bare_draft(Subject::Cat, index, 100);
@@ -1885,13 +1885,13 @@ mod tests {
         assert!(state.draft.is_some(), "the draft should load from the temp fixture");
 
         let Some(map_number) = schema.index_of("map_number") else {
-            panic!("nyanko no longer publishes map_number");
+            panic!("codex no longer publishes map_number");
         };
         let Some(pattern) = schema.index_of(schema::MAP_PATTERN_FIELD) else {
             panic!("the joined table lost its map pattern column");
         };
         let Some(xp) = schema.index_of("xp") else {
-            panic!("nyanko no longer publishes xp");
+            panic!("codex no longer publishes xp");
         };
 
         assert!(map_number < pattern && pattern < xp, "the map-wide cells must lead the stage row");
@@ -1918,7 +1918,7 @@ mod tests {
         let path = dir.join("unitbuy.csv");
         let schema = schema::of(Subject::Buy);
         let Some(index) = schema.index_of("stage_unlock_requirement") else {
-            panic!("nyanko no longer publishes stage_unlock_requirement");
+            panic!("codex no longer publishes stage_unlock_requirement");
         };
 
         let seed = plan(Subject::Buy, Address::Line(0), "test".to_owned(), &path, None, EditorMode::Resolved);
@@ -1959,7 +1959,7 @@ mod tests {
         let path = dir.join("unitbuy.csv");
         let schema = schema::of(Subject::Buy);
         let Some(index) = schema.index_of("stage_unlock_requirement") else {
-            panic!("nyanko no longer publishes stage_unlock_requirement");
+            panic!("codex no longer publishes stage_unlock_requirement");
         };
 
         let seed = plan(Subject::Buy, Address::Line(0), "test".to_owned(), &path, None, EditorMode::Resolved);
@@ -1998,7 +1998,7 @@ mod tests {
         let path = dir.join("unitbuy.csv");
         let schema = schema::of(Subject::Buy);
         let Some(index) = schema.index_of("stage_unlock_requirement") else {
-            panic!("nyanko no longer publishes stage_unlock_requirement");
+            panic!("codex no longer publishes stage_unlock_requirement");
         };
 
         let seed = plan(Subject::Buy, Address::Line(0), "test".to_owned(), &path, None, EditorMode::Resolved);
@@ -2098,8 +2098,8 @@ mod tests {
 mod append_tests {
     use std::fs;
 
-    use kore::domains::settings::EditorMode;
-    use kore::Vfs;
+    use kokoro::domains::settings::EditorMode;
+    use kokoro::Vfs;
 
     use super::schema::{self, Subject};
     use super::{plan, Address, Draft};

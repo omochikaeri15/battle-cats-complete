@@ -2,14 +2,14 @@ use iced::alignment::Vertical;
 use iced::widget::{column, container, row, scrollable, slider, text, Column};
 use iced::{Element, Length};
 
-use kore::domains::sandbox::base::{self, Parts};
-use kore::systems::combat::NameBook;
-use kore::domains::sandbox::config::{CatGod, StartSpeed, Tutorial, FILIBUSTER_MAP};
-use kore::domains::sandbox::{config, ITEMS, TECHS};
-use kore::domains::stage::{navigate, GlobalMapId, StageRegistry};
-use kore::systems::treasure::Catalog;
-use kore::Vfs;
-use nyanko::chapter::Category;
+use kokoro::domains::sandbox::base::{self, Parts};
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::sandbox::config::{CatGod, StartSpeed, Tutorial, FILIBUSTER_MAP};
+use kokoro::domains::sandbox::{config, ITEMS, TECHS};
+use kokoro::domains::stage::{navigate, GlobalMapId, StageRegistry};
+use kokoro::systems::treasure::Catalog;
+use kokoro::Vfs;
+use codex::chapter::Category;
 
 use crate::app::state::{SandboxScaling, SandboxDevice, SandboxPanel, SandboxState, SandboxVolume, QUALITY_RANGE, QUALITY_STEP};
 use crate::app::theme;

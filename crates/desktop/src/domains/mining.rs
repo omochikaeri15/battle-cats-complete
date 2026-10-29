@@ -16,28 +16,28 @@ use iced::widget::text::Wrapping;
 use iced::widget::{image as iced_image, operation, scrollable, tooltip, Id};
 use iced::futures::channel::mpsc::unbounded;
 use iced::{Color, ContentFit, Element, Length, Size, Task, Theme};
-use nyanko::cat::unit::{LevelCurve, TalentCost};
+use codex::cat::unit::{LevelCurve, TalentCost};
 use rustc_hash::FxHasher;
 use tracing::debug;
-use nyanko::combat::{Entity, REGISTRY};
+use codex::combat::{Entity, REGISTRY};
 
-use kore::common::formats::SpriteSheet as CoreSpriteSheet;
-use kore::systems::combat::NameBook;
-use kore::domains::cat::files as cat_files;
-use kore::domains::cat::game::stats as cat_stats;
-use kore::domains::cat::game::talents as talent_logic;
-use kore::domains::cat::scanner::{self as cat_scanner, CatEntry};
-use kore::domains::enemy::scanner::{self as enemy_scanner, EnemyEntry};
-use kore::domains::stage::{GlobalMapId, GlobalStageId, StageRegistry};
-use nyanko::chapter::Category;
-use kore::domains::import;
-use kore::domains::mining::{self, changes, enemies, forms, localized, stages, talents, units, Build, Diff, Status};
+use kokoro::common::formats::SpriteSheet as CoreSpriteSheet;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::cat::files as cat_files;
+use kokoro::domains::cat::game::stats as cat_stats;
+use kokoro::domains::cat::game::talents as talent_logic;
+use kokoro::domains::cat::scanner::{self as cat_scanner, CatEntry};
+use kokoro::domains::enemy::scanner::{self as enemy_scanner, EnemyEntry};
+use kokoro::domains::stage::{GlobalMapId, GlobalStageId, StageRegistry};
+use codex::chapter::Category;
+use kokoro::domains::import;
+use kokoro::domains::mining::{self, changes, enemies, forms, localized, stages, talents, units, Build, Diff, Status};
 
-use kore::domains::settings::{ScannerConfig, Settings};
-use kore::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
-use kore::systems::treasure::Bonus;
-use kore::common::context::GlobalContext;
-use kore::{Source, Vault, Vfs};
+use kokoro::domains::settings::{ScannerConfig, Settings};
+use kokoro::systems::combat::registry::{get_display_def, is_trait, AbilityIcon, STAT_RARITY};
+use kokoro::systems::treasure::Bonus;
+use kokoro::common::context::GlobalContext;
+use kokoro::{Source, Vault, Vfs};
 
 use crate::app::theme;
 

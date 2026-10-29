@@ -3,7 +3,7 @@ use iced::widget::canvas;
 use iced::widget::canvas::{Geometry, Path, Stroke};
 use iced::{Color, Element, Length, Point, Rectangle, Renderer, Size, Theme};
 
-use nyanko::graphics::backdrop::Camera;
+use codex::graphics::backdrop::Camera;
 
 use crate::widget::{toast, Tone};
 

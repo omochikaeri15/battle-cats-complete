@@ -7,9 +7,9 @@ use iced::widget::{column, container, markdown, pick_list, progress_bar, row, sc
 use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 use tracing::{error, info, warn};
 
-use kore::domains::import;
-use kore::domains::settings::source::{self, ErrorKind, Partial, Stamp, Step};
-use kore::domains::settings::{FilesSettings, Settings as CoreSettings, UpdateMode};
+use kokoro::domains::import;
+use kokoro::domains::settings::source::{self, ErrorKind, Partial, Stamp, Step};
+use kokoro::domains::settings::{FilesSettings, Settings as CoreSettings, UpdateMode};
 
 use crate::app::state::SourceState;
 use crate::app::theme;

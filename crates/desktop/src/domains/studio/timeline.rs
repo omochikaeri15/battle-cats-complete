@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use super::*;
-use kore::systems::animation::authoring::Cycle;
+use kokoro::systems::animation::authoring::Cycle;
 use iced::border::Radius;
 use iced::widget::canvas::{self, Geometry, Path, Stroke};
 use iced::widget::{canvas as canvas_widget, column, container, row, text};

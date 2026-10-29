@@ -14,10 +14,10 @@ use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use kore::common::architecture;
-use kore::domains::import::{self, PackFault};
-use kore::domains::settings::{FilesSettings, Utf8Mode};
-use kore::Vfs;
+use kokoro::common::architecture;
+use kokoro::domains::import::{self, PackFault};
+use kokoro::domains::settings::{FilesSettings, Utf8Mode};
+use kokoro::Vfs;
 
 use crate::app::state::FilesState;
 use crate::app::theme;

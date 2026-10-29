@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use iced::widget::column;
 use iced::Element;
-use nyanko::cat::unit::LevelCurve;
-use nyanko::files::img015;
+use codex::cat::unit::LevelCurve;
+use codex::files::img015;
 
-use kore::common::context::GlobalContext;
-use nyanko::combat::Faction;
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::settings::Settings;
-use kore::systems::combat::{AbilityItem, CustomIcon, RenderContext, ABILITY_Y};
+use kokoro::common::context::GlobalContext;
+use codex::combat::Faction;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::settings::Settings;
+use kokoro::systems::combat::{AbilityItem, CustomIcon, RenderContext, ABILITY_Y};
 
 use crate::common::{CustomAssets, SpriteSheet};
 use crate::systems::combat::abilities::{self as shared, ListLayout};

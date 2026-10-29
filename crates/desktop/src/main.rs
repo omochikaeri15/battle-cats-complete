@@ -13,10 +13,10 @@ use std::panic;
 use iced::window;
 use iced::Size;
 
-use kore::common::architecture;
-use kore::common::assets;
+use kokoro::common::architecture;
+use kokoro::common::assets;
 #[cfg(target_os = "linux")]
-use kore::common::dirs::APP_DIR;
+use kokoro::common::dirs::APP_DIR;
 
 pub fn main() -> iced::Result {
     architecture::anchor();

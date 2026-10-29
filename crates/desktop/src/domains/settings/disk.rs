@@ -6,8 +6,8 @@ use iced::widget::{column, container, text, tooltip};
 use iced::{task, Element, Task};
 use tracing::{debug, error};
 
-use kore::common::architecture;
-use kore::domains::import;
+use kokoro::common::architecture;
+use kokoro::domains::import;
 
 use crate::app::theme;
 use crate::common::feedback::{Slot as Confirm, CONFIRM_LABEL};
@@ -79,7 +79,7 @@ fn size_hint<'a>(content: impl Into<Element<'a, Message>>, size: Option<u64>, sc
 fn measure() -> Sizes {
     Sizes {
         game: folder_size(Path::new(architecture::GAME)),
-        cache: kore::common::dirs::cache_path().map_or(0, |dir| folder_size(&dir)),
+        cache: kokoro::common::dirs::cache_path().map_or(0, |dir| folder_size(&dir)),
     }
 }
 
@@ -136,7 +136,7 @@ impl State {
                 let path = match target {
                     Target::Game => PathBuf::from(architecture::GAME),
                     Target::Cache => {
-                        let Some(cache_dir) = kore::common::dirs::cache_path() else {
+                        let Some(cache_dir) = kokoro::common::dirs::cache_path() else {
                             return Task::none();
                         };
                         cache_dir
@@ -251,7 +251,7 @@ impl State {
 
     pub fn view<'a>(&'a self) -> Element<'a, Message> {
         let game_exists = architecture::game_present();
-        let cache_present = kore::common::dirs::cache_path()
+        let cache_present = kokoro::common::dirs::cache_path()
             .is_some_and(|dir| architecture::has_content(&dir));
 
         column![

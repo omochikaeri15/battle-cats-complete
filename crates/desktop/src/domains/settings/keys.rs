@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use iced::widget::{column, container, row, scrollable, text_input};
 use iced::{Alignment, Element, Length, Size, Task, Theme};
 
-use kore::common::keys::sanitize;
-use kore::domains::settings::UserKeys;
+use kokoro::common::keys::sanitize;
+use kokoro::domains::settings::UserKeys;
 
 use crate::app::theme;
 use crate::common::dialog;
@@ -77,7 +77,7 @@ impl Default for State {
 }
 
 impl State {
-    fn region_mut(&mut self, slot: RegionSlot) -> &mut kore::domains::settings::RegionKey {
+    fn region_mut(&mut self, slot: RegionSlot) -> &mut kokoro::domains::settings::RegionKey {
         match slot {
             RegionSlot::Ja => &mut self.keys.ja,
             RegionSlot::En => &mut self.keys.en,
@@ -86,7 +86,7 @@ impl State {
         }
     }
 
-    fn region_ref(&self, slot: RegionSlot) -> &kore::domains::settings::RegionKey {
+    fn region_ref(&self, slot: RegionSlot) -> &kokoro::domains::settings::RegionKey {
         match slot {
             RegionSlot::Ja => &self.keys.ja,
             RegionSlot::En => &self.keys.en,

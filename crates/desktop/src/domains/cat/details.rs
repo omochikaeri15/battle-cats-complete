@@ -7,12 +7,12 @@ use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, row, scrollable, stack, text, tooltip, Space};
 use iced::{font, Border, Color, Element, Font, Length, Padding, Theme};
 
-use kore::common::context::GlobalContext;
-use kore::common::io;
-use kore::domains::cat::combo::{self, CatCombo, ComboMember};
-use kore::domains::cat::scanner::CatEntry;
-use kore::Vfs;
-use kore::Source;
+use kokoro::common::context::GlobalContext;
+use kokoro::common::io;
+use kokoro::domains::cat::combo::{self, CatCombo, ComboMember};
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::Vfs;
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;

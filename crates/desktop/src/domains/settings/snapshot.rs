@@ -3,7 +3,7 @@ use std::time::Duration;
 use iced::{task, Element, Task};
 use tracing::debug;
 
-use kore::domains::mining;
+use kokoro::domains::mining;
 
 use crate::app::theme;
 use crate::common::feedback::{Slot as Confirm, CONFIRM_LABEL};

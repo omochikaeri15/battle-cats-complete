@@ -5,15 +5,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use iced::alignment::Horizontal;
 use iced::widget::{button, column, container, pick_list, scrollable, text, text_input};
 use iced::{Element, Length, Padding, Size, Task};
-use nyanko::combat::Separator;
-use nyanko::common;
+use codex::combat::Separator;
+use codex::common;
 use tracing::warn;
 
-use kore::common::preview::{self, Stamp};
-use kore::Vfs;
-use kore::domains::mods;
-use kore::domains::stage::names;
-use nyanko::combat::{Faction, Identity};
+use kokoro::common::preview::{self, Stamp};
+use kokoro::Vfs;
+use kokoro::domains::mods;
+use kokoro::domains::stage::names;
+use codex::combat::{Faction, Identity};
 
 use crate::app::{theme, Page};
 use crate::common::feedback::{Slot, CONFIRM_LABEL};

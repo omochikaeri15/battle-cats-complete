@@ -9,9 +9,9 @@ use iced::{task, Task};
 use image::RgbaImage;
 use tracing::{error, info, warn};
 
-use kore::domains::utilities::background::FRAME_RATE;
-use kore::systems::animation::export::{leader, process, EncoderMessage, EncoderStatus, ExportFormat, ExportMode, ExportRequest, FrameTiming, ShowcaseLengths};
-use nyanko::graphics::backdrop::{Backdrop, Camera};
+use kokoro::domains::utilities::background::FRAME_RATE;
+use kokoro::systems::animation::export::{leader, process, EncoderMessage, EncoderStatus, ExportFormat, ExportMode, ExportRequest, FrameTiming, ShowcaseLengths};
+use codex::graphics::backdrop::{Backdrop, Camera};
 
 use crate::common::feedback::Slot;
 

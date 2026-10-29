@@ -2,7 +2,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, scrollable, text, Column, Row};
 use iced::{Element, Length, Theme};
 
-use kore::domains::settings::EditorMode;
+use kokoro::domains::settings::EditorMode;
 
 use crate::app::theme;
 use crate::widget::smooth_scroll;
@@ -196,7 +196,7 @@ pub(super) fn rule(index: usize) -> Rule {
 mod tests {
     use super::{rule, Rule, COST_HEAD, COST_LEVELS};
 
-    // nyanko parses each cost with u16::from_str and drops what fails, so a negative
+    // codex parses each cost with u16::from_str and drops what fails, so a negative
     // cost would not be stored as -1: it would vanish and shift every later level up one.
     #[test]
     fn every_level_refuses_a_cost_the_engine_would_drop() {

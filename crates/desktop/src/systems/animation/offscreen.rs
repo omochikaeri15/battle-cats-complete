@@ -8,16 +8,16 @@ use iced::Point;
 use image::RgbaImage;
 use tracing::{error, info, warn};
 
-use nyanko::graphics::animate::{resolve_frame, FrameData};
-use nyanko::graphics::rig::{Animation, Rig};
-use nyanko::graphics::tools::joint;
-use nyanko::graphics::tools::part;
+use codex::graphics::animate::{resolve_frame, FrameData};
+use codex::graphics::rig::{Animation, Rig};
+use codex::graphics::tools::joint;
+use codex::graphics::tools::part;
 
-use kore::systems::animation::export::process::calculate_export_time;
-use kore::systems::animation::export::{EncoderMessage, ExportMode, FrameTiming, ShowcaseLengths};
-use kore::domains::settings::Scope;
-use kore::systems::animation::{multiply_mat3, Role};
-use kore::Source;
+use kokoro::systems::animation::export::process::calculate_export_time;
+use kokoro::systems::animation::export::{EncoderMessage, ExportMode, FrameTiming, ShowcaseLengths};
+use kokoro::domains::settings::Scope;
+use kokoro::systems::animation::{multiply_mat3, Role};
+use kokoro::Source;
 
 use crate::systems::animation;
 

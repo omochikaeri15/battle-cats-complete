@@ -3,12 +3,12 @@ use iced::widget::canvas::{self, Geometry, Path, Stroke};
 use iced::widget::canvas as canvas_widget;
 use iced::{Color, Element, Length, Point, Rectangle, Renderer, Theme, Vector};
 
-use nyanko::graphics::animate::{resolve_frame, FrameData};
-use nyanko::graphics::rig::{BoundingBox, Rig};
-use nyanko::graphics::tools::joint::Joint;
-use nyanko::graphics::tools::part;
+use codex::graphics::animate::{resolve_frame, FrameData};
+use codex::graphics::rig::{BoundingBox, Rig};
+use codex::graphics::tools::joint::Joint;
+use codex::graphics::tools::part;
 
-use kore::domains::settings::{Overlays, Scope, StudioSettings, Tier};
+use kokoro::domains::settings::{Overlays, Scope, StudioSettings, Tier};
 
 use super::canvas as viewer;
 use super::data;
@@ -498,7 +498,7 @@ pub(super) fn paint(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kore::domains::settings::Shown;
+    use kokoro::domains::settings::Shown;
 
     fn sheet(pixels: &mut [u8], width: i32, height: i32) -> Sheet<'_> {
         Sheet { pixels, width, height }

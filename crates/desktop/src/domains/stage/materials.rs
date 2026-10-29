@@ -7,10 +7,10 @@ use iced::widget::image::Handle;
 use iced::widget::{column, container, image as iced_image, row, space, text, tooltip, Column};
 use iced::{Color, Element, Length, Theme};
 
-use kore::domains::stage::materials;
-use kore::domains::stage::{Map, Stage};
-use kore::{ItemStore, Vfs};
-use kore::Source;
+use kokoro::domains::stage::materials;
+use kokoro::domains::stage::{Map, Stage};
+use kokoro::{ItemStore, Vfs};
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;

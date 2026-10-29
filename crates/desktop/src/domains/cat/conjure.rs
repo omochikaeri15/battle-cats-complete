@@ -1,15 +1,15 @@
 use iced::border::Radius;
 use iced::widget::{button, column, container, row, text, Space};
 use iced::{Alignment, Border, Element, Length, Theme};
-use nyanko::files::img015;
+use codex::files::img015;
 
-use kore::domains::cat::game::stats::get_final_stats;
-use nyanko::combat::Faction;
-use kore::domains::cat::waiter::unitid;
-use kore::domains::settings::Settings;
-use kore::systems::combat::abilities::collect_ability_data;
-use kore::systems::combat::registry::Magnification;
-use kore::systems::combat::{AbilityItem, RenderContext, ABILITY_Y, TRAIT_Y};
+use kokoro::domains::cat::game::stats::get_final_stats;
+use codex::combat::Faction;
+use kokoro::domains::cat::waiter::unitid;
+use kokoro::domains::settings::Settings;
+use kokoro::systems::combat::abilities::collect_ability_data;
+use kokoro::systems::combat::registry::Magnification;
+use kokoro::systems::combat::{AbilityItem, RenderContext, ABILITY_Y, TRAIT_Y};
 
 use crate::app::theme;
 use crate::common::{CustomAssets, SpriteSheet};

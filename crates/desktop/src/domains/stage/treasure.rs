@@ -6,13 +6,13 @@ use iced::alignment::Horizontal;
 use iced::widget::image::Handle;
 use iced::widget::{column, container, image as iced_image, row, space, text, tooltip, Column};
 use iced::{Alignment, Element, Length, Theme};
-use nyanko::cat::unit::UnitBuy;
-use nyanko::chapter::stage::{DropOdds, RewardStructure};
+use codex::cat::unit::UnitBuy;
+use codex::chapter::stage::{DropOdds, RewardStructure};
 
-use kore::domains::stage::treasure;
-use kore::domains::stage::Stage;
-use kore::{ItemStore, Vfs};
-use kore::Source;
+use kokoro::domains::stage::treasure;
+use kokoro::domains::stage::Stage;
+use kokoro::{ItemStore, Vfs};
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;

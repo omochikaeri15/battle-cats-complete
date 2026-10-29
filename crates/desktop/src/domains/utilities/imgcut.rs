@@ -8,7 +8,7 @@ use iced::widget::{button, column, container, pick_list, row};
 use iced::{Alignment, Background, Border, Color, Element, Length, Task, Theme};
 use image::ImageFormat;
 
-use kore::domains::utilities::imgcut::{self, Sheet};
+use kokoro::domains::utilities::imgcut::{self, Sheet};
 
 use crate::app::theme;
 use crate::common::dialog;

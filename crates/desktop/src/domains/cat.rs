@@ -20,22 +20,22 @@ use iced::widget::{
     text, text_input, Id, Space,
 };
 use iced::{Border, Color, Element, Length, Size, Subscription, Task, Theme};
-use nyanko::combat::Entity;
+use codex::combat::Entity;
 use tracing::info;
 
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::common::formats::SpriteSheet as CoreSpriteSheet;
-use kore::domains::cat::animation as cat_animation;
-use kore::domains::cat::game::stats::{get_final_stats, seeded_level};
-use kore::domains::cat::scanner::{self, CatEntry};
-use kore::domains::cat::waiter::unitid;
-use kore::domains::cat::CatDataState;
-use kore::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_COOLDOWN, STAT_COST, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_RARITY, STAT_SPEED};
-use kore::systems::combat::RenderContext;
-use kore::domains::settings::{ScannerConfig, Settings};
-use kore::systems::treasure::Bonus;
-use kore::{Vfs, Vault};
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::common::formats::SpriteSheet as CoreSpriteSheet;
+use kokoro::domains::cat::animation as cat_animation;
+use kokoro::domains::cat::game::stats::{get_final_stats, seeded_level};
+use kokoro::domains::cat::scanner::{self, CatEntry};
+use kokoro::domains::cat::waiter::unitid;
+use kokoro::domains::cat::CatDataState;
+use kokoro::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_COOLDOWN, STAT_COST, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_RARITY, STAT_SPEED};
+use kokoro::systems::combat::RenderContext;
+use kokoro::domains::settings::{ScannerConfig, Settings};
+use kokoro::systems::treasure::Bonus;
+use kokoro::{Vfs, Vault};
 
 use crate::systems::animation;
 use crate::app::state::{AnimState, AppState, CatListState};

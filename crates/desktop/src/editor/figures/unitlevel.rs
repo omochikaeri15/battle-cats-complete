@@ -48,7 +48,7 @@ mod tests {
     fn level_brackets_publish_no_columns() {
         assert!(
             schema::of(Subject::Curve).order().is_empty(),
-            "unitlevel: nyanko now publishes named curve columns, so the blanket rule must become a table"
+            "unitlevel: codex now publishes named curve columns, so the blanket rule must become a table"
         );
     }
 }

@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
 use iced::{Element, Size, Task};
-use nyanko::combat::Identity;
+use codex::combat::Identity;
 
-use kore::domains::enemy::filter::EnemyFilterState;
-use kore::domains::enemy::scanner::EnemyEntry;
-use kore::systems::combat::NameBook;
+use kokoro::domains::enemy::filter::EnemyFilterState;
+use kokoro::domains::enemy::scanner::EnemyEntry;
+use kokoro::systems::combat::NameBook;
 
 use crate::common::{CustomAssets, SpriteSheet};
 use crate::systems::combat::enemy_filter::{Art, Catalog, Panel, Profile};

@@ -4,8 +4,8 @@ use iced::alignment::Vertical;
 use iced::widget::{button, column, pick_list, row, rule, text, Column};
 use iced::{Element, Length, Theme};
 
-use kore::systems::treasure::{Catalog, Config, ARCS, FULL_PERCENT};
-use nyanko::chapter::treasure::ARC_SLOTS;
+use kokoro::systems::treasure::{Catalog, Config, ARCS, FULL_PERCENT};
+use codex::chapter::treasure::ARC_SLOTS;
 
 use crate::app::theme;
 use crate::widget::{entry_row, subsection};

@@ -82,7 +82,7 @@ mod tests {
         for entry in schema::of(Subject::Cat).order() {
             assert!(
                 rule(entry.field).is_some(),
-                "cat: nyanko publishes {}, which no resolved rule arm names",
+                "cat: codex publishes {}, which no resolved rule arm names",
                 entry.field,
             );
         }

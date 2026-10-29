@@ -3,14 +3,14 @@ use std::collections::HashSet;
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, image as iced_image, operation, pick_list, row, scrollable, stack, text, text_input, tooltip, Id, Space};
 use iced::{Element, Length, Size, Task};
-use nyanko::combat::{AttrUnit, Identity, REGISTRY};
+use codex::combat::{AttrUnit, Identity, REGISTRY};
 
-use kore::domains::enemy::filter::evaluation::get_identity_name;
-use kore::systems::combat::NameBook;
-use kore::domains::enemy::filter::{EnemyFilterState, MatchMode, ATTACK_TYPE_IDENTITIES};
-use kore::domains::enemy::scanner::EnemyEntry;
-use kore::systems::combat::present_identities;
-use kore::systems::combat::registry::{get_display_def, AbilityIcon, DisplayGroup};
+use kokoro::domains::enemy::filter::evaluation::get_identity_name;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::enemy::filter::{EnemyFilterState, MatchMode, ATTACK_TYPE_IDENTITIES};
+use kokoro::domains::enemy::scanner::EnemyEntry;
+use kokoro::systems::combat::present_identities;
+use kokoro::systems::combat::registry::{get_display_def, AbilityIcon, DisplayGroup};
 
 use crate::app::theme;
 use crate::common::ability_icon;

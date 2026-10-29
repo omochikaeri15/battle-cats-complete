@@ -152,7 +152,7 @@ impl Draft {
         self.restate();
     }
 
-    pub(super) fn curve(&self) -> Option<&nyanko::graphics::rig::AnimModification> {
+    pub(super) fn curve(&self) -> Option<&codex::graphics::rig::AnimModification> {
         self.doc.track(self.track?)
     }
 

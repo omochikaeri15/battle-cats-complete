@@ -6,7 +6,7 @@ use iced::wgpu;
 use iced::Rectangle;
 use tracing::{error, info, warn};
 
-use nyanko::graphics::backdrop::{Backdrop, Camera};
+use codex::graphics::backdrop::{Backdrop, Camera};
 
 use super::pipeline::{self, Pipeline};
 

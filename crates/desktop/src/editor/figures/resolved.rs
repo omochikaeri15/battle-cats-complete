@@ -1,6 +1,6 @@
 use std::fmt;
 
-use kore::domains::settings::EditorMode;
+use kokoro::domains::settings::EditorMode;
 
 use super::combat::{cats, enemies};
 use super::{combos, costs, itembuy, mapdata, mapdrops, schema::Subject, talents, unitbuy, unitlevel};
@@ -231,7 +231,7 @@ fn lookup(field: Option<&str>, find: fn(&str) -> Option<Rule>) -> Rule {
 
 #[cfg(test)]
 mod tests {
-    use kore::domains::settings::EditorMode;
+    use kokoro::domains::settings::EditorMode;
 
     use super::{rule, Rule};
     use crate::editor::figures::combat::{cats, enemies};
@@ -285,7 +285,7 @@ mod tests {
                 assert_ne!(
                     rule(subject, index, Some(entry.field), &[]),
                     Rule::Flag,
-                    "{subject:?}: {} carries a nyanko Scale, so it is a magnitude and never a flag",
+                    "{subject:?}: {} carries a codex Scale, so it is a magnitude and never a flag",
                     entry.field,
                 );
             }

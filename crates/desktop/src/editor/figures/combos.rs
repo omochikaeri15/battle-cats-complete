@@ -8,13 +8,13 @@ use iced::widget::{button, column, container, image as iced_image, scrollable, t
 use iced::{ContentFit, Element, Length};
 use rustc_hash::FxHashMap;
 
-use kore::common::gfx::autocrop;
-use kore::domains::cat::combo;
-use kore::domains::cat::files;
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::settings::EditorMode;
-use nyanko::cat::unit::{ComboStrength, NyancomboData};
-use kore::Vault;
+use kokoro::common::gfx::autocrop;
+use kokoro::domains::cat::combo;
+use kokoro::domains::cat::files;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::settings::EditorMode;
+use codex::cat::unit::{ComboStrength, NyancomboData};
+use kokoro::Vault;
 
 use crate::app::theme;
 use crate::common::feedback::CONFIRM_LABEL;
@@ -689,7 +689,7 @@ mod tests {
         for entry in schema::of(Subject::Combo).order() {
             assert!(
                 rule(entry.field).is_some(),
-                "combo: nyanko publishes {}, which no resolved rule arm names",
+                "combo: codex publishes {}, which no resolved rule arm names",
                 entry.field,
             );
         }
@@ -731,7 +731,7 @@ mod tests {
     // effect's param row, and only the three effects with a sixth column ever use Activated.
     #[test]
     fn a_power_is_offered_only_where_its_effect_declares_a_magnitude() {
-        use nyanko::cat::unit::{ComboStrength, NyancomboParam};
+        use codex::cat::unit::{ComboStrength, NyancomboParam};
 
         let ordinary = NyancomboParam { magnitudes: vec![Some(10), Some(20), Some(30), Some(50), Some(-20)] };
         let granting = NyancomboParam {

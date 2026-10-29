@@ -6,7 +6,7 @@ use iced::wgpu;
 use iced::widget::shader;
 use image::RgbaImage;
 
-use nyanko::graphics::backdrop::{Quad, Surface};
+use codex::graphics::backdrop::{Quad, Surface};
 
 const SHADER_SOURCE: &str = r"
 struct VertexInput {

@@ -3,8 +3,8 @@ use iced::widget::{button, column, container, row, text, text_input};
 
 use crate::widget::picker;
 
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::enemy::scanner::EnemyEntry;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::enemy::scanner::EnemyEntry;
 
 pub(super) const TITLE: &str = "Export Set";
 pub(super) const SPEC: popup::Spec = popup::Spec::new(popup::Kind::StudioShipout, Size::new(304.0, 186.0));

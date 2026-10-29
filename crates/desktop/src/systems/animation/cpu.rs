@@ -3,7 +3,7 @@ use std::sync::Arc;
 use iced::Rectangle;
 use image::RgbaImage;
 
-use kore::systems::animation::multiply_mat3;
+use kokoro::systems::animation::multiply_mat3;
 
 use crate::widget::cpu::{Alpha, Layer, Pixels, Plan, Rasterize, Sheet, Vertex};
 

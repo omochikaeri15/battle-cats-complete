@@ -12,7 +12,7 @@ use iced::{Element, Length, Size, Task};
 use image::RgbaImage;
 use tracing::{info, warn};
 
-use kore::common::assets;
+use kokoro::common::assets;
 
 use crate::app::theme;
 use crate::common::row_window::{self, RowWindow};

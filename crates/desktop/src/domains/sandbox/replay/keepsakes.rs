@@ -3,15 +3,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use iced::Size;
-use nyanko::files::{Localizable, Param};
+use codex::files::{Localizable, Param};
 
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::common::formats::{fitting_cut, imgcut};
-use kore::domains::sandbox::replay::{self as tape, Save, Summary};
-use kore::domains::settings::{ScannerConfig, Settings};
-use kore::systems::treasure::Bonus;
-use kore::{Source, Vault};
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::common::formats::{fitting_cut, imgcut};
+use kokoro::domains::sandbox::replay::{self as tape, Save, Summary};
+use kokoro::domains::settings::{ScannerConfig, Settings};
+use kokoro::systems::treasure::Bonus;
+use kokoro::{Source, Vault};
 
 use crate::app::state::AppState;
 use crate::common::sheet_layers;

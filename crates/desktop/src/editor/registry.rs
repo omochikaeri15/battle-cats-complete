@@ -1,14 +1,14 @@
 use std::borrow::Cow;
 use std::path::Path;
 
-use kore::common::architecture;
-use kore::common::io::APP_LANGUAGES;
-use kore::domains::settings::EditorMode;
+use kokoro::common::architecture;
+use kokoro::common::io::APP_LANGUAGES;
+use kokoro::domains::settings::EditorMode;
 
 use crate::app::{theme, Page};
 use crate::common::feedback::LOCKED_NOTICE;
 
-use kore::systems::animation::authoring;
+use kokoro::systems::animation::authoring;
 
 use crate::domains::studio;
 

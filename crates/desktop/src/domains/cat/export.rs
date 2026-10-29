@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use kore::common::context::GlobalContext;
-use kore::domains::cat::scanner::CatEntry;
-use kore::domains::cat::statblock::{self, Subject};
-use kore::domains::settings::Settings;
+use kokoro::common::context::GlobalContext;
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::domains::cat::statblock::{self, Subject};
+use kokoro::domains::settings::Settings;
 
 use crate::common::SpriteSheet;
 use crate::widget::statblock_export::Request;

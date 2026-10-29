@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/data",
-    "crates/emu",
-    "crates/kore",
+    "crates/codex",
+    "crates/emulator",
+    "crates/kokoro",
     "crates/desktop",
     "xtask",
 ]
@@ -16,7 +16,7 @@ authors = ["omochikaeri15 <251449262+omochikaeri15@users.noreply.github.com>"]
 repository = "https://github.com/omochikaeri15/battle-cats-complete"
 
 [workspace.dependencies]
-nyanko = { path = "crates/data" }
+codex = { path = "crates/codex" }
 
 [profile.dev]
 debug = "line-tables-only"
@@ -25,7 +25,7 @@ split-debuginfo = "unpacked"
 [profile.dev.package."*"]
 debug = false
 
-[profile.dev.package.emu]
+[profile.dev.package.emulator]
 opt-level = 2
 
 [profile.release]

@@ -13,25 +13,25 @@ use iced::widget::{button, column, container, image as iced_image, mouse_area, r
 use iced::{mouse, Border, Color, Element, Length, Padding, Size, Task, Theme};
 use tracing::warn;
 
-use emu::runtime::VERSION;
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::common::frames;
-use kore::domains::cat::scanner;
-use kore::domains::sandbox::orb::Allowance;
-use kore::domains::sandbox::replay::{self as tape, Staged, Summary, Unit};
-use kore::domains::settings::{ScannerConfig, Settings};
-use kore::systems::treasure::{self, Bonus};
-use kore::Vault;
-use nyanko::files::Localizable;
-use kore::common::gfx::open_image;
+use emulator::runtime::VERSION;
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::common::frames;
+use kokoro::domains::cat::scanner;
+use kokoro::domains::sandbox::orb::Allowance;
+use kokoro::domains::sandbox::replay::{self as tape, Staged, Summary, Unit};
+use kokoro::domains::settings::{ScannerConfig, Settings};
+use kokoro::systems::treasure::{self, Bonus};
+use kokoro::Vault;
+use codex::files::Localizable;
+use kokoro::common::gfx::open_image;
 
 use crate::app::state::AppState;
 use crate::app::theme;
 use crate::common::{fonts, header_icon};
 use crate::domains::cat;
 use crate::domains::stage::CROWN_GLYPH;
-use crate::systems::emu::Reel;
+use crate::systems::host::Reel;
 use crate::widget::{list_row, popup, section, smooth_scroll, text_with_superscript};
 
 use super::lineup::{Metrics, SMALLEST};
@@ -388,7 +388,7 @@ impl State {
         let orbs = self.orbs.load(&staged.vault, &self.glossary).map(Message::Orbs);
 
         self.coin = staged.vault.vfs.find(NP_ICON).and_then(|path| open_image(&staged.vault.vfs.source(&path))).map(|opened| {
-            let cropped = kore::common::gfx::autocrop(opened.to_rgba8());
+            let cropped = kokoro::common::gfx::autocrop(opened.to_rgba8());
 
             Handle::from_rgba(cropped.width(), cropped.height(), cropped.into_raw())
         });

@@ -10,8 +10,8 @@ use iced::widget::{container, image as iced_image, row, scrollable, space, text,
 use iced::{Element, Length, Task};
 use image::imageops;
 
-use kore::common::gfx;
-use kore::domains::mods::{self, ModData};
+use kokoro::common::gfx;
+use kokoro::domains::mods::{self, ModData};
 
 use crate::app::theme;
 use crate::widget::{list_row, smooth_scroll};

@@ -6,11 +6,11 @@ use iced::widget::shader;
 use iced::{Element, Event, Point, Rectangle, Vector};
 use image::RgbaImage;
 
-use nyanko::graphics::animate::{resolve_frame, FrameData};
+use codex::graphics::animate::{resolve_frame, FrameData};
 
-use kore::domains::settings::{Scope, StudioSettings};
+use kokoro::domains::settings::{Scope, StudioSettings};
 
-use kore::systems::animation::multiply_mat3;
+use kokoro::systems::animation::multiply_mat3;
 
 use crate::widget::{cpu, LINE_PIXELS};
 
@@ -107,7 +107,7 @@ struct Interaction {
 }
 
 impl Viewport<'_> {
-    fn scoped(&self, unit: &nyanko::graphics::rig::Rig, frame: i32) -> Vec<FrameData> {
+    fn scoped(&self, unit: &codex::graphics::rig::Rig, frame: i32) -> Vec<FrameData> {
         let motion = self.data.current_anim.as_deref();
         let offset = self.data.offset();
         let entity = self.anim.map_or(Scope::Rig, |held| held.entity);
@@ -139,7 +139,7 @@ impl Viewport<'_> {
         self.data.trailed(at).map(|frame| frame.floor() as i32)
     }
 
-    fn drawn(&self, unit: &nyanko::graphics::rig::Rig) -> Vec<Painted> {
+    fn drawn(&self, unit: &codex::graphics::rig::Rig) -> Vec<Painted> {
         let now = self.state.current_frame;
         let live: Vec<Painted> =
             self.scoped(unit, self.seated(now)).into_iter().map(Painted::plain).collect();

@@ -5,13 +5,13 @@ use std::path::Path;
 use iced::widget::image::Handle;
 use iced::widget::{column, container, image as iced_image, row, rule};
 use iced::{Alignment, Element, Length};
-use nyanko::chapter::map::LockSkipDataEntry;
-use nyanko::chapter::stage::ScatCpuSetting;
-use nyanko::chapter::Category;
+use codex::chapter::map::LockSkipDataEntry;
+use codex::chapter::stage::ScatCpuSetting;
+use codex::chapter::Category;
 
-use kore::domains::stage::{cost, files as stage_files, Map, Stage, StageDataState};
-use kore::{ItemStore, Vfs};
-use kore::Source;
+use kokoro::domains::stage::{cost, files as stage_files, Map, Stage, StageDataState};
+use kokoro::{ItemStore, Vfs};
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;

@@ -1,16 +1,16 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, pick_list, row, scrollable, stack, text, text_input, Space};
 use iced::{Element, Length, Size, Theme};
-use nyanko::chapter::stage::{CataminGrade, CostType};
+use codex::chapter::stage::{CataminGrade, CostType};
 
-use kore::domains::stage::cost::grade_label;
-use kore::systems::combat::NameBook;
-use kore::domains::stage::filter::enemy::EnemyFilter;
-use kore::domains::stage::filter::lineup::LineupFilter;
-use kore::domains::stage::filter::material::MaterialFilter;
-use kore::domains::stage::filter::range::StatRange;
-use kore::domains::stage::filter::treasure::TreasureFilter;
-use kore::domains::stage::filter::StageFilterState;
+use kokoro::domains::stage::cost::grade_label;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::stage::filter::enemy::EnemyFilter;
+use kokoro::domains::stage::filter::lineup::LineupFilter;
+use kokoro::domains::stage::filter::material::MaterialFilter;
+use kokoro::domains::stage::filter::range::StatRange;
+use kokoro::domains::stage::filter::treasure::TreasureFilter;
+use kokoro::domains::stage::filter::StageFilterState;
 
 use crate::app::theme;
 use crate::systems::combat::enemy_filter::{self, Art, Panel, Profile};

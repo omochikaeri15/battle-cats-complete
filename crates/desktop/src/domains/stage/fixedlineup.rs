@@ -5,13 +5,13 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, row, scrollable, space, tooltip};
 use iced::{Alignment, Border, Element, Length, Theme};
-use nyanko::chapter::stage::{AbilityType, CannonType, CertificationPreset, EvolutionForm, TreasureType};
+use codex::chapter::stage::{AbilityType, CannonType, CertificationPreset, EvolutionForm, TreasureType};
 
-use kore::domains::cat::waiter::unitexplanation;
-use kore::domains::stage::fixedlineup::{ResolvedFixedLineup, ResolvedSlot};
-use kore::systems::combat::NameBook;
-use kore::Vfs;
-use kore::Source;
+use kokoro::domains::cat::waiter::unitexplanation;
+use kokoro::domains::stage::fixedlineup::{ResolvedFixedLineup, ResolvedSlot};
+use kokoro::systems::combat::NameBook;
+use kokoro::Vfs;
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::common::item_icon;

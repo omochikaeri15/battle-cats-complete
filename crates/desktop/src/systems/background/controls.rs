@@ -2,7 +2,7 @@ use iced::border::Radius;
 use iced::widget::{button, column, container, mouse_area, opaque, pick_list, row, rule, text, text_input, Button, Container, TextInput};
 use iced::{alignment, border, font, Background, Border, Color, Element, Font, Length, Padding, Theme};
 
-use kore::systems::animation::export::ExportFormat;
+use kokoro::systems::animation::export::ExportFormat;
 
 use crate::app::theme;
 use crate::common::feedback::FAILURE_LABEL;

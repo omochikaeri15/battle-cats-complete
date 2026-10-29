@@ -16,12 +16,12 @@ use std::time::Duration;
 use iced::widget::{button, column, container, stack, text, Space};
 use iced::{Alignment, Background, Border, Color, Element, Length, Padding, Size, Task, Theme};
 
-use nyanko::graphics::rig::{Animation, Model, Rig, SpriteSheet};
-use nyanko::graphics::tools::joint::Joint;
-use nyanko::graphics::tools::part;
+use codex::graphics::rig::{Animation, Model, Rig, SpriteSheet};
+use codex::graphics::tools::joint::Joint;
+use codex::graphics::tools::part;
 
-use kore::domains::settings::{Overlays, Scope, ScrubBehavior, Settings};
-use kore::systems::animation::MotionSet;
+use kokoro::domains::settings::{Overlays, Scope, ScrubBehavior, Settings};
+use kokoro::systems::animation::MotionSet;
 
 use crate::app::state::AnimState;
 use crate::app::theme;
@@ -86,7 +86,7 @@ pub struct Posed {
 }
 
 pub(crate) fn shows(
-    model: &nyanko::graphics::rig::Model,
+    model: &codex::graphics::rig::Model,
     entity: Scope,
     picked: Option<usize>,
     part: usize,
@@ -262,7 +262,7 @@ impl State {
         self.data.adopt_sheet(cuts, sheet);
     }
 
-    pub(crate) fn motions(&self) -> impl Iterator<Item = (usize, &kore::systems::animation::Motion)> {
+    pub(crate) fn motions(&self) -> impl Iterator<Item = (usize, &kokoro::systems::animation::Motion)> {
         self.data.motions()
     }
 
@@ -322,7 +322,7 @@ impl State {
         self.data.held_unit.clone()
     }
 
-    pub(crate) fn shared_anim(&self) -> Option<Arc<nyanko::graphics::rig::Animation>> {
+    pub(crate) fn shared_anim(&self) -> Option<Arc<codex::graphics::rig::Animation>> {
         self.data.current_anim.clone()
     }
 

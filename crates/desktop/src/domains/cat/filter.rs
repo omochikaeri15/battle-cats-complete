@@ -3,15 +3,15 @@ use std::collections::HashSet;
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, image as iced_image, operation, pick_list, row, scrollable, stack, text, text_input, tooltip, Id, Space};
 use iced::{Element, Length, Size, Task, Theme};
-use nyanko::combat::{AttrUnit, Identity, REGISTRY};
+use codex::combat::{AttrUnit, Identity, REGISTRY};
 
-use kore::domains::cat::combo::{self, ComboEffects};
-use kore::systems::combat::NameBook;
-use kore::domains::cat::filter::{icons, ATTACK_TYPE_ICONS, CatFilterState, MatchMode, TalentFilterMode};
-use kore::domains::cat::scanner::CatEntry;
-use kore::Vault;
-use kore::systems::combat::registry::{get_display_def, AbilityIcon, DisplayGroup};
-use kore::systems::combat::{present_identities, talent_identities, CustomIcon, TalentIdentities};
+use kokoro::domains::cat::combo::{self, ComboEffects};
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::cat::filter::{icons, ATTACK_TYPE_ICONS, CatFilterState, MatchMode, TalentFilterMode};
+use kokoro::domains::cat::scanner::CatEntry;
+use kokoro::Vault;
+use kokoro::systems::combat::registry::{get_display_def, AbilityIcon, DisplayGroup};
+use kokoro::systems::combat::{present_identities, talent_identities, CustomIcon, TalentIdentities};
 
 use crate::app::theme;
 use crate::common::ability_icon;

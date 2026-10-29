@@ -9,13 +9,13 @@ use iced::widget::{button, column, container, operation, pick_list, progress_bar
 use iced::{task, Alignment, Element, Length, Size, Task, Theme};
 use tracing::trace;
 
-use nyanko::graphics::rig::Animation;
+use codex::graphics::rig::Animation;
 
-use kore::common::job::ProgressCounter;
-use kore::systems::addons::paths::{self, Presence};
-use kore::systems::animation::export::{find_bounds, find_loop, leader, process, BoundsOutcome, EncoderStatus, ExportFormat, ExportMode, ExportRequest, FrameTiming, LoopStatus, ShowcaseLengths};
-use kore::systems::animation::{playback_frames, Role};
-use kore::domains::settings::Settings;
+use kokoro::common::job::ProgressCounter;
+use kokoro::systems::addons::paths::{self, Presence};
+use kokoro::systems::animation::export::{find_bounds, find_loop, leader, process, BoundsOutcome, EncoderStatus, ExportFormat, ExportMode, ExportRequest, FrameTiming, LoopStatus, ShowcaseLengths};
+use kokoro::systems::animation::{playback_frames, Role};
+use kokoro::domains::settings::Settings;
 
 use crate::app::state::AnimState;
 use crate::app::theme;
@@ -1629,8 +1629,8 @@ fn derive_name_prefix(raw_id: &str, type_string: &str) -> String {
 mod tests {
     use std::sync::Arc;
 
-    use kore::systems::animation::{Motion, MotionSet, Loop, Rigging, Role};
-    use kore::Source;
+    use kokoro::systems::animation::{Motion, MotionSet, Loop, Rigging, Role};
+    use kokoro::Source;
 
     use super::*;
 

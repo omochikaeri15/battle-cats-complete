@@ -1,7 +1,7 @@
 use iced::Task;
 
-use kore::common::formats::SpriteSheet as CoreSpriteSheet;
-use kore::Vfs;
+use kokoro::common::formats::SpriteSheet as CoreSpriteSheet;
+use kokoro::Vfs;
 
 use super::SpriteSheet;
 

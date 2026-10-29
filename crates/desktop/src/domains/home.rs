@@ -4,7 +4,7 @@ use iced::widget::{button, column, container, markdown, pick_list, row, scrollab
 use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 use tracing::{debug, error, info, warn};
 
-use kore::common::changelog;
+use kokoro::common::changelog;
 
 use crate::app::{theme, Page};
 use crate::widget::{nightly_label, popup, smooth_scroll};

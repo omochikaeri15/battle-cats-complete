@@ -1,4 +1,4 @@
-use nyanko::graphics::rig::AnimModification;
+use codex::graphics::rig::AnimModification;
 
 use super::*;
 use iced::widget::{container, row, space, text};
@@ -519,7 +519,7 @@ fn walk_of(model: &Model, expanded: &HashSet<usize>) -> Vec<(usize, usize)> {
 
 #[cfg(test)]
 mod tests {
-    use nyanko::graphics::rig::ModelPart;
+    use codex::graphics::rig::ModelPart;
 
     use super::*;
 

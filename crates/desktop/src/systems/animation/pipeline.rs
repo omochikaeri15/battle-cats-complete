@@ -5,9 +5,9 @@ use iced::wgpu;
 use iced::widget::shader;
 use image::RgbaImage;
 
-use nyanko::graphics::animate::FrameData;
+use codex::graphics::animate::FrameData;
 
-use kore::systems::animation::multiply_mat3;
+use kokoro::systems::animation::multiply_mat3;
 
 const VERTEX_STRIDE: u64 = 36;
 const VERTS_PER_PART: u32 = 4;

@@ -43,10 +43,10 @@ fn main() -> std::io::Result<()> {
 
     #[cfg(windows)]
     {
-        println!("cargo::rerun-if-changed=../kore/assets/icon.ico");
+        println!("cargo::rerun-if-changed=../kokoro/assets/icon.ico");
 
         let mut res = winres::WindowsResource::new();
-        res.set_icon("../kore/assets/icon.ico");
+        res.set_icon("../kokoro/assets/icon.ico");
         res.compile()?;
     }
 

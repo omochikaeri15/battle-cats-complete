@@ -8,19 +8,19 @@ use iced::widget::{button, column, container, image as iced_image, mouse_area, r
 use iced::{mouse, Border, Color, Element, Length, Padding, Point, Size, Task, Theme};
 use tracing::{debug, info};
 
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::domains::cat::scanner::{self, CatEntry};
-use kore::domains::cat::game::stats::get_final_stats;
-use kore::systems::treasure::Bonus;
-use kore::domains::sandbox::orb::Allowance;
-use kore::domains::sandbox::rules::Rules;
-use kore::domains::sandbox::{mount_of, Arrangement, Cell, Edge, Lineup, Member, Placed, Roster, BENCH_SLOTS, LINEUP_SLOTS};
-use kore::domains::settings::Settings;
-use kore::Vfs;
-use kore::Source;
-use kore::common::gfx::open_image;
-use nyanko::combat::Entity;
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::cat::scanner::{self, CatEntry};
+use kokoro::domains::cat::game::stats::get_final_stats;
+use kokoro::systems::treasure::Bonus;
+use kokoro::domains::sandbox::orb::Allowance;
+use kokoro::domains::sandbox::rules::Rules;
+use kokoro::domains::sandbox::{mount_of, Arrangement, Cell, Edge, Lineup, Member, Placed, Roster, BENCH_SLOTS, LINEUP_SLOTS};
+use kokoro::domains::settings::Settings;
+use kokoro::Vfs;
+use kokoro::Source;
+use kokoro::common::gfx::open_image;
+use codex::combat::Entity;
 
 use crate::app::state::AppState;
 use crate::app::theme;
@@ -416,7 +416,7 @@ impl State {
 
         if self.coin.is_none() {
             self.coin = ctx.vault.vfs.find(NP_ICON).and_then(|path| open_image(&ctx.vault.vfs.source(&path))).map(|opened| {
-                let cropped = kore::common::gfx::autocrop(opened.to_rgba8());
+                let cropped = kokoro::common::gfx::autocrop(opened.to_rgba8());
 
                 Handle::from_rgba(cropped.width(), cropped.height(), cropped.into_raw())
             });

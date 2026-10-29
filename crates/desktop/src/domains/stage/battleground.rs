@@ -5,16 +5,16 @@ use iced::alignment::Horizontal;
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, row, text, tooltip};
 use iced::{Alignment, Element, Length, Theme};
-use nyanko::chapter::map::{BonusType, RuleType, ScoreBonusMapEntry, SpecialRulesMapEntry};
-use nyanko::chapter::stage::{BossType, EnemyAmount};
-use nyanko::common::{strip_html_tags, BreakHandling};
+use codex::chapter::map::{BonusType, RuleType, ScoreBonusMapEntry, SpecialRulesMapEntry};
+use codex::chapter::stage::{BossType, EnemyAmount};
+use codex::common::{strip_html_tags, BreakHandling};
 use tracing::warn;
 
-use kore::common::context::GlobalContext;
-use kore::domains::enemy::scanner::EnemyEntry;
-use kore::domains::stage::{restrictions, Map, Stage};
-use kore::systems::treasure::{self, Bonus};
-use kore::Source;
+use kokoro::common::context::GlobalContext;
+use kokoro::domains::enemy::scanner::EnemyEntry;
+use kokoro::domains::stage::{restrictions, Map, Stage};
+use kokoro::systems::treasure::{self, Bonus};
+use kokoro::Source;
 
 use crate::app::theme;
 use crate::editor;

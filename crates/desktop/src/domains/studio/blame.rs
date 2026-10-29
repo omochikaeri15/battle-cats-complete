@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use nyanko::graphics::rig::{Animation, Model};
-use nyanko::graphics::tools::crash::{self, Encoding, Fault, Side, Sited};
+use codex::graphics::rig::{Animation, Model};
+use codex::graphics::tools::crash::{self, Encoding, Fault, Side, Sited};
 
 use super::*;
 
@@ -268,7 +268,7 @@ fn sided(fault: &Fault) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use nyanko::graphics::rig::{Alignment, AnimModification, Keyframe, ModelPart};
+    use codex::graphics::rig::{Alignment, AnimModification, Keyframe, ModelPart};
 
     use super::*;
 

@@ -91,7 +91,7 @@ pub(super) fn value(ability: i32, pair: usize) -> Option<Value> {
 
 #[cfg(test)]
 mod tests {
-    use nyanko::combat::get_talent;
+    use codex::combat::get_talent;
 
     use super::values;
 
@@ -104,7 +104,7 @@ mod tests {
 
             assert!(
                 values(i32::from(id)).is_some(),
-                "nyanko publishes talent {id} ({:?}), which no value-table arm names",
+                "codex publishes talent {id} ({:?}), which no value-table arm names",
                 ability.identity,
             );
         }
@@ -139,7 +139,7 @@ mod tests {
 
             assert!(
                 listed.len() >= ability.talent_values.len(),
-                "nyanko gives talent {id} ({:?}) {} value pairs, but only {} are named here",
+                "codex gives talent {id} ({:?}) {} value pairs, but only {} are named here",
                 ability.identity,
                 ability.talent_values.len(),
                 listed.len(),

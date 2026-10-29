@@ -16,21 +16,21 @@ use iced::widget::{
     text, text_input, Id, Space,
 };
 use iced::{Color, Element, Length, Size, Subscription, Task, Theme};
-use nyanko::combat::{Entity, Identity};
+use codex::combat::{Entity, Identity};
 use tracing::info;
 
-use kore::common::context::GlobalContext;
-use nyanko::combat::Faction;
-use kore::systems::combat::NameBook;
-use kore::common::formats::SpriteSheet as CoreSpriteSheet;
-use kore::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_CASH_DROP, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_SPEED};
-use kore::systems::combat::RenderContext;
-use kore::domains::enemy::animation as enemy_animation;
-use kore::domains::enemy::scanner::{self, EnemyEntry};
-use kore::domains::enemy::EnemyDataState;
-use kore::domains::settings::Settings;
-use kore::systems::treasure::Bonus;
-use kore::{Vfs, Vault};
+use kokoro::common::context::GlobalContext;
+use codex::combat::Faction;
+use kokoro::systems::combat::NameBook;
+use kokoro::common::formats::SpriteSheet as CoreSpriteSheet;
+use kokoro::systems::combat::registry::{format_stat, Magnification, StatContext, STAT_ATK_CYCLE, STAT_ATTACK, STAT_CASH_DROP, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_SPEED};
+use kokoro::systems::combat::RenderContext;
+use kokoro::domains::enemy::animation as enemy_animation;
+use kokoro::domains::enemy::scanner::{self, EnemyEntry};
+use kokoro::domains::enemy::EnemyDataState;
+use kokoro::domains::settings::Settings;
+use kokoro::systems::treasure::Bonus;
+use kokoro::{Vfs, Vault};
 
 use crate::systems::animation;
 use crate::systems::combat::abilities as combat_abilities;

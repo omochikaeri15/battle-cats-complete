@@ -14,13 +14,13 @@ use iced::{Alignment, Element, Length, Subscription, Task, Theme};
 use smol::Timer;
 use tracing::{info, trace, warn};
 
-use kore::systems::addons::paths::{self, Presence};
-use kore::common::job::{JobEvent, JobOutcome, ProgressCounter};
-use kore::common::region::Region;
-use kore::domains::import::{
+use kokoro::systems::addons::paths::{self, Presence};
+use kokoro::common::job::{JobEvent, JobOutcome, ProgressCounter};
+use kokoro::common::region::Region;
+use kokoro::domains::import::{
     android, pack, raw, AdbImportType, AdbTarget, DataConfigState, ImportMode, ImportSubTab,
 };
-use kore::domains::settings::Settings;
+use kokoro::domains::settings::Settings;
 
 use crate::app::state::AppState;
 use crate::app::theme;

@@ -11,32 +11,32 @@ use std::time::{Duration, Instant};
 use iced::futures::channel::mpsc;
 use iced::widget::{button, column, container, markdown, opaque, operation, row, scrollable, stack, Space};
 use iced::{task, window, Element, Length, Size, Subscription, Task, Theme};
-use nyanko::{chapter::Category, files::{Localizable, Param}};
+use codex::{chapter::Category, files::{Localizable, Param}};
 use rustc_hash::FxHasher;
 use smol::Timer;
 use tracing::{debug, info, trace, warn};
 
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::common::game::{localizable, param};
-use kore::common::io::json;
-use kore::domains::cat::files as cat_files;
-use kore::domains::cat::scanner as cat_scanner;
-use kore::domains::enemy::scanner as enemy_scanner;
-use kore::domains::mods as kore_mods;
-use kore::common::architecture;
-use kore::domains::settings::{GraphicsBackend, Settings, UpdateMode};
-use kore::domains::stage::lottery::Lottery;
-use kore::domains::stage::scanner::{self as stage_scanner, Touch};
-use kore::domains::stage::{navigate::{invaded_stage, is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
-use kore::systems::treasure::{Bonus, Catalog};
-use kore::{ContentStore, Evicted, StageStore, Vault};
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::common::game::{localizable, param};
+use kokoro::common::io::json;
+use kokoro::domains::cat::files as cat_files;
+use kokoro::domains::cat::scanner as cat_scanner;
+use kokoro::domains::enemy::scanner as enemy_scanner;
+use kokoro::domains::mods as kore_mods;
+use kokoro::common::architecture;
+use kokoro::domains::settings::{GraphicsBackend, Settings, UpdateMode};
+use kokoro::domains::stage::lottery::Lottery;
+use kokoro::domains::stage::scanner::{self as stage_scanner, Touch};
+use kokoro::domains::stage::{navigate::{invaded_stage, is_invader, is_invasion, map_screen_slot}, GlobalMapId, GlobalStageId};
+use kokoro::systems::treasure::{Bonus, Catalog};
+use kokoro::{ContentStore, Evicted, StageStore, Vault};
 
 use crate::common::feedback::Slot;
 use crate::common::fonts;
 use crate::common::watcher::{self, Asset, Change};
 use crate::domains::{cat, enemy, files, help, home, import, mining, mods, sandbox, settings as gui_settings, stage, studio, utilities};
-use crate::systems::emu;
+use crate::systems::host;
 use crate::editor;
 use crate::widget::{fade, nightly_label, popup, slide, smooth_scroll, Slide};
 
@@ -500,7 +500,7 @@ impl Default for BattleCatsApp {
             cat_state: cat::State::default(),
             enemy_state: enemy::EnemyState::default(),
             stage_state: stage::State::default(),
-            mods_state: mods::State::new(kore::domains::mods::ModDataState::default()),
+            mods_state: mods::State::new(kokoro::domains::mods::ModDataState::default()),
             files_state: files::State::default(),
             import_state: import::State::default(),
             mining_state: mining::State::default(),
@@ -1787,7 +1787,7 @@ impl BattleCatsApp {
                     let setup = self.sandbox_state.setup(&self.app_state, entry);
 
                     let label = (!self.settings.sandbox.disable_replays).then(|| self.replay_label());
-                    let lineup = kore::domains::sandbox::replay::Save { setup: emu::tape_setup(&setup, "", ""), ..Default::default() };
+                    let lineup = kokoro::domains::sandbox::replay::Save { setup: host::tape_setup(&setup, "", ""), ..Default::default() };
                     let recording = label.is_some();
 
                     self.sandbox_state.start(self.window_size.width, self.window_size.height, &self.app_state.sandbox, setup, label);
@@ -2001,10 +2001,10 @@ impl BattleCatsApp {
             .map(|view| view.map_or_else(|| Space::new().into(), |view| view.map(Message::Sandbox)))
             .collect();
 
-        emu::overlay(
+        host::overlay(
             watched,
             iced::widget::Stack::with_children(above).width(iced::Length::Fill).height(iced::Length::Fill).into(),
-            emu::Feed {
+            host::Feed {
                 frame: self.sandbox_state.curtain_frame(),
                 sheets: self.sandbox_state.curtain_sheets(),
                 touches: self.sandbox_state.curtain_touches(),
@@ -2022,21 +2022,21 @@ impl BattleCatsApp {
         let data = &self.stage_state.data;
         let rules = data.selected_stage.as_ref().and_then(|picked| {
             let stage = data.registry.stages.get(picked)?;
-            let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+            let map = kokoro::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
 
-            Some(kore::domains::sandbox::rules::Rules::of(stage, data.registry.maps.get(&map), self.stage_state.selected_crown as i8))
+            Some(kokoro::domains::sandbox::rules::Rules::of(stage, data.registry.maps.get(&map), self.stage_state.selected_crown as i8))
         });
 
         let global = data.selected_stage.as_ref().and_then(|picked| {
-            let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+            let map = kokoro::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
 
             i32::try_from(data.registry.addresses.get(&map)?.global?).ok()
         });
 
-        let scored = kore::domains::sandbox::scored::score_stage_maps(&self.vault.vfs);
+        let scored = kokoro::domains::sandbox::scored::score_stage_maps(&self.vault.vfs);
 
         self.app_state.sandbox.usable_items = global.map_or([true; 6], |map_id| {
-            ::emu::runtime::usable_items(map_id, scored.contains(&map_id))
+            emulator::runtime::usable_items(map_id, scored.contains(&map_id))
         });
         let castle = data.selected_stage.as_ref().and_then(|picked| data.registry.stages.get(picked)).and_then(|stage| i32::try_from(stage.anim_base_id).ok());
 
@@ -2044,13 +2044,13 @@ impl BattleCatsApp {
         self.sandbox_state.set_castle(castle, &self.app_state);
     }
 
-    fn replay_label(&self) -> emu::Label {
+    fn replay_label(&self) -> host::Label {
         let data = &self.stage_state.data;
         let picked = data.selected_stage.as_ref();
-        let map = picked.map(|picked| kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map });
+        let map = picked.map(|picked| kokoro::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map });
 
-        emu::Label {
-            app: self.mods_state.active_mod().unwrap_or_else(|| kore::domains::sandbox::replay::VANILLA_APP.to_owned()),
+        host::Label {
+            app: self.mods_state.active_mod().unwrap_or_else(|| kokoro::domains::sandbox::replay::VANILLA_APP.to_owned()),
             map: map.and_then(|map| data.registry.maps.get(&map)).map_or_else(String::new, |map| match map.category {
                 Category::ZombieOutbreaks => format!("{} ({OUTBREAK_TAG})", map.name),
                 _ => map.name.clone(),
@@ -2082,19 +2082,19 @@ impl BattleCatsApp {
         })
     }
 
-    fn staged_entry(&self) -> Option<::emu::runtime::StageEntry> {
+    fn staged_entry(&self) -> Option<emulator::runtime::StageEntry> {
         let picked = self.stage_state.data.selected_stage.as_ref()?;
-        let map = kore::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
+        let map = kokoro::domains::stage::GlobalMapId { category: picked.category.clone(), map: picked.map };
         let global = self.stage_state.data.registry.addresses.get(&map)?.global?;
 
         if let Some(target) = invaded_stage(&self.stage_state.data.registry, picked) {
-            return Some(::emu::runtime::StageEntry {
+            return Some(emulator::runtime::StageEntry {
                 map_id: i32::try_from(target.map_id).ok()?,
                 stage: i32::try_from(target.stage).ok()?,
                 layout: None,
                 crown: i32::from(target.crown),
                 dungeon_stage: None,
-                variant: ::emu::runtime::StageVariant::ExInvasion,
+                variant: emulator::runtime::StageVariant::ExInvasion,
             });
         }
 
@@ -2102,16 +2102,16 @@ impl BattleCatsApp {
         let outbreak = picked.category == Category::ZombieOutbreaks;
         let invaded = self.invaded_slot(picked);
         let variant = match (outbreak, invaded.is_some()) {
-            (false, false) => ::emu::runtime::StageVariant::Plain,
-            (true, false) => ::emu::runtime::StageVariant::Outbreak,
-            (false, true) => ::emu::runtime::StageVariant::Invasion,
-            (true, true) => ::emu::runtime::StageVariant::ZombieInvasion,
+            (false, false) => emulator::runtime::StageVariant::Plain,
+            (true, false) => emulator::runtime::StageVariant::Outbreak,
+            (false, true) => emulator::runtime::StageVariant::Invasion,
+            (true, true) => emulator::runtime::StageVariant::ZombieInvasion,
         };
         let stage = invaded.unwrap_or(picked.stage);
         let layout = map_screen_slot(map_id, i32::try_from(stage).ok()?);
         let slot = Lottery::load(&self.vault.vfs).slot_for(map_id, layout);
 
-        Some(::emu::runtime::StageEntry {
+        Some(emulator::runtime::StageEntry {
             map_id,
             stage: slot.unwrap_or(layout),
             layout: slot.map(|_| layout),

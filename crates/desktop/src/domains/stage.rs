@@ -17,16 +17,16 @@ use iced::widget::{button, column, container, opaque, row, scrollable, space, st
 use iced::{Alignment, Element, Length, Padding, Size, Task};
 use tracing::{debug, info, warn};
 
-use kore::common::context::GlobalContext;
-use kore::systems::combat::NameBook;
-use kore::domains::enemy::scanner::EnemyEntry;
-use kore::domains::settings::{Settings, SidebarBehavior};
-use kore::domains::stage::filter::enemy::EnemyFilter;
-use kore::domains::stage::filter::StageFilterState;
-use kore::domains::stage::scanner::{self, StageBundle};
-use kore::domains::stage::{fixedlineup as core_fixedlineup, GlobalMapId, StageDataState};
-use kore::systems::treasure::Bonus;
-use kore::Vault;
+use kokoro::common::context::GlobalContext;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::enemy::scanner::EnemyEntry;
+use kokoro::domains::settings::{Settings, SidebarBehavior};
+use kokoro::domains::stage::filter::enemy::EnemyFilter;
+use kokoro::domains::stage::filter::StageFilterState;
+use kokoro::domains::stage::scanner::{self, StageBundle};
+use kokoro::domains::stage::{fixedlineup as core_fixedlineup, GlobalMapId, StageDataState};
+use kokoro::systems::treasure::Bonus;
+use kokoro::Vault;
 
 use crate::app::state::StageListState;
 use crate::app::theme;

@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use kore::Source;
+use kokoro::Source;
 
 use iced::widget::image::Handle;
 
-use kore::common::gfx::{autocrop, open_image};
+use kokoro::common::gfx::{autocrop, open_image};
 
 #[derive(Clone)]
 pub(crate) struct HeaderIcon {

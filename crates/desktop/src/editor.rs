@@ -15,32 +15,32 @@ use iced::{Element, Point, Size, Task};
 use rustc_hash::FxHashMap;
 use tracing::{info, trace, warn};
 
-use kore::domains::cat::animation as cat_animation;
-use nyanko::combat::{Faction, Identity};
-use kore::domains::cat::combo as cat_combo;
-use kore::domains::cat::files as cat_files;
-use kore::domains::cat::waiter as cat_waiter;
-use kore::domains::enemy::animation as enemy_animation;
-use kore::domains::enemy::files as enemy_files;
-use kore::domains::enemy::scanner::EnemyEntry;
-use kore::common::architecture;
-use kore::domains::mods;
-use kore::domains::stage::files as stage_files;
-use kore::domains::stage::authoring as stage_authoring;
-use kore::domains::stage::materials as stage_materials;
+use kokoro::domains::cat::animation as cat_animation;
+use codex::combat::{Faction, Identity};
+use kokoro::domains::cat::combo as cat_combo;
+use kokoro::domains::cat::files as cat_files;
+use kokoro::domains::cat::waiter as cat_waiter;
+use kokoro::domains::enemy::animation as enemy_animation;
+use kokoro::domains::enemy::files as enemy_files;
+use kokoro::domains::enemy::scanner::EnemyEntry;
+use kokoro::common::architecture;
+use kokoro::domains::mods;
+use kokoro::domains::stage::files as stage_files;
+use kokoro::domains::stage::authoring as stage_authoring;
+use kokoro::domains::stage::materials as stage_materials;
 
-use kore::domains::stage::{names, GlobalMapId, GlobalStageId};
-use kore::domains::settings::{ContextScope, EditorMode};
-use kore::Vfs;
-use nyanko::chapter::stage::RewardStructure;
-use nyanko::common;
-use nyanko::graphics::tools::crash::Side;
+use kokoro::domains::stage::{names, GlobalMapId, GlobalStageId};
+use kokoro::domains::settings::{ContextScope, EditorMode};
+use kokoro::Vfs;
+use codex::chapter::stage::RewardStructure;
+use codex::common;
+use codex::graphics::tools::crash::Side;
 
 use crate::app::state::SandboxTab;
 use crate::app::{theme, BattleCatsApp, Page};
 use crate::domains::cat::DetailTab;
 use crate::domains::studio;
-use kore::domains::studio as kore_studio;
+use kokoro::domains::studio as kore_studio;
 use crate::domains::enemy::DetailTab as EnemyTab;
 use crate::common::dialog;
 use crate::widget::popup;
@@ -53,7 +53,7 @@ pub(crate) use watch::watch;
 pub enum Target {
     FileRow(usize),
     CatRow(u32),
-    LineupCell(kore::domains::sandbox::Cell),
+    LineupCell(kokoro::domains::sandbox::Cell),
     EnemyRow(u32),
     CatLevels,
     CatForms,
@@ -104,7 +104,7 @@ pub(crate) struct Context {
     offsets: Option<studio::Offsets>,
     ground: Option<GroundTarget>,
     making: Option<MakeTarget>,
-    lineup: Option<kore::domains::sandbox::Cell>,
+    lineup: Option<kokoro::domains::sandbox::Cell>,
 }
 
 pub(crate) struct MakeTarget {
@@ -600,7 +600,7 @@ enum Action {
     AddOffset,
     DropOffset { row: usize },
     Locate { part: usize },
-    DropMember { cell: kore::domains::sandbox::Cell },
+    DropMember { cell: kokoro::domains::sandbox::Cell },
     DropPart { part: usize },
     EditAnimation(AnimPlan),
     EditFigures(figures::Plan),
@@ -800,7 +800,7 @@ pub(crate) struct State {
     open: Option<Open>,
     opened: Option<Page>,
     rescan: bool,
-    dropped: Option<kore::domains::sandbox::Cell>,
+    dropped: Option<kokoro::domains::sandbox::Cell>,
     pending: Option<Trail>,
     confirm: Slot<Trail>,
     failed: Slot<Trail>,
@@ -913,7 +913,7 @@ impl State {
         self.opened.take()
     }
 
-    pub(crate) fn take_dropped(&mut self) -> Option<kore::domains::sandbox::Cell> {
+    pub(crate) fn take_dropped(&mut self) -> Option<kokoro::domains::sandbox::Cell> {
         self.dropped.take()
     }
 
@@ -1595,7 +1595,7 @@ fn item_buy_targets(app: &BattleCatsApp, item: Option<u32>) -> Vec<LevelTarget> 
 }
 
 // The name file has no header, so an item's catalog line is its line here outright --
-// nyanko's own `icon_index` doc states that pairing.
+// codex's `icon_index` states that pairing.
 fn item_name_target(app: &BattleCatsApp, item: Option<u32>) -> Option<ProseTarget> {
     if scene(app) != Page::Stages {
         return None;
@@ -1701,7 +1701,7 @@ fn drop_chara_targets(app: &BattleCatsApp) -> Vec<LevelTarget> {
     }]
 }
 
-fn drop_ids(stage: &kore::domains::stage::Stage) -> impl Iterator<Item = u32> + '_ {
+fn drop_ids(stage: &kokoro::domains::stage::Stage) -> impl Iterator<Item = u32> + '_ {
     let timed = match &stage.rewards {
         RewardStructure::Timed { scores, .. } => Some(scores.iter().map(|score| score.item_id)),
         _ => None,
@@ -1783,7 +1783,7 @@ fn make_target(app: &BattleCatsApp, reached: bool) -> Option<MakeTarget> {
 fn making(
     app: &BattleCatsApp,
     map: &GlobalMapId,
-    held: &kore::domains::stage::MapAddress,
+    held: &kokoro::domains::stage::MapAddress,
     target_mod: Option<String>,
     stage: u32,
     whole_map: bool,
@@ -3171,7 +3171,7 @@ mod authoring_tests {
     }
 
     // A map is born holding its first stage: a table with no stage rows is an EmptyFile to
-    // nyanko, and a map with no battleground never reaches the list at all.
+    // codex, and a map with no battleground never reaches the list at all.
     #[test]
     fn a_new_map_writes_its_own_files_and_its_first_stage() {
         let made = authored(&seed(true));

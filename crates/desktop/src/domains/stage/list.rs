@@ -5,12 +5,12 @@ use std::hash::{Hash, Hasher};
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, row, rule, scrollable, space, text, Column, Container};
 use iced::{Element, Length, Padding, Theme};
-use nyanko::chapter::Category;
+use codex::chapter::Category;
 
-use kore::domains::stage::filter::{CompiledStageFilter, StageFilterState, StageLookupContext};
-use kore::domains::stage::{navigate, GlobalMapId, GlobalStageId, StageDataState};
-use kore::systems::treasure::Bonus;
-use kore::Vault;
+use kokoro::domains::stage::filter::{CompiledStageFilter, StageFilterState, StageLookupContext};
+use kokoro::domains::stage::{navigate, GlobalMapId, GlobalStageId, StageDataState};
+use kokoro::systems::treasure::Bonus;
+use kokoro::Vault;
 
 use crate::app::theme;
 use crate::editor;

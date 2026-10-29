@@ -40,7 +40,7 @@ pub(super) fn view<'a>(draft: &'a Draft, width: f32, armed: bool) -> Element<'a,
     )
 }
 
-// nyanko publishes `absent -1` for the whole header table, which is the value a *cell*
+// codex publishes `absent -1` for the whole header table, which is the value a *cell*
 // reads as when the column is missing -- not the value the field resolves to. The two
 // disagree for cost_type, whose struct default is Energy and whose own tests assert an
 // omitted column keeps it, and 1,186 of 1,270 files stop before that column. Left at -1 the
@@ -97,9 +97,9 @@ pub(super) fn rule(index: usize, field: Option<&str>, cells: &[i32]) -> Rule {
     tail(index, cells).map_or(Rule::Opaque, |(_, rule)| rule)
 }
 
-// The reward block past nyanko's five published stage columns. Its length and meaning are
+// The reward block past codex's five published stage columns. Its length and meaning are
 // decided by the row's own contents, so the walk is a mirror of `extract_treasure_drops` and
-// `extract_timed_scores` and is pinned against nyanko by a probe test. Anything those two
+// `extract_timed_scores` and is pinned against codex by a probe test. Anything those two
 // never read stays unlabeled and opaque rather than being given a name we invented.
 fn tail(index: usize, cells: &[i32]) -> Option<(Cow<'static, str>, Rule)> {
     let column = index.checked_sub(MAP_STAGE_LEAD)?;
@@ -167,7 +167,7 @@ fn timed(row: &[i32]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use nyanko::chapter::stage::{CostType, MapStageData, RewardStructure};
+    use codex::chapter::stage::{CostType, MapStageData, RewardStructure};
 
     use super::super::schema::{self, Subject};
     use super::*;
@@ -175,7 +175,7 @@ mod tests {
     const HEADER_WIDTH: usize = 7;
 
     // Only the cells the line really holds are compared. Past them the editor pads with the
-    // column's published `absent` default, which is nyanko's declared value for a missing
+    // column's published `absent` default, which is codex's declared value for a missing
     // column and deliberately not the same as the struct field's Default.
     fn cells(line: &str, delimiter: char, first: usize, len: usize) -> (Vec<i32>, usize) {
         let row = super::super::split_span(line, delimiter, schema::of(Subject::MapStage), first, len);
@@ -189,7 +189,7 @@ mod tests {
     fn an_absent_cost_type_resolves_to_the_scheme_the_engine_assumes() {
         let schema = schema::of(Subject::MapStage);
         let Some(index) = schema.index_of("cost_type") else {
-            panic!("nyanko no longer publishes cost_type");
+            panic!("codex no longer publishes cost_type");
         };
 
         assert_eq!(schema.fallback(index), 0, "an omitted cost_type is Energy, not the -1 cell sentinel");
@@ -202,11 +202,11 @@ mod tests {
         let held = MapStageData::parse(format!("{short}\n0\n10,1,1,1,1\n"), None)
             .expect("the fixture should parse");
 
-        assert_eq!(held.header.cost_type, CostType::Energy, "nyanko agrees the absent column is Energy");
+        assert_eq!(held.header.cost_type, CostType::Energy, "codex agrees the absent column is Energy");
     }
 
-    // Each labeled reward cell is given a value of its own and the row handed to nyanko, so
-    // the name the card shows is checked against the field nyanko actually parses it into
+    // Each labeled reward cell is given a value of its own and the row handed to codex, so
+    // the name the card shows is checked against the field codex actually parses it into
     // rather than against a reading of its extractor.
     fn probe(row: &[i32]) -> Vec<(String, i32)> {
         let cells: Vec<i32> = std::iter::repeat_n(0, MAP_STAGE_LEAD).chain(row.iter().copied()).collect();
@@ -234,7 +234,7 @@ mod tests {
         let named = probe(&row);
 
         let RewardStructure::Treasure { drop_rule, drops } = parsed(&row) else {
-            panic!("nyanko no longer reads this row as a treasure pool");
+            panic!("codex no longer reads this row as a treasure pool");
         };
 
         assert_eq!(drop_rule, -3);
@@ -268,7 +268,7 @@ mod tests {
         let named = probe(&row);
 
         let RewardStructure::Timed { scores, .. } = parsed(&row) else {
-            panic!("nyanko no longer reads this row as a score ladder");
+            panic!("codex no longer reads this row as a score ladder");
         };
 
         assert_eq!(scores.len(), 2, "two score blocks");

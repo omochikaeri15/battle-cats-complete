@@ -13,8 +13,8 @@ use notify::event::ModifyKind;
 use notify::{recommended_watcher, ErrorKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tracing::{debug, trace, warn};
 
-use kore::common::architecture;
-use kore::common::junk;
+use kokoro::common::architecture;
+use kokoro::common::junk;
 
 const BATCH_BUFFER: usize = 8;
 const COALESCE: Duration = Duration::from_millis(20);

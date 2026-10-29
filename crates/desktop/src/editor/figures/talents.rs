@@ -8,14 +8,14 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, scrollable, text, tooltip, Column, Row};
 use iced::{Element, Font, Length, Theme};
-use nyanko::combat::{get_ability, get_talent, targets_traits, Faction, Identity};
+use codex::combat::{get_ability, get_talent, targets_traits, Faction, Identity};
 use rustc_hash::FxHashMap;
 
-use kore::common::gfx::autocrop;
-use kore::systems::combat::NameBook;
-use kore::domains::settings::EditorMode;
-use kore::systems::combat::registry::get_display_def;
-use kore::{Vault, Vfs};
+use kokoro::common::gfx::autocrop;
+use kokoro::systems::combat::NameBook;
+use kokoro::domains::settings::EditorMode;
+use kokoro::systems::combat::registry::get_display_def;
+use kokoro::{Vault, Vfs};
 
 use crate::app::theme;
 use crate::common::glyphs::Ruler;
@@ -790,7 +790,7 @@ mod tests {
     fn talents_publish_no_columns() {
         assert!(
             schema::of(Subject::Talents).order().is_empty(),
-            "talents: nyanko now publishes named columns, so the generated labels must become a table"
+            "talents: codex now publishes named columns, so the generated labels must become a table"
         );
     }
 
@@ -798,7 +798,7 @@ mod tests {
     fn every_talent_ability_resolves_to_a_name() {
         let listed = &*super::CATALOG;
 
-        assert!(listed.len() > 1, "nyanko publishes no talent abilities, so the picker would be empty");
+        assert!(listed.len() > 1, "codex publishes no talent abilities, so the picker would be empty");
 
         for skill in &listed[1..] {
             assert!(

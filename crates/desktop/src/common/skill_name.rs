@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use iced::widget::image::Handle;
-use nyanko::cat::unit::TalentGroup;
+use codex::cat::unit::TalentGroup;
 
-use kore::common::gfx::{autocrop, open_image};
-use kore::Vfs;
+use kokoro::common::gfx::{autocrop, open_image};
+use kokoro::Vfs;
 
 pub(crate) type Cache = RefCell<HashMap<String, Option<Handle>>>;
 

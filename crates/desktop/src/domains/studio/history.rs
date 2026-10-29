@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use kore::domains::studio::{Kind, Ledger, Snapshot};
-use kore::systems::animation::authoring::{Imgcut, Maanim, Mamodel};
+use kokoro::domains::studio::{Kind, Ledger, Snapshot};
+use kokoro::systems::animation::authoring::{Imgcut, Maanim, Mamodel};
 use tracing::warn;
 
 use super::{Field, Gizmo};

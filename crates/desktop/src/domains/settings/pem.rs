@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use iced::widget::{column, container, row, scrollable, text};
 use iced::{Alignment, Color, Element, Length, Size, Task, Theme};
 
-use kore::domains::settings::pem;
+use kokoro::domains::settings::pem;
 
 use crate::app::theme;
 use crate::common::dialog;

@@ -3,12 +3,12 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use nyanko::chapter::Category;
+use codex::chapter::Category;
 
-use kore::systems::animation::export::ExportFormat;
-use kore::systems::animation::Placement;
-use kore::domains::import::ImportSubTab;
-use kore::domains::stage::{GlobalMapId, GlobalStageId};
+use kokoro::systems::animation::export::ExportFormat;
+use kokoro::systems::animation::Placement;
+use kokoro::domains::import::ImportSubTab;
+use kokoro::domains::stage::{GlobalMapId, GlobalStageId};
 
 use crate::domains::files::Mode;
 use crate::widget::popup::StoredSize;
@@ -171,8 +171,8 @@ pub(crate) struct SandboxState {
     pub agreement: String,
     pub tab: SandboxTab,
     pub panel: SandboxPanel,
-    pub roster: kore::domains::sandbox::Roster,
-    pub config: kore::domains::sandbox::Config,
+    pub roster: kokoro::domains::sandbox::Roster,
+    pub config: kokoro::domains::sandbox::Config,
     pub list_scroll_offset: f32,
     pub search_query: String,
     pub music_volume: i32,
@@ -191,8 +191,8 @@ impl Default for SandboxState {
             agreement: String::new(),
             tab: SandboxTab::default(),
             panel: SandboxPanel::default(),
-            roster: kore::domains::sandbox::Roster::default(),
-            config: kore::domains::sandbox::Config::default(),
+            roster: kokoro::domains::sandbox::Roster::default(),
+            config: kokoro::domains::sandbox::Config::default(),
             list_scroll_offset: 0.0,
             search_query: String::new(),
             music_volume: SandboxVolume::Medium.percent(),

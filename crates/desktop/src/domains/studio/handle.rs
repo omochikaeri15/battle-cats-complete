@@ -1,7 +1,7 @@
 use super::*;
 
 use iced::Vector;
-use nyanko::graphics::tools::joint::Joint;
+use codex::graphics::tools::joint::Joint;
 
 
 const X_FIELD: usize = 4;

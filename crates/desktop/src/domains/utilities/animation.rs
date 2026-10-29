@@ -4,8 +4,8 @@ use iced::alignment::Horizontal;
 use iced::widget::{column, container, row};
 use iced::{Alignment, Element, Length, Padding, Size, Task};
 
-use kore::domains::settings::Settings;
-use kore::domains::utilities::animation as builder;
+use kokoro::domains::settings::Settings;
+use kokoro::domains::utilities::animation as builder;
 
 use crate::app::state::{AnimState, AppState};
 use crate::app::theme;

@@ -1,18 +1,18 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nyanko::chapter::stage::{Battleground, BattlegroundEntry};
-use nyanko::common::Column;
-use nyanko::combat::{Scale, Separator};
-use nyanko::common::FromColumn;
-use nyanko::common;
+use codex::chapter::stage::{Battleground, BattlegroundEntry};
+use codex::common::Column;
+use codex::combat::{Scale, Separator};
+use codex::common::FromColumn;
+use codex::common;
 use tracing::warn;
 
-use kore::common::preview::{self, Stamp};
-use kore::domains::mods;
-use kore::domains::settings::EditorMode;
-use kore::Vfs;
-use kore::Source;
+use kokoro::common::preview::{self, Stamp};
+use kokoro::domains::mods;
+use kokoro::domains::settings::EditorMode;
+use kokoro::Vfs;
+use kokoro::Source;
 
 use super::figures::resolved::{Face, Rule, Toggle};
 
@@ -1053,7 +1053,7 @@ pub(super) fn pick_kind() -> crate::widget::popup::Kind {
 
 fn resolve(
     typed: &str,
-    enemies: &std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+    enemies: &std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
 ) -> Option<(u32, String)> {
     let typed = typed.trim();
 
@@ -1299,7 +1299,7 @@ impl State {
     pub(super) fn view<'a>(
         &'a self,
         window: iced::Size,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
     ) -> Option<iced::Element<'a, Message>> {
         let draft = self.draft.as_ref()?;
 
@@ -1316,7 +1316,7 @@ impl State {
     pub(super) fn picker_view<'a>(
         &'a self,
         window: iced::Size,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
     ) -> Option<iced::Element<'a, Message>> {
         self.picking?;
 
@@ -1332,7 +1332,7 @@ impl State {
 
     fn picker<'a>(
         &'a self,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
     ) -> iced::Element<'a, Message> {
         use iced::alignment::Horizontal;
         use iced::widget::{button, column, container, text, text_input};
@@ -1380,7 +1380,7 @@ impl State {
     fn body<'a>(
         &'a self,
         draft: &'a Draft,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
     ) -> iced::Element<'a, Message> {
         use iced::widget::{container, scrollable, Column};
         use iced::Length;
@@ -1474,7 +1474,7 @@ impl State {
     fn spawn_row<'a>(
         &'a self,
         draft: &'a Draft,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
         shown: &[(String, u16, Cell)],
         row: usize,
         fixed: bool,
@@ -1525,7 +1525,7 @@ impl State {
     fn enemy_cell<'a>(
         &'a self,
         draft: &'a Draft,
-        enemies: &'a std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &'a std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
         row: usize,
     ) -> iced::Element<'a, Message> {
         use iced::widget::{button, container, image as iced_image};
@@ -1563,7 +1563,7 @@ impl State {
 
     fn icon(
         &self,
-        enemies: &std::collections::HashMap<u32, kore::domains::enemy::scanner::EnemyEntry>,
+        enemies: &std::collections::HashMap<u32, kokoro::domains::enemy::scanner::EnemyEntry>,
         id: u32,
     ) -> Option<iced::widget::image::Handle> {
         if let Some(cached) = self.icons.borrow().get(&id) {
@@ -1869,12 +1869,12 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
-    use kore::domains::settings::EditorMode;
+    use kokoro::domains::settings::EditorMode;
 
     use super::{Kind, Rule};
 
     // The editor writes raw lines, so it has to find the enemy rows itself rather than
-    // going through the parser. Agreeing with nyanko on every shipped stage is what keeps
+    // going through the parser. Agreeing with codex on every shipped stage is what keeps
     // that mirror honest: header rows, config rows, comments, blanks and the 0 terminator
     // all have to land the same way.
     // Every other editor blanks a cell that already holds its column's declared default
@@ -1926,7 +1926,7 @@ mod tests {
     // offers no ghost value, so the 5,882 stages declaring none show an empty field.
     #[test]
     fn the_animated_base_id_translates_like_a_spawn_row() {
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         assert_eq!(super::rule(Kind::Setup, 6), Rule::Offset(super::ENEMY_OFFSET));
         assert_eq!(super::shown_cell(Kind::Setup, 46, 6, EditorMode::Resolved), "44");
@@ -1952,12 +1952,12 @@ mod tests {
         }
     }
 
-    // start_frame, respawn_min and respawn_max carry nyanko's Double scale, so the file
+    // start_frame, respawn_min and respawn_max carry codex's Double scale, so the file
     // stores half of what the editor shows and an odd number of frames cannot be stored
     // at all. Typing 5 lands on 4; Raw is where an exact cell gets written.
     #[test]
     fn an_odd_frame_count_snaps_because_the_file_stores_halves() {
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         let stored = super::to_raw(Kind::Spawn, super::RESPAWN_MAX, 5, EditorMode::Resolved);
 
@@ -1968,7 +1968,7 @@ mod tests {
 
     #[test]
     fn a_new_row_is_seeded_at_the_values_the_editor_shows() {
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         for (column, shown) in super::SEEDS {
             let stored = super::seed(column, shown);
@@ -1991,7 +1991,7 @@ mod tests {
 
     #[test]
     fn the_picker_takes_a_bare_id_a_suffixed_id_or_a_name() {
-        use kore::domains::enemy::scanner::EnemyEntry;
+        use kokoro::domains::enemy::scanner::EnemyEntry;
 
         let mut roster = std::collections::HashMap::new();
         roster.insert(
@@ -2000,7 +2000,7 @@ mod tests {
                 id: 44,
                 name: "Gory Black".to_owned(),
                 description: Vec::new(),
-                stats: nyanko::combat::Entity::default(),
+                stats: codex::combat::Entity::default(),
                 icon_path: None,
                 atk_anim_frames: 0,
             },
@@ -2021,12 +2021,12 @@ mod tests {
 
     #[test]
     fn a_cell_holding_its_default_reads_back_empty() {
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         let magnification = super::MAGNIFICATION;
         let held = super::fallback(Kind::Spawn, magnification);
 
-        assert_eq!(held, 100, "nyanko declares 100 for the magnification column");
+        assert_eq!(held, 100, "codex declares 100 for the magnification column");
         assert_eq!(super::shown_cell(Kind::Spawn, held, magnification, EditorMode::Resolved), "");
         assert_eq!(super::shown_cell(Kind::Spawn, 150, magnification, EditorMode::Resolved), "150");
         assert_eq!(super::hint(Kind::Spawn, magnification, EditorMode::Resolved), "100");
@@ -2036,7 +2036,7 @@ mod tests {
     // point of the resolved mode.
     #[test]
     fn the_enemy_column_reads_two_below_what_the_file_stores() {
-        use kore::domains::settings::EditorMode;
+        use kokoro::domains::settings::EditorMode;
 
         assert_eq!(super::shown_cell(Kind::Spawn, 2, super::ENEMY_ID, EditorMode::Resolved), "0");
         assert_eq!(super::shown_cell(Kind::Spawn, 2, super::ENEMY_ID, EditorMode::Raw), "2");
@@ -2075,12 +2075,12 @@ mod tests {
         dir
     }
 
-    fn seeded(label: &str, body: &str) -> (PathBuf, super::State, kore::Vfs) {
+    fn seeded(label: &str, body: &str) -> (PathBuf, super::State, kokoro::Vfs) {
         let path = scratch_dir(label).join("stage00.csv");
         fs::write(&path, body).expect("failed to seed the temp fixture file");
 
         let seed = super::plan("test".to_owned(), &path, None, EditorMode::Resolved);
-        let vfs = kore::Vfs::with_priority(&[]);
+        let vfs = kokoro::Vfs::with_priority(&[]);
         let state = super::State { draft: super::Draft::load(seed, &vfs), ..super::State::default() };
 
         assert!(state.draft.is_some(), "the draft should load from the temp fixture");

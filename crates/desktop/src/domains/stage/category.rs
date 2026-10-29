@@ -1,4 +1,4 @@
-use nyanko::chapter::Category;
+use codex::chapter::Category;
 
 pub(crate) trait CategoryExt {
     fn display_name(&self) -> &str;

@@ -11,15 +11,15 @@ use iced::widget::{column, pick_list, progress_bar, row, text, text_input};
 use iced::{Element, Length, Task};
 use tracing::warn;
 
-use kore::common::job::JobOutcome;
-use kore::domains::sandbox::replay as tape;
-use kore::domains::settings::Settings;
-use kore::systems::addons::ffmpeg::{self, video::{Quality, VideoFormat}};
-use kore::Vfs;
+use kokoro::common::job::JobOutcome;
+use kokoro::domains::sandbox::replay as tape;
+use kokoro::domains::settings::Settings;
+use kokoro::systems::addons::ffmpeg::{self, video::{Quality, VideoFormat}};
+use kokoro::Vfs;
 
 use crate::app::theme;
 use crate::common::feedback::{Slot, FAILURE_LABEL};
-use crate::systems::emu::{export_video, Reel, VideoEvent, VideoJob};
+use crate::systems::host::{export_video, Reel, VideoEvent, VideoJob};
 use crate::widget::hover_hint;
 
 use super::Pick;

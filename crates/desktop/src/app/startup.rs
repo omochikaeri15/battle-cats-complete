@@ -14,15 +14,15 @@ use tracing::{debug, error, info, warn};
 #[cfg(windows)]
 use windows_sys::Win32::System::Threading::{GetCurrentThread, SetThreadPriority, THREAD_MODE_BACKGROUND_BEGIN};
 
-use kore::common::architecture;
-use kore::common::dirs;
-use kore::common::io::json;
-use kore::domains::import;
-use kore::domains::mods;
-use kore::domains::settings::{lang, nightly, AutoGraphics, ExceptionList, GraphicsBackend, ScannerConfig, Settings, UpdateMode, WindowSettings};
+use kokoro::common::architecture;
+use kokoro::common::dirs;
+use kokoro::common::io::json;
+use kokoro::domains::import;
+use kokoro::domains::mods;
+use kokoro::domains::settings::{lang, nightly, AutoGraphics, ExceptionList, GraphicsBackend, ScannerConfig, Settings, UpdateMode, WindowSettings};
 #[cfg(target_os = "linux")]
-use kore::domains::settings::desktop;
-use kore::{ContentStore, Vault};
+use kokoro::domains::settings::desktop;
+use kokoro::{ContentStore, Vault};
 
 use crate::domains::{home, settings::{self as gui_settings, source}};
 use crate::widget::popup;

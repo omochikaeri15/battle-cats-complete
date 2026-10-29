@@ -5,15 +5,15 @@ use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, row, scrollable, slider, text, text_input, Space};
 use iced::alignment::{Horizontal, Vertical};
 use iced::{font, Alignment, Color, Element, Length, Padding, Theme};
-use nyanko::combat::{get_talent, Entity, Faction};
-use nyanko::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
-use nyanko::files::img022;
+use codex::combat::{get_talent, Entity, Faction};
+use codex::cat::unit::{LevelCurve, Talent, TalentCost, TalentGroup};
+use codex::files::img022;
 
-use kore::systems::combat::registry::{get_display_def, AbilityIcon};
-use kore::systems::combat::NameBook;
-use kore::systems::treasure::Bonus;
-use kore::domains::cat::game::talents as talent_logic;
-use kore::Vfs;
+use kokoro::systems::combat::registry::{get_display_def, AbilityIcon};
+use kokoro::systems::combat::NameBook;
+use kokoro::systems::treasure::Bonus;
+use kokoro::domains::cat::game::talents as talent_logic;
+use kokoro::Vfs;
 
 use crate::app::theme;
 use crate::common::ability_icon;

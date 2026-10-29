@@ -7,13 +7,13 @@ use iced::widget::image::Handle;
 use iced::widget::{column, container, image as iced_image, pick_list, row, text, Space};
 use iced::{Element, Length, Task};
 
-use kore::common::formats::SpriteSheet as CoreSpriteSheet;
-use kore::systems::combat::NameBook;
-use nyanko::combat::Identity;
-use kore::domains::sandbox::orb::{self, Allowance, Kind, GRADES};
-use kore::{Vault, Vfs};
+use kokoro::common::formats::SpriteSheet as CoreSpriteSheet;
+use kokoro::systems::combat::NameBook;
+use codex::combat::Identity;
+use kokoro::domains::sandbox::orb::{self, Allowance, Kind, GRADES};
+use kokoro::{Vault, Vfs};
 use image::{imageops, RgbaImage};
-use nyanko::cat::unit::Equipment;
+use codex::cat::unit::Equipment;
 
 use crate::app::theme;
 use crate::common::{ensure_sheet_loaded, SpriteSheet};

@@ -9,8 +9,8 @@ use std::sync::Arc;
 use iced::widget::{column, container, row, scrollable};
 use iced::{Element, Length, Size, Subscription, Task};
 
-use kore::domains::settings::Settings;
-use kore::Vault;
+use kokoro::domains::settings::Settings;
+use kokoro::Vault;
 
 use crate::app::state::AppState;
 use crate::app::theme;

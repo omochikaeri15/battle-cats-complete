@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-use nyanko::cat::unit::{NyancomboData, UnitBuy};
-use nyanko::cat::unitid;
-use nyanko::chapter::stage::{MapStageDataEntry, MapStageDataHeader};
-use nyanko::combat::Scale;
-use nyanko::common::{Column, FromColumn};
-use nyanko::enemy::t_unit;
-use nyanko::files::GatyaItemBuy;
+use codex::cat::unit::{NyancomboData, UnitBuy};
+use codex::cat::unitid;
+use codex::chapter::stage::{MapStageDataEntry, MapStageDataHeader};
+use codex::combat::Scale;
+use codex::common::{Column, FromColumn};
+use codex::enemy::t_unit;
+use codex::files::GatyaItemBuy;
 
-use kore::domains::settings::EditorMode;
+use kokoro::domains::settings::EditorMode;
 
 use crate::app::Page;
 
@@ -603,7 +603,7 @@ mod tests {
         for (field, _) in names {
             assert!(
                 schema.order().iter().any(|column| column.field == *field),
-                "{subject}: override names {field}, which nyanko no longer publishes"
+                "{subject}: override names {field}, which codex no longer publishes"
             );
         }
     }

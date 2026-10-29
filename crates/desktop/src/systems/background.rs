@@ -12,9 +12,9 @@ use std::time::Duration;
 use iced::widget::{container, stack, text, Space};
 use iced::{Background, Border, Color, Element, Length, Padding, Task, Theme};
 
-use kore::domains::utilities::background::{self as builder, Loaded, STAGE_WIDTH};
-use kore::systems::addons::paths::{self, Presence};
-use nyanko::graphics::backdrop::{Backdrop, Camera, Layers, Quad, Screen};
+use kokoro::domains::utilities::background::{self as builder, Loaded, STAGE_WIDTH};
+use kokoro::systems::addons::paths::{self, Presence};
+use codex::graphics::backdrop::{Backdrop, Camera, Layers, Quad, Screen};
 
 use crate::app::state::BackgroundState;
 use crate::editor;

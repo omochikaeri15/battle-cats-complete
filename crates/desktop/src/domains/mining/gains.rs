@@ -234,7 +234,7 @@ mod tests {
                 .iter()
                 .map(|ultra| talents::Gain {
                     index: 0,
-                    group: nyanko::cat::unit::TalentGroup { limit: u8::from(*ultra), ..Default::default() },
+                    group: codex::cat::unit::TalentGroup { limit: u8::from(*ultra), ..Default::default() },
                     name: "",
                     fallback: "",
                     icon: AbilityIcon::None,

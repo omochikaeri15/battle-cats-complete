@@ -3,7 +3,7 @@ use iced::{Color, Element, Length, Theme};
 use iced::font::{Font, Weight};
 use iced::widget::{column, row, text, Row, Space};
 
-use kore::common::superscript::{self, Segment};
+use kokoro::common::superscript::{self, Segment};
 
 const SUPERSCRIPT_SHRINK: f32 = 3.0;
 const SUPERSCRIPT_ALPHA: f32 = 0.7;

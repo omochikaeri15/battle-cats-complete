@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use tracing::warn;
 
-use nyanko::graphics::rig::{Animation, BoundingBox, Model, Rig, SpriteSheet};
-use nyanko::graphics::tools::joint::{self, Joint};
-use nyanko::graphics::tools::part;
+use codex::graphics::rig::{Animation, BoundingBox, Model, Rig, SpriteSheet};
+use codex::graphics::tools::joint::{self, Joint};
+use codex::graphics::tools::part;
 
-use kore::common::preview::{self, Stamp};
-use kore::Source;
-use kore::systems::animation::{cycle, loop_frame, restart, restart_frame, Motion, MotionSet, Loop, Offset, Placement, Rigging, Role, NO_OFFSET};
+use kokoro::common::preview::{self, Stamp};
+use kokoro::Source;
+use kokoro::systems::animation::{cycle, loop_frame, restart, restart_frame, Motion, MotionSet, Loop, Offset, Placement, Rigging, Role, NO_OFFSET};
 
 pub(super) const COLUMNS: usize = 4;
 const DEFAULT_SLOTS: usize = 8;
@@ -873,7 +873,7 @@ impl RigCache {
 
 #[cfg(test)]
 mod tests {
-    use kore::systems::animation::SLOT_MODEL;
+    use kokoro::systems::animation::SLOT_MODEL;
 
     use super::*;
 

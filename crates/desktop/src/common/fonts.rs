@@ -36,7 +36,7 @@ mod tests {
                 continue;
             };
 
-            system.load_font(std::borrow::Cow::Borrowed(kore::common::assets::FONT_SYMBOLS));
+            system.load_font(std::borrow::Cow::Borrowed(kokoro::common::assets::FONT_SYMBOLS));
 
             let raw = system.raw();
             let family = cosmic_text::fontdb::Family::Name("Miscellaneous-Symbols");

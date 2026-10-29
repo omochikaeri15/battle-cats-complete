@@ -84,7 +84,7 @@ mod tests {
         for entry in schema::of(Subject::Enemy).order() {
             assert!(
                 rule(entry.field).is_some(),
-                "enemy: nyanko publishes {}, which no resolved rule arm names",
+                "enemy: codex publishes {}, which no resolved rule arm names",
                 entry.field,
             );
         }

@@ -5,7 +5,7 @@ use std::time::Instant;
 use iced::wgpu;
 use tracing::{info, warn};
 
-use kore::domains::settings::{AutoGraphics, GraphicsBackend};
+use kokoro::domains::settings::{AutoGraphics, GraphicsBackend};
 
 const WGPU_BACKEND: &str = "WGPU_BACKEND";
 const ICED_BACKEND: &str = "ICED_BACKEND";
