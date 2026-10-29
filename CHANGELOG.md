@@ -1,2 +1,2 @@
 Changes:
-- Resolved Editor now shows names of mechanics instead of raw file names in the context menu.
+- Type ID can now be set for any target trait talent using the Editor.
