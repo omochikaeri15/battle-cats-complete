@@ -8,7 +8,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::image::Handle;
 use iced::widget::{button, column, container, image as iced_image, scrollable, text, tooltip, Column, Row};
 use iced::{Element, Font, Length, Theme};
-use nyanko::combat::{get_ability, get_talent, Faction, Identity};
+use nyanko::combat::{get_ability, get_talent, targets_traits, Faction, Identity};
 use rustc_hash::FxHashMap;
 
 use kore::common::gfx::autocrop;
@@ -492,8 +492,11 @@ fn trait_button<'a>(bit: usize, name: &'a str, mask: i32, live: bool) -> Element
 }
 
 fn arming(draft: &Draft) -> bool {
-    (0..filled(draft)).any(|slot| {
-        draft.reads_at(TALENT_HEAD + slot * TALENT_STRIDE + NAME_ID).is_some_and(|id| id != -1)
+    (0..TALENT_SLOTS).any(|slot| {
+        draft
+            .reads_at(TALENT_HEAD + slot * TALENT_STRIDE + ABILITY)
+            .and_then(|id| u8::try_from(id).ok())
+            .is_some_and(targets_traits)
     })
 }
 
