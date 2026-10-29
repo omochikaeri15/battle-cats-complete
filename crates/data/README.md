@@ -5,6 +5,9 @@ Pure stateless library for handling game quirks, animations, and data from *The 
 
 Designed as a standalone API, `nyanko` abstracts away the underlying engine complexities, providing a clean front-facing module for developers and modders to input and process game files.
 
+## DEPRICATED
+Due to a lack of users, this project now lives completely under `battle-cats-complete` under the name `codex` (at the time of writng this), and adopts the projects Non-Commercial license. You may continue to use this crate but be warned that it will recieve no further updates.
+
 ## Features
 - **Unit Structs:** Aggregate structs for both Cat Units and Enemy Units that can be serialized to `.json`, each with an `assemble` constructor that performs the cross-file lookups the engine's layout requires.
 - **Data Structs:** Re-exports containing pure-data structs for raw game files.
