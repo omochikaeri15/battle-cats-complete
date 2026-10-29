@@ -1,0 +1,11 @@
+[package]
+name = "website"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+omote = { path = "../omote" }
