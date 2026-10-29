@@ -1,6 +1,6 @@
 [package]
 name = "nyanko"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["omochikaeri15 <251449262+omochikaeri15@users.noreply.github.com>"]
