@@ -1,6 +1,8 @@
+use std::borrow::Cow;
 use std::path::Path;
 
 use kore::common::architecture;
+use kore::common::io::APP_LANGUAGES;
 use kore::domains::settings::EditorMode;
 
 use crate::app::{theme, Page};
@@ -26,6 +28,8 @@ const VANILLA_NOTICE: &str =
     "The game ships this one, and a mod cannot hide a file the game ships. Unlock the game mount to remove it for real";
 const NO_MOD_NOTICE: &str =
     "Creating a stage writes new files, so it needs an active mod to write them into";
+const ANIMATION_TITLE: &str = "Animation";
+const BANNERS_TITLE: &str = "Banners";
 const FIXED_CHAPTER_NOTICE: &str =
     "The story chapters declare their stages in stageNormal files the engine names itself, so no stage or map can be added to one";
 
@@ -152,6 +156,7 @@ enum Primary<'a> {
 
 struct Payload<'a> {
     key: &'a str,
+    title: Option<&'a str>,
     mount: Mount<'a>,
     scopes: Vec<Scope<'a>>,
     primary: Primary<'a>,
@@ -335,7 +340,8 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: target.asset.key(),
-            scopes: target.asset.scopes(mount.target.is_some()),
+            title: Some(ANIMATION_TITLE),
+            scopes: target.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Animation(target),
             values: context.values,
@@ -349,7 +355,8 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
             payloads.push(Payload {
                 key: &cat.file,
-                scopes: vec![Scope { name: &cat.file, source: Some(&cat.source), present }],
+                title: Some(figures::Subject::Cat.title()),
+                scopes: vec![Scope { name: &cat.file, source: Some(&cat.source), present, title: None }],
                 mount,
                 primary: Primary::Cat(cat),
                 values: context.values,
@@ -364,7 +371,8 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
             payloads.push(Payload {
                 key: &enemy.file,
-                scopes: vec![Scope { name: &enemy.file, source: Some(&enemy.source), present }],
+                title: Some(figures::Subject::Enemy.title()),
+                scopes: vec![Scope { name: &enemy.file, source: Some(&enemy.source), present, title: None }],
                 mount,
                 primary: Primary::Enemy(enemy),
                 values: context.values,
@@ -377,6 +385,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: &icon.asset.internal,
+            title: Some(icon.title),
             scopes: icon.asset.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Replace,
@@ -389,6 +398,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: target.asset.key(),
+            title: Some(target.title),
             scopes: target.asset.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Replace,
@@ -401,6 +411,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: &banner.key,
+            title: Some(BANNERS_TITLE),
             scopes: banner.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Replace,
@@ -413,6 +424,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: target.asset.key(),
+            title: Some(target.subject.title()),
             scopes: target.asset.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Level(target),
@@ -425,6 +437,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: target.asset.key(),
+            title: None,
             scopes: target.asset.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Unsupported(Verb::Edit),
@@ -435,10 +448,12 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
     if let Some(target) = context.ground.as_ref() {
         let mount = mount(target.active_mod.as_deref(), target.unlocked);
         let present = present(&mount, target.mod_copy.as_deref(), Some(&target.game));
-        let scopes = vec![Scope { name: target.file.as_str(), source: Some(target.game.as_path()), present }];
+        let scopes =
+            vec![Scope { name: target.file.as_str(), source: Some(target.game.as_path()), present, title: None }];
 
         payloads.push(Payload {
             key: target.file.as_str(),
+            title: Some(ground::TITLE),
             scopes,
             mount,
             primary: Primary::Ground(target),
@@ -451,6 +466,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
 
         payloads.push(Payload {
             key: target.asset.key(),
+            title: Some(target.subject.title()),
             scopes: target.asset.scopes(mount.target.is_some()),
             mount,
             primary: Primary::Prose(target),
@@ -461,7 +477,7 @@ fn payloads(context: &Context) -> Vec<Payload<'_>> {
     payloads
 }
 
-impl Payload<'_> {
+impl<'a> Payload<'a> {
     fn render(&self, style: Style) -> Vec<Item> {
         if self.scopes.is_empty() {
             return Vec::new();
@@ -483,13 +499,13 @@ impl Payload<'_> {
             return self.bare(0, only, plans, Labeling::Verbose);
         }
 
-        let mut columns: Vec<(Verb, Vec<Item>)> = Vec::new();
+        let mut columns: Vec<(Verb, Vec<(&Scope<'a>, Item)>)> = Vec::new();
 
         for (at, scope) in self.scopes.iter().enumerate() {
             for (verb, item) in self.verbs(at, scope, plans, Labeling::Named) {
                 match columns.iter_mut().find(|(known, _)| *known == verb) {
-                    Some((_, listed)) => listed.push(item),
-                    None => columns.push((verb, vec![item])),
+                    Some((_, listed)) => listed.push((scope, item)),
+                    None => columns.push((verb, vec![(scope, item)])),
                 }
             }
         }
@@ -500,11 +516,13 @@ impl Payload<'_> {
             .into_iter()
             .filter_map(|(verb, mut listed)| {
                 if listed.len() > 1 {
-                    return Some(Item::list(verb.flat(&subject, self.mount.name), listed));
+                    let items = listed.into_iter().map(|(_, item)| item).collect();
+
+                    return Some(Item::list(verb.flat(&subject, self.mount.name), items));
                 }
 
-                listed.pop().map(|only| {
-                    let named = verb.flat(&only.label, self.mount.name);
+                listed.pop().map(|(scope, only)| {
+                    let named = verb.flat(&self.full(scope), self.mount.name);
 
                     only.relabel(named)
                 })
@@ -520,7 +538,7 @@ impl Payload<'_> {
 
                 for (at, scope) in scopes.iter().enumerate() {
                     per_file.push(Item::list(
-                        scope.name.to_owned(),
+                        self.short(scope).into_owned(),
                         self.bare(at, scope, plans, Labeling::Terse),
                     ));
                 }
@@ -543,12 +561,50 @@ impl Payload<'_> {
     }
 
     fn subject(&self) -> String {
-        match self.scopes.as_slice() {
-            [only] => only.name.to_owned(),
-            _ => Path::new(self.key)
-                .file_stem()
-                .map_or_else(|| self.key.to_owned(), |stem| stem.to_string_lossy().into_owned()),
+        if let [only] = self.scopes.as_slice() {
+            return self.full(only).into_owned();
         }
+
+        self.title.filter(|_| self.values == EditorMode::Resolved).map_or_else(
+            || {
+                Path::new(self.key)
+                    .file_stem()
+                    .map_or_else(|| self.key.to_owned(), |stem| stem.to_string_lossy().into_owned())
+            },
+            str::to_owned,
+        )
+    }
+
+    fn resolved(&self, scope: &Scope<'a>) -> Option<&'a str> {
+        (self.values == EditorMode::Resolved).then(|| scope.title.or(self.title)).flatten()
+    }
+
+    fn shared(&self, title: &str) -> bool {
+        self.scopes.iter().filter(|scope| self.resolved(scope) == Some(title)).count() > 1
+    }
+
+    fn short(&self, scope: &Scope<'a>) -> Cow<'a, str> {
+        let Some(title) = self.resolved(scope) else {
+            return Cow::Borrowed(scope.name);
+        };
+
+        if !self.shared(title) {
+            return Cow::Borrowed(title);
+        }
+
+        Cow::Borrowed(language(scope.name).unwrap_or(scope.name))
+    }
+
+    fn full(&self, scope: &Scope<'a>) -> Cow<'a, str> {
+        let Some(title) = self.resolved(scope) else {
+            return Cow::Borrowed(scope.name);
+        };
+
+        if !self.shared(title) {
+            return Cow::Borrowed(title);
+        }
+
+        language(scope.name).map_or(Cow::Borrowed(scope.name), |language| Cow::Owned(format!("{title} ({language})")))
     }
 
     fn verbs(
@@ -561,9 +617,14 @@ impl Payload<'_> {
         let mut items = Vec::new();
         let target_mod = self.mount.target.map(str::to_owned);
 
+        let name = match labeling {
+            Labeling::Named => self.short(scope),
+            Labeling::Verbose | Labeling::Terse => self.full(scope),
+        };
+
         match self.primary {
             Primary::Unsupported(verb) => {
-                items.push((verb, Item::unsupported(verb.label(scope.name, &self.mount, labeling))));
+                items.push((verb, Item::unsupported(verb.label(&name, &self.mount, labeling))));
             }
             Primary::Ground(target) => {
                 let plan = ground::plan(
@@ -576,7 +637,7 @@ impl Payload<'_> {
                 items.push((
                     Verb::Edit,
                     self.mount.item(
-                        Verb::Edit.label(scope.name, &self.mount, labeling),
+                        Verb::Edit.label(&name, &self.mount, labeling),
                         Action::EditGround(plan),
                         Confirm::Never,
                     ),
@@ -587,7 +648,7 @@ impl Payload<'_> {
                     items.push((
                         Verb::Edit,
                         self.mount.item(
-                            Verb::Edit.label(scope.name, &self.mount, labeling),
+                            Verb::Edit.label(&name, &self.mount, labeling),
                             Action::EditFigures(plan),
                             Confirm::Never,
                         ),
@@ -597,7 +658,7 @@ impl Payload<'_> {
             Primary::Animation(target) => {
                 let plan = super::anim_plan(target, self.mount.target.map(str::to_owned));
                 let item =
-                    Item::new(Verb::Edit.label(scope.name, &self.mount, labeling), Action::EditAnimation(plan));
+                    Item::new(Verb::Edit.label(&name, &self.mount, labeling), Action::EditAnimation(plan));
 
                 let item = match (self.mount.target, self.mount.locked) {
                     (None, false) => item.confirming(),
@@ -606,11 +667,11 @@ impl Payload<'_> {
 
                 items.push((Verb::Edit, item));
             }
-            Primary::Replace => items.push((Verb::Replace, replace(scope, &self.mount, labeling))),
+            Primary::Replace => items.push((Verb::Replace, replace(scope, &name, &self.mount, labeling))),
             Primary::Cat(cat) => items.push((
                 Verb::Edit,
                 self.mount.item(
-                    Verb::Edit.label(scope.name, &self.mount, labeling),
+                    Verb::Edit.label(&name, &self.mount, labeling),
                     Action::EditFigures(cat_plan(cat, target_mod, self.values)),
                     Confirm::Never,
                 ),
@@ -618,7 +679,7 @@ impl Payload<'_> {
             Primary::Enemy(enemy) => items.push((
                 Verb::Edit,
                 self.mount.item(
-                    Verb::Edit.label(scope.name, &self.mount, labeling),
+                    Verb::Edit.label(&name, &self.mount, labeling),
                     Action::EditFigures(enemy_plan(enemy, target_mod, self.values)),
                     Confirm::Never,
                 ),
@@ -628,7 +689,7 @@ impl Payload<'_> {
                     items.push((
                         Verb::Edit,
                         self.mount.item(
-                            Verb::Edit.label(scope.name, &self.mount, labeling),
+                            Verb::Edit.label(&name, &self.mount, labeling),
                             Action::EditProse(plan),
                             Confirm::Never,
                         ),
@@ -637,17 +698,17 @@ impl Payload<'_> {
             }
         }
 
-        items.push((Verb::Open, open(scope, &self.mount, labeling)));
-        items.push((Verb::Find, find(scope, &self.mount, labeling)));
-        items.extend(sync(scope, &self.mount, labeling).map(|item| (Verb::Sync, item)));
-        items.push((Verb::Delete, delete(scope, &self.mount, labeling)));
+        items.push((Verb::Open, open(scope, &name, &self.mount, labeling)));
+        items.push((Verb::Find, find(scope, &name, &self.mount, labeling)));
+        items.extend(sync(scope, &name, &self.mount, labeling).map(|item| (Verb::Sync, item)));
+        items.push((Verb::Delete, delete(scope, &name, &self.mount, labeling)));
 
         items
     }
 }
 
-fn open(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
-    let label = Verb::Open.label(scope.name, mount, labeling);
+fn open(scope: &Scope<'_>, name: &str, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Open.label(name, mount, labeling);
 
     let Some(path) = scope.present else {
         return Item::disabled(label, absent(mount));
@@ -659,8 +720,8 @@ fn open(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
     }
 }
 
-fn find(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
-    let label = Verb::Find.label(scope.name, mount, labeling);
+fn find(scope: &Scope<'_>, name: &str, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Find.label(name, mount, labeling);
 
     let Some(path) = scope.present else {
         return Item::disabled(label, absent(mount));
@@ -669,8 +730,8 @@ fn find(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
     Item::new(label, Action::Find { source: path.to_path_buf() })
 }
 
-fn replace(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
-    let label = Verb::Replace.label(scope.name, mount, labeling);
+fn replace(scope: &Scope<'_>, name: &str, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Replace.label(name, mount, labeling);
 
     if mount.locked {
         return Item::disabled(label, LOCKED_NOTICE);
@@ -694,11 +755,11 @@ fn replace(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
     if scope.present.is_some() { item.confirming() } else { item }
 }
 
-fn sync(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Option<Item> {
+fn sync(scope: &Scope<'_>, name: &str, mount: &Mount<'_>, labeling: Labeling) -> Option<Item> {
     let active = mount.target?;
     let game = scope.source?;
 
-    let label = Verb::Sync.label(scope.name, mount, labeling);
+    let label = Verb::Sync.label(name, mount, labeling);
 
     let item = Item::new(
         label,
@@ -712,8 +773,8 @@ fn sync(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Option<Item
     Some(if scope.present.is_some() { item.confirming() } else { item })
 }
 
-fn delete(scope: &Scope<'_>, mount: &Mount<'_>, labeling: Labeling) -> Item {
-    let label = Verb::Delete.label(scope.name, mount, labeling);
+fn delete(scope: &Scope<'_>, name: &str, mount: &Mount<'_>, labeling: Labeling) -> Item {
+    let label = Verb::Delete.label(name, mount, labeling);
 
     if mount.locked {
         return Item::disabled(label, LOCKED_NOTICE);
@@ -764,6 +825,13 @@ fn plans(target: &ProseTarget, scopes: &[Scope<'_>], target_mod: Option<&str>) -
         .collect()
 }
 
+fn language(name: &str) -> Option<&'static str> {
+    let stem = Path::new(name).file_stem()?.to_str()?;
+    let (_, code) = stem.rsplit_once('_')?;
+
+    APP_LANGUAGES.iter().find(|(known, _)| *known == code).map(|(_, label)| *label)
+}
+
 fn present<'a>(mount: &Mount<'_>, mod_copy: Option<&'a Path>, game: Option<&'a Path>) -> Option<&'a Path> {
     if mount.target.is_some() { mod_copy } else { game }
 }
@@ -800,7 +868,7 @@ fn files(items: &mut Vec<Item>, file: &FileTarget) {
 
     let mount = mount(file.active_mod.as_deref(), file.unlocked);
     let browsing = Mount { name: &file.mount, target: None, locked: false };
-    let scope = Scope { name: &file.name, source: file.game.as_deref(), present: Some(&file.source) };
+    let scope = Scope { name: &file.name, source: file.game.as_deref(), present: Some(&file.source), title: None };
 
     if file.mount == architecture::GAME
         && let Some(active) = mount.target
@@ -814,11 +882,11 @@ fn files(items: &mut Vec<Item>, file: &FileTarget) {
         ));
     }
 
-    items.push(open(&scope, &browsing, Labeling::Verbose));
-    items.push(find(&scope, &browsing, Labeling::Verbose));
+    items.push(open(&scope, &file.name, &browsing, Labeling::Verbose));
+    items.push(find(&scope, &file.name, &browsing, Labeling::Verbose));
 
     if file.mount != architecture::GAME {
-        items.extend(sync(&scope, &mount, Labeling::Verbose));
+        items.extend(sync(&scope, &file.name, &mount, Labeling::Verbose));
         items.push(discard(file));
 
         return;
@@ -840,4 +908,50 @@ fn files(items: &mut Vec<Item>, file: &FileTarget) {
 fn discard(file: &FileTarget) -> Item {
     Item::new(Verb::Delete.flat(&file.name, &file.mount), Action::Delete { source: file.source.clone() })
         .confirming()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn payload<'a>(scopes: Vec<Scope<'a>>, values: EditorMode) -> Payload<'a> {
+        Payload {
+            key: "Nyancombo.csv",
+            title: Some("Combo Names"),
+            mount: Mount { name: architecture::GAME, target: None, locked: false },
+            scopes,
+            primary: Primary::Replace,
+            values,
+        }
+    }
+
+    fn scope(name: &str) -> Scope<'_> {
+        Scope { name, source: None, present: None, title: None }
+    }
+
+    #[test]
+    fn language_copies_of_one_mechanic_are_told_apart_by_language() {
+        let resolved = payload(vec![scope("Nyancombo_en.csv"), scope("Nyancombo_ja.csv")], EditorMode::Resolved);
+
+        assert_eq!(resolved.subject(), "Combo Names");
+        assert_eq!(resolved.short(&resolved.scopes[0]), "English");
+        assert_eq!(resolved.full(&resolved.scopes[1]), "Combo Names (Japanese)");
+
+        // a lone copy needs no language at all
+        let alone = payload(vec![scope("Nyancombo_en.csv")], EditorMode::Resolved);
+        assert_eq!(alone.full(&alone.scopes[0]), "Combo Names");
+    }
+
+    #[test]
+    fn raw_mode_and_untitled_files_keep_the_file_name() {
+        let raw = payload(vec![scope("Nyancombo_en.csv"), scope("Nyancombo_ja.csv")], EditorMode::Raw);
+
+        assert_eq!(raw.subject(), "Nyancombo");
+        assert_eq!(raw.full(&raw.scopes[0]), "Nyancombo_en.csv");
+
+        // two copies with no language suffix can only be named by their files
+        let bare = payload(vec![scope("Nyancombo.csv"), scope("Nyancombo_xx.csv")], EditorMode::Resolved);
+        assert_eq!(bare.short(&bare.scopes[0]), "Nyancombo.csv");
+        assert_eq!(bare.full(&bare.scopes[1]), "Nyancombo_xx.csv");
+    }
 }

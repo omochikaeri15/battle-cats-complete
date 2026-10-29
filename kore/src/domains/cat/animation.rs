@@ -24,6 +24,10 @@ pub fn rig_files(cat: &CatEntry, form: usize, vfs: &Vfs) -> Option<RigFiles> {
     animation::rig_files(vfs, &set_id(cat, form), &base)
 }
 
+pub fn motion_name(suffix: &str) -> Option<&'static str> {
+    animation::standard_name(suffix)
+}
+
 pub fn motions(cat: &CatEntry, form: usize, vfs: &Vfs) -> MotionSet {
     let egg_ids = cat.egg_ids.unwrap_or((-1, -1));
     let base = vec![files::anim_base_filename(cat.id, form, egg_ids)];
@@ -37,7 +41,7 @@ pub fn motions(cat: &CatEntry, form: usize, vfs: &Vfs) -> MotionSet {
             let named = index.and_then(animation::standard);
 
             motions.push(Motion {
-                name: named.map(|(name, _, _)| name.to_string()),
+                name: motion_name(&suffix).map(str::to_string),
                 slot: named.map(|(_, slot, _)| slot),
                 role: named.map(|(_, _, role)| role),
                 looping: if named.is_some_and(|(_, _, role)| role.loops()) { Loop::Exact } else { Loop::Frames },

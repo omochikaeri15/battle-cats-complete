@@ -124,6 +124,20 @@ impl Subject {
         self as usize
     }
 
+    pub(super) fn title(self) -> &'static str {
+        match self {
+            Self::Explanation => "Name & Description",
+            Self::EnemyName => "Name",
+            Self::EnemyDescription => "Description",
+            Self::ComboName => "Combo Names",
+            Self::TalentText => "Talent Text",
+            Self::MapName => "Map Name",
+            Self::StageName => "Stage Name",
+            Self::ItemName => "Item Text",
+            Self::CatGlossary | Self::EnemyGlossary => "Ability Glossary",
+        }
+    }
+
     pub(super) fn page(self) -> Page {
         match self {
             Self::Explanation | Self::ComboName | Self::TalentText | Self::CatGlossary => Page::Cats,

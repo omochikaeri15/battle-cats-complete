@@ -149,6 +149,10 @@ pub(crate) fn standard(index: usize) -> Option<(&'static str, usize, Role)> {
     }
 }
 
+pub(crate) fn standard_name(suffix: &str) -> Option<&'static str> {
+    suffix.parse::<usize>().ok().and_then(standard).map(|(name, _, _)| name)
+}
+
 pub(crate) fn rigging(vfs: &Vfs, id: &str, bases: &[String]) -> Option<Arc<Rigging>> {
     let resolve = |ext: &str| -> Option<Source> {
         let names: Vec<String> = bases.iter().map(|base| format!("{}.{}", base, ext)).collect();

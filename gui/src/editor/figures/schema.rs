@@ -63,6 +63,21 @@ impl Subject {
         }
     }
 
+    pub(crate) fn title(self) -> &'static str {
+        match self {
+            Subject::Cat | Subject::Enemy => "Abilities",
+            Subject::Buy => "Progression",
+            Subject::Curve => "Level Curve",
+            Subject::Talents => "Talents",
+            Subject::Costs => "Talent Costs",
+            Subject::Combo => "Cat Combos",
+            Subject::MapStage => "Stage Settings",
+            Subject::MapDrops => "Material Drops",
+            Subject::DropChara => "Unit Drops",
+            Subject::ItemBuy => "Item Catalog",
+        }
+    }
+
     pub(crate) fn page(self) -> Page {
         match self {
             Subject::Enemy => Page::Enemies,

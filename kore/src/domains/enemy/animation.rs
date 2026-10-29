@@ -17,6 +17,13 @@ pub fn rig_files(enemy: &EnemyEntry, vfs: &Vfs) -> Option<RigFiles> {
     animation::rig_files(vfs, &set_id(enemy), &bases)
 }
 
+pub fn motion_name(suffix: &str) -> Option<&'static str> {
+    suffix.strip_prefix(ZOMBIE_MARK).map_or_else(
+        || animation::standard_name(suffix),
+        |zombie| zombie.parse::<usize>().ok().and_then(zombie_name),
+    )
+}
+
 pub fn motions(enemy: &EnemyEntry, vfs: &Vfs) -> MotionSet {
     let plain = files::anim_base_filename(enemy.id);
     let bases = vec![plain.clone(), format!("i{}", plain)];
@@ -34,9 +41,7 @@ pub fn motions(enemy: &EnemyEntry, vfs: &Vfs) -> MotionSet {
         let named = if zombie.is_some() { None } else { index.and_then(animation::standard) };
 
         motions.push(Motion {
-            name: named
-                .map(|(name, _, _)| name.to_string())
-                .or_else(|| zombie.and(index).and_then(zombie_name).map(str::to_string)),
+            name: motion_name(&suffix).map(str::to_string),
             slot: named.map(|(_, slot, _)| slot),
             role: named.map(|(_, _, role)| role),
             looping: if named.is_some_and(|(_, _, role)| role.loops()) { Loop::Exact } else { Loop::Frames },

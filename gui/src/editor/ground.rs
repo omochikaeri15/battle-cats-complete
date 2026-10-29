@@ -21,6 +21,8 @@ const TERMINATOR: u32 = 0;
 const HEADER_MAX: usize = 7;
 const HEADER_PROBE: usize = 6;
 
+pub(super) const TITLE: &str = "Setup & Spawns";
+
 pub(super) const ENEMY_ID: usize = 0;
 pub(super) const AMOUNT: usize = 1;
 pub(super) const MAGNIFICATION: usize = 9;

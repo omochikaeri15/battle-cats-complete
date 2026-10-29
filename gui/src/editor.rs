@@ -134,6 +134,7 @@ struct AnimTarget {
     key: String,
     motion: Option<String>,
     asset: Asset,
+    titles: Vec<Option<String>>,
     unlocked: bool,
     active_mod: Option<String>,
 }
@@ -169,6 +170,15 @@ const ACQUISITION_ONLY: [(figures::Subject, &str); 1] =
     [(figures::Subject::Talents, cat_files::SKILL_ACQUISITION)];
 
 const FIRST_COST: u32 = 1;
+
+const RIG_TITLES: [&str; 3] = ["Sprite Sheet", "Sprite Cuts", "Model"];
+const ENTRY_SUFFIX: &str = "_entry";
+
+const BANNER_TITLES: [&str; 4] = ["Normal Banner", "Evolved Banner", "True Banner", "Ultra Banner"];
+const CAT_ICON_TITLE: &str = "Deploy Icon";
+const ENEMY_ICON_TITLE: &str = "Enemy Icon";
+const MAP_BANNER_TITLE: &str = "Map Banner";
+const STAGE_BANNER_TITLE: &str = "Stage Banner";
 
 const FIRST_TALENT_TEXT: usize = 1;
 
@@ -261,6 +271,7 @@ struct Scope<'a> {
     name: &'a str,
     source: Option<&'a Path>,
     present: Option<&'a Path>,
+    title: Option<&'a str>,
 }
 
 fn exception(app: &BattleCatsApp, wanted: String) -> Option<Exception> {
@@ -320,12 +331,22 @@ fn visible_name(app: &BattleCatsApp, wanted: &str) -> String {
 impl Exception {
     fn scopes(&self, in_mod: bool) -> Vec<Scope<'_>> {
         if in_mod {
-            return vec![Scope { name: &self.internal, source: self.vanilla.as_deref(), present: self.mod_copy.as_deref() }];
+            return vec![Scope {
+                name: &self.internal,
+                source: self.vanilla.as_deref(),
+                present: self.mod_copy.as_deref(),
+                title: None,
+            }];
         }
 
         self.variants
             .iter()
-            .map(|file| Scope { name: &file.name, source: file.game.as_deref(), present: file.game.as_deref() })
+            .map(|file| Scope {
+                name: &file.name,
+                source: file.game.as_deref(),
+                present: file.game.as_deref(),
+                title: None,
+            })
             .collect()
     }
 }
@@ -361,6 +382,7 @@ impl Asset {
                     name: &file.name,
                     source: file.game.as_deref(),
                     present: if in_mod { file.mod_copy.as_deref() } else { file.game.as_deref() },
+                    title: None,
                 })
                 .collect(),
         }
@@ -393,26 +415,44 @@ impl ProseTarget {
 
 struct IconTarget {
     asset: Exception,
+    title: &'static str,
     unlocked: bool,
     active_mod: Option<String>,
 }
 
 struct ImageTarget {
     asset: Asset,
+    title: &'static str,
     unlocked: bool,
     active_mod: Option<String>,
 }
 
 struct BannerTarget {
     key: String,
-    forms: Vec<Exception>,
+    forms: Vec<(Option<&'static str>, Exception)>,
     unlocked: bool,
     active_mod: Option<String>,
 }
 
+impl AnimTarget {
+    fn scopes(&self, in_mod: bool) -> Vec<Scope<'_>> {
+        self.asset
+            .scopes(in_mod)
+            .into_iter()
+            .zip(&self.titles)
+            .map(|(scope, title)| Scope { title: title.as_deref(), ..scope })
+            .collect()
+    }
+}
+
 impl BannerTarget {
     fn scopes(&self, in_mod: bool) -> Vec<Scope<'_>> {
-        self.forms.iter().flat_map(|form| form.scopes(in_mod)).collect()
+        self.forms
+            .iter()
+            .flat_map(|(title, form)| {
+                form.scopes(in_mod).into_iter().map(|scope| Scope { title: *title, ..scope })
+            })
+            .collect()
     }
 }
 
@@ -1335,29 +1375,32 @@ fn stage_images(app: &BattleCatsApp, map: bool, stage: bool) -> Vec<ImageTarget>
 
     let prefix = entry.category.image_prefix();
 
-    let wanted: Vec<String> = [
-        map.then(|| stage_files::map_banner_file(entry.map_id, &prefix)),
+    let wanted: Vec<(&'static str, String)> = [
+        map.then(|| (MAP_BANNER_TITLE, stage_files::map_banner_file(entry.map_id, &prefix))),
         stage.then(|| {
-            stage_files::stage_banner_file(&entry.category, entry.map_id, entry.stage_id, &prefix)
+            let file = stage_files::stage_banner_file(&entry.category, entry.map_id, entry.stage_id, &prefix);
+
+            (STAGE_BANNER_TITLE, file)
         }),
     ]
     .into_iter()
     .flatten()
     .collect();
 
-    let bases: Vec<&str> = wanted.iter().map(String::as_str).collect();
+    let bases: Vec<&str> = wanted.iter().map(|(_, key)| key.as_str()).collect();
     let active_mod = app.mods_state.active_mod();
 
     variant_sets(app, &bases)
         .into_iter()
         .zip(wanted)
-        .map(|(files, key)| match active_mod.is_some() {
-            true => (padded(files, app.vault.vfs.candidates(&key)), key),
-            false => (files, key),
+        .map(|(files, (title, key))| match active_mod.is_some() {
+            true => (padded(files, app.vault.vfs.candidates(&key)), title, key),
+            false => (files, title, key),
         })
-        .filter(|(files, _)| !files.is_empty())
-        .map(|(files, key)| ImageTarget {
+        .filter(|(files, _, _)| !files.is_empty())
+        .map(|(files, title, key)| ImageTarget {
             asset: Asset::Variants { key, files },
+            title,
             unlocked: app.settings.files.unlock_game_mount,
             active_mod: active_mod.clone(),
         })
@@ -1864,19 +1907,19 @@ fn named_files(app: &BattleCatsApp, names: Vec<String>) -> Vec<AssetFile> {
 fn anim_target(app: &BattleCatsApp, cats: bool, enemies: bool) -> Option<AnimTarget> {
     let vfs = &app.vault.vfs;
 
-    let (files, motion) = match scene(app) {
+    let (files, motion, naming): (_, _, fn(&str) -> Option<&'static str>) = match scene(app) {
         Page::Cats if cats => {
             let id = held_cat(app)?;
             let form = held_form(app);
             let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
-            (cat_animation::rig_files(cat, form, vfs)?, held_view(app).selected_motion())
+            (cat_animation::rig_files(cat, form, vfs)?, held_view(app).selected_motion(), cat_animation::motion_name)
         }
         Page::Enemies if enemies => {
             let id = app.app_state.enemy.selected_enemy?;
             let enemy = app.enemy_state.data.enemies.iter().find(|enemy| enemy.id == id)?;
 
-            (enemy_animation::rig_files(enemy, vfs)?, app.enemy_state.selected_motion())
+            (enemy_animation::rig_files(enemy, vfs)?, app.enemy_state.selected_motion(), enemy_animation::motion_name)
         }
         _ => return None,
     };
@@ -1884,13 +1927,32 @@ fn anim_target(app: &BattleCatsApp, cats: bool, enemies: bool) -> Option<AnimTar
     let key = files.key.clone();
     let asset = Asset::Variants { key: files.key.clone(), files: named_files(app, files.names()) };
 
+    let titles = RIG_TITLES
+        .into_iter()
+        .map(|title| Some(title.to_owned()))
+        .chain(files.anims.iter().map(|(suffix, _)| motion_title(suffix, naming)))
+        .collect();
+
     Some(AnimTarget {
         key,
         motion,
         asset,
+        titles,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
     })
+}
+
+fn motion_title(suffix: &str, naming: fn(&str) -> Option<&'static str>) -> Option<String> {
+    if let Some(name) = naming(suffix) {
+        return Some(format!("{name} Animation"));
+    }
+
+    match suffix {
+        ENTRY_SUFFIX => Some("Entry Animation".to_owned()),
+        _ if suffix.bytes().all(|byte| byte.is_ascii_digit()) => Some("Extra Animation".to_owned()),
+        _ => None,
+    }
 }
 
 #[derive(Clone)]
@@ -2588,16 +2650,16 @@ fn explanation_target(app: &BattleCatsApp, id: u32) -> Option<ProseTarget> {
 }
 
 fn icon_target(app: &BattleCatsApp, subject: Option<IconSubject>) -> Option<IconTarget> {
-    let resolved = match subject? {
+    let (resolved, title) = match subject? {
         IconSubject::Cat(id) => {
             let cat = app.cat_state.data.cats.iter().find(|cat| cat.id == id)?;
 
-            cat.deploy_icon_paths[held_form(app)].as_ref()?
+            (cat.deploy_icon_paths[held_form(app)].as_ref()?, CAT_ICON_TITLE)
         }
         IconSubject::Enemy(id) => {
             let enemy = app.enemy_state.data.enemies.iter().find(|enemy| enemy.id == id)?;
 
-            enemy.icon_path.as_ref()?
+            (enemy.icon_path.as_ref()?, ENEMY_ICON_TITLE)
         }
     };
 
@@ -2605,6 +2667,7 @@ fn icon_target(app: &BattleCatsApp, subject: Option<IconSubject>) -> Option<Icon
 
     Some(IconTarget {
         asset: exception(app, name)?,
+        title,
         unlocked: app.settings.files.unlock_game_mount,
         active_mod: app.mods_state.active_mod(),
     })
@@ -2629,13 +2692,12 @@ fn banner_target(app: &BattleCatsApp, id: u32) -> Option<BannerTarget> {
     let wanted: Vec<String> =
         (0..cat.forms.len()).map(|form| cat_files::banner_file(id, form, egg_ids)).collect();
 
-    let forms: Vec<Exception> = exceptions(app, wanted)
+    let forms: Vec<(Option<&'static str>, Exception)> = exceptions(app, wanted)
         .into_iter()
         .enumerate()
         .filter_map(|(form, asset)| {
             let offered = form == NORMAL_FORM || cat.forms[form] || !asset.variants.is_empty();
-
-            offered.then_some(asset)
+            offered.then(|| (BANNER_TITLES.get(form).copied(), asset))
         })
         .collect();
 
