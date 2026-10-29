@@ -3300,6 +3300,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mobile"
+version = "26.10.2"
+dependencies = [
+ "omote",
+]
+
+[[package]]
 name = "moxcms"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4027,6 +4034,10 @@ dependencies = [
  "objc2-core-location",
  "objc2-foundation 0.2.2",
 ]
+
+[[package]]
+name = "omote"
+version = "26.10.2"
 
 [[package]]
 name = "once_cell"
@@ -6699,6 +6710,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "website"
+version = "26.10.2"
+dependencies = [
+ "omote",
 ]
 
 [[package]]

@@ -5,6 +5,9 @@ members = [
     "crates/emulator",
     "crates/kokoro",
     "crates/desktop",
+    "crates/omote",
+    "crates/website",
+    "crates/mobile",
     "xtask",
 ]
 
