@@ -1,0 +1,16 @@
+target/
+**/*.rs.bk
+.cargo/
+.vscode/
+.idea/
+*swp
+.tsv
+.json
+.csv
+.DS_Store
+.cl*/
+CL*.md
+*.py
+modules*.md
+Thumbs.db
+examples/assets
