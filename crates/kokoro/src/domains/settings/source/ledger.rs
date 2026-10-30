@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -43,14 +43,19 @@ impl Ledger {
         cache::write::<Cache>(UNKEYED, &Self { root: root(game), installed, chunks });
     }
 
-    pub(super) fn missing(&self, chunks: &[Chunk]) -> u64 {
-        let held: HashSet<&str> = self.chunks.iter().map(|held| held.name.as_str()).collect();
+    pub(super) fn missing(&self, game: &Path, chunks: &[Chunk]) -> u64 {
+        let latest = self.latest();
+        let held: HashMap<&str, &Held> = self.chunks.iter().map(|held| (held.name.as_str(), held)).collect();
 
-        chunks.iter().filter(|chunk| !held.contains(chunk.name.as_str())).map(|chunk| chunk.size).sum()
+        chunks
+            .iter()
+            .filter(|chunk| !held.get(chunk.name.as_str()).is_some_and(|held| untouched(game, held, latest)))
+            .map(|chunk| chunk.size)
+            .sum()
     }
 
     pub(super) fn split<'a>(mut self, game: &Path, chunks: &'a [Chunk]) -> (Vec<Held>, Vec<&'a Chunk>) {
-        let latest = UNIX_EPOCH + Duration::from_secs(self.installed) + SLACK;
+        let latest = self.latest();
         let mut held: HashMap<String, Held> = self.chunks.drain(..).map(|held| (held.name.clone(), held)).collect();
         let (mut kept, mut wanted) = (Vec::new(), Vec::new());
 
@@ -62,6 +67,10 @@ impl Ledger {
         }
 
         (kept, wanted)
+    }
+
+    fn latest(&self) -> SystemTime {
+        UNIX_EPOCH + Duration::from_secs(self.installed) + SLACK
     }
 }
 
@@ -122,7 +131,8 @@ mod tests {
         let published = [chunk("same", 10), chunk("resized", 20), chunk("lost", 30), chunk("fresh", 40)];
         let now = SystemTime::now();
 
-        assert_eq!(ledger(now, recorded.clone()).missing(&published), 40);
+        // The size the popup promises has to be exactly what the download then fetches.
+        assert_eq!(ledger(now, recorded.clone()).missing(&game, &published), 90);
 
         let (kept, wanted) = ledger(now, recorded.clone()).split(&game, &published);
 
@@ -130,7 +140,11 @@ mod tests {
         assert_eq!(wanted.iter().map(|chunk| chunk.name.as_str()).collect::<Vec<_>>(), ["resized", "lost", "fresh"]);
 
         // A file saved after the install was edited by someone, even if its size happens to match.
-        let (kept, wanted) = ledger(now - Duration::from_secs(3600), recorded).split(&game, &published);
+        let stale = now - Duration::from_secs(3600);
+
+        assert_eq!(ledger(stale, recorded.clone()).missing(&game, &published), 100);
+
+        let (kept, wanted) = ledger(stale, recorded).split(&game, &published);
 
         assert!(kept.is_empty());
         assert_eq!(wanted.len(), 4);
@@ -143,7 +157,7 @@ mod tests {
         let game = folder("empty");
         let published = [chunk("one", 10), chunk("two", 20)];
 
-        assert_eq!(Ledger::default().missing(&published), 30);
+        assert_eq!(Ledger::default().missing(&game, &published), 30);
         assert_eq!(Ledger::default().split(&game, &published).1.len(), 2);
 
         let _ = fs::remove_dir_all(&game);

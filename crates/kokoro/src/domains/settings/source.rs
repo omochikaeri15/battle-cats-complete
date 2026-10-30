@@ -335,7 +335,15 @@ fn same(remote: &Stamp, held: Option<&Stamp>) -> bool {
 }
 
 pub fn probe(link: &str) -> Result<Stamp, Error> {
-    inspect(link).map(|(stamp, ..)| stamp).inspect_err(|err| warn!("Game data source could not be checked: {}", err))
+    inspect(link)
+        .map(|(manifest, ledger, _, modified)| {
+            let size = ledger.missing(Path::new(architecture::GAME), &manifest.chunks);
+
+            debug!(payload = manifest.id, size, "Game data still to download");
+
+            Stamp { id: manifest.id, modified, size }
+        })
+        .inspect_err(|err| warn!("Game data source could not be checked: {}", err))
 }
 
 pub fn install(link: &str, partial: Option<Partial>, emit: impl Fn(Step) + Sync, abort: &AtomicBool) -> Result<Stamp, Failure> {
@@ -346,7 +354,7 @@ pub fn install(link: &str, partial: Option<Partial>, emit: impl Fn(Step) + Sync,
     })
 }
 
-fn inspect(link: &str) -> Result<(Stamp, Manifest, Ledger, String), Error> {
+fn inspect(link: &str) -> Result<(Manifest, Ledger, String, String), Error> {
     let base = parse(link).ok_or_else(|| Error::new(ErrorKind::Link, "this is not an https link to a game data source".to_owned()))?;
     let client = client(Some(TIMEOUT), false)?;
     let (modified, bytes) = retry(|| {
@@ -364,11 +372,10 @@ fn inspect(link: &str) -> Result<(Stamp, Manifest, Ledger, String), Error> {
     })?;
     let manifest = Manifest::read(&bytes).map_err(malformed)?;
     let ledger = Ledger::load();
-    let stamp = Stamp { id: manifest.id.clone(), modified, size: ledger.missing(&manifest.chunks) };
 
-    debug!(payload = stamp.id, modified = stamp.modified, size = stamp.size, "Game data source answered");
+    debug!(payload = manifest.id, modified, "Game data source answered");
 
-    Ok((stamp, manifest, ledger, base))
+    Ok((manifest, ledger, base, modified))
 }
 
 fn retry<T>(mut step: impl FnMut() -> Result<T, Error>) -> Result<T, Error> {
@@ -387,12 +394,13 @@ fn retry<T>(mut step: impl FnMut() -> Result<T, Error>) -> Result<T, Error> {
 }
 
 fn fetch(link: &str, partial: Option<Partial>, emit: &(impl Fn(Step) + Sync), abort: &AtomicBool) -> Result<Stamp, Failure> {
-    let (stamp, manifest, ledger, base) = match inspect(link) {
+    let (manifest, ledger, base, modified) = match inspect(link) {
         Ok(found) => found,
         Err(error) => return Err(Failure { error, partial, touched: false }),
     };
     let game = Path::new(architecture::GAME);
     let (mut held, wanted) = ledger.split(game, &manifest.chunks);
+    let stamp = Stamp { id: manifest.id, modified, size: wanted.iter().map(|chunk| chunk.size).sum() };
     let mut partial = match partial {
         Some(partial) if partial.id == stamp.id => partial.intact(game).unwrap_or_else(|| {
             info!("Files from the interrupted download were changed since, starting the download over");
