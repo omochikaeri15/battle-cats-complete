@@ -364,9 +364,10 @@ pub(super) fn parse_caf(bytes: &[u8]) -> Option<Effect> {
             let end = if size < 0 { bytes.len() } else { (body + size as usize).min(bytes.len()) };
             let pcm = bytes.get(body + EDIT_COUNT..end)?;
             let samples: Vec<f32> = pcm
-                .chunks_exact(2)
-                .map(|pair| {
-                    let word = [pair[0], pair[1]];
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|&word| {
                     let sample = if flags & LITTLE_ENDIAN != 0 {
                         i16::from_le_bytes(word)
                     } else {

@@ -464,13 +464,8 @@ fn select_target(releases: &[github::Release], current_version: &str) -> Result<
         .chain(newer)
         .find_map(|release| matching_asset(release).map(|asset| (release, asset)))
     else {
-        return Err(CheckError {
-            reason: CheckFailure::Unknown,
-            detail: format!(
-                "{} is newer than v{}, but no release above it ships an asset this build can install",
-                latest.tag_name, current_version
-            ),
-        });
+        info!("Releases up to {} ship nothing for this build, so v{} stays current", latest.tag_name, current_version);
+        return Ok(None);
     };
 
     if installable.tag_name != latest.tag_name {
@@ -537,6 +532,7 @@ mod tests {
         assert_eq!(target.latest, "3.0.0");
     }
 
+    // A release that only shipped the website must not show desktop users an update error.
     #[test]
     fn never_walks_back_past_the_running_version() {
         let releases = [
@@ -544,7 +540,7 @@ mod tests {
             release("v2.7.0", &[&known_asset()]),
         ];
 
-        assert!(select_target(&releases, "2.8.0").is_err());
+        assert!(select_target(&releases, "2.8.0").unwrap().is_none());
     }
 
     #[test]

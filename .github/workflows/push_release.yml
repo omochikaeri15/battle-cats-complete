@@ -20,6 +20,8 @@ jobs:
     outputs:
       should_release: ${{ steps.check.outputs.should_release }}
       app_version: ${{ steps.get_version.outputs.version }}
+      desktop: ${{ steps.builds.outputs.desktop }}
+      website: ${{ steps.builds.outputs.website }}
     steps:
       - uses: actions/checkout@v5
 
@@ -45,10 +47,26 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Pick the front ends this release builds
+        id: builds
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          for NAME in desktop website; do
+            if [ ! -f .github/release-builds ] && [ "$NAME" = desktop ]; then
+              BUILD=true
+            elif grep -q "^$NAME $VERSION " .github/release-builds 2>/dev/null; then
+              BUILD=true
+            else
+              BUILD=false
+            fi
+            echo "$NAME=$BUILD" >> $GITHUB_OUTPUT
+            echo "$NAME builds in v$VERSION: $BUILD"
+          done
+
   build-windows:
     name: Build Windows (x64)
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
+    if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.desktop == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -82,7 +100,7 @@ jobs:
   build-linux:
     name: Build Linux (${{ matrix.flavor }})
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
+    if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.desktop == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -131,7 +149,7 @@ jobs:
   build-macos:
     name: Build MacOS (${{ matrix.flavor }})
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
+    if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.desktop == 'true'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -176,11 +194,13 @@ jobs:
   create-release:
     name: Publish Release
     needs: [check-version, build-windows, build-linux, build-macos]
+    if: ${{ !cancelled() && needs.check-version.outputs.should_release == 'true' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v4
+        if: needs.check-version.outputs.desktop == 'true'
 
       - name: List artifacts (Verification)
         run: ls -R
@@ -189,12 +209,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_RELEASE_TOKEN }}
         run: |
+          ASSETS=()
+          if [ "${{ needs.check-version.outputs.desktop }}" = true ]; then
+            ASSETS+=(
+              windows-x64-build/bcc_windows_x64.zip
+              linux-x64-build/bcc_linux_x64.zip
+              linux-arm-build/bcc_linux_arm.zip
+              mac-arm-build/bcc_mac_arm.zip
+              mac-x64-build/bcc_mac_x64.zip
+            )
+          fi
           gh release create "v${{ needs.check-version.outputs.app_version }}" \
             --repo "${{ github.repository }}" \
             --title "v${{ needs.check-version.outputs.app_version }}" \
             --notes-file CHANGELOG.md \
-            windows-x64-build/bcc_windows_x64.zip \
-            linux-x64-build/bcc_linux_x64.zip \
-            linux-arm-build/bcc_linux_arm.zip \
-            mac-arm-build/bcc_mac_arm.zip \
-            mac-x64-build/bcc_mac_x64.zip
+            "${ASSETS[@]}"

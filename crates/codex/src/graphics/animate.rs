@@ -59,7 +59,7 @@ pub(super) fn lift(parts: &[engine::Part<'_>], model: &Model, offset: Option<usi
 
 fn shift(frames: &mut [FrameData], (x, y): (f32, f32)) {
     for frame in frames {
-        for corner in frame.vertices.chunks_exact_mut(2) {
+        for corner in frame.vertices.as_chunks_mut::<2>().0 {
             corner[0] -= x;
             corner[1] -= y;
         }

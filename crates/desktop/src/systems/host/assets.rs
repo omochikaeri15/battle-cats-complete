@@ -424,59 +424,54 @@ impl DiskAssets {
             return Some(sheet.clone());
         }
 
-        let decoded = self.read(name).and_then(|bytes| {
+        let image = self.read(name).and_then(|bytes| {
             image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
                 .inspect_err(|error| warn!("emu: {name} failed to decode: {error}"))
                 .ok()
-        });
-        let sheet = match decoded {
-            Some(image) => {
-                let mut decoded = image.to_rgba8();
+        })?;
+        let mut decoded = image.to_rgba8();
 
-                for pixel in decoded.pixels_mut() {
-                    let alpha = u32::from(pixel.0[3]);
+        for pixel in decoded.pixels_mut() {
+            let alpha = u32::from(pixel.0[3]);
 
-                    for channel in &mut pixel.0[..3] {
-                        *channel = (u32::from(*channel) * alpha / 0xff) as u8;
-                    }
-                }
-
-                let (width, height) = (decoded.width(), decoded.height());
-                let patch = name
-                    .strip_suffix(SHEET_SUFFIX)
-                    .and_then(|stem| self.fuller(&format!("{stem}{CUT_SUFFIX}")))
-                    .and_then(|(variant, extra)| {
-                        let fuller = format!("{variant}{SHEET_SUFFIX}");
-
-                        self.note(&fuller);
-
-                        let bytes = self.read(&fuller)?;
-                        let donor = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png).ok()?.to_rgba8();
-
-                        (donor.width() == width && donor.height() == height).then_some((donor, extra))
-                    });
-
-                if let Some((donor, extra)) = patch {
-                    for [left, top, wide, tall] in extra {
-                        for y in top..top.saturating_add(tall).min(height) {
-                            for x in left..left.saturating_add(wide).min(width) {
-                                let mut pixel = *donor.get_pixel(x, y);
-                                let alpha = u32::from(pixel.0[3]);
-
-                                for channel in &mut pixel.0[..3] {
-                                    *channel = (u32::from(*channel) * alpha / 0xff) as u8;
-                                }
-
-                                decoded.put_pixel(x, y, pixel);
-                            }
-                        }
-                    }
-                }
-
-                Sheet::new(width, height, decoded.into_raw().as_slice())
+            for channel in &mut pixel.0[..3] {
+                *channel = (u32::from(*channel) * alpha / 0xff) as u8;
             }
-            None => return None,
-        };
+        }
+
+        let (width, height) = (decoded.width(), decoded.height());
+        let patch = name
+            .strip_suffix(SHEET_SUFFIX)
+            .and_then(|stem| self.fuller(&format!("{stem}{CUT_SUFFIX}")))
+            .and_then(|(variant, extra)| {
+                let fuller = format!("{variant}{SHEET_SUFFIX}");
+
+                self.note(&fuller);
+
+                let bytes = self.read(&fuller)?;
+                let donor = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png).ok()?.to_rgba8();
+
+                (donor.width() == width && donor.height() == height).then_some((donor, extra))
+            });
+
+        if let Some((donor, extra)) = patch {
+            for [left, top, wide, tall] in extra {
+                for y in top..top.saturating_add(tall).min(height) {
+                    for x in left..left.saturating_add(wide).min(width) {
+                        let mut pixel = *donor.get_pixel(x, y);
+                        let alpha = u32::from(pixel.0[3]);
+
+                        for channel in &mut pixel.0[..3] {
+                            *channel = (u32::from(*channel) * alpha / 0xff) as u8;
+                        }
+
+                        decoded.put_pixel(x, y, pixel);
+                    }
+                }
+            }
+        }
+
+        let sheet = Sheet::new(width, height, decoded.into_raw().as_slice());
 
         self.sheets
             .borrow_mut()

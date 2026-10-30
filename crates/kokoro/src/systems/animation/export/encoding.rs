@@ -73,7 +73,7 @@ pub(crate) fn encode_native(
                         let mut pixel_buffer = image_data.into_vec();
 
                         if !config.background {
-                            for chunk in pixel_buffer.chunks_exact_mut(4) {
+                            for chunk in pixel_buffer.as_chunks_mut::<4>().0 {
                                 if chunk[3] < 127 {
                                     chunk[0] = 0; chunk[1] = 0; chunk[2] = 0; chunk[3] = 0;
                                 } else {
@@ -240,7 +240,7 @@ fn quantizer_speed(quality_percent: u32) -> i32 {
 }
 
 pub(crate) fn prepare_image(mut pixel_buffer: Vec<u8>, width: u32, height: u32, is_opaque_background: bool) -> RgbaImage {
-    for chunk in pixel_buffer.chunks_exact_mut(4) {
+    for chunk in pixel_buffer.as_chunks_mut::<4>().0 {
         if is_opaque_background {
             chunk[3] = 255;
         } else {

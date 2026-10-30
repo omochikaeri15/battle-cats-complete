@@ -318,7 +318,9 @@ pub(crate) fn draw(pixels: &mut [u8], width: u32, height: u32, vertices: &[Verte
             vertices
                 .get(batch.range.clone())
                 .unwrap_or_default()
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .filter_map(move |corners| Triangle::new(corners, batch, width, height))
         })
         .collect();
@@ -363,7 +365,7 @@ mod tests {
 
         draw(&mut pixels, 8, 8, &quad([0.25; 4]), &[Batch { texture: None, blend: 1, alpha: Alpha::Blended, range: 0..6 }]);
 
-        assert!(pixels.chunks_exact(4).all(|pixel| pixel == [64, 64, 64, 64]));
+        assert!(pixels.as_chunks::<4>().0.iter().all(|pixel| *pixel == [64, 64, 64, 64]));
     }
 
     #[test]

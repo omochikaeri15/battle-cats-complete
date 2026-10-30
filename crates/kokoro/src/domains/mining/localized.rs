@@ -114,8 +114,8 @@ pub fn enemies(diff: &Diff, vfs: &Vfs) -> Vec<Localized> {
                         continue;
                     };
 
-                    if row.after.as_deref().is_some_and(&speaks)
-                        && !row.before.as_deref().is_some_and(&speaks)
+                    if row.after.as_deref().is_some_and(speaks)
+                        && !row.before.as_deref().is_some_and(speaks)
                     {
                         record(&mut found, (id, None), &code);
                     }
@@ -149,11 +149,11 @@ pub fn stages(diff: &Diff, vfs: &Vfs) -> Vec<Localized> {
             }
             Status::Changed => {
                 for row in &delta.rows {
-                    let Some(map) = row.after.as_deref().and_then(&named) else {
+                    let Some(map) = row.after.as_deref().and_then(named) else {
                         continue;
                     };
 
-                    if row.before.as_deref().and_then(&named).is_none() {
+                    if row.before.as_deref().and_then(named).is_none() {
                         record(&mut found, (map, None), &code);
                     }
                 }

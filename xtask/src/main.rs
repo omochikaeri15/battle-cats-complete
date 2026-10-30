@@ -1,7 +1,11 @@
 use std::env;
 use std::fs;
-use std::process::{Command, exit};
+use std::io::Write;
+use std::path::Path;
+use std::process::{Command, Stdio, exit};
 
+const BUILDS: &str = ".github/release-builds";
+const FRONTENDS: [&str; 2] = ["desktop", "website"];
 const APP_REMOTE: &str = "origin";
 const APP_RELEASE_BRANCH: &str = "main";
 const APP_DEV_BRANCH: &str = "dev";
@@ -114,7 +118,101 @@ fn stamp_version(old: &str, new: &str) {
     fs::write(APP_MANIFEST, stamped).expect("Failed to write the workspace manifest");
 }
 
-fn ship() {
+fn git_stdout(args: &[&str]) -> String {
+    let output = Command::new("git").args(args).output().expect("Failed to execute git command");
+
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn cargo_stdout(args: &[&str]) -> String {
+    let output = Command::new("cargo").args(args).output().expect("Failed to execute cargo command");
+
+    if !output.status.success() {
+        eprintln!("Error: 'cargo {}' failed. Aborting.", args.join(" "));
+        exit(1);
+    }
+
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+fn git_hash(text: &str) -> String {
+    let mut child = Command::new("git")
+        .args(["hash-object", "--stdin"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute git hash-object");
+
+    child
+        .stdin
+        .take()
+        .expect("git hash-object has no stdin")
+        .write_all(text.as_bytes())
+        .expect("Failed to feed git hash-object");
+
+    let output = child.wait_with_output().expect("Failed to read git hash-object");
+
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn tree_entry(line: &str, root: &Path) -> Option<String> {
+    let line = line.trim().trim_end_matches(" (*)");
+    let (name, rest) = line.split_once(' ')?;
+    let local = rest
+        .split_once(" (")
+        .and_then(|(_, path)| path.strip_suffix(')'))
+        .and_then(|path| fs::canonicalize(path).ok())
+        .and_then(|path| path.strip_prefix(root).ok().map(Path::to_path_buf));
+
+    Some(local.map_or_else(
+        || line.to_string(),
+        |dir| format!("{name} {}", git_stdout(&["rev-parse", &format!("HEAD:{}", dir.display())])),
+    ))
+}
+
+fn fingerprint(package: &str, root: &Path) -> String {
+    let tree = cargo_stdout(&["tree", "-p", package, "--target", "all", "-e", "normal,build", "--prefix", "none"]);
+    let mut entries: Vec<String> = tree.lines().filter_map(|line| tree_entry(line, root)).collect();
+
+    entries.sort_unstable();
+    entries.dedup();
+
+    let manifest = fs::read_to_string(APP_MANIFEST).expect("Failed to read the workspace manifest");
+    entries.extend(manifest.lines().filter(|line| !line.trim_start().starts_with("version =")).map(str::to_string));
+
+    git_hash(&entries.join("\n"))
+}
+
+fn settle_builds(version: &str, everything: bool) -> Vec<&'static str> {
+    let root = env::current_dir().and_then(fs::canonicalize).expect("Failed to resolve the workspace root");
+    let recorded = fs::read_to_string(BUILDS).unwrap_or_default();
+    let mut lines = Vec::new();
+    let mut shipping = Vec::new();
+
+    for name in FRONTENDS {
+        let fingerprint = fingerprint(name, &root);
+        let kept = recorded.lines().find_map(|line| {
+            let mut parts = line.split_whitespace();
+            let matches = parts.next() == Some(name);
+            let built = parts.next();
+
+            (matches && parts.next() == Some(fingerprint.as_str())).then_some(built).flatten()
+        });
+        let built = kept.filter(|_| !everything).unwrap_or(version);
+
+        if built == version {
+            shipping.push(name);
+        }
+
+        lines.push(format!("{name} {built} {fingerprint}"));
+    }
+
+    fs::write(BUILDS, lines.join("\n") + "\n").expect("Failed to write the release builds");
+
+    shipping
+}
+
+fn ship(everything: bool) {
     println!("Starting BCC Release...");
 
     println!("> Reading the releases on {APP_REMOTE}...");
@@ -132,8 +230,17 @@ fn ship() {
     println!("> Verifying build state with cargo check...");
     run_cargo(&["check"]);
 
-    let release_files = [APP_MANIFEST, APP_LOCKFILE, CHANGELOG];
+    let release_files = [APP_MANIFEST, APP_LOCKFILE, CHANGELOG, BUILDS];
     let tag = format!("{APP_TAG_PREFIX}{version}");
+
+    println!("> Fingerprinting the front ends against their last builds...");
+    let builds = settle_builds(&version, everything);
+
+    if builds.is_empty() {
+        println!("> No front end changed since its last build; {tag} only carries notes.");
+    } else {
+        println!("> {tag} builds {}.", builds.join(" and "));
+    }
 
     run_git(&[&["add"][..], &release_files].concat());
 
@@ -177,10 +284,12 @@ fn manifest_version(path: &str) -> String {
 }
 
 fn main() {
-    if let Some(unknown) = env::args().nth(1) {
-        eprintln!("Unknown xtask command '{unknown}'. Use 'cargo ship'.");
-        exit(2);
+    match env::args().nth(1).as_deref() {
+        None => ship(false),
+        Some("--all") => ship(true),
+        Some(unknown) => {
+            eprintln!("Unknown xtask argument '{unknown}'. Use 'cargo ship', or 'cargo ship --all' to rebuild every front end.");
+            exit(2);
+        }
     }
-
-    ship();
 }
