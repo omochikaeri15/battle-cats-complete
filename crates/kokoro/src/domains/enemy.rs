@@ -1,6 +1,7 @@
 pub mod animation;
 pub mod filter;
 pub mod files;
+#[cfg(feature = "import")]
 pub(crate) mod patterns;
 pub mod scanner;
 pub mod statblock;

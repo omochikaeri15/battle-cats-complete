@@ -1,7 +1,10 @@
+#[cfg(feature = "disk")]
 use std::fs;
 use std::hash::Hash;
 use std::hash::Hasher;
+#[cfg(feature = "disk")]
 use std::sync::OnceLock;
+#[cfg(feature = "disk")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rustc_hash::FxHasher;
@@ -9,6 +12,7 @@ use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
 
+#[cfg(feature = "disk")]
 use crate::common::dirs;
 use crate::domains::settings::ScannerConfig;
 
@@ -44,14 +48,22 @@ pub(crate) fn content_key(index: u64, config: &ScannerConfig) -> u64 {
     hasher.finish()
 }
 
+#[cfg(feature = "disk")]
 const SIZE_LIMIT: u64 = 1024 * 1024 * 100;
 
 const BUILD_STAMP: &str = env!("CORE_FINGERPRINT");
 
 pub const FORCE_RESCAN: &str = "FORCE_RESCAN";
 
+#[cfg(feature = "disk")]
 static FORCE_STAMP: OnceLock<Option<u128>> = OnceLock::new();
 
+#[cfg(not(feature = "disk"))]
+fn force_token() -> Option<u128> {
+    None
+}
+
+#[cfg(feature = "disk")]
 fn force_token() -> Option<u128> {
     *FORCE_STAMP.get_or_init(|| {
         std::env::var(FORCE_RESCAN)
@@ -79,10 +91,12 @@ pub(crate) trait CacheSpec {
     const FILE: &'static str;
 }
 
+#[cfg(feature = "disk")]
 pub(crate) fn read<C: CacheSpec>() -> Option<(u64, C::Data)> {
     load_payload(C::FILE)
 }
 
+#[cfg(feature = "disk")]
 pub(crate) fn purge<C: CacheSpec>() {
     let Some(cache_directory) = dirs::cache_path() else {
         return;
@@ -95,6 +109,7 @@ pub(crate) fn purge<C: CacheSpec>() {
     }
 }
 
+#[cfg(feature = "disk")]
 pub(crate) fn write<C: CacheSpec>(hash: u64, data: &C::Data) {
     let Some(bytes) = encode::<C>(hash, data) else {
         return;
@@ -111,6 +126,7 @@ pub(crate) fn encode<C: CacheSpec>(hash: u64, data: &C::Data) -> Option<Vec<u8>>
         .ok()
 }
 
+#[cfg(feature = "disk")]
 pub(crate) fn store<C: CacheSpec>(bytes: &[u8]) {
     let Some(cache_directory) = dirs::cache() else {
         tracing::warn!("Cache directory unavailable; skipping save for {}", C::FILE);
@@ -131,6 +147,7 @@ pub(crate) fn store<C: CacheSpec>(bytes: &[u8]) {
     }
 }
 
+#[cfg(feature = "disk")]
 #[tracing::instrument(level = "debug", skip_all, fields(file = %filename))]
 fn load_payload<T: DeserializeOwned>(filename: &str) -> Option<(u64, T)> {
     let cache_directory = dirs::cache_path()?;

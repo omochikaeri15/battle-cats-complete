@@ -1,5 +1,3 @@
-use std::fs;
-
 use codex::files::Localizable;
 use codex::files::Param;
 use tracing::debug;
@@ -19,7 +17,7 @@ pub fn localizable(vfs: &Vfs) -> Localizable {
 
     debug!(path = %file_path.display(), "Located localizable file, reading raw bytes");
 
-    let Ok(data) = fs::read(&file_path) else {
+    let Ok(data) = vfs.read(&file_path) else {
         error!(path = %file_path.display(), "Found localizable.tsv, but failed to read byte data");
         return Localizable::default();
     };
@@ -46,7 +44,7 @@ pub fn param(vfs: &Vfs) -> Option<Param> {
 
     debug!(path = %file_path.display(), "Located param file, reading raw bytes");
 
-    let Ok(bytes) = fs::read(&file_path) else {
+    let Ok(bytes) = vfs.read(&file_path) else {
         error!(path = %file_path.display(), "Found param.tsv, but failed to read byte data");
         return None;
     };

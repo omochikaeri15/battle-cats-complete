@@ -137,10 +137,12 @@ struct MapJob {
     map_id: u32,
 }
 
+#[cfg(feature = "disk")]
 pub fn purge() {
     cache::purge::<StageCache>();
 }
 
+#[cfg(feature = "disk")]
 pub fn hydrate() -> Option<(u64, StageBundle)> {
     let (hash, bundle) = cache::read::<StageCache>()?;
     debug!(
@@ -153,6 +155,7 @@ pub fn hydrate() -> Option<(u64, StageBundle)> {
     Some((hash, bundle))
 }
 
+#[cfg(feature = "disk")]
 pub fn persist(payload: &[u8]) {
     cache::store::<StageCache>(payload);
 }

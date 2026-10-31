@@ -1,4 +1,5 @@
 pub mod authoring;
+#[cfg(feature = "export")]
 pub mod export;
 pub mod posing;
 

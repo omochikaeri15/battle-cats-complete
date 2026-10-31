@@ -1,12 +1,17 @@
 //! Virtual File System
+#[cfg(feature = "disk")]
 mod disk;
 mod regional;
+#[cfg(feature = "disk")]
 mod walk;
 
+#[cfg(feature = "disk")]
 use std::env;
 use std::ffi::OsStr;
 use std::hash::{Hash, Hasher};
+#[cfg(feature = "disk")]
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -15,7 +20,7 @@ use std::sync::{Arc, Mutex, RwLock, RwLockWriteGuard};
 
 use rustc_hash::{FxHashMap, FxHasher};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::domains::settings::{Settings, lang};
 
@@ -40,11 +45,14 @@ struct MountedDir {
     files: FxHashMap<MountKey, Entry>,
     #[serde(skip)]
     blobs: FxHashMap<MountKey, Arc<[u8]>>,
+    #[serde(skip)]
+    lazy: bool,
     dirs: FxHashMap<Box<str>, Vec<Box<str>>>,
     folders: FxHashMap<Box<str>, Vec<Box<str>>>,
     conflicts: Vec<Conflict>,
 }
 
+#[cfg(feature = "disk")]
 impl MountedDir {
     fn prune(&mut self, relative: &Path) -> Vec<MountKey> {
         let mut removed = Vec::new();
@@ -209,35 +217,44 @@ pub trait Mount {
     fn unmount(self, vfs: &Vfs);
 }
 
+pub trait Loader: Send + Sync {
+    fn load(&self, name: &str) -> Option<Arc<[u8]>>;
+
+    fn head(&self, name: &str, len: usize) -> Option<Vec<u8>> {
+        self.load(name).map(|bytes| bytes.get(..len).unwrap_or(&bytes).to_vec())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Source {
     pub path: PathBuf,
     blob: Option<Arc<[u8]>>,
+    deferred: bool,
 }
 
 impl Source {
     pub fn disk(path: impl Into<PathBuf>) -> Self {
-        Self { path: path.into(), blob: None }
+        Self { path: path.into(), blob: None, deferred: false }
     }
 
     pub fn memory(name: impl AsRef<Path>, bytes: Arc<[u8]>) -> Self {
-        Self { path: Path::new(MEMORY_ROOT).join(name), blob: Some(bytes) }
+        Self { path: Path::new(MEMORY_ROOT).join(name), blob: Some(bytes), deferred: false }
     }
 
-    pub fn read(&self) -> std::io::Result<Arc<[u8]>> {
-        self.blob.as_ref().map_or_else(|| fs::read(&self.path).map(Arc::from), |bytes| Ok(Arc::clone(bytes)))
+    pub fn deferred(&self) -> bool {
+        self.deferred
     }
 
-    pub fn head(&self, len: usize) -> std::io::Result<Vec<u8>> {
+    pub fn read(&self) -> io::Result<Arc<[u8]>> {
+        self.blob.as_ref().map_or_else(|| read_disk(&self.path), |bytes| Ok(Arc::clone(bytes)))
+    }
+
+    pub fn head(&self, len: usize) -> io::Result<Vec<u8>> {
         if let Some(bytes) = &self.blob {
             return Ok(bytes.get(..len).unwrap_or(bytes).to_vec());
         }
 
-        let mut buffer = vec![0u8; len];
-        let read = std::io::Read::read(&mut fs::File::open(&self.path)?, &mut buffer)?;
-
-        buffer.truncate(read);
-        Ok(buffer)
+        head_disk(&self.path, len)
     }
 
     pub fn in_memory(&self) -> bool {
@@ -260,6 +277,43 @@ impl Eq for Source {}
 pub struct Memory<'a> {
     pub key: &'a str,
     pub files: Vec<(Box<str>, Arc<[u8]>)>,
+}
+
+pub struct Lazy<'a> {
+    pub key: &'a str,
+    pub names: Vec<Box<str>>,
+}
+
+impl Mount for Lazy<'_> {
+    fn mount(self, vfs: &Vfs) -> Result<Vec<Conflict>, VfsError> {
+        let root = Path::new(MEMORY_ROOT).join(self.key);
+        let mut mount = MountedDir { root, lazy: true, ..MountedDir::default() };
+        let mut listing = self.names;
+
+        listing.sort_unstable();
+        listing.dedup();
+
+        for name in &listing {
+            mount.files.insert(name.clone(), Entry { path: PathBuf::from(name.as_ref()), mtime: 0, len: 0 });
+        }
+
+        mount.dirs.insert(Box::from(""), listing);
+        mount.folders.insert(Box::from(""), Vec::new());
+
+        let Some(mut mounts) = vfs.mutate() else {
+            return Err(VfsError::Unavailable);
+        };
+
+        mounts.insert(self.key.into(), mount);
+
+        Ok(Vec::new())
+    }
+
+    fn unmount(self, vfs: &Vfs) {
+        if let Some(mut mounts) = vfs.mutate() {
+            mounts.remove(self.key);
+        }
+    }
 }
 
 impl Mount for Memory<'_> {
@@ -296,6 +350,7 @@ pub struct Vfs {
     sorted: RwLock<Sorted>,
     printed: RwLock<Printed>,
     trace: Option<Mutex<BTreeSet<PathBuf>>>,
+    loader: RwLock<Option<Arc<dyn Loader>>>,
 }
 
 struct Mutation<'a> {
@@ -340,12 +395,14 @@ impl Vfs {
             sorted: RwLock::new(None),
             printed: RwLock::new(None),
             trace: None,
+            loader: RwLock::new(None),
         }
     }
 
     pub fn fork(&self) -> Self {
         let mounts = self.mounts.read().map(|mounts| mounts.clone()).unwrap_or_default();
         let priority = self.priority.read().map(|order| order.clone()).unwrap_or_default();
+        let loader = self.loader.read().ok().and_then(|loader| loader.clone());
 
         Self {
             mounts: RwLock::new(mounts),
@@ -355,23 +412,84 @@ impl Vfs {
             sorted: RwLock::new(None),
             printed: RwLock::new(None),
             trace: Some(Mutex::new(BTreeSet::new())),
+            loader: RwLock::new(loader),
+        }
+    }
+
+    pub fn install(&self, loader: Arc<dyn Loader>) {
+        if let Ok(mut held) = self.loader.write() {
+            *held = Some(loader);
         }
     }
 
     pub fn source(&self, path: &Path) -> Source {
         let held = self.mounts.read().ok().and_then(|mounts| {
-            mounts.values().filter(|mount| !mount.blobs.is_empty()).find_map(|mount| {
+            mounts.values().filter(|mount| mount.lazy || !mount.blobs.is_empty()).find_map(|mount| {
                 let name = path.strip_prefix(&mount.root).ok()?.to_str()?;
+                let blob = mount.blobs.get(name).map(Arc::clone).or_else(|| self.fetch(mount, name));
 
-                mount.blobs.get(name).map(Arc::clone)
+                Some((blob, mount.lazy && mount.files.contains_key(name)))
             })
         });
+        let (blob, deferred) = held.map_or((None, false), |(blob, lazy)| (blob.clone(), lazy && blob.is_none()));
 
-        Source { path: path.to_path_buf(), blob: held }
+        Source { path: path.to_path_buf(), blob, deferred }
+    }
+
+    pub fn stock(&self, key: &str, files: Vec<(Box<str>, Arc<[u8]>)>) -> bool {
+        let Some(mut mounts) = self.mutate() else {
+            return false;
+        };
+        let Some(mount) = mounts.get_mut(key) else {
+            return false;
+        };
+
+        for (name, bytes) in files {
+            if !mount.files.contains_key(&name) {
+                mount.files.insert(name.clone(), Entry { path: PathBuf::from(name.as_ref()), mtime: 0, len: bytes.len() as u64 });
+                admit(mount.dirs.entry(Box::from("")).or_default(), &name);
+            }
+
+            mount.blobs.insert(name, bytes);
+        }
+
+        true
+    }
+
+    fn fetch(&self, mount: &MountedDir, name: &str) -> Option<Arc<[u8]>> {
+        if !mount.lazy || !mount.files.contains_key(name) {
+            return None;
+        }
+
+        let loader = self.loader.read().ok()?.clone()?;
+
+        loader.load(name)
     }
 
     pub fn read(&self, path: &Path) -> std::io::Result<Arc<[u8]>> {
         self.source(path).read()
+    }
+
+    pub fn head(&self, path: &Path, len: usize) -> io::Result<Vec<u8>> {
+        let held = self.mounts.read().ok().and_then(|mounts| {
+            mounts.values().filter(|mount| mount.lazy || !mount.blobs.is_empty()).find_map(|mount| {
+                let name = path.strip_prefix(&mount.root).ok()?.to_str()?;
+
+                if let Some(blob) = mount.blobs.get(name) {
+                    return Some(Ok(blob.get(..len).unwrap_or(blob).to_vec()));
+                }
+
+                if !mount.lazy || !mount.files.contains_key(name) {
+                    return None;
+                }
+
+                let loader = self.loader.read().ok()?.clone()?;
+
+                Some(loader.head(name, len).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "the file has not arrived yet")))
+            })
+        });
+
+        held.unwrap_or_else(|| head_disk(path, len))
     }
 
     pub fn traced(&self) -> BTreeSet<PathBuf> {
@@ -393,6 +511,7 @@ impl Vfs {
             .map(|mounts| Mutation { mounts, generation: &self.generation })
     }
 
+    #[cfg(feature = "mods")]
     pub(crate) fn detached() -> Self {
         Self::with_priority(&[])
     }
@@ -531,9 +650,13 @@ impl Vfs {
         }
 
         let path = self.find(filename)?;
-        let bytes = self
-            .read(&path)
-            .inspect_err(|err| warn!(file = filename, path = %path.display(), "vfs read failed: {}", err))
+        let source = self.source(&path);
+        let bytes = source
+            .read()
+            .inspect_err(|err| match source.deferred() {
+                true => debug!(file = filename, "vfs read deferred until the file arrives"),
+                false => warn!(file = filename, path = %path.display(), "vfs read failed: {}", err),
+            })
             .ok()?;
 
         if let Ok(mut cache) = self.cache.write() {
@@ -568,6 +691,7 @@ impl Vfs {
         }
     }
 
+    #[cfg(feature = "disk")]
     pub fn prune(&self, mount: &str, path: &Path) -> Vec<Box<str>> {
         let Some(mut mounts) = self.mutate() else {
             return Vec::new();
@@ -959,6 +1083,7 @@ impl Vfs {
         paths
     }
 
+    #[cfg(feature = "disk")]
     pub fn persist(&self, hash: u64) {
         let encoded = self.mounts.read().ok().and_then(|mounts| disk::encode(&mounts, hash));
 
@@ -969,6 +1094,7 @@ impl Vfs {
         disk::store(&bytes);
     }
 
+    #[cfg(feature = "disk")]
     pub fn hydrate(&self) -> Option<u64> {
         let (stored, index) = disk::load()?;
         let mut mounts = self.mutate()?;
@@ -979,6 +1105,7 @@ impl Vfs {
 
 }
 
+#[cfg(feature = "disk")]
 impl Mount for &Path {
     fn mount(self, vfs: &Vfs) -> Result<Vec<Conflict>, VfsError> {
         let Some(key) = self.file_name().and_then(OsStr::to_str) else {
@@ -1016,6 +1143,7 @@ impl Mount for &Path {
     }
 }
 
+#[cfg(feature = "disk")]
 impl Mount for (&str, &Path) {
     fn mount(self, vfs: &Vfs) -> Result<Vec<Conflict>, VfsError> {
         let (key, file) = self;
@@ -1152,6 +1280,7 @@ fn admit(listing: &mut Vec<Box<str>>, name: &str) {
     }
 }
 
+#[cfg(feature = "disk")]
 fn link(mount: &mut MountedDir, dir: &Path) {
     let mut current = Some(dir);
 
@@ -1175,6 +1304,11 @@ fn within(root: &Path, file: &Path) -> Option<PathBuf> {
         return Some(relative.to_path_buf());
     }
 
+    settled(root, file)
+}
+
+#[cfg(feature = "disk")]
+fn settled(root: &Path, file: &Path) -> Option<PathBuf> {
     let absolute = env::current_dir().ok()?.join(root);
 
     if let Ok(relative) = file.strip_prefix(&absolute) {
@@ -1182,6 +1316,36 @@ fn within(root: &Path, file: &Path) -> Option<PathBuf> {
     }
 
     file.strip_prefix(fs::canonicalize(&absolute).ok()?).ok().map(Path::to_path_buf)
+}
+
+#[cfg(not(feature = "disk"))]
+fn settled(_root: &Path, _file: &Path) -> Option<PathBuf> {
+    None
+}
+
+#[cfg(feature = "disk")]
+fn read_disk(path: &Path) -> io::Result<Arc<[u8]>> {
+    fs::read(path).map(Arc::from)
+}
+
+#[cfg(not(feature = "disk"))]
+fn read_disk(path: &Path) -> io::Result<Arc<[u8]>> {
+    Err(io::Error::new(io::ErrorKind::NotFound, format!("{} is not held by any mount", path.display())))
+}
+
+#[cfg(feature = "disk")]
+fn head_disk(path: &Path, len: usize) -> io::Result<Vec<u8>> {
+    let mut buffer = vec![0u8; len];
+    let read = io::Read::read(&mut fs::File::open(path)?, &mut buffer)?;
+
+    buffer.truncate(read);
+
+    Ok(buffer)
+}
+
+#[cfg(not(feature = "disk"))]
+fn head_disk(path: &Path, _len: usize) -> io::Result<Vec<u8>> {
+    read_disk(path).map(|bytes| bytes.to_vec())
 }
 
 fn resolve(mounts: &Index, name: &str) -> Option<PathBuf> {
@@ -1217,11 +1381,12 @@ fn vanilla(mounts: &Index, name: &str) -> Option<PathBuf> {
         .find_map(|(_, mount)| mount.files.get(name).map(|entry| mount.root.join(&entry.path)))
 }
 
+#[cfg(feature = "disk")]
 fn canonical(path: &Path) -> bool {
     path.components().count() == 1 && path.file_name() == Some(OsStr::new(MOUNT_GAME))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "disk"))]
 mod tests {
     use std::env;
 

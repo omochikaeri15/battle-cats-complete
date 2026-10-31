@@ -45,6 +45,7 @@ pub(super) fn walk(root: &Path) -> Result<MountedDir, VfsError> {
         root: root.to_path_buf(),
         files: collected.files,
         blobs: FxHashMap::default(),
+        lazy: false,
         dirs: collected.dirs,
         folders: collected.folders,
         conflicts,

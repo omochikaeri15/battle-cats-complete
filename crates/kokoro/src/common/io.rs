@@ -1,14 +1,21 @@
 pub mod cache;
+#[cfg(feature = "disk")]
 pub mod json;
 
+#[cfg(feature = "disk")]
 use std::ffi::{OsStr, OsString};
+#[cfg(feature = "disk")]
 use std::fs;
-use std::path::{Path, PathBuf};
+#[cfg(feature = "disk")]
+use std::path::Path;
+use std::path::PathBuf;
 
+#[cfg(feature = "disk")]
 use tracing::{info, warn};
 
 use crate::Vfs;
 
+#[cfg(feature = "disk")]
 pub(crate) fn recase(destination: &Path) {
     let Some(dir) = destination.parent() else {
         return;
@@ -49,6 +56,7 @@ pub(crate) fn recase(destination: &Path) {
     }
 }
 
+#[cfg(feature = "disk")]
 pub(crate) fn hidden_temp(path: &Path) -> PathBuf {
     let Some(name) = path.file_name() else {
         return path.to_path_buf();
@@ -61,12 +69,14 @@ pub(crate) fn hidden_temp(path: &Path) -> PathBuf {
     path.with_file_name(hidden)
 }
 
+#[cfg(any(feature = "mods", feature = "studio"))]
 const RESERVED_STEMS: [&str; 22] = [
     "CON", "PRN", "AUX", "NUL",
     "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 ];
 
+#[cfg(any(feature = "mods", feature = "studio"))]
 pub(crate) fn filename(wanted: &str) -> String {
     let cleaned: String = wanted
         .chars()
@@ -83,18 +93,29 @@ pub(crate) fn filename(wanted: &str) -> String {
     }
 }
 
+#[cfg(feature = "import")]
 pub(crate) const ASSET_IMG015_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.png$";
+#[cfg(feature = "import")]
 pub(crate) const ASSET_015CUT_PATTERN: &str = r"^img015(?:_([a-z]{2}))?\.imgcut$";
+#[cfg(feature = "import")]
 pub(crate) const ASSET_IMG022_PATTERN: &str = r"^img022(?:_([a-z]{2}))?\.png$";
+#[cfg(feature = "import")]
 pub(crate) const ASSET_022CUT_PATTERN: &str = r"^img022(?:_([a-z]{2}))?\.imgcut$";
+#[cfg(feature = "import")]
 pub(crate) const LOCALIZEABLE_PATTERN: &str = r"^localizable(?:_([a-z]{2}))?\.tsv$";
+#[cfg(feature = "import")]
 pub(crate) const PARAM_PATTERN: &str = r"^param\.tsv$";
 
+#[cfg(feature = "import")]
 pub(crate) const AUDIO_OGG_PATTERN: &str = r"^.+\.ogg$";
+#[cfg(feature = "import")]
 pub(crate) const AUDIO_CAF_PATTERN: &str = r"^.+\.caf$";
 
+#[cfg(feature = "import")]
 pub(crate) const GATYA_ITEM_D_PATTERN: &str = r"^gatyaitemD_(\d{2,3})_([fz])\.png$";
+#[cfg(feature = "import")]
 pub(crate) const GATYA_ITEM_BUY_PATTERN: &str = r"^Gatyaitembuy\.csv$";
+#[cfg(feature = "import")]
 pub(crate) const GATYA_ITEM_NAME_PATTERN: &str = r"^GatyaitemName(?:_([a-z]{2}))?\.csv$";
 
 
@@ -120,7 +141,7 @@ pub fn gatya_item_icon(vfs: &Vfs, id: i32) -> Option<PathBuf> {
     vfs.find(&names)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "disk"))]
 mod tests {
     use std::env;
 

@@ -7,35 +7,48 @@ authors.workspace = true
 repository.workspace = true
 publish = false
 
+[features]
+default = ["disk", "source", "import", "mods", "addons", "export", "studio", "sandbox"]
+disk = ["dep:directories", "dep:serde_ignored"]
+source = ["disk", "dep:reqwest", "dep:zstd"]
+import = ["disk", "codex/pack", "dep:zip", "dep:regex", "dep:rsa", "dep:rasn", "dep:rasn-pkix", "dep:base64", "dep:sha2", "dep:byteorder", "dep:resand"]
+mods = ["disk", "codex/pack", "dep:zip", "dep:resand", "dep:tar", "dep:zstd", "dep:hex", "dep:sha2", "dep:rsa", "dep:rasn", "dep:rasn-pkix", "dep:base64", "dep:byteorder"]
+addons = ["disk", "dep:open", "dep:reqwest", "dep:zip"]
+export = ["disk", "statblock", "dep:webp-animation", "dep:gif"]
+statblock = []
+studio = ["disk", "dep:zip", "dep:sha2"]
+sandbox = []
+
 [dependencies]
-codex = { workspace = true, features = ["pack", "graphics"] }
+codex = { workspace = true, features = ["graphics"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "ico", "rayon"] }
 imageproc = { version = "0.27.0", default-features = false, features = ["rayon", "text"] }
 ab_glyph = "0.2.32"
-zip = { version = "8.6", default-features = false, features = ["deflate", "deflate64"] }
-regex = "1.13"
+zip = { version = "8.6", default-features = false, features = ["deflate", "deflate64"], optional = true }
+regex = { version = "1.13", optional = true }
 rayon = "1.12"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = "1.0.151"
 md-5 = "0.10"
-hex = "0.4.3"
-reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "rustls", "charset", "http2", "system-proxy"] }
-webp-animation = "0.10.0"
-gif = "0.14.2"
-directories = "6.0"
+hex = { version = "0.4.3", optional = true }
+reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "rustls", "charset", "http2", "system-proxy", "gzip"], optional = true }
+webp-animation = { version = "0.10.0", optional = true }
+gif = { version = "0.14.2", optional = true }
+directories = { version = "6.0", optional = true }
 indexmap = { version = "2.14", features = ["serde"] }
 postcard = { version = "1.1.3", default-features = false, features = ["use-std"] }
 rustc-hash = "2.1.3"
-byteorder = "1.5.0"
-sha2 = "0.10.9"
-rsa = { version = "0.9.10", features = ["sha2", "pem"] }
-base64 = "0.23.1"
-rasn-pkix = "0.28.14"
-rasn = "0.28.14"
-open = "5.4.1"
-resand = "0.3.0"
+byteorder = { version = "1.5.0", optional = true }
+sha2 = { version = "0.10.9", optional = true }
+rsa = { version = "0.9.10", features = ["sha2", "pem"], optional = true }
+base64 = { version = "0.23.1", optional = true }
+rasn-pkix = { version = "0.28.14", optional = true }
+rasn = { version = "0.28.14", optional = true }
+open = { version = "5.4.1", optional = true }
+resand = { version = "0.3.0", optional = true }
 thiserror = "2.0.20"
 tracing = "0.1.44"
-zstd = { version = "0.14", features = ["zstdmt"] }
-tar = "0.4"
-serde_ignored = "0.1.14"
+zstd = { version = "0.14", features = ["zstdmt"], optional = true }
+tar = { version = "0.4", optional = true }
+serde_ignored = { version = "0.1.14", optional = true }
+web-time = "1.1.0"

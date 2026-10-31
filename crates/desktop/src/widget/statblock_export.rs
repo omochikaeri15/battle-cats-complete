@@ -131,7 +131,7 @@ impl State {
         self.pending = Some(action);
 
         Task::perform(async move {
-            let build_result = statblock::build_statblock_image(&priority, &layers, data);
+            let build_result = statblock::build_statblock_image(&priority, &layers, data, &statblock::Fonts::embedded());
 
             match action {
                 ExportAction::Copy => JobResult::Copy(build_result),

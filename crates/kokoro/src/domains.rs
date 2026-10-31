@@ -1,10 +1,15 @@
 pub mod cat;
 pub mod enemy;
+#[cfg(feature = "import")]
 pub mod import;
+#[cfg(feature = "studio")]
 pub mod mining;
+#[cfg(feature = "mods")]
 pub mod mods;
 pub mod sandbox;
 pub mod settings;
 pub mod stage;
+#[cfg(feature = "studio")]
 pub mod studio;
+#[cfg(feature = "studio")]
 pub mod utilities;

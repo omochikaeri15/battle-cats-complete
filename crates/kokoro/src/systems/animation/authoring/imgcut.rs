@@ -91,6 +91,7 @@ impl Imgcut {
         &self.sheet
     }
 
+    #[cfg(feature = "studio")]
     pub(crate) fn set_sheet(&mut self, name: &str) -> bool {
         if self.sheet == name {
             return false;

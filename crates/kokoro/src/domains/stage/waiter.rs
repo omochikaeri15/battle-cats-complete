@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs;
+use std::sync::Arc;
 
 use codex::chapter::map::{LockSkipData, LockSkipDataEntry};
 use codex::chapter::stage::{
@@ -52,7 +52,7 @@ pub(crate) fn stagename(vfs: &Vfs, filename: &str) -> HashMap<u32, StageNameEntr
     let paths = vfs.list(filename);
 
     for path in paths.iter().rev() {
-        let Ok(bytes) = fs::read(path) else { continue; };
+        let Ok(bytes) = vfs.read(path) else { continue; };
         let Ok(parsed) = StageName::parse(&bytes, None) else { continue; };
 
         for (map_id, entry) in parsed.entries {
@@ -73,8 +73,8 @@ pub(crate) fn stagename(vfs: &Vfs, filename: &str) -> HashMap<u32, StageNameEntr
     final_map
 }
 
-fn read(vfs: &Vfs, filename: &str) -> Option<Vec<u8>> {
+fn read(vfs: &Vfs, filename: &str) -> Option<Arc<[u8]>> {
     let path = vfs.find(filename)?;
 
-    fs::read(path).ok()
+    vfs.read(&path).ok()
 }

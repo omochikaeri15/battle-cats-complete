@@ -1,5 +1,4 @@
 mod ledger;
-mod payload;
 
 use std::collections::HashSet;
 use std::ffi::OsString;
@@ -15,18 +14,16 @@ use std::time::{Duration, Instant};
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{CONTENT_TYPE, LAST_MODIFIED, RANGE};
 use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, warn};
 
 use crate::common::architecture;
 use crate::common::job::Ticker;
+use crate::common::payload::{self, Chunk, Fault, MANIFEST, Manifest};
 
 use ledger::{Held, Ledger};
-use payload::{Chunk, Fault, Manifest};
 
 const AGENT: &str = concat!("BattleCatsComplete/", env!("CARGO_PKG_VERSION"));
 const SCHEME: &str = "https://";
-const MANIFEST: &str = "manifest.json";
 const TIMEOUT: Duration = Duration::from_secs(8);
 const STALL_FLOOR: Duration = Duration::from_secs(30);
 const SLOWEST_BYTES_PER_SEC: u64 = 32 * 1024;
@@ -97,13 +94,7 @@ impl Partial {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-#[serde(default)]
-pub struct Stamp {
-    pub id: String,
-    pub modified: String,
-    pub size: u64,
-}
+pub use crate::domains::settings::Stamp;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Step {

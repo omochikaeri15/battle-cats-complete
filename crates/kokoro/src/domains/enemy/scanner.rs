@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
-use std::io::Read;
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -10,7 +8,9 @@ use codex::combat::Entity;
 use codex::graphics::rig::Animation;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, trace, warn};
+#[cfg(feature = "disk")]
+use tracing::debug;
+use tracing::{trace, warn};
 
 use crate::common::job::Ticker;
 use crate::common::io::cache::{self, Scan};
@@ -36,10 +36,11 @@ impl EnemyEntry {
     }
 }
 
-fn is_placeholder_png(path: &Path) -> bool {
-    let Ok(mut file) = File::open(path) else { return true; };
-    let mut buffer = [0u8; 25];
-    if file.read_exact(&mut buffer).is_err() { return true; }
+const PNG_HEAD: usize = 25;
+
+fn is_placeholder_png(vfs: &Vfs, path: &Path) -> bool {
+    let Ok(buffer) = vfs.head(path, PNG_HEAD) else { return true; };
+    if buffer.len() < PNG_HEAD { return true; }
     const PNG_SIG: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     if buffer[0..8] != PNG_SIG { return true; }
     buffer[24] < 4
@@ -49,7 +50,7 @@ fn resolve_icon(vfs: &Vfs, id: u32, show_invalid: bool, pristine: bool) -> Optio
     let name = files::icon_file(id);
     let resolved = if pristine { vfs.pristine(&name) } else { vfs.find(&name) }?;
 
-    (show_invalid || !is_placeholder_png(&resolved)).then_some(resolved)
+    (show_invalid || !is_placeholder_png(vfs, &resolved)).then_some(resolved)
 }
 
 fn valid_icon(icon: Option<&PathBuf>, show_invalid: bool) -> bool {
@@ -82,10 +83,12 @@ impl cache::CacheSpec for EnemyCache {
     const FILE: &'static str = "enemies_cache.bin";
 }
 
+#[cfg(feature = "disk")]
 pub fn purge() {
     cache::purge::<EnemyCache>();
 }
 
+#[cfg(feature = "disk")]
 pub fn hydrate() -> Option<(u64, Vec<EnemyEntry>)> {
     let (hash, cached_enemies) = cache::read::<EnemyCache>()?;
     debug!(hash, count = cached_enemies.len(), "hydrated enemies from cache");
@@ -93,6 +96,7 @@ pub fn hydrate() -> Option<(u64, Vec<EnemyEntry>)> {
     Some((hash, cached_enemies))
 }
 
+#[cfg(feature = "disk")]
 pub fn persist(payload: &[u8]) {
     cache::store::<EnemyCache>(payload);
 }
@@ -198,7 +202,7 @@ fn process_enemy_entry(id: u32, vfs: &Vfs, stats: Entity, name: String, descript
 
     let mut atk_anim_frames = 0;
     if let Some(resolved_atk) = vfs.find(&files::maanim_file(id, 2))
-        && let Ok(bytes) = fs::read(&resolved_atk) {
+        && let Ok(bytes) = vfs.read(&resolved_atk) {
         let content = String::from_utf8_lossy(&bytes);
         atk_anim_frames = Animation::scan_length(content.as_bytes()).unwrap_or(0).max(0);
     }

@@ -1,4 +1,3 @@
-use std::fmt;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
@@ -6,36 +5,19 @@ use std::process::{Child, ChildStdin, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::common::process;
 
 use super::{get_ffmpeg_path, vp9_crf, vp9_speed, x264_crf, x264_preset};
 
+pub use crate::domains::settings::VideoFormat;
+
 const PROGRESS_KEY: &str = "out_time_us=";
 const AAC_BITRATE: &str = "192k";
 const OPUS_BITRATE: &str = "160k";
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub enum VideoFormat {
-    #[default]
-    Mp4,
-    Mkv,
-    Webm,
-}
-
 impl VideoFormat {
-    pub const ALL: [Self; 3] = [Self::Mp4, Self::Mkv, Self::Webm];
-
-    pub fn extension(self) -> &'static str {
-        match self {
-            Self::Mp4 => "mp4",
-            Self::Mkv => "mkv",
-            Self::Webm => "webm",
-        }
-    }
-
     fn container(self) -> &'static str {
         match self {
             Self::Mp4 => "mp4",
@@ -60,16 +42,6 @@ impl VideoFormat {
             Self::Mp4 | Self::Mkv => ["-c:a", "aac", "-b:a", AAC_BITRATE],
             Self::Webm => ["-c:a", "libopus", "-b:a", OPUS_BITRATE],
         }
-    }
-}
-
-impl fmt::Display for VideoFormat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Mp4 => "MP4",
-            Self::Mkv => "MKV",
-            Self::Webm => "WebM",
-        })
     }
 }
 

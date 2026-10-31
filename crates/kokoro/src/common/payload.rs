@@ -1,50 +1,102 @@
+#[cfg(feature = "source")]
 use std::fs;
 use std::io::{self, Read};
+#[cfg(feature = "source")]
 use std::path::Path;
+#[cfg(feature = "source")]
 use std::thread;
+#[cfg(feature = "source")]
 use std::time::Duration;
 
 use serde::Deserialize;
+#[cfg(feature = "source")]
 use tracing::warn;
+#[cfg(feature = "source")]
 use zstd::stream::read::Decoder;
 
+pub const MANIFEST: &str = "manifest.json";
 const FORMAT: u32 = 1;
 const MARK: [u8; 4] = *b"BGL1";
 const LARGEST_CHUNK: u64 = 64 * 1024 * 1024;
+#[cfg(feature = "source")]
 const WRITE_TRIES: u32 = 5;
+#[cfg(feature = "source")]
 const WRITE_PAUSE: Duration = Duration::from_millis(200);
 
 #[derive(Deserialize, Clone, Debug)]
-pub(super) struct Manifest {
+pub struct Manifest {
     format: u32,
-    pub(super) id: String,
-    files: u64,
-    pub(super) packed: u64,
-    pub(super) chunks: Vec<Chunk>,
+    pub id: String,
+    pub files: u64,
+    pub packed: u64,
+    pub chunks: Vec<Chunk>,
+    #[serde(default)]
+    pub sidecars: Vec<Sidecar>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub(super) struct Chunk {
-    pub(super) name: String,
+pub struct Sidecar {
+    pub name: String,
+    pub kind: String,
     #[serde(default)]
-    pub(super) address: String,
-    pub(super) size: u64,
-    pub(super) files: u64,
+    pub address: String,
+    pub size: u64,
+    pub raw: u64,
+    #[serde(default)]
+    pub files: Vec<Placed>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Chunk {
+    pub name: String,
+    #[serde(default)]
+    pub address: String,
+    pub size: u64,
+    pub files: u64,
+    #[serde(default)]
+    pub names: Vec<String>,
+    #[serde(default)]
+    pub frames: Vec<Frame>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Frame {
+    pub offset: u64,
+    pub size: u64,
+    pub raw: u64,
+    #[serde(default)]
+    pub pool: Option<String>,
+    #[serde(default)]
+    pub files: Vec<Placed>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Placed(pub String, pub u64, pub u64);
+
+impl Chunk {
+    pub fn framed(&self) -> bool {
+        !self.frames.is_empty()
+    }
 }
 
 #[derive(Debug)]
-pub(super) enum Fault {
+pub enum Fault {
     Stream(io::Error),
     Disk(io::Error),
 }
 
-struct Record {
-    size: u64,
-    names: Vec<String>,
+pub struct Record {
+    pub size: u64,
+    pub names: Vec<String>,
+}
+
+pub struct Extracted {
+    pub names: Vec<String>,
+    pub data: Vec<u8>,
 }
 
 impl Manifest {
-    pub(super) fn read(bytes: &[u8]) -> Result<Self, String> {
+    pub fn read(bytes: &[u8]) -> Result<Self, String> {
         let manifest: Self = serde_json::from_slice(bytes).map_err(|err| format!("the manifest could not be read: {}", err))?;
 
         if manifest.format != FORMAT {
@@ -59,8 +111,20 @@ impl Manifest {
             return Err(format!("{} was never published", chunk.name));
         }
 
+        if let Some(sidecar) = manifest.sidecars.iter().find(|sidecar| !addressed(&sidecar.address) || sidecar.files.iter().any(|Placed(name, offset, size)| !flat(name) || offset + size > sidecar.raw)) {
+            return Err(format!("{} is not a usable sidecar", sidecar.name));
+        }
+
         if let Some(chunk) = manifest.chunks.iter().find(|chunk| chunk.size > LARGEST_CHUNK) {
             return Err(format!("{} is too large for a chunk", chunk.name));
+        }
+
+        if let Some(chunk) = manifest.chunks.iter().find(|chunk| !chunk.names.is_empty() && chunk.names.len() as u64 != chunk.files) {
+            return Err(format!("{} lists {} names for {} files", chunk.name, chunk.names.len(), chunk.files));
+        }
+
+        if let Some(chunk) = manifest.chunks.iter().filter(|chunk| chunk.framed()).find(|chunk| !contiguous(chunk)) {
+            return Err(format!("{} describes frames that do not tile the chunk", chunk.name));
         }
 
         if manifest.chunks.iter().map(|chunk| chunk.size).sum::<u64>() != manifest.packed
@@ -73,7 +137,32 @@ impl Manifest {
     }
 }
 
-pub(super) fn unpack(source: impl Read, game: &Path) -> Result<Vec<(String, u64)>, Fault> {
+pub fn extract(decoded: impl Read) -> io::Result<Vec<Extracted>> {
+    let mut decoded = decoded;
+    let records = records(&mut decoded)?;
+    let mut files = Vec::with_capacity(records.len());
+
+    for record in records {
+        let mut data = Vec::new();
+
+        (&mut decoded).take(record.size).read_to_end(&mut data)?;
+
+        if data.len() as u64 != record.size {
+            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "the chunk ends before its last file does"));
+        }
+
+        files.push(Extracted { names: record.names, data });
+    }
+
+    if decoded.read(&mut [0u8; 1])? != 0 {
+        return Err(invalid("the chunk holds data past its last file"));
+    }
+
+    Ok(files)
+}
+
+#[cfg(feature = "source")]
+pub(crate) fn unpack(source: impl Read, game: &Path) -> Result<Vec<(String, u64)>, Fault> {
     let mut decoder = Decoder::new(source).map_err(Fault::Stream)?;
     let records = records(&mut decoder).map_err(Fault::Stream)?;
     let mut data = Vec::new();
@@ -100,6 +189,7 @@ pub(super) fn unpack(source: impl Read, game: &Path) -> Result<Vec<(String, u64)
     Ok(files)
 }
 
+#[cfg(feature = "source")]
 fn land(path: &Path, data: &[u8]) -> io::Result<()> {
     let mut tries = 1;
 
@@ -116,7 +206,7 @@ fn land(path: &Path, data: &[u8]) -> io::Result<()> {
     }
 }
 
-fn records(reader: &mut impl Read) -> io::Result<Vec<Record>> {
+pub fn records(reader: &mut impl Read) -> io::Result<Vec<Record>> {
     if array::<4>(reader)? != MARK {
         return Err(invalid("the chunk does not start with the payload mark"));
     }
@@ -147,6 +237,20 @@ fn records(reader: &mut impl Read) -> io::Result<Vec<Record>> {
     Ok(records)
 }
 
+fn contiguous(chunk: &Chunk) -> bool {
+    let mut at = 0u64;
+
+    for frame in &chunk.frames {
+        if frame.offset != at || frame.files.iter().any(|Placed(name, offset, size)| !flat(name) || offset + size > frame.raw) {
+            return false;
+        }
+
+        at += frame.size;
+    }
+
+    at == chunk.size && chunk.frames.iter().map(|frame| frame.files.len() as u64).sum::<u64>() == chunk.files
+}
+
 fn addressed(address: &str) -> bool {
     flat(address) && !address.contains(['?', '#', ' ']) && !address.chars().any(char::is_control)
 }
@@ -167,7 +271,7 @@ fn invalid(reason: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, reason)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "source"))]
 mod tests {
     use std::path::PathBuf;
 
@@ -278,5 +382,10 @@ mod tests {
         assert!(Manifest::read(manifest(1, r#","address":"001.chunk?x=1""#, 100).as_bytes()).is_err());
         assert!(Manifest::read(manifest(1, r#","address":"001.chunk""#, 101).as_bytes()).is_err());
         assert!(Manifest::read(b"<html>Sign in</html>").is_err());
+
+        let indexed = Manifest::read(manifest(1, r#","address":"001.chunk","names":["a.csv"]"#, 100).as_bytes()).unwrap();
+
+        assert_eq!(indexed.chunks[1].names, ["a.csv"]);
+        assert!(Manifest::read(manifest(1, r#","address":"001.chunk","names":["a.csv","b.csv"]"#, 100).as_bytes()).is_err());
     }
 }

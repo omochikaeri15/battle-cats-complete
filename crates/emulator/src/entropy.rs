@@ -1,4 +1,5 @@
 use std::cell::Cell;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const GAMMA: u64 = 0x9e37_79b9_7f4a_7c15;
@@ -22,14 +23,27 @@ pub struct Entropy {
     state: u64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn clock() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_nanos() as u64)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn clock() -> u64 {
+    0
+}
+
 impl Entropy {
+    pub fn prime(seed: u64) {
+        COUNTER.with(|counter| counter.set(Some(seed)));
+    }
+
     pub fn draw() -> u64 {
         COUNTER.with(|counter| {
             let seeded = counter.get().unwrap_or_else(|| {
-                let clock = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_nanos() as u64);
                 let place = counter as *const Cell<Option<u64>> as usize as u64;
 
-                clock ^ place.rotate_left(32)
+                clock() ^ place.rotate_left(32)
             });
             let state = seeded.wrapping_add(GAMMA);
 

@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::time::Instant;
+use web_time::Instant;
 
 #[derive(Debug, Clone)]
 pub enum JobEvent {

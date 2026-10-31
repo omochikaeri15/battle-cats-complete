@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "disk")]
 use crate::common::io::cache;
 
 use super::{CatStore, EnemyStore, ItemStore, StageStore, Vds};
 
+#[cfg(feature = "disk")]
 struct ContentCache;
 
+#[cfg(feature = "disk")]
 impl cache::CacheSpec for ContentCache {
     type Data = ContentStore;
     const FILE: &'static str = "virtual_data_store.bin";
@@ -36,14 +39,17 @@ impl ContentStore {
         vds.stages = self.stages;
     }
 
+    #[cfg(feature = "disk")]
     pub fn save(&self, hash: u64) {
         cache::write::<ContentCache>(hash, self);
     }
 
+    #[cfg(feature = "disk")]
     pub fn purge() {
         cache::purge::<ContentCache>();
     }
 
+    #[cfg(feature = "disk")]
     pub fn hydrate() -> Option<Self> {
         cache::read::<ContentCache>().map(|(_, content)| content)
     }

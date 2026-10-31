@@ -1,0 +1,12 @@
+[application]
+name = "bcc"
+
+[web.app]
+title = "Battle Cats Complete"
+
+[web.wasm_opt]
+level = "4"
+memory_packing = true
+debug = false
+keep_names = false
+extra_features = ["--enable-simd"]

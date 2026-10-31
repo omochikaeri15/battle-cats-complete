@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::io::cache::{self, CacheSpec};
 
-use super::payload::Chunk;
+use crate::common::payload::Chunk;
 
 const UNKEYED: u64 = 0;
 const SLACK: Duration = Duration::from_secs(2);

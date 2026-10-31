@@ -8,4 +8,77 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+bytemuck = "1.25"
+codex = { workspace = true, features = ["graphics"] }
+console_error_panic_hook = "0.1"
+dioxus = { version = "0.7.10", features = ["web", "router"] }
+futures-channel = "0.3"
+futures-util = { version = "0.3", default-features = false }
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+js-sys = "0.3"
+kokoro = { path = "../kokoro", default-features = false }
 omote = { path = "../omote" }
+postcard = { version = "1.1.3", default-features = false, features = ["use-std"] }
+ruzstd = "0.9"
+serde = { version = "1.0.229", features = ["derive"] }
+tracing = "0.1.44"
+tracing-wasm = "0.2"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wgpu = { version = "27", default-features = false, features = ["webgl", "webgpu", "wgsl"] }
+web-sys = { version = "0.3", features = [
+    "CanvasRenderingContext2d",
+    "DedicatedWorkerGlobalScope",
+    "Document",
+    "FontFaceSet",
+    "Element",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "HtmlAnchorElement",
+    "HtmlElement",
+    "Response",
+    "AudioContext",
+    "AudioBuffer",
+    "AudioBufferSourceNode",
+    "AudioDestinationNode",
+    "AudioNode",
+    "AudioParam",
+    "AudioScheduledSourceNode",
+    "BaseAudioContext",
+    "GainNode",
+    "Request",
+    "RequestInit",
+    "RequestCache",
+    "Navigator",
+    "Performance",
+    "ServiceWorker",
+    "ServiceWorkerContainer",
+    "ServiceWorkerRegistration",
+    "RegistrationOptions",
+    "CacheStorage",
+    "Cache",
+    "ResponseInit",
+    "Headers",
+    "HtmlCanvasElement",
+    "FileSystemDirectoryHandle",
+    "FileSystemFileHandle",
+    "FileSystemGetDirectoryOptions",
+    "FileSystemGetFileOptions",
+    "FileSystemReadWriteOptions",
+    "FileSystemRemoveOptions",
+    "FileSystemSyncAccessHandle",
+    "HtmlScriptElement",
+    "MessageEvent",
+    "Storage",
+    "StorageManager",
+    "Window",
+    "Worker",
+    "ErrorEvent",
+    "WorkerGlobalScope",
+    "WorkerNavigator",
+    "WorkerOptions",
+    "WorkerType",
+    "XmlHttpRequest",
+    "XmlHttpRequestResponseType",
+] }

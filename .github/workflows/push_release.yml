@@ -191,9 +191,55 @@ jobs:
           path: bcc_mac_${{ matrix.flavor }}.zip
           retention-days: 1
 
+  build-website:
+    name: Build & Deploy Website
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.website == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-website-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install the Dioxus CLI
+        run: cargo binstall dioxus-cli@0.7.10 --locked --no-confirm
+
+      - name: Clear the previous website bundle
+        run: rm -rf target/dx/website/release/web/public
+
+      - name: Build Website (release)
+        working-directory: crates/website
+        env:
+          RUSTFLAGS: -C target-feature=+simd128
+        run: dx build --release
+
+      - name: Add the Pages headers file
+        run: cp crates/website/_headers target/dx/website/release/web/public/_headers
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy target/dx/website/release/web/public --project-name=battle-cats-complete --branch=main --commit-dirty=true
+
   create-release:
     name: Publish Release
-    needs: [check-version, build-windows, build-linux, build-macos]
+    needs: [check-version, build-windows, build-linux, build-macos, build-website]
     if: ${{ !cancelled() && needs.check-version.outputs.should_release == 'true' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     steps:

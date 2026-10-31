@@ -10,7 +10,9 @@ use codex::combat::Entity;
 use codex::graphics::rig::Animation;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, trace, warn};
+#[cfg(feature = "disk")]
+use tracing::debug;
+use tracing::{trace, warn};
 
 use crate::common::job::Ticker;
 use crate::common::io::cache::{self, Scan};
@@ -58,7 +60,7 @@ const PLACEHOLDER_EDGE: u32 = 1;
 const PNG_HEAD: usize = 25;
 
 fn is_valid_png(vfs: &Vfs, path: &Path) -> bool {
-    let Ok(buffer) = vfs.source(path).head(PNG_HEAD) else { return false; };
+    let Ok(buffer) = vfs.head(path, PNG_HEAD) else { return false; };
     if buffer.len() < PNG_HEAD { return false; }
     const PNG_SIG: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     if buffer[0..8] != PNG_SIG { return false; }
@@ -229,10 +231,12 @@ impl cache::CacheSpec for CatCache {
     const FILE: &'static str = "cats_cache.bin";
 }
 
+#[cfg(feature = "disk")]
 pub fn purge() {
     cache::purge::<CatCache>();
 }
 
+#[cfg(feature = "disk")]
 pub fn hydrate(vault: &Vault) -> Option<(u64, Vec<CatEntry>)> {
     let (hash, cached_cats) = cache::read::<CatCache>()?;
     debug!(hash, count = cached_cats.len(), "hydrated cats from cache");
@@ -249,6 +253,7 @@ pub fn hydrate(vault: &Vault) -> Option<(u64, Vec<CatEntry>)> {
     Some((hash, cats))
 }
 
+#[cfg(feature = "disk")]
 pub fn persist(payload: &[u8]) {
     cache::store::<CatCache>(payload);
 }

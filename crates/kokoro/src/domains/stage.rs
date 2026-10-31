@@ -7,6 +7,7 @@ pub mod materials;
 pub mod names;
 pub mod navigate;
 pub mod files;
+#[cfg(feature = "import")]
 pub(crate) mod patterns;
 pub mod restrictions;
 pub mod scanner;

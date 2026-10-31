@@ -8,3 +8,15 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+ab_glyph = "0.2.32"
+base64 = "0.23.1"
+codex = { workspace = true, features = ["graphics"] }
+emulator = { path = "../emulator" }
+dioxus = { version = "0.7.10", default-features = false, features = ["lib", "router"] }
+futures-channel = "0.3"
+futures-util = { version = "0.3", default-features = false }
+image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
+kokoro = { path = "../kokoro", default-features = false, features = ["statblock", "sandbox"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tracing = "0.1.44"

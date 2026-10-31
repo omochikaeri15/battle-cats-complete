@@ -1,10 +1,16 @@
+#[cfg(feature = "disk")]
 pub mod desktop;
 pub mod lang;
 pub mod nightly;
+#[cfg(any(feature = "import", feature = "mods"))]
 pub mod pem;
+#[cfg(feature = "source")]
 pub mod source;
 
+#[cfg(feature = "disk")]
 use std::fs;
+use std::fmt;
+#[cfg(feature = "disk")]
 use std::path::Path;
 
 use indexmap::IndexMap;
@@ -12,11 +18,12 @@ use md5::{Digest, Md5};
 use codex::common::Region;
 use codex::graphics::tools::crash::Side;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "disk")]
 use tracing::{info, warn};
 
+#[cfg(feature = "disk")]
 use crate::common::io::json;
 use crate::common::keys::sanitize;
-use crate::systems::addons::ffmpeg::video::VideoFormat;
 use crate::systems::animation::Loop;
 use crate::systems::treasure;
 
@@ -26,6 +33,44 @@ const EXPECTED_HASHES: [(&str, &str); 4] = [
     ("264a0ffd5f69d257284b93ae881ce2b6", "213cecb58af008964303ecb2cf0f5373"),
     ("3d22eafdcc4fc2a1379b103970b36217", "4cacdb0839634116caaf0b966638865b"),
 ];
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum VideoFormat {
+    #[default]
+    Mp4,
+    Mkv,
+    Webm,
+}
+
+impl VideoFormat {
+    pub const ALL: [Self; 3] = [Self::Mp4, Self::Mkv, Self::Webm];
+
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Mp4 => "mp4",
+            Self::Mkv => "mkv",
+            Self::Webm => "webm",
+        }
+    }
+}
+
+impl fmt::Display for VideoFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Mp4 => "MP4",
+            Self::Mkv => "MKV",
+            Self::Webm => "WebM",
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(default)]
+pub struct Stamp {
+    pub id: String,
+    pub modified: String,
+    pub size: u64,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum UpdateMode {
@@ -160,7 +205,7 @@ pub struct FilesSettings {
     pub editor_mode: EditorMode,
     pub source_link: String,
     pub source_mode: UpdateMode,
-    pub source_stamp: Option<source::Stamp>,
+    pub source_stamp: Option<Stamp>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -818,7 +863,7 @@ impl AnimSettings {
     }
 }
 
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize)]
 pub struct ScannerConfig {
     pub language_priority: Vec<String>,
     pub active_mod: Option<String>,
@@ -933,6 +978,7 @@ impl Default for ExceptionList {
     }
 }
 
+#[cfg(feature = "disk")]
 impl ExceptionList {
     pub fn save(&mut self) {
         self.source = RuleSource::Custom;
@@ -983,6 +1029,7 @@ pub struct UserKeys {
     pub ko: RegionKey,
 }
 
+#[cfg(feature = "disk")]
 impl UserKeys {
     pub fn load() -> Self {
         json::salvage(json::config_file("keys.json"))
@@ -993,7 +1040,9 @@ impl UserKeys {
             warn!("Failed to save keys.json: {}", err);
         }
     }
+}
 
+impl UserKeys {
     pub fn is_empty(&self) -> bool {
         ![Region::Ja, Region::En, Region::Tw, Region::Ko]
             .iter()
@@ -1009,6 +1058,7 @@ impl UserKeys {
         }
     }
 
+    #[cfg(any(feature = "import", feature = "mods"))]
     pub(crate) fn as_tuples(&self) -> Vec<(String, String, Region)> {
         let mut key_tuples = Vec::new();
         if self.has_key_for(Region::Ja) { key_tuples.push((sanitize(&self.ja.key), sanitize(&self.ja.iv), Region::Ja)); }
