@@ -64,10 +64,14 @@ jobs:
           done
 
   build-windows:
-    name: Build Windows (x64)
+    name: Build Windows (${{ matrix.flavor }})
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.desktop == 'true'
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - flavor: x64
     steps:
       - uses: actions/checkout@v5
 
@@ -88,13 +92,13 @@ jobs:
       - name: Rename and Zip (Windows)
         run: |
           move target\release\desktop.exe "${{ env.BIN_NAME }}.exe"
-          Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows_x64.zip
+          Compress-Archive -Path "${{ env.BIN_NAME }}.exe" -DestinationPath bcc_windows_${{ matrix.flavor }}.zip
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-build
-          path: bcc_windows_x64.zip
+          name: windows-${{ matrix.flavor }}-build
+          path: bcc_windows_${{ matrix.flavor }}.zip
           retention-days: 1
 
   build-linux:
@@ -192,10 +196,14 @@ jobs:
           retention-days: 1
 
   build-website:
-    name: Build Website
+    name: Build Website (${{ matrix.flavor }})
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.website == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - flavor: WASM
     steps:
       - uses: actions/checkout@v5
 
