@@ -1,2 +1,3 @@
 Changes:
-- Type ID can now be set for any target trait talent using the Editor.
+- Changed Source bucket layout
+- First deploy of the website

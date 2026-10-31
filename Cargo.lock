@@ -1003,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "codex"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "aes",
  "block-padding",
@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "desktop"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "ab_glyph",
  "arboard",
@@ -3837,7 +3837,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kokoro"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "ab_glyph",
  "base64 0.23.1",
@@ -4366,7 +4366,7 @@ dependencies = [
 
 [[package]]
 name = "mobile"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "omote",
 ]
@@ -5131,7 +5131,7 @@ dependencies = [
 
 [[package]]
 name = "omote"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "ab_glyph",
  "base64 0.23.1",
@@ -8147,7 +8147,7 @@ dependencies = [
 
 [[package]]
 name = "website"
-version = "26.10.2"
+version = "26.10.3"
 dependencies = [
  "bytemuck",
  "codex",
