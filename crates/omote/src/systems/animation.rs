@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use dioxus::core::spawn_forever;
 use dioxus::html::geometry::WheelDelta;
+use dioxus::html::input_data::MouseButton;
 use dioxus::prelude::*;
 use tracing::warn;
 
@@ -63,6 +64,24 @@ const NO_TINT: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 const CULL_SCALE: f32 = 100.0;
 const MIN_SELECTION_AREA: f32 = 25.0;
 const SELECT_HINT: &str = "Drag to set the camera";
+const EXPANDED_LABEL: &str = "Animation Expanded";
+const RESTORE_LABEL: &str = "Restore View";
+const EXPAND_SPAN: f32 = 14.0;
+const EXPAND_ARM: f32 = 5.0;
+const EXPAND_THICKNESS: f32 = 2.0;
+const EXPAND_CORNERS: [(f32, f32); 4] = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)];
+
+fn expand_marks() -> Vec<(f32, f32, f32, f32)> {
+    EXPAND_CORNERS
+        .iter()
+        .flat_map(|&(fx, fy)| {
+            let (arm_x, arm_y) = (fx * (EXPAND_SPAN - EXPAND_ARM), fy * (EXPAND_SPAN - EXPAND_ARM));
+            let (edge_x, edge_y) = (fx * (EXPAND_SPAN - EXPAND_THICKNESS), fy * (EXPAND_SPAN - EXPAND_THICKNESS));
+
+            [(arm_x, edge_y, EXPAND_ARM, EXPAND_THICKNESS), (edge_x, arm_y, EXPAND_THICKNESS, EXPAND_ARM)]
+        })
+        .collect()
+}
 const COLUMNS: usize = 4;
 const DEFAULT_SLOTS: usize = 8;
 const MISSING_FILES_NOTICE: &str = "Missing essential files needed to load Entity";
@@ -79,6 +98,7 @@ pub(crate) struct ViewerState {
     range_inputs: Signal<(String, String)>,
     placement: Signal<Placement>,
     controls_expanded: Signal<bool>,
+    expanded: Signal<bool>,
     hold: Signal<Option<(i8, f64)>>,
     size: Signal<(f32, f32)>,
     drag: Signal<Option<(f32, f32)>>,
@@ -116,6 +136,7 @@ pub(crate) fn provide() -> ViewerState {
         range_inputs: Signal::new((String::new(), String::new())),
         placement: Signal::new(Placement::default()),
         controls_expanded: Signal::new(true),
+        expanded: Signal::new(false),
         hold: Signal::new(None),
         size: Signal::new((0.0, 0.0)),
         drag: Signal::new(None),
@@ -591,15 +612,30 @@ fn Viewer(motions: Memo<Motions>) -> Element {
     let (pixel_width, pixel_height) = ((width * scale).round().max(1.0) as u32, (height * scale).round().max(1.0) as u32);
     let opener = platform.clone();
     let selecting = (state.selecting)();
-    let viewer_class = if selecting { "viewer selecting" } else { "viewer" };
+    let expanded = (state.expanded)();
+    let viewer_class = match (selecting, expanded) {
+        (true, true) => "viewer expanded selecting",
+        (true, false) => "viewer selecting",
+        (false, true) => "viewer expanded",
+        (false, false) => "viewer",
+    };
+    let expand_class = if expanded { "btn btn-toggle btn-overlay viewer-expand active" } else { "btn btn-toggle btn-overlay viewer-expand" };
     let serial = use_hook(next_viewer);
     let canvas_id = format!("viewer-canvas-{serial}");
     let overlay_id = format!("viewer-overlay-{serial}");
     let ids = (canvas_id.clone(), overlay_id.clone());
+    let capturer = opener.clone();
+    let captured_id = overlay_id.clone();
 
     rsx! {
         if selecting {
             div { class: "select-scrim", onpointerdown: move |_| cancel_selection(state) }
+        }
+        if expanded {
+            div { class: "viewer-placeholder",
+                div { class: "viewer-placeholder-title", "{EXPANDED_LABEL}" }
+                button { class: "btn btn-primary", onclick: move |_| state.expanded.set(false), "{RESTORE_LABEL}" }
+            }
         }
         div {
             class: "{viewer_class}",
@@ -640,8 +676,14 @@ fn Viewer(motions: Memo<Motions>) -> Element {
                     width: "{pixel_width}",
                     height: "{pixel_height}",
                     onpointerdown: move |event| {
+                        if event.data().trigger_button() != Some(MouseButton::Primary) {
+                            return;
+                        }
+
                         let point = event.data().element_coordinates();
                         let at = (point.x as f32, point.y as f32);
+
+                        capturer.host().capture_pointer(&captured_id, event.data().pointer_id());
 
                         if *state.selecting.peek() {
                             state.selection.set(Some((at, at)));
@@ -688,7 +730,13 @@ fn Viewer(motions: Memo<Motions>) -> Element {
                             cancel_selection(state);
                         }
                     },
-                    onpointerleave: move |_| state.drag.set(None),
+                    onlostpointercapture: move |_| {
+                        state.drag.set(None);
+
+                        if *state.selecting.peek() && state.selection.peek().is_some() {
+                            cancel_selection(state);
+                        }
+                    },
                     oncontextmenu: move |event| event.prevent_default(),
                     onwheel: move |event| {
                         event.prevent_default();
@@ -707,6 +755,15 @@ fn Viewer(motions: Memo<Motions>) -> Element {
             }
             if selecting {
                 div { class: "viewer-hint", div { class: "toast hint-banner", "{SELECT_HINT}" } }
+            }
+            if !failed {
+                button { class: "{expand_class}", onclick: move |_| state.expanded.toggle(),
+                    svg { class: "expand-icon", width: "{EXPAND_SPAN}", height: "{EXPAND_SPAN}", view_box: "0 0 {EXPAND_SPAN} {EXPAND_SPAN}",
+                        for (index, (x, y, w, h)) in expand_marks().into_iter().enumerate() {
+                            rect { key: "{index}", x: "{x}", y: "{y}", width: "{w}", height: "{h}" }
+                        }
+                    }
+                }
             }
             Controls { motions, loaded, slots, surface }
         }

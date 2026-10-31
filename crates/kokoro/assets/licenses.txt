@@ -168,9 +168,9 @@ CC0-1.0):
 ab_glyph, aes, arboard, base64, block-padding, byteorder, bytemuck, cbc,
 cipher, console_error_panic_hook, dioxus, directories, ecb, futures-channel,
 futures-util, gif, hex, iced, iced_renderer, image, image-webp, imageproc, indexmap, js-sys,
-md-5, notify, open, postcard, pulseaudio, rasn, rasn-pkix, rayon, regex, reqwest,
+md-5, muxide, notify, open, postcard, pulseaudio, rasn, rasn-pkix, rayon, regex, reqwest,
 resand, rfd, rodio, rsa, rustc-hash, ruzstd, self_update, serde, serde_ignored,
-serde_json, sha2, smol, tar, thiserror, tracing, tracing-subscriber, tracing-wasm,
+serde_json, sha2, smol, structured-zstd, tar, thiserror, tracing, tracing-subscriber, tracing-wasm,
 wasm-bindgen, wasm-bindgen-futures, web-sys, web-time, webp-animation, wgpu,
 windows-sys, winres, zip, zstd.
 

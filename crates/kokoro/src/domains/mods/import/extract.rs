@@ -1,11 +1,12 @@
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use tracing::{error, info, trace};
 use zip::ZipArchive;
 
 use crate::common::solid;
+use crate::domains::mods;
 use crate::domains::settings::UserKeys;
 
 use super::decrypt;
@@ -127,36 +128,7 @@ pub(crate) fn run_solid(archive_path: &Path, workspace_dir: &Path, emit_log: &(d
 }
 
 fn destination(name: &str, workspace_dir: &Path) -> Option<(PathBuf, bool)> {
-    let path = Path::new(name);
-    let safe_name = path.file_name()?;
-    let safe_name_str = safe_name.to_string_lossy();
-
-    if name.starts_with("patch/") || name.starts_with("loose/") || name.starts_with("icons/") {
-        let nested = path.components().all(|part| matches!(part, Component::Normal(_)));
-
-        return nested.then(|| (workspace_dir.join(name), false));
-    }
-
-    if name == "assets/DownloadLocal.list" || name == "assets/DownloadLocal.pack" {
-        return Some((workspace_dir.join(safe_name), true));
-    }
-
-    if safe_name_str == "metadata.json" {
-        return Some((workspace_dir.join("patch").join(safe_name), false));
-    }
-
-    if path.parent() != Some(Path::new("assets")) {
-        return None;
-    }
-
-    let is_download_tsv = safe_name_str.starts_with("download") && safe_name_str.ends_with(".tsv");
-    let is_junk = safe_name_str.ends_with(".dat")
-        || safe_name_str.ends_with(".lock")
-        || safe_name_str.ends_with(".pack")
-        || safe_name_str.ends_with(".list")
-        || safe_name_str.ends_with(".dex");
-
-    (!is_download_tsv && !is_junk).then(|| (workspace_dir.join("loose").join(safe_name), false))
+    mods::placement(name).map(|(relative, pack)| (workspace_dir.join(relative), pack))
 }
 
 fn write_out(out_path: &Path, source: &mut impl Read) -> bool {

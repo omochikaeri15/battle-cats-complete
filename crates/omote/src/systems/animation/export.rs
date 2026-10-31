@@ -9,7 +9,7 @@ use tracing::error;
 
 use codex::graphics::animate::{FrameData, resolve_frame};
 use codex::graphics::rig::Animation;
-use kokoro::systems::animation::{Loop, cycle, loop_frame};
+use kokoro::systems::animation::{Loop, alpha, cycle, loop_frame};
 
 use crate::platform::{Atlas, Bytes, Captured, Fault, Painted, Platform, Scene, Surface};
 use crate::systems::export::{Phase, png, settle};
@@ -188,15 +188,7 @@ fn flatten_glow(frames: &mut [FrameData]) {
 fn straight(captured: Captured) -> Result<RgbaImage, Fault> {
     let mut rgba = captured.rgba;
 
-    for texel in rgba.as_chunks_mut::<4>().0 {
-        let alpha = u32::from(texel[3]);
-
-        if alpha > 0 && alpha < 255 {
-            for channel in &mut texel[..3] {
-                *channel = ((u32::from(*channel) * 255 + alpha / 2) / alpha).min(255) as u8;
-            }
-        }
-    }
+    alpha::straighten(&mut rgba);
 
     RgbaImage::from_raw(captured.width, captured.height, rgba).ok_or_else(|| Fault("the captured frame had the wrong size".to_owned()))
 }

@@ -27,21 +27,43 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           RELEASE_BODY_EVENT: ${{ github.event.release.body }}
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             REL_NAME="${{ steps.latest_release.outputs.name }}"
+            REL_TAG="${{ steps.latest_release.outputs.tag }}"
             REL_URL="${{ steps.latest_release.outputs.url }}"
             REL_DATE=$(echo "${{ steps.latest_release.outputs.date }}" | cut -c1-10)
             MESSAGE_BODY=$(cat release_body.txt)
           else
             REL_NAME="${{ github.event.release.name }}"
+            REL_TAG="${{ github.event.release.tag_name }}"
             REL_URL="${{ github.event.release.html_url }}"
             REL_DATE=$(echo "${{ github.event.release.published_at }}" | cut -c1-10)
             MESSAGE_BODY="$RELEASE_BODY_EVENT"
           fi
 
+          ASSETS=""
+          for ATTEMPT in 1 2 3 4 5 6; do
+            ASSETS=$(curl -s -H "Authorization: Bearer $GH_API_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$REL_TAG" | jq -r '.assets[]?.name')
+            [ -n "$ASSETS" ] && break
+            sleep 10
+          done
+
+          PLATFORMS=()
+          if echo "$ASSETS" | grep -q '^bcc_windows_'; then PLATFORMS+=("Windows"); fi
+          if echo "$ASSETS" | grep -q '^bcc_linux_'; then PLATFORMS+=("Linux"); fi
+          if echo "$ASSETS" | grep -q '^bcc_mac_'; then PLATFORMS+=("macOS"); fi
+          if echo "$ASSETS" | grep -q '^bcc_website_'; then PLATFORMS+=("Web"); fi
+
           if [ ${#MESSAGE_BODY} -gt 2000 ]; then
             MESSAGE_BODY=$(printf "%s ...\n\n**[Read full release notes](%s)**" "${MESSAGE_BODY:0:2000}" "$REL_URL")
+          fi
+
+          if [ ${#PLATFORMS[@]} -gt 0 ]; then
+            printf -v TARGETS '%s | ' "${PLATFORMS[@]}"
+            MESSAGE_BODY=$(printf "**%s**\n\n%s" "${TARGETS% | }" "$MESSAGE_BODY")
           fi
 
           CLEAN_BODY=$(echo "$MESSAGE_BODY" | jq -Rs .)

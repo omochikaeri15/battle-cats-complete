@@ -21,7 +21,7 @@ use kokoro::domains::cat::statblock::{self as cat_statblock, Subject};
 use kokoro::domains::cat::waiter::unitid;
 use kokoro::domains::settings::Settings;
 
-use crate::app::Route;
+use crate::app::{self, Route};
 use crate::platform::Platform;
 use crate::systems::catalog::{self, Load};
 use crate::systems::context::{self, Shared};
@@ -34,6 +34,7 @@ use crate::widget::{Hold, NameBox, Settled, Status};
 pub(crate) use filter::FilterPopup;
 
 const FORM_LABELS: [&str; 4] = ["Normal", "Evolved", "True", "Ultra"];
+const LAST_CAT_KEY: &str = "last-cat";
 const EMPTY_CAT_ICON: &str = "uni.png";
 const TALENT_HISTORY_CAP: usize = 3;
 const ULTRA_BUMP: i32 = 60;
@@ -65,11 +66,20 @@ pub(crate) struct CatState {
     pub(crate) expanded_groups: Signal<HashMap<(u32, u8), bool>>,
     pub(crate) conjure_expanded: Signal<HashMap<u32, bool>>,
     pub(crate) seeded_for: Signal<Option<u32>>,
+    pub(crate) locked: bool,
     ultra_active: Signal<bool>,
     saved_level: Signal<Option<(i32, String)>>,
 }
 
 pub(crate) fn provide() -> CatState {
+    provided(false)
+}
+
+pub(crate) fn provide_locked() -> CatState {
+    provided(true)
+}
+
+fn provided(locked: bool) -> CatState {
     use_context_provider(|| CatState {
         search: Signal::new(String::new()),
         filter: Signal::new(CatFilterState::default()),
@@ -84,6 +94,7 @@ pub(crate) fn provide() -> CatState {
         expanded_groups: Signal::new(HashMap::new()),
         conjure_expanded: Signal::new(HashMap::new()),
         seeded_for: Signal::new(None),
+        locked,
         ultra_active: Signal::new(false),
         saved_level: Signal::new(None),
     })
@@ -160,6 +171,10 @@ impl CatState {
     }
 
     pub(crate) fn set_form(&mut self, cat: &CatEntry, form: usize, settings: &Settings) {
+        if self.locked {
+            return;
+        }
+
         self.form.set(form);
 
         if (self.tab)() == DetailTab::Talents && form < 2 {
@@ -170,7 +185,7 @@ impl CatState {
     }
 
     pub(crate) fn set_level_input(&mut self, input: String) {
-        if !typable_level(&input) {
+        if self.locked || !typable_level(&input) {
             return;
         }
 
@@ -183,13 +198,17 @@ impl CatState {
     }
 
     pub(crate) fn set_talent_level(&mut self, cat: &CatEntry, index: u8, level: u8, settings: &Settings) {
+        if self.locked {
+            return;
+        }
+
         self.talent_levels.write().entry(cat.id).or_default().insert(index, level);
         self.talent_inputs.write().remove(&index);
         self.sync_ultra(cat, settings);
     }
 
     pub(crate) fn set_talent_input(&mut self, cat: &CatEntry, index: u8, input: String, settings: &Settings) {
-        if !input.chars().all(|glyph| glyph.is_ascii_digit()) {
+        if self.locked || !input.chars().all(|glyph| glyph.is_ascii_digit()) {
             return;
         }
 
@@ -218,7 +237,7 @@ impl CatState {
     }
 
     pub(crate) fn toggle_talents(&mut self, cat: &CatEntry, ultra: bool, settings: &Settings) {
-        let Some(talent_data) = cat.talent_data.as_ref() else {
+        let Some(talent_data) = cat.talent_data.as_ref().filter(|_| !self.locked) else {
             return;
         };
         let levels = self.levels_for(cat.id);
@@ -295,18 +314,49 @@ pub(crate) struct Selected {
 
 #[component]
 pub(crate) fn Cats(segments: Vec<String>) -> Element {
+    app::use_last_visited(LAST_CAT_KEY, &segments, |segments| Route::Cats { segments });
+
     rsx! {
-        Browser { selected: Route::picked(&segments) }
+        Browser { selected: Route::picked(&segments), form: Route::form_of(&segments) }
     }
 }
 
 #[component]
-fn Browser(selected: Option<u32>) -> Element {
+fn Browser(selected: Option<u32>, form: Option<usize>) -> Element {
     let platform = use_context::<Platform>();
     let library = use_context::<Library>();
     let catalogs = catalog::catalogs();
     let settings = context::settings();
     let mut state = state();
+    let navigator = use_navigator();
+    let mut seen: Signal<Option<(u32, Option<usize>)>> = use_signal(|| None);
+    let visitor = platform.clone();
+
+    use_effect(use_reactive!(|(selected, form)| {
+        let current = (state.form)();
+        let applied = seen().map(|(id, _)| id);
+        let (Some(id), Load::Ready(cats)) = (selected, catalogs.cats()) else {
+            return;
+        };
+
+        if !cats.iter().any(|cat| cat.id == id) {
+            app::forget_visit(&visitor, navigator, LAST_CAT_KEY, Route::Cats { segments: Vec::new() });
+
+            return;
+        }
+
+        if applied != Some(id) {
+            return;
+        }
+
+        let canonical = Route::cat_form(id, current);
+
+        if form != Some(current) {
+            navigator.replace(canonical.clone());
+        }
+
+        app::remember_visit(&visitor, LAST_CAT_KEY, &canonical);
+    }));
 
     use_hook(move || {
         let config = settings.read().scanner_config(None);
@@ -345,6 +395,14 @@ fn Browser(selected: Option<u32>) -> Element {
 
     if let Some(cat) = &cat {
         state.select(cat, &settings.read());
+
+        if *seen.peek() != Some((cat.id, form)) {
+            seen.set(Some((cat.id, form)));
+
+            if let Some(form) = form.filter(|&form| form != *state.form.peek() && cat.forms.get(form).copied().unwrap_or(false)) {
+                state.set_form(cat, form, &settings.read());
+            }
+        }
     }
 
     rsx! {
@@ -452,7 +510,7 @@ pub(crate) fn Detail(cat: SelectedCat, globals: Shared, #[props(default)] extra:
 
     rsx! {
         Hold { stamp: format!("{id}:{form}:{tab:?}"),
-        div { class: "detail",
+        div { class: if state.locked { "detail locked" } else { "detail" },
             div { class: "detail-header",
                 div { class: "header-buttons",
                     div { class: "form-row", {form_buttons} }
@@ -476,13 +534,10 @@ pub(crate) fn Detail(cat: SelectedCat, globals: Shared, #[props(default)] extra:
                                 r#type: "text",
                                 inputmode: "numeric",
                                 value: "{level_input}",
+                                readonly: state.locked,
                                 oninput: move |event| state.set_level_input(event.value()),
                             }
                         }
-                    }
-                    if let Some(extra) = extra {
-                        div { class: "vrule tall" }
-                        {extra}
                     }
                     if tab == DetailTab::Animation {
                         div { class: "vrule tall" }
@@ -495,6 +550,10 @@ pub(crate) fn Detail(cat: SelectedCat, globals: Shared, #[props(default)] extra:
                     if tab == DetailTab::Talents && cat.talent_data.is_some() {
                         div { class: "vrule tall" }
                         talents::Header { cat: SelectedCat(Rc::clone(&cat)), globals: globals.clone() }
+                        if let Some(extra) = extra {
+                            div { class: "vrule tall even" }
+                            {extra}
+                        }
                     }
                 }
                 div { class: "rule" }

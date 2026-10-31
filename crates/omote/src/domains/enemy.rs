@@ -17,7 +17,7 @@ use kokoro::systems::combat::registry::{
     Magnification, STAT_ATK_CYCLE, STAT_ATTACK, STAT_CASH_DROP, STAT_DPS, STAT_HITPOINTS, STAT_KNOCKBACKS, STAT_RANGE, STAT_SPEED, StatContext, format_stat,
 };
 
-use crate::app::Route;
+use crate::app::{self, Route};
 use crate::domains::cat::icons::{self, IMG015};
 use crate::domains::cat::{abilities, header_class};
 use crate::platform::Platform;
@@ -32,6 +32,7 @@ use crate::widget::{Hold, NameBox, Settled, StatFrames, StatHeader, StatValue, S
 pub(crate) use filter::FilterPopup;
 
 const EMPTY_ICON: &str = "uni.png";
+const LAST_ENEMY_KEY: &str = "last-enemy";
 const DEFAULT_MAGNIFICATION: &str = "100";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -127,6 +128,8 @@ impl PartialEq for SelectedEnemy {
 
 #[component]
 pub(crate) fn Enemies(segments: Vec<String>) -> Element {
+    app::use_last_visited(LAST_ENEMY_KEY, &segments, |segments| Route::Enemies { segments });
+
     rsx! {
         Browser { selected: Route::picked(&segments) }
     }
@@ -139,6 +142,20 @@ fn Browser(selected: Option<u32>) -> Element {
     let catalogs = catalog::catalogs();
     let settings = context::settings();
     let mut state = state();
+    let navigator = use_navigator();
+    let visitor = platform.clone();
+
+    use_effect(use_reactive!(|selected| {
+        let (Some(id), Load::Ready(enemies)) = (selected, catalogs.enemies()) else {
+            return;
+        };
+
+        if enemies.iter().any(|enemy| enemy.id == id) {
+            app::remember_visit(&visitor, LAST_ENEMY_KEY, &Route::enemy(id));
+        } else {
+            app::forget_visit(&visitor, navigator, LAST_ENEMY_KEY, Route::Enemies { segments: Vec::new() });
+        }
+    }));
 
     use_hook(move || {
         let config = settings.read().scanner_config(None);
@@ -274,7 +291,7 @@ fn Detail(enemy: SelectedEnemy, globals: Shared) -> Element {
                             class: "btn btn-primary appearances-btn",
                             onclick: move |_| {
                                 state.appearances.set(Some(id));
-                                navigator.push(Route::Stages {});
+                                navigator.push(Route::Stages { segments: Vec::new() });
                             },
                             "Appearances"
                         }

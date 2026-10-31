@@ -225,6 +225,7 @@ fn body(
                         inputmode: "numeric",
                         placeholder: "0",
                         value: "{input}",
+                        readonly: state.locked,
                         oninput: move |event| state.set_talent_input(&for_input.0.cat, index, event.value(), &settings.read()),
                     }
                 }

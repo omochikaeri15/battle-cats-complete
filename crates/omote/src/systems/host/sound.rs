@@ -7,7 +7,7 @@ use tracing::{debug, warn};
 
 use emulator::engine::{AudioHost, AudioSource, SoundData};
 
-use super::assets::Files;
+use super::assets::{Files, SharedLedger};
 
 const BUFFER_VOICES: i32 = 24;
 const STREAM_VOICES: i32 = 2;
@@ -118,6 +118,7 @@ impl Drop for Voice {
 
 pub struct Pool {
     files: Rc<dyn Files>,
+    ledger: SharedLedger,
     backend: Rc<dyn Backend>,
     buffers: Rc<Cell<i32>>,
     streams: Rc<Cell<i32>>,
@@ -125,8 +126,8 @@ pub struct Pool {
 }
 
 impl Pool {
-    pub fn new(files: Rc<dyn Files>, backend: Rc<dyn Backend>) -> Self {
-        Self { files, backend, buffers: Rc::new(Cell::new(0)), streams: Rc::new(Cell::new(0)), voices: Vec::new() }
+    pub fn new(files: Rc<dyn Files>, ledger: SharedLedger, backend: Rc<dyn Backend>) -> Self {
+        Self { files, ledger, backend, buffers: Rc::new(Cell::new(0)), streams: Rc::new(Cell::new(0)), voices: Vec::new() }
     }
 
     fn name(path: &[u8]) -> String {
@@ -138,6 +139,8 @@ impl Pool {
     fn read(&self, path: &[u8]) -> Option<(String, Vec<u8>)> {
         let name = Self::name(path);
         let bytes = self.files.read(&name)?;
+
+        self.ledger.borrow_mut().note(&name, &name);
 
         Some((name, bytes))
     }

@@ -56,19 +56,29 @@ struct Fit {
     scale: f32,
     x: f32,
     y: f32,
+    width: f32,
+    height: f32,
 }
 
-fn fit(bounds: Bounds, design_width: f32) -> Fit {
+fn fit(bounds: Bounds, design_width: f32, aspect: f32) -> Fit {
     let wide = if design_width > 0.0 { bounds.width / design_width } else { 1.0 };
 
-    Fit { scale: wide, x: 0.0, y: 0.0 }
+    if aspect <= 0.0 || design_width <= 0.0 {
+        return Fit { scale: wide, x: 0.0, y: 0.0, width: bounds.width, height: bounds.height };
+    }
+
+    let scale = wide.min(bounds.height / (design_width * aspect));
+    let width = design_width * scale;
+    let height = design_width * aspect * scale;
+
+    Fit { scale, x: (bounds.width - width) / 2.0, y: (bounds.height - height) / 2.0, width, height }
 }
 
 pub fn paint(frame: &Frame, sizes: &HashMap<Box<str>, (u32, u32)>, canvas: Canvas, bounds: Bounds) -> Scene {
     let Canvas { surfaced, .. } = canvas;
     let design_height = frame.design_height;
     let letterbox = frame.letterbox;
-    let fit = fit(bounds, frame.design_width);
+    let fit = fit(bounds, frame.design_width, frame.aspect);
     let scale = fit.scale;
     let mut vertices: Vec<Vertex> = Vec::with_capacity(frame.quads.len() * 6 + 6);
     let mut runs: Vec<Run> = Vec::new();
@@ -135,7 +145,16 @@ pub fn paint(frame: &Frame, sizes: &HashMap<Box<str>, (u32, u32)>, canvas: Canva
 
     let pad = if surfaced { letterbox.max(0.0) * scale } else { 0.0 };
     let floor = fit.y + (design_height - letterbox.max(0.0)).min(letterbox.max(0.0) + PLAY_HEIGHT) * scale;
-    let bars = [[0.0, fit.y, bounds.width, pad], [0.0, floor, bounds.width, if pad > 0.0 { bounds.height - floor } else { 0.0 }]];
+    let mut bars = vec![[0.0, fit.y, bounds.width, pad], [0.0, floor, bounds.width, if pad > 0.0 { bounds.height - floor } else { 0.0 }]];
+
+    if frame.aspect > 0.0 {
+        bars.extend([
+            [0.0, 0.0, bounds.width, fit.y],
+            [0.0, fit.y + fit.height, bounds.width, bounds.height - fit.y - fit.height],
+            [0.0, fit.y, fit.x, fit.height],
+            [fit.x + fit.width, fit.y, bounds.width - fit.x - fit.width, fit.height],
+        ]);
+    }
     let start = vertices.len() as u32;
 
     for [x, y, width, height] in bars.into_iter().filter(|bar| bar[2] > 0.0 && bar[3] > 0.0) {

@@ -1,6 +1,8 @@
 mod arena;
 mod battle;
 mod bridge;
+mod film;
+mod mods;
 mod protocol;
 mod viewer;
 mod worker;
@@ -21,8 +23,11 @@ fn main() {
     }
 
     console_error_panic_hook::set_once();
+    battle::hide_renderer_info();
 
-    let _ = dioxus::logger::init(Level::INFO);
+    if bridge::logging() {
+        let _ = dioxus::logger::init(Level::INFO);
+    }
 
     LaunchBuilder::new().with_context_provider(|| Box::new(Platform::new(WebHost::spawn()))).launch(omote::App);
 }

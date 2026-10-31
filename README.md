@@ -1,5 +1,8 @@
 # Battle Cats Complete
-An all-in-one desktop toolkit for The Battle Cats. This app is a passion project and hobby.
+An all-in-one toolkit for The Battle Cats. This app is a passion project and hobby.
+
+# Desktop
+Has the most features, fastest speeds, and highest capabilities, but requires the most set-up.
 
 ## Usage
 To use BCC, you must provide game files for it to read. These files are not included in the app or repository; they must be obtained through your own personal and legal means.
@@ -22,6 +25,12 @@ Because BCC is not signed with a paid certificate, your OS may flag it on the fi
 > You may see an error saying **"App is damaged and can't be opened"** or **"Unidentified Developer"** (Gatekeeper).
 >
 > To fix this, type the following command in Terminal: `xattr -cr`, then drag the app binary into the terminal window to auto-fill the path.
+
+# Website
+Least features, least powerful, but most accesssible and requires no set-up.
+
+## Usage
+Simply visit [omochikaeri.app](https://omochikaeri.app).
 
 ### Legal
 > This tool is not affiliated with, endorsed by, or sponsored by PONOS Corp. This project is for educational purposes only. Assets are copyright PONOS Corp. Please support the official release.

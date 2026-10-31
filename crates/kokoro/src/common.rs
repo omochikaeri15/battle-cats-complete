@@ -3,6 +3,8 @@ pub mod assets;
 #[cfg(feature = "source")]
 pub mod changelog;
 pub mod context;
+#[cfg(any(feature = "sandbox", feature = "bcm"))]
+pub(crate) mod counted;
 #[cfg(feature = "disk")]
 pub mod dirs;
 pub mod formats;

@@ -27,7 +27,7 @@ fn shrink_by(lines: &[(String, f32)], widths: &[f32], available: f32, floor: f32
 }
 
 #[component]
-pub(crate) fn FitColumn(lines: Vec<(String, f32)>, #[props(default = DEFAULT_GAP)] gap: f32, #[props(default = DEFAULT_FLOOR)] floor: f32) -> Element {
+pub(crate) fn FitColumn(lines: Vec<(String, f32)>, #[props(default = DEFAULT_GAP)] gap: f32, #[props(default = DEFAULT_FLOOR)] floor: f32, #[props(default)] bold_first: bool) -> Element {
     let mut available = use_signal(|| 0.0f32);
     let mut widths: Signal<Vec<f32>> = use_signal(Vec::new);
     let mut seen = use_signal(String::new);
@@ -82,13 +82,13 @@ pub(crate) fn FitColumn(lines: Vec<(String, f32)>, #[props(default = DEFAULT_GAP
                 }
             },
             for (index, (text, size)) in lines.iter().enumerate() {
-                div { key: "{index}", class: "fit-line", style: "font-size: {(size - shrink).max(floor)}px;", "{text}" }
+                div { key: "{index}", class: if bold_first && index == 0 { "fit-line bold" } else { "fit-line" }, style: "font-size: {(size - shrink).max(floor)}px;", "{text}" }
             }
             if !ready {
                 for (index, (text, size)) in lines.iter().enumerate() {
                     span {
                         key: "probe-{index}",
-                        class: "fit-probe",
+                        class: if bold_first && index == 0 { "fit-probe bold" } else { "fit-probe" },
                         style: "font-size: {size}px;",
                         onmounted: {
                             let probes = Rc::clone(&probes);

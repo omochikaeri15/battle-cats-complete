@@ -18,6 +18,7 @@ use tracing::{error, info, trace, warn};
 use kokoro::Vfs;
 use kokoro::common::architecture::Workspace;
 use kokoro::common::job::JobOutcome;
+use kokoro::domains::sandbox::replay as tape;
 use kokoro::domains::settings::ReplaySource;
 use kokoro::systems::addons::ffmpeg::video::{self, Quality, VideoFormat, VideoWriter};
 
@@ -107,7 +108,7 @@ fn film(job: &VideoJob, work: &Path, emit: &dyn Fn(VideoEvent)) -> Result<bool, 
         ReplaySource::Bcv => opened.index,
         ReplaySource::Vfs => job.index.clone(),
         ReplaySource::Hybrid => {
-            let mut index = job.index.clone();
+            let mut index: FileIndex = job.index.iter().filter(|(name, _)| tape::unit_file(name).is_some()).map(|(name, source)| (name.clone(), source.clone())).collect();
 
             index.extend(opened.index);
             index

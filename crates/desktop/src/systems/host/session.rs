@@ -506,7 +506,7 @@ impl Session {
             ReplaySource::Bcv => opened.index,
             ReplaySource::Vfs => DiskAssets::index(vfs),
             ReplaySource::Hybrid => {
-                let mut index = DiskAssets::index(vfs);
+                let mut index: FileIndex = DiskAssets::index(vfs).into_iter().filter(|(name, _)| tape::unit_file(name).is_some()).collect();
 
                 index.extend(opened.index);
                 index

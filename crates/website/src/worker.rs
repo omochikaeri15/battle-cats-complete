@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Cursor, Read};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError, RwLock};
 
 use image::{ImageFormat, RgbaImage};
 use js_sys::{Array, AsyncIterator, Function, Promise, Reflect, Uint8Array};
@@ -13,7 +13,7 @@ use tracing_wasm::WASMLayerConfigBuilder;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use futures_channel::oneshot;
-use futures_util::future::{join, join_all};
+use futures_util::future::join;
 use futures_util::stream::{self, StreamExt};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{
@@ -45,6 +45,12 @@ const STATS_POOL: &str = "roster:stats";
 const CATS: &str = "cats";
 const ENEMIES: &str = "enemies";
 const INDEX_FILE: &str = "index.bin";
+pub(crate) const NAME: &str = "data";
+pub(crate) const LOGGED_NAME: &str = "data-logged";
+pub(crate) const LATEST_FILE: &str = "latest-battle.bin";
+pub(crate) const UPLOADED_FILE: &str = "latest-battle.bcv";
+pub(crate) const UPLOADED_NAME: &str = "latest-battle.name";
+pub(crate) const LATEST_FILES: &str = "latest-battle.files";
 const ETAG: &str = "etag";
 
 type Listener = Closure<dyn FnMut(MessageEvent)>;
@@ -57,7 +63,7 @@ struct Decoded {
 }
 
 pub(crate) struct Engine {
-    vault: Arc<Vault>,
+    pub(crate) vault: Arc<Vault>,
     pub(crate) loader: Arc<ChunkLoader>,
     cache: Option<FileSystemDirectoryHandle>,
     root: Option<FileSystemDirectoryHandle>,
@@ -118,6 +124,12 @@ struct Placement {
     size: usize,
 }
 
+#[derive(Default)]
+pub(crate) struct Layer {
+    pub(crate) files: HashMap<Box<str>, Arc<[u8]>>,
+    pub(crate) withheld: HashSet<Box<str>>,
+}
+
 pub(crate) struct ChunkLoader {
     catalog: Arc<Catalog>,
     frames: Vec<Located>,
@@ -126,6 +138,7 @@ pub(crate) struct ChunkLoader {
     pools: HashMap<Box<str>, Vec<usize>>,
     heads: Option<Sidefiles>,
     sides: Mutex<HashMap<Box<str>, Arc<Sidefiles>>>,
+    layer: RwLock<Arc<Layer>>,
 }
 
 fn cache_key(chunk: &str, offset: u64) -> String {
@@ -141,6 +154,8 @@ thread_local! {
     static SHEETS: RefCell<HashMap<Box<str>, Rc<Vec<SpriteSheet>>>> = RefCell::new(HashMap::new());
     static PRIORITY: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
     static HANDLES: RefCell<HashMap<usize, FileSystemSyncAccessHandle>> = RefCell::new(HashMap::new());
+    static CACHED: RefCell<HashMap<usize, Box<str>>> = RefCell::new(HashMap::new());
+    static CACHE_DIR: RefCell<Option<FileSystemDirectoryHandle>> = const { RefCell::new(None) };
     static QUEUE: RefCell<Vec<(usize, Vec<u8>)>> = const { RefCell::new(Vec::new()) };
     static DECODED: RefCell<Decoded> = RefCell::new(Decoded::default());
     static ONMESSAGE: RefCell<Option<Listener>> = const { RefCell::new(None) };
@@ -152,7 +167,10 @@ thread_local! {
 
 pub(crate) fn run(scope: DedicatedWorkerGlobalScope) {
     console_error_panic_hook::set_once();
-    tracing_wasm::set_as_global_default_with_config(WASMLayerConfigBuilder::new().set_report_logs_in_timings(false).build());
+
+    if scope.name() == LOGGED_NAME {
+        tracing_wasm::set_as_global_default_with_config(WASMLayerConfigBuilder::new().set_report_logs_in_timings(false).build());
+    }
 
     let listener = Listener::new(|event: MessageEvent| received(event));
 
@@ -305,10 +323,10 @@ async fn boot(scope: DedicatedWorkerGlobalScope) {
     sorted.sort_unstable();
     phase(&format!("Mounting {} files...", grouped(names.len())), 0, 0);
 
-    let loader = Arc::new(ChunkLoader { catalog, frames, index, sorted, pools, heads, sides: Mutex::new(HashMap::new()) });
+    let loader = Arc::new(ChunkLoader { catalog, frames, index, sorted, pools, heads, sides: Mutex::new(HashMap::new()), layer: RwLock::new(Arc::default()) });
     let vault = Vault::with_priority(&[]);
 
-    if let Err(err) = vault.vfs.create(Lazy { key: GAME, names }) {
+    if let Err(err) = vault.vfs.create(Lazy { key: GAME, names, withheld: Vec::new() }) {
         return fail(format!("The game mount could not be created: {err}"));
     }
 
@@ -369,12 +387,21 @@ async fn serve(call: Call) {
         post(Answer { id: call.id, reply: Reply::Failed(reason) });
         return;
     };
-    if let Request::Battle(command) = call.request {
-        crate::arena::command(&engine, command);
-        post(Answer { id: call.id, reply: Reply::Warmed });
+    let request = match call.request {
+        Request::Battle(command) => {
+            crate::arena::command(&engine, command);
+            post(Answer { id: call.id, reply: Reply::Warmed });
 
-        return;
-    }
+            return;
+        }
+        Request::Mods(command) => {
+            post(Answer { id: call.id, reply: crate::mods::command(&engine, command).await });
+
+            return;
+        }
+        request => request,
+    };
+    let call = Call { id: call.id, request };
 
     let needs = wanted(&engine.loader, &call.request);
     let afterwards = afterwards(&engine.loader, &call.request);
@@ -399,7 +426,7 @@ async fn serve(call: Call) {
 
 fn wanted(loader: &ChunkLoader, request: &Request) -> Needs {
     let frames = match request {
-        Request::Battle(_) | Request::Names | Request::Stages(_) | Request::Enemies(_) => Vec::new(),
+        Request::Battle(_) | Request::Mods(_) | Request::Names | Request::Stages(_) | Request::Enemies(_) => Vec::new(),
         Request::Fetch(names) | Request::Warm(names) => loader.frames_of(names.iter().map(Box::as_ref)),
         Request::Picture { kind, name } => match kind {
             PictureKind::Cut { sheet, .. } => loader.frames_of([name.as_ref(), sheet.as_ref()]),
@@ -559,7 +586,7 @@ pub(crate) async fn warm_frames(engine: &Rc<Engine>, frames: Vec<usize>, backgro
     spawn_local(persist());
 }
 
-async fn breathe() {
+pub(crate) async fn breathe() {
     let Some(scope) = SCOPE.with(|slot| slot.borrow().clone()) else {
         return;
     };
@@ -609,7 +636,7 @@ fn notify(frame: usize) {
 
 fn answer(engine: &Engine, id: u32, request: Request) -> Reply {
     match request {
-        Request::Battle(_) | Request::Names => Reply::Names(engine.loader.index.keys().cloned().collect()),
+        Request::Battle(_) | Request::Mods(_) | Request::Names => Reply::Names(engine.loader.index.keys().cloned().collect()),
         Request::Fetch(names) => {
             Reply::Files(names.into_iter().filter_map(|name| engine.loader.load(&name).map(|bytes| (name, bytes.to_vec()))).collect())
         }
@@ -665,6 +692,10 @@ fn localize(engine: &Engine, priority: &[String]) {
 
 fn progress(id: u32, done: usize, total: usize) {
     post(Answer { id, reply: Reply::Progress { done, total } });
+}
+
+pub(crate) fn forget_sheets() {
+    SHEETS.with(|slot| slot.borrow_mut().clear());
 }
 
 pub(crate) fn scope() -> Option<DedicatedWorkerGlobalScope> {
@@ -767,17 +798,14 @@ pub(crate) fn post(answer: Answer) {
 
 impl Loader for ChunkLoader {
     fn load(&self, name: &str) -> Option<Arc<[u8]>> {
-        if let Some(bytes) = self.sided(name) {
-            return Some(bytes);
-        }
-
-        let place = *self.index.get(name)?;
-        let raw = decoded(place.frame).or_else(|| self.pull(place.frame))?;
-
-        raw.get(place.offset..place.offset + place.size).map(Arc::from)
+        self.layered(name).unwrap_or_else(|| self.vanilla(name))
     }
 
     fn head(&self, name: &str, len: usize) -> Option<Vec<u8>> {
+        if let Some(layered) = self.layered(name) {
+            return layered.map(|bytes| bytes.get(..len).unwrap_or(&bytes).to_vec());
+        }
+
         if let Some(heads) = &self.heads
             && let Some(&(offset, size)) = heads.index.get(name)
             && let Some(head) = heads.raw.get(offset..offset + size)
@@ -790,6 +818,52 @@ impl Loader for ChunkLoader {
 }
 
 impl ChunkLoader {
+    fn layer(&self) -> Arc<Layer> {
+        self.layer.read().map_or_else(|poisoned| Arc::clone(&poisoned.into_inner()), |held| Arc::clone(&held))
+    }
+
+    fn layered(&self, name: &str) -> Option<Option<Arc<[u8]>>> {
+        let layer = self.layer();
+
+        if layer.withheld.contains(name) {
+            return Some(None);
+        }
+
+        layer.files.get(name).map(|bytes| Some(Arc::clone(bytes)))
+    }
+
+    pub(crate) fn vanilla(&self, name: &str) -> Option<Arc<[u8]>> {
+        if let Some(bytes) = self.sided(name) {
+            return Some(bytes);
+        }
+
+        let place = *self.index.get(name)?;
+        let raw = decoded(place.frame).or_else(|| self.pull(place.frame))?;
+
+        raw.get(place.offset..place.offset + place.size).map(Arc::from)
+    }
+
+    pub(crate) fn has_vanilla(&self, name: &str) -> bool {
+        self.index.contains_key(name) || self.sides.lock().unwrap_or_else(PoisonError::into_inner).values().any(|side| side.index.contains_key(name))
+    }
+
+    pub(crate) fn vanilla_size(&self, name: &str) -> Option<usize> {
+        self.index.get(name).map(|place| place.size)
+    }
+
+    pub(crate) fn modded<'a>(&self, names: impl IntoIterator<Item = &'a str>) -> Vec<(Box<str>, Arc<[u8]>)> {
+        let layer = self.layer();
+
+        names.into_iter().filter_map(|name| layer.files.get(name).map(|bytes| (Box::from(name), Arc::clone(bytes)))).collect()
+    }
+
+    pub(crate) fn relayer(&self, layer: Layer) {
+        match self.layer.write() {
+            Ok(mut held) => *held = Arc::new(layer),
+            Err(poisoned) => *poisoned.into_inner() = Arc::new(layer),
+        }
+    }
+
     fn sided(&self, name: &str) -> Option<Arc<[u8]>> {
         let sides = self.sides.lock().unwrap_or_else(PoisonError::into_inner);
 
@@ -801,11 +875,15 @@ impl ChunkLoader {
     }
 
     pub(crate) fn has(&self, name: &str) -> bool {
-        self.index.contains_key(name) || self.sides.lock().unwrap_or_else(PoisonError::into_inner).values().any(|side| side.index.contains_key(name))
+        self.layered(name).map_or_else(|| self.has_vanilla(name), |layered| layered.is_some())
     }
 
     pub(crate) fn names(&self) -> Vec<Box<str>> {
-        self.index.keys().cloned().collect()
+        let layer = self.layer();
+        let mut names: Vec<Box<str>> = self.index.keys().filter(|name| !layer.withheld.contains(*name)).cloned().collect();
+
+        names.extend(layer.files.keys().filter(|name| !self.index.contains_key(*name)).cloned());
+        names
     }
 
     pub(crate) fn frames_of<'a>(&self, names: impl IntoIterator<Item = &'a str>) -> Vec<usize> {
@@ -857,6 +935,9 @@ impl ChunkLoader {
         let located = *self.frames.get(frame)?;
         let chunk = self.catalog.chunks.get(located.chunk)?;
         let started = now();
+
+        reopen(frame, located.size).await;
+
         let (bytes, fresh) = match stored(frame) {
             Some(bytes) => (bytes, false),
             None => {
@@ -974,6 +1055,23 @@ fn remember(frame: usize, raw: Vec<u8>) -> Arc<[u8]> {
     raw
 }
 
+async fn reopen(frame: usize, size: u64) {
+    let Some(key) = CACHED.with(|cached| cached.borrow_mut().remove(&frame)) else {
+        return;
+    };
+    let Some(dir) = CACHE_DIR.with(|slot| slot.borrow().clone()) else {
+        return;
+    };
+
+    match open(&dir, key.into_string(), frame, size).await {
+        Ok(Some((id, handle))) => {
+            HANDLES.with(|handles| handles.borrow_mut().insert(id, handle));
+        }
+        Ok(None) => {}
+        Err(err) => warn!("A cached frame could not be opened, it will be fetched again: {:?}", err),
+    }
+}
+
 fn stored(at: usize) -> Option<Vec<u8>> {
     HANDLES.with(|handles| {
         let handles = handles.borrow();
@@ -1063,7 +1161,7 @@ async fn prepare(root: Option<&FileSystemDirectoryHandle>, catalog: &Catalog, fr
     let root = root.ok_or_else(|| JsValue::from_str("the origin private file system is not available"))?;
 
     for key in keys(root).await? {
-        if key != *catalog.id && key != INDEX_FILE && !catalog.sidecars.iter().any(|side| *side.address == *key) {
+        if key != *catalog.id && key != INDEX_FILE && ![LATEST_FILE, LATEST_FILES, UPLOADED_FILE, UPLOADED_NAME].contains(&key.as_str()) && !crate::mods::STORED.contains(&key.as_str()) && !catalog.sidecars.iter().any(|side| *side.address == *key) {
             let options = FileSystemRemoveOptions::new();
 
             options.set_recursive(true);
@@ -1078,49 +1176,52 @@ async fn prepare(root: Option<&FileSystemDirectoryHandle>, catalog: &Catalog, fr
 
     let dir: FileSystemDirectoryHandle = JsFuture::from(root.get_directory_handle_with_options(&catalog.id, &options)).await?.dyn_into()?;
     let known: HashMap<String, usize> = frames.iter().enumerate().map(|(id, located)| (cache_key(&catalog.chunks[located.chunk].name, located.offset), id)).collect();
-    let mut opens = Vec::new();
+    let mut cached = HashMap::new();
 
     for key in keys(&dir).await? {
         match known.get(&key) {
-            Some(&id) => opens.push(open(&dir, key, id, frames[id].size)),
+            Some(&id) => {
+                cached.insert(id, Box::from(key.as_str()));
+            }
             None => {
                 JsFuture::from(dir.remove_entry(&key)).await?;
             }
         }
     }
 
-    let mut opened = 0usize;
-
-    for outcome in join_all(opens).await {
-        match outcome {
-            Ok(Some((id, handle))) => {
-                HANDLES.with(|handles| handles.borrow_mut().insert(id, handle));
-                opened += 1;
-            }
-            Ok(None) => {}
-            Err(err) => warn!("A cached frame could not be opened: {:?}", err),
-        }
-    }
-
-    info!(cached = opened, "Browser storage opened");
+    info!(cached = cached.len(), "Browser storage opened");
+    CACHED.with(|slot| *slot.borrow_mut() = cached);
+    CACHE_DIR.with(|slot| *slot.borrow_mut() = Some(dir.clone()));
 
     Ok(dir)
 }
 
+pub(crate) async fn recall(engine: &Engine, name: &str) -> Option<Vec<u8>> {
+    read_root(engine.root.as_ref()?, name).await
+}
+
+pub(crate) async fn keep(engine: &Engine, name: &str, bytes: &[u8]) -> Result<(), String> {
+    let root = engine.root.as_ref().ok_or("the origin private file system is not available")?;
+
+    write_root(root, name, bytes).await.map_err(|err| format!("{err:?}"))
+}
+
+pub(crate) async fn discard(engine: &Engine, name: &str) -> Result<(), String> {
+    let root = engine.root.as_ref().ok_or("the origin private file system is not available")?;
+
+    if JsFuture::from(root.get_file_handle(name)).await.is_err() {
+        return Ok(());
+    }
+
+    JsFuture::from(root.remove_entry(name)).await.map(|_| ()).map_err(describe)
+}
+
 async fn read_root(dir: &FileSystemDirectoryHandle, name: &str) -> Option<Vec<u8>> {
     let file: FileSystemFileHandle = JsFuture::from(dir.get_file_handle(name)).await.ok()?.dyn_into().ok()?;
-    let handle: FileSystemSyncAccessHandle = JsFuture::from(file.create_sync_access_handle()).await.ok()?.dyn_into().ok()?;
-    let size = handle.get_size().ok()? as usize;
-    let mut bytes = vec![0u8; size];
-    let options = FileSystemReadWriteOptions::new();
+    let snapshot: web_sys::File = JsFuture::from(file.get_file()).await.ok()?.dyn_into().ok()?;
+    let buffer = JsFuture::from(snapshot.array_buffer()).await.ok()?;
 
-    options.set_at(0.0);
-
-    let read = handle.read_with_u8_array_and_options(&mut bytes, &options).ok();
-
-    handle.close();
-
-    (read == Some(size as f64)).then_some(bytes)
+    Some(Uint8Array::new(&buffer).to_vec())
 }
 
 async fn write_root(dir: &FileSystemDirectoryHandle, name: &str, bytes: &[u8]) -> Result<(), JsValue> {
@@ -1188,7 +1289,7 @@ async fn persist() {
             continue;
         };
 
-        if HANDLES.with(|handles| handles.borrow().contains_key(&frame)) {
+        if HANDLES.with(|handles| handles.borrow().contains_key(&frame)) || CACHED.with(|cached| cached.borrow().contains_key(&frame)) {
             continue;
         }
 

@@ -9,12 +9,26 @@ use crate::platform::Platform;
 use crate::systems::context::Shared;
 use crate::systems::images;
 use crate::systems::picture::Pic;
-use crate::widget::RowList;
+use crate::widget::{FitColumn, RowList};
 
 use super::{Cats, Ruled};
 
 const DOUBLE_CLICK_MS: f64 = 400.0;
 const ROW_HEIGHT: f32 = 58.0;
+const ICON_HEIGHT: f32 = 52.0;
+const ICON_GAP: f32 = 3.0;
+const SLOT_ASPECT: f32 = 110.0 / 85.0;
+const TEXT_WIDTH: f32 = 170.0;
+const ROW_PADDING: f32 = 8.0;
+const BODY_GAP: f32 = 8.0;
+const SMALLEST: f32 = 0.7;
+const TEXT_SMALLEST: f32 = 0.8;
+const BLOCK_FLOOR: f32 = 60.0;
+const NAME_SIZE: f32 = 13.0;
+const EFFECT_SIZE: f32 = 12.0;
+const RESTRICTION_SIZE: f32 = 10.0;
+const FIT_FLOOR: f32 = 7.0;
+const LINE_GAP: f32 = 1.0;
 const PLAY_CLEARANCE: f32 = 60.0;
 const LOOKAHEAD_ROWS: usize = 12;
 const EVERY_KIND: &str = "All Types";
@@ -62,6 +76,28 @@ impl PartialEq for Decked {
     }
 }
 
+#[derive(Clone, Copy)]
+struct Fit {
+    row: f32,
+    slot: (f32, f32),
+    block: f32,
+    text: f32,
+}
+
+impl Fit {
+    fn of(width: f32) -> Self {
+        let width = if width > 0.0 { width } else { f32::MAX };
+        let slots = SLOT_COUNT as f32;
+        let gaps = ICON_GAP * (slots - 1.0);
+        let spare = width - ROW_PADDING * 2.0 - BODY_GAP;
+        let scale = ((spare - gaps) / (ICON_HEIGHT * SLOT_ASPECT * slots + TEXT_WIDTH)).clamp(SMALLEST, 1.0);
+        let slot = (ICON_HEIGHT * SLOT_ASPECT * scale, ICON_HEIGHT * scale);
+        let block = (spare - slot.0 * slots - gaps).min(TEXT_WIDTH * scale).max(BLOCK_FLOOR);
+
+        Self { row: ROW_HEIGHT * scale, slot, block, text: scale.max(TEXT_SMALLEST) }
+    }
+}
+
 fn build(globals: &Shared, cats: &Cats) -> Deck {
     let cards: Vec<Card> = combo::every(globals.0.context(), &cats.0).into_iter().map(|combo| Card { folded: combo.name.to_lowercase(), combo }).collect();
     let mut kinds: Vec<(i32, String)> = Vec::new();
@@ -91,6 +127,8 @@ pub(crate) fn Combos(cats: Cats, globals: Shared, rules: Ruled, lineup: Held, fo
     let mut kind: Signal<Option<i32>> = use_signal(|| None);
     let mut strength = use_signal(Strength::default);
     let mut clicked: Signal<Option<(usize, f64)>> = use_signal(|| None);
+    let mut across = use_signal(|| 0.0f32);
+    let fit = Fit::of(across());
     let shared = globals.clone();
     let deck = use_memo(use_reactive!(|(cats, shared)| Decked(Rc::new(build(&shared, &cats)))));
     let deck = deck();
@@ -158,17 +196,22 @@ pub(crate) fn Combos(cats: Cats, globals: Shared, rules: Ruled, lineup: Held, fo
             (true, false) => "combo-row active",
             (false, false) => "combo-row",
         };
-        let note = match (&card.combo.restriction, banned) {
-            (_, true) => Some(BANNED_NOTE.to_owned()),
-            (Some(restriction), false) => Some(restriction.clone()),
-            (None, false) => None,
-        };
+        let mut lines = vec![(card.combo.name.clone(), NAME_SIZE * fit.text), (card.combo.effect.clone(), EFFECT_SIZE * fit.text)];
+
+        match (&card.combo.restriction, banned) {
+            (_, true) => lines.push((BANNED_NOTE.to_owned(), RESTRICTION_SIZE * fit.text)),
+            (Some(restriction), false) => lines.push((restriction.clone(), RESTRICTION_SIZE * fit.text)),
+            (None, false) => (),
+        }
+
+        let (slot_width, slot_height) = fit.slot;
         let platform = platform.clone();
 
         rsx! {
             div {
                 key: "{line}",
                 class: "{class}",
+                style: "height: {fit.row}px;",
                 onclick: move |_| {
                     let now = platform.host().now();
                     let doubled = clicked.peek().is_some_and(|(held, at)| held == line && now - at <= DOUBLE_CLICK_MS);
@@ -179,20 +222,17 @@ pub(crate) fn Combos(cats: Cats, globals: Shared, rules: Ruled, lineup: Held, fo
                         onadopt.call(line);
                     }
                 },
-                div { class: "combo-labels",
-                    span { class: "bold combo-name", "{card.combo.name}" }
-                    span { class: "combo-effect", "{card.combo.effect}" }
-                    if let Some(note) = note {
-                        span { class: "combo-note", "{note}" }
-                    }
+                div { class: "combo-labels", style: "width: {fit.block}px;",
+                    FitColumn { lines, gap: LINE_GAP, floor: FIT_FLOOR, bold_first: true }
                 }
                 div { class: "combo-icons",
                     for (slot, member) in card.combo.members.iter().enumerate().take(SLOT_COUNT) {
                         {
                             let icon = member.icon.as_ref().and_then(|source| pictures.trimmed(&source.path));
+                            let class = if icon.is_some() { "combo-icon" } else { "combo-icon empty" };
 
                             rsx! {
-                                div { key: "{slot}", class: "combo-icon",
+                                div { key: "{slot}", class, style: "width: {slot_width}px; height: {slot_height}px;",
                                     if let Some(icon) = icon {
                                         Pic { url: icon.url }
                                     }
@@ -206,7 +246,7 @@ pub(crate) fn Combos(cats: Cats, globals: Shared, rules: Ruled, lineup: Held, fo
     });
 
     rsx! {
-        div { class: "card-outlined combos-card",
+        div { class: "outlined-card combos-card",
             div { class: "combos-header",
                 span { class: "bold combos-title", "Combos" }
                 input { class: "input combos-search", r#type: "search", placeholder: "Name...", value: "{query}", oninput: move |event| query.set(event.value()) }
@@ -239,7 +279,19 @@ pub(crate) fn Combos(cats: Cats, globals: Shared, rules: Ruled, lineup: Held, fo
                     }
                 }
             }
-            RowList { count, row, empty: "No Combos Found!", height: ROW_HEIGHT, tail: PLAY_CLEARANCE, buffer: LOOKAHEAD_ROWS }
+            RowList {
+                count,
+                row,
+                empty: "No Combos Found!",
+                height: fit.row,
+                tail: PLAY_CLEARANCE,
+                buffer: LOOKAHEAD_ROWS,
+                onwidth: move |width: f32| {
+                    if *across.peek() != width {
+                        across.set(width);
+                    }
+                },
+            }
         }
     }
 }

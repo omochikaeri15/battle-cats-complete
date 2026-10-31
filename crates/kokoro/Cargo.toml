@@ -17,7 +17,8 @@ addons = ["disk", "dep:open", "dep:reqwest", "dep:zip"]
 export = ["disk", "statblock", "dep:webp-animation", "dep:gif"]
 statblock = []
 studio = ["disk", "dep:zip", "dep:sha2"]
-sandbox = []
+sandbox = ["dep:tar", "dep:structured-zstd"]
+bcm = ["dep:tar", "dep:structured-zstd"]
 
 [dependencies]
 codex = { workspace = true, features = ["graphics"] }
@@ -50,5 +51,6 @@ thiserror = "2.0.20"
 tracing = "0.1.44"
 zstd = { version = "0.14", features = ["zstdmt"], optional = true }
 tar = { version = "0.4", optional = true }
+structured-zstd = { version = "0.2.6", optional = true }
 serde_ignored = { version = "0.1.14", optional = true }
 web-time = "1.1.0"

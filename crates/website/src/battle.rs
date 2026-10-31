@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use js_sys::{Float32Array, Uint8Array};
 use tracing::{debug, trace, warn};
+use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{AudioBuffer, AudioBufferSourceNode, AudioContext, GainNode, HtmlCanvasElement};
@@ -70,6 +71,7 @@ const BLENDS: [(wgpu::BlendFactor, wgpu::BlendFactor); 4] = [
     (wgpu::BlendFactor::One, wgpu::BlendFactor::OneMinusSrc),
 ];
 const VERTEX_STRIDE: u64 = 32;
+const MIN_PIXEL_RATIO: f64 = 0.5;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -137,6 +139,68 @@ pub(crate) struct Screen {
 }
 
 pub(crate) type SharedScreen = Rc<RefCell<Screen>>;
+
+#[wasm_bindgen(inline_js = "export function hide_renderer_info() {
+    if (typeof WebGL2RenderingContext === 'undefined' || !navigator.userAgent.includes('Firefox/')) {
+        return;
+    }
+
+    const prototype = WebGL2RenderingContext.prototype;
+    const listed = prototype.getSupportedExtensions;
+
+    prototype.getSupportedExtensions = function () {
+        const names = listed.call(this);
+
+        return names && names.filter((name) => name !== 'WEBGL_debug_renderer_info');
+    };
+}")]
+extern "C" {
+    #[wasm_bindgen(js_name = hide_renderer_info)]
+    pub(crate) fn hide_renderer_info();
+}
+
+pub(crate) struct Darkroom {
+    canvas: HtmlCanvasElement,
+    gpu: Gpu,
+    sizes: HashMap<Box<str>, (u32, u32)>,
+    width: u32,
+    height: u32,
+}
+
+impl Darkroom {
+    pub(crate) async fn open(width: u32, height: u32) -> Result<Self, String> {
+        let canvas: HtmlCanvasElement = web_sys::window()
+            .and_then(|window| window.document())
+            .ok_or("the page has no document")?
+            .create_element("canvas")
+            .map_err(describe)?
+            .dyn_into()
+            .map_err(|_| "the video canvas is not a canvas")?;
+        let gpu = open(canvas.clone(), Some((width, height))).await?;
+
+        Ok(Self { canvas, gpu, sizes: HashMap::new(), width, height })
+    }
+
+    pub(crate) fn develop(&mut self, sheets: Vec<SheetWire>) {
+        for sheet in sheets {
+            let binding = self.gpu.upload(sheet.width, sheet.height, &sheet.pixels);
+
+            self.sizes.insert(sheet.name.clone(), (sheet.width, sheet.height));
+            self.gpu.sheets.insert(sheet.name, binding);
+        }
+    }
+
+    pub(crate) fn expose(&mut self, frame: &Frame) -> Result<(), String> {
+        let bounds = Bounds { width: self.width as f32, height: self.height as f32 };
+        let scene = paint(frame, &self.sizes, Canvas { surfaced: true, scale: 1.0, padded: false }, bounds);
+
+        self.gpu.render(&scene, 1.0, false)
+    }
+
+    pub(crate) fn canvas(&self) -> &HtmlCanvasElement {
+        &self.canvas
+    }
+}
 
 fn describe(err: JsValue) -> String {
     err.as_string().unwrap_or_else(|| format!("{err:?}"))
@@ -408,7 +472,14 @@ fn prepare_context(canvas: &HtmlCanvasElement) {
     }
 }
 
-async fn open(canvas: HtmlCanvasElement) -> Result<Gpu, String> {
+fn backing(canvas: &HtmlCanvasElement) -> (u32, u32) {
+    let ratio = web_sys::window().map_or(1.0, |window| window.device_pixel_ratio()).max(MIN_PIXEL_RATIO);
+    let rect = canvas.get_bounding_client_rect();
+
+    ((rect.width() * ratio).round().max(1.0) as u32, (rect.height() * ratio).round().max(1.0) as u32)
+}
+
+async fn open(canvas: HtmlCanvasElement, sized: Option<(u32, u32)>) -> Result<Gpu, String> {
     prepare_context(&canvas);
 
     let instance = wgpu::util::new_instance_with_webgpu_detection(&wgpu::InstanceDescriptor { backends: wgpu::Backends::GL | wgpu::Backends::BROWSER_WEBGPU, ..wgpu::InstanceDescriptor::default() }).await;
@@ -422,8 +493,11 @@ async fn open(canvas: HtmlCanvasElement) -> Result<Gpu, String> {
         })
         .await
         .map_err(|err| err.to_string())?;
-    let width = canvas.width().max(1);
-    let height = canvas.height().max(1);
+    let (width, height) = sized.unwrap_or_else(|| backing(&canvas));
+
+    canvas.set_width(width);
+    canvas.set_height(height);
+
     let mut config = surface.get_default_config(&adapter, width, height).ok_or("the battle canvas is not supported by this adapter")?;
 
     let capabilities = surface.get_capabilities(&adapter);
@@ -507,7 +581,7 @@ impl Screen {
         let screen = Rc::clone(screen);
 
         wasm_bindgen_futures::spawn_local(async move {
-            match open(canvas).await {
+            match open(canvas, None).await {
                 Ok(gpu) => {
                     let mut held = screen.borrow_mut();
 
@@ -580,22 +654,28 @@ impl Screen {
     }
 
     pub(crate) fn draw(&mut self) {
-        if !self.dirty {
-            return;
-        }
-
         let Some(canvas) = self.canvas.clone() else {
             return;
         };
         let Some(gpu) = self.gpu.as_mut() else {
             return;
         };
-        let (width, height) = (canvas.width().max(1), canvas.height().max(1));
+        let (width, height) = backing(&canvas);
+
+        if canvas.width() != width || canvas.height() != height {
+            canvas.set_width(width);
+            canvas.set_height(height);
+        }
 
         if gpu.config.width != width || gpu.config.height != height {
             gpu.config.width = width;
             gpu.config.height = height;
             gpu.surface.configure(&gpu.device, &gpu.config);
+            self.dirty = true;
+        }
+
+        if !self.dirty {
+            return;
         }
 
         for sheet in self.pending.drain(..) {

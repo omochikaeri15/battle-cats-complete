@@ -4,7 +4,7 @@ pub mod enemy;
 pub mod import;
 #[cfg(feature = "studio")]
 pub mod mining;
-#[cfg(feature = "mods")]
+#[cfg(any(feature = "mods", feature = "bcm"))]
 pub mod mods;
 pub mod sandbox;
 pub mod settings;

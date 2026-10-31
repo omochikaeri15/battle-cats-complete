@@ -140,7 +140,7 @@ impl Default for SandboxState {
             search_query: String::new(),
             music_volume: Volume::Medium.percent(),
             effects_volume: Volume::Medium.percent(),
-            two_rows: false,
+            two_rows: true,
             vibrate: false,
             device: Device::default(),
             image_quality: None,

@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 use tracing::{trace, warn};
 
 use emulator::runtime::{BattleOptions, Setup};
+use kokoro::domains::sandbox::replay::Footage;
 
 use super::assets::SheetCache;
 use super::diagnostics::Diagnostics;
-use super::driver::{Clock, Driver, Equipment};
+use super::driver::{Clock, Driver, Equipment, Label};
 use super::input::TouchQueue;
 use super::keys::Action;
 use super::sink::Frame;
@@ -49,6 +50,9 @@ pub struct Session {
     again: bool,
     presented: bool,
     warm: bool,
+    reel: Option<Footage>,
+    recording: bool,
+    cut: bool,
 }
 
 impl Session {
@@ -75,6 +79,9 @@ impl Session {
             again: false,
             presented: false,
             warm: true,
+            reel: None,
+            recording: true,
+            cut: false,
         }
     }
 
@@ -115,10 +122,52 @@ impl Session {
         matches!(self.phase, Phase::Covering | Phase::Loading | Phase::Closing | Phase::Leaving)
     }
 
+    pub fn set_recording(&mut self, recording: bool) {
+        self.recording = recording;
+    }
+
+    pub fn label(&mut self, label: Label) {
+        self.driver.label(label);
+    }
+
+    pub fn watching(&self) -> bool {
+        self.driver.watching()
+    }
+
+    pub fn watch(&mut self, footage: Footage) {
+        if self.in_transition() {
+            return;
+        }
+
+        self.begin();
+        self.reel = Some(footage);
+    }
+
+    pub fn take_cut(&mut self) -> bool {
+        std::mem::take(&mut self.cut)
+    }
+
+    pub fn refit(&mut self) {
+        if self.phase != Phase::Idle {
+            self.stale = true;
+
+            return;
+        }
+
+        self.driver.renew();
+        self.driver.forget_assets();
+    }
+
+    pub fn take_footage(&mut self) -> Option<Footage> {
+        self.driver.take_footage()
+    }
+
     pub fn begin(&mut self) {
         if self.in_transition() {
             return;
         }
+
+        self.reel = None;
 
         self.phase = Phase::Covering;
         self.sweep = 0;
@@ -235,6 +284,12 @@ impl Session {
 
                 if self.sweep >= CLOSED_FRAME {
                     self.phase = if self.again { Phase::Loading } else { Phase::Leaving };
+
+                    if self.driver.watching() {
+                        self.driver.end_playback();
+                        self.driver.draw_curtain(self.sweep);
+                    }
+
                     self.started = now;
                     self.swept = now;
 
@@ -296,7 +351,28 @@ impl Session {
 
                 let mark = self.clock.now_ms();
 
-                self.load();
+                match self.reel.take() {
+                    Some(footage) => match footage.cues() {
+                        Ok(frames) => {
+                            self.driver.arm_playback(&footage.save, frames, footage.faults());
+                            self.driver.draw_curtain(self.sweep);
+                            self.load();
+                        }
+                        Err(reason) => {
+                            warn!("emu: the replay could not be loaded: {reason}");
+                            self.failure = Some(reason);
+                        }
+                    },
+                    None => {
+                        if self.recording {
+                            self.driver.arm_recording();
+                        }
+
+                        self.load();
+                        self.driver.stamp_deck();
+                        self.driver.keep_assets();
+                    }
+                }
 
                 trace!(entered = self.entered, ms = (self.clock.now_ms() - mark) as u32, failure = ?self.failure, "emu: battle load finished");
 
@@ -308,6 +384,7 @@ impl Session {
                     self.started = self.clock.now_ms();
                     self.swept = self.started;
                     self.sweep = CLOSED_FRAME + 1;
+                    self.driver.end_playback();
                     self.driver.draw_curtain(self.sweep);
                 }
 
@@ -349,7 +426,7 @@ impl Session {
     }
 
     pub fn restart(&mut self) {
-        if self.phase != Phase::Running {
+        if self.phase != Phase::Running || self.driver.watching() {
             return;
         }
 
@@ -381,6 +458,19 @@ impl Session {
         }
 
         if let Err(reason) = advanced {
+            if self.driver.watching() {
+                if self.driver.forgive_scripted() {
+                    return;
+                }
+
+                warn!("emu: the replay was terminated by a fault: {reason}");
+                self.cut = true;
+                self.terminate();
+                self.discard = false;
+
+                return;
+            }
+
             self.failure = Some(reason);
             self.phase = Phase::Faulted;
             self.entered = false;
@@ -391,7 +481,8 @@ impl Session {
             return;
         }
 
-        if self.driver.exit_requested() {
+        if self.driver.exit_requested() || self.driver.reel_finished() {
+            self.cut |= self.driver.reel_finished() && self.driver.cut();
             self.terminate();
 
             return;
@@ -402,6 +493,7 @@ impl Session {
             self.driver.silence();
             self.phase = Phase::Leaving;
             self.sweep = CLOSED_FRAME;
+            self.driver.end_playback();
             self.started = self.clock.now_ms();
             self.driver.draw_curtain(self.sweep);
         }

@@ -282,12 +282,14 @@ pub struct Memory<'a> {
 pub struct Lazy<'a> {
     pub key: &'a str,
     pub names: Vec<Box<str>>,
+    pub withheld: Vec<Box<str>>,
 }
 
 impl Mount for Lazy<'_> {
     fn mount(self, vfs: &Vfs) -> Result<Vec<Conflict>, VfsError> {
         let root = Path::new(MEMORY_ROOT).join(self.key);
-        let mut mount = MountedDir { root, lazy: true, ..MountedDir::default() };
+        let conflicts = self.withheld.into_iter().map(|key| Conflict { key, paths: Vec::new() }).collect();
+        let mut mount = MountedDir { root, lazy: true, conflicts, ..MountedDir::default() };
         let mut listing = self.names;
 
         listing.sort_unstable();

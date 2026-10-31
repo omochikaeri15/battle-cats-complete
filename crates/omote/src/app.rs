@@ -1,12 +1,16 @@
 use dioxus::prelude::*;
+use dioxus::router::Navigator;
 
+use codex::chapter::Category;
 use kokoro::domains::settings::Settings as GameSettings;
+use kokoro::domains::stage::GlobalStageId;
 
 use crate::domains::cat::{self, Cats};
 use crate::domains::enemy::{self, Enemies};
 use crate::domains::home::Home;
+use crate::domains::mods::{self, Mods};
 use crate::domains::sandbox::{self, Sandbox};
-use crate::domains::settings::Settings;
+use crate::domains::settings::{self, Settings};
 use crate::domains::stage::{self, Stages};
 use crate::platform::Platform;
 use crate::systems::library::Library;
@@ -16,6 +20,8 @@ use crate::theme::{self, AppTheme};
 static ICON: Asset = asset!("/assets/icon.ico");
 const THEME_KEY: &str = "theme";
 const SETTINGS_KEY: &str = "settings";
+const SEPARATOR: char = '/';
+const FORM_LETTERS: [&str; 4] = ["f", "c", "s", "u"];
 const OPEN_ARROW: &str = "\u{25b6}";
 const CLOSED_ARROW: &str = "\u{25c0}";
 
@@ -29,15 +35,25 @@ pub enum Route {
         Cats { segments: Vec<String> },
         #[route("/enemies/:..segments")]
         Enemies { segments: Vec<String> },
-        #[route("/stages")]
-        Stages {},
+        #[route("/stages/:..segments")]
+        Stages { segments: Vec<String> },
+        #[route("/mods")]
+        Mods {},
         #[route("/sandbox")]
         Sandbox {},
         #[route("/settings")]
         Settings {},
 }
 
-const TABS: [Route; 6] = [Route::Home {}, Route::Sandbox {}, Route::Cats { segments: Vec::new() }, Route::Enemies { segments: Vec::new() }, Route::Stages {}, Route::Settings {}];
+const TABS: [Route; 7] = [
+    Route::Home {},
+    Route::Sandbox {},
+    Route::Cats { segments: Vec::new() },
+    Route::Enemies { segments: Vec::new() },
+    Route::Stages { segments: Vec::new() },
+    Route::Mods {},
+    Route::Settings {},
+];
 
 impl Route {
     pub fn cat(id: u32) -> Self {
@@ -48,8 +64,51 @@ impl Route {
         Self::Enemies { segments: vec![format!("{id:03}")] }
     }
 
+    pub(crate) fn cat_form(id: u32, form: usize) -> Self {
+        let mut segments = vec![format!("{id:03}")];
+
+        segments.extend(FORM_LETTERS.get(form).map(|letter| (*letter).to_owned()));
+
+        Self::Cats { segments }
+    }
+
+    pub(crate) fn stage(id: &GlobalStageId) -> Option<Self> {
+        let prefix = id.category.map_prefix();
+
+        (!prefix.is_empty()).then(|| Self::Stages { segments: vec![prefix, format!("{:03}", id.map), format!("{:03}", id.stage)] })
+    }
+
     pub fn picked(segments: &[String]) -> Option<u32> {
         segments.first()?.parse().ok()
+    }
+
+    pub(crate) fn form_of(segments: &[String]) -> Option<usize> {
+        let letter = segments.get(1)?;
+
+        FORM_LETTERS.iter().position(|known| known.eq_ignore_ascii_case(letter))
+    }
+
+    pub(crate) fn stage_of(segments: &[String]) -> Option<GlobalStageId> {
+        let [prefix, map, stage] = segments else {
+            return None;
+        };
+
+        Some(GlobalStageId { category: Category::from_prefix(prefix), map: map.parse().ok()?, stage: stage.parse().ok()? })
+    }
+
+    fn segments(&self) -> &[String] {
+        match self {
+            Self::Cats { segments } | Self::Enemies { segments } | Self::Stages { segments } => segments,
+            _ => &[],
+        }
+    }
+
+    fn joined(segments: &[String]) -> String {
+        segments.join(&SEPARATOR.to_string())
+    }
+
+    fn split(saved: &str) -> Vec<String> {
+        saved.split(SEPARATOR).filter(|segment| !segment.is_empty()).map(str::to_owned).collect()
     }
 
     pub fn tab_name(&self) -> &'static str {
@@ -57,7 +116,8 @@ impl Route {
             Self::Home {} => "Home",
             Self::Cats { .. } => "Cats",
             Self::Enemies { .. } => "Enemies",
-            Self::Stages {} => "Stages",
+            Self::Stages { .. } => "Stages",
+            Self::Mods {} => "Mods",
             Self::Sandbox {} => "Sandbox",
             Self::Settings {} => "Settings",
         }
@@ -83,6 +143,8 @@ pub fn App() -> Element {
     animation::provide_rigs(&platform);
 
     sandbox::provide(&platform);
+    settings::provide_logging(&platform);
+    settings::provide_fullscreen(&platform);
 
     let library = Library::provide(platform);
 
@@ -93,6 +155,7 @@ pub fn App() -> Element {
     animation::provide();
     enemy::provide();
     stage::provide();
+    mods::provide();
 
     rsx! {
         document::Link { rel: "icon", href: ICON }
@@ -103,6 +166,35 @@ pub fn App() -> Element {
         document::Link { rel: "stylesheet", href: theme::THEME }
         Router::<Route> {}
     }
+}
+
+pub(crate) fn use_last_visited(key: &'static str, segments: &[String], make: fn(Vec<String>) -> Route) {
+    let platform = use_context::<Platform>();
+    let navigator = use_navigator();
+    let bare = segments.is_empty();
+
+    use_effect(use_reactive!(|bare| {
+        if !bare {
+            return;
+        }
+
+        if let Some(saved) = last_visited(&platform, key) {
+            navigator.replace(make(saved));
+        }
+    }));
+}
+
+pub(crate) fn last_visited(platform: &Platform, key: &str) -> Option<Vec<String>> {
+    platform.host().recall(key).map(|saved| Route::split(&saved)).filter(|saved| !saved.is_empty())
+}
+
+pub(crate) fn remember_visit(platform: &Platform, key: &str, route: &Route) {
+    platform.host().remember(key, &Route::joined(route.segments()));
+}
+
+pub(crate) fn forget_visit(platform: &Platform, navigator: Navigator, key: &str, bare: Route) {
+    platform.host().remember(key, "");
+    navigator.replace(bare);
 }
 
 #[component]

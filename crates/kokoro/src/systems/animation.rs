@@ -1,3 +1,4 @@
+pub mod alpha;
 pub mod authoring;
 #[cfg(feature = "export")]
 pub mod export;

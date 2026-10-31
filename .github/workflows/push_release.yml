@@ -227,6 +227,24 @@ jobs:
           RUSTFLAGS: -C target-feature=+simd128
         run: dx build --release
 
+      - name: Zip the WASM
+        run: |
+          WASM=$(find target/dx/website/release/web/public -name '*.wasm' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+          if [ -z "$WASM" ]; then
+            echo "The website build produced no .wasm file"
+            exit 1
+          fi
+          mkdir -p wasm-bundle
+          cp "$WASM" "wasm-bundle/${{ env.BIN_NAME }}.wasm"
+          (cd wasm-bundle && zip ../bcc_website_wasm.zip "${{ env.BIN_NAME }}.wasm")
+
+      - name: Upload Website Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-wasm-build
+          path: bcc_website_wasm.zip
+          retention-days: 1
+
       - name: Add the Pages headers file
         run: cp crates/website/_headers target/dx/website/release/web/public/_headers
 
@@ -246,7 +264,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v4
-        if: needs.check-version.outputs.desktop == 'true'
+        if: needs.check-version.outputs.desktop == 'true' || needs.check-version.outputs.website == 'true'
 
       - name: List artifacts (Verification)
         run: ls -R
@@ -264,6 +282,9 @@ jobs:
               mac-arm-build/bcc_mac_arm.zip
               mac-x64-build/bcc_mac_x64.zip
             )
+          fi
+          if [ "${{ needs.check-version.outputs.website }}" = true ]; then
+            ASSETS+=(website-wasm-build/bcc_website_wasm.zip)
           fi
           gh release create "v${{ needs.check-version.outputs.app_version }}" \
             --repo "${{ github.repository }}" \

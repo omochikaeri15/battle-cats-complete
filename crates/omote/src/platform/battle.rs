@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use emulator::runtime::{BATTLE_ITEMS, BattleOptions, CatGod, PartLevels, Setup, SetupUnit, StageEntry, StageVariant, TECH_COUNT, TREASURE_CHAPTERS, TREASURE_STAGES, TechLevel, TutorialFlags};
 
+use kokoro::domains::sandbox::replay::Save;
+use kokoro::domains::settings::ReplaySource;
+
 use crate::host::{Action, Diagnostics, Frame, Phase, Touch};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,9 +187,50 @@ impl From<SetupWire> for Setup {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum ReelWire {
+    Latest,
+    Held,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Recorded {
+    pub save: Save,
+    pub frames: usize,
+    pub assets: usize,
+    pub bytes: u64,
+    pub uploaded: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Launch {
+    pub setup: SetupWire,
+    pub options: OptionsWire,
+    pub phone: bool,
+    pub width: f32,
+    pub height: f32,
+    pub prefixes: Vec<Box<str>>,
+    pub pools: Vec<Box<str>>,
+    pub priority: Vec<String>,
+    pub record: bool,
+    pub app: String,
+    pub map: String,
+    pub stage: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BattleCommand {
     Prepare { fonts: Vec<Box<str>> },
-    Start { setup: Box<SetupWire>, options: OptionsWire, phone: bool, width: f32, height: f32, prefixes: Vec<Box<str>>, pools: Vec<Box<str>>, priority: Vec<String> },
+    Start(Box<Launch>),
+    Watch { reel: ReelWire, checked: bool, source: ReplaySource, phone: bool, width: f32, height: f32, priority: Vec<String> },
+    Latest,
+    ExportLatest,
+    Upload { name: String, bytes: Vec<u8> },
+    DeleteLatest,
+    ExportVideo(Box<Filming>),
+    AbortVideo,
+    Film { source: ReplaySource, priority: Vec<String> },
+    Roll(u32),
+    Unroll,
     Stop,
     Forget,
     Resume,
@@ -218,6 +262,33 @@ pub struct SheetWire {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Filming {
+    pub source: ReplaySource,
+    pub priority: Vec<String>,
+    pub quality: u32,
+    pub compression: u32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Rolled {
+    pub size: (u32, u32),
+    pub frames: Vec<Frame>,
+    pub sheets: Vec<SheetWire>,
+    pub audio: Vec<(u32, AudioCommand)>,
+    pub played: usize,
+    pub total: usize,
+    pub over: bool,
+    pub failure: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Filmed {
+    Done,
+    Aborted,
+    Failed(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Standing {
     pub phase: Phase,
     pub covered: bool,
@@ -234,6 +305,18 @@ pub enum BattleEvent {
     Diagnostics(Diagnostics),
     Failure(String),
     Warming { done: usize, total: usize },
+    Latest(Option<Box<Recorded>>),
+    Exporting(f32),
+    Exported(Result<Vec<u8>, String>),
+    Uploading(f32),
+    Uploaded(Result<(), String>),
+    Rolled(Box<Rolled>),
+    Rendering(f32),
+    Sounding(f32),
+    Filmed(Filmed),
+    Foreign(String),
+    Rejected(String),
+    Cut,
 }
 
 pub type BattleWatch = Box<dyn Fn(BattleEvent)>;

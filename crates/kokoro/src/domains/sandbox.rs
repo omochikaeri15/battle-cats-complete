@@ -11,7 +11,7 @@ pub mod lineup;
 pub mod orb;
 #[cfg(feature = "sandbox")]
 pub mod rules;
-#[cfg(all(feature = "sandbox", feature = "disk"))]
+#[cfg(feature = "sandbox")]
 pub mod replay;
 #[cfg(feature = "sandbox")]
 pub mod scored;

@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::mem;
+use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -9,15 +10,17 @@ use tracing::{info, trace, warn};
 use emulator::Site;
 use emulator::engine::{AppContext, Platform, set_bgm_volume_setting, set_se_volume_setting, sound_manager, sound_pause_all};
 use emulator::runtime::{
-    BattleOptions, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, apply_battle_options, fill_dummy_cannon_parts, fill_dummy_save,
-    fill_dummy_talents, plant_seeds, preload_sounds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god, seed_point_cap,
-    set_limits, stock_battle_items, unlock_dummy_combos,
+    BattleOptions, DECK_SLOTS, DeviceProfile, InertMeta, InertPlatform, InertScene, InertUi, Seeds, Setup, VERSION, apply_battle_options, fill_dummy_cannon_parts,
+    fill_dummy_save, fill_dummy_talents, plant_seeds, preload_sounds, pump_stage_return, read_battle_options, relatch_battle_rects, seed_altar_records, seed_cat_god,
+    seed_point_cap, set_limits, stock_battle_items, unlock_dummy_combos,
 };
+use kokoro::domains::sandbox::replay::{self as tape, Cue, Footage, Forgiven};
 
-use super::assets::{Assets, Files, SheetCache};
+use super::assets::{Assets, Files, Ledger, SharedLedger, SheetCache};
 use super::diagnostics::{self, Diagnostics};
 use super::input::{Touch, TouchQueue};
 use super::keys::{Action, Keys, LEAVE_AFTER};
+use super::replay;
 use super::sink::{Frame, Recorder};
 use super::sound::{Backend, Pool};
 use super::text::{Formatter, LABEL_PREFIX};
@@ -35,6 +38,69 @@ const PINCH_LIFT_FRAMES: u32 = 2;
 const FULL_VOLUME: i32 = 100;
 const DIM_ALPHA: i32 = 0x80;
 const NOTCH_SHARE: f32 = 0.04;
+const ALTAR_ROW_SHIFT: i32 = -2;
+const BUTTON_SLOTS: i32 = 21;
+const REWARD_CELLS: usize = 0x2f;
+const FIRST_CHARA_DROP: i32 = 1000;
+const SECOND_CHARA_DROP: i32 = 1100;
+const FORM_DROPS: Range<i32> = 10000..0x7530;
+const PAIRED_DROP_ITEM: i32 = 0x3ea;
+const PAIRED_DROP_UNIT: i32 = 0x1b;
+const UNIT_REWARD: i32 = 1;
+
+enum Tape {
+    Off,
+    Recording(Box<Footage>),
+    Playing { frames: Vec<Vec<Cue>>, at: usize, faults: Vec<Forgiven> },
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Label {
+    pub app: String,
+    pub map: String,
+    pub stage: String,
+}
+
+fn reward_unit(ctx: &AppContext, item: i32) -> Option<u32> {
+    if item == PAIRED_DROP_ITEM && item <= ctx.drop_chara_max_1000 {
+        return u32::try_from(PAIRED_DROP_UNIT).ok();
+    }
+
+    let listed = (FIRST_CHARA_DROP..=ctx.drop_chara_max_1000).contains(&item) || (SECOND_CHARA_DROP..=ctx.drop_chara_max_1100).contains(&item) || FORM_DROPS.contains(&item);
+
+    listed.then(|| emulator::engine::reward_unit_id(ctx, item).ok()).flatten().and_then(|unit| u32::try_from(unit).ok())
+}
+
+fn needed_units(ctx: &AppContext) -> BTreeSet<u32> {
+    let deck: Vec<(i32, i32, i32)> = [0, 1]
+        .into_iter()
+        .flat_map(|faction| (0..BUTTON_SLOTS).map(move |slot| (faction, slot)))
+        .filter_map(|(faction, slot)| {
+            let unit = emulator::engine::get_button_unit_id(ctx, faction, slot).ok().filter(|unit| *unit >= 0)?;
+            let form = emulator::engine::get_button_unit_form(ctx, faction, slot).unwrap_or(0);
+
+            Some((faction, unit, form))
+        })
+        .collect();
+    let spirits = deck.iter().filter_map(|&(faction, unit, form)| emulator::engine::stat_conjure_unit_id(ctx, faction, unit, form).ok());
+    let row = AppContext::MAP_STAGE_ROWS + usize::try_from(ctx.i32_at(AppContext::STAGE_ROW).unwrap_or(0)).unwrap_or(0) * AppContext::MAP_STAGE_ROW_STRIDE;
+    let cells: Vec<i32> =
+        ctx.bytes_from(row).map(|bytes| (0..REWARD_CELLS).filter_map(|cell| emulator::engine::xor_row46_get(bytes, cell)).map(|item| item as i32).collect()).unwrap_or_default();
+    let points: Vec<i32> = ctx
+        .event_items
+        .as_ref()
+        .and_then(|store| emulator::engine::get_point_rewards(&ctx.point_event_rewards, emulator::engine::get_point_id(store)))
+        .map(|record| record.rewards.iter().filter(|reward| reward.kind == UNIT_REWARD).map(|reward| reward.id).collect())
+        .unwrap_or_default();
+
+    deck.iter()
+        .map(|&(_, unit, _)| unit)
+        .chain(spirits)
+        .chain(points)
+        .filter_map(|unit| u32::try_from(unit).ok())
+        .chain(cells.into_iter().filter_map(|item| reward_unit(ctx, item)))
+        .collect()
+}
 
 pub trait Clock {
     fn now_ms(&self) -> f64;
@@ -198,6 +264,17 @@ pub struct Driver {
     applied: (f32, f32),
     leaving: Option<u16>,
     resolved: usize,
+    ledger: SharedLedger,
+    tape: Tape,
+    pending: Vec<Cue>,
+    window: (f32, f32),
+    wanted_phone: bool,
+    finished: bool,
+    label: Label,
+    needed: Option<BTreeSet<u32>>,
+    kept: BTreeSet<Box<str>>,
+    cut: bool,
+    filmed: Option<Footage>,
 }
 
 impl Driver {
@@ -235,6 +312,17 @@ impl Driver {
             applied: (0.0, 0.0),
             leaving: None,
             resolved: 0,
+            ledger: Rc::new(RefCell::new(Ledger::default())),
+            tape: Tape::Off,
+            pending: Vec::new(),
+            window: (0.0, 0.0),
+            wanted_phone: false,
+            finished: false,
+            label: Label::default(),
+            needed: None,
+            kept: BTreeSet::new(),
+            cut: false,
+            filmed: None,
         };
 
         driver.host();
@@ -243,7 +331,7 @@ impl Driver {
 
     fn host(&mut self) {
         let ctx = &mut self.ctx;
-        let assets = Assets::new(Rc::clone(&self.equipment.files), Rc::clone(&self.sheets), &self.equipment.priority);
+        let assets = Assets::new(Rc::clone(&self.equipment.files), Rc::clone(&self.sheets), Rc::clone(&self.ledger), &self.equipment.priority);
         let wanted = assets.limits();
         let applied = set_limits(ctx, wanted);
 
@@ -255,7 +343,7 @@ impl Driver {
 
         ctx.set_assets(Box::new(assets));
         ctx.set_platform(Box::new(HostPlatform { inner: InertPlatform { profile: Rc::clone(&self.profile) }, clock: Rc::clone(&self.equipment.clock) }));
-        ctx.set_audio(Box::new(Pool::new(Rc::clone(&self.equipment.files), Rc::clone(&self.equipment.backend))));
+        ctx.set_audio(Box::new(Pool::new(Rc::clone(&self.equipment.files), Rc::clone(&self.ledger), Rc::clone(&self.equipment.backend))));
         ctx.set_meta(Box::new(InertMeta));
         ctx.set_scene_host(Box::new(InertScene { returning: Rc::clone(&self.returning) }));
         ctx.set_text_renderer(Box::new(Formatter::new(Rc::clone(&self.sheets), &self.equipment.fonts)));
@@ -272,10 +360,15 @@ impl Driver {
         self.forgiven.clear();
         self.tripped = None;
 
-        let (width, height) = (self.ctx.device_screen_w as f32, self.ctx.device_screen_h as f32);
+        let (width, height) = if self.watching() {
+            self.phone = self.wanted_phone;
+            self.window
+        } else {
+            (self.ctx.device_screen_w as f32, self.ctx.device_screen_h as f32)
+        };
         let options = self.options;
 
-        self.leaving = None;
+        self.close_tape();
         self.seeds = Seeds::draw();
 
         *self.ctx = AppContext::default();
@@ -289,6 +382,169 @@ impl Driver {
         self.host();
         self.apply_size(width, height);
         self.set_options(options);
+    }
+
+    fn close_tape(&mut self) {
+        if let Tape::Recording(footage) = mem::replace(&mut self.tape, Tape::Off) {
+            self.filmed = Some(*footage);
+        }
+
+        self.pending.clear();
+        self.finished = false;
+        self.leaving = None;
+        self.needed = None;
+        self.kept.clear();
+        self.cut = false;
+        self.ledger.borrow_mut().disarm();
+    }
+
+    pub fn take_footage(&mut self) -> Option<Footage> {
+        self.filmed.take()
+    }
+
+    pub fn label(&mut self, label: Label) {
+        self.label = label;
+    }
+
+    pub fn arm_recording(&mut self) {
+        self.close_tape();
+
+        let save = tape::Save {
+            version: VERSION.to_owned(),
+            app: self.label.app.clone(),
+            seeds: replay::seeds_to(self.seeds),
+            screen: tape::Screen { width: self.applied.0, height: self.applied.1, phone: self.phone },
+            options: replay::options_to(self.options),
+            setup: replay::setup_to(&self.setup, &self.label.map, &self.label.stage),
+            icons: Vec::new(),
+            costs: Vec::new(),
+            altar_cap: None,
+            terminated: false,
+        };
+
+        self.ledger.borrow_mut().arm();
+        self.tape = Tape::Recording(Box::new(Footage::new(save)));
+    }
+
+    pub fn stamp_deck(&mut self) {
+        if !matches!(self.tape, Tape::Recording(_)) {
+            return;
+        }
+
+        self.needed = Some(needed_units(&self.ctx));
+
+        let icons: Vec<String> = self
+            .ctx
+            .unit_icon_textures
+            .iter()
+            .map(|texture| texture.as_ref().map_or_else(String::new, |texture| String::from_utf8_lossy(&texture.png).into_owned()))
+            .collect();
+        let costs: Vec<i32> = (0..DECK_SLOTS as i32).map(|slot| emulator::engine::get_effective_deploy_cost(&mut self.ctx, 0, slot).map_or(-1, emulator::ops::div_100)).collect();
+        let altar_cap = emulator::engine::get_castle_enemy_row(&self.ctx).ok().and_then(|row| {
+            let enemy = row.wrapping_add(ALTAR_ROW_SHIFT);
+            let sealed = emulator::engine::stage_not_sealed(&self.ctx, enemy).is_ok_and(|open| !open);
+
+            sealed.then(|| emulator::engine::get_altar_level_cap(&self.ctx, enemy).unwrap_or(-1))
+        });
+
+        if let Tape::Recording(footage) = &mut self.tape {
+            footage.save.icons = icons;
+            footage.save.costs = costs;
+            footage.save.altar_cap = altar_cap;
+        }
+    }
+
+    pub fn arm_playback(&mut self, save: &tape::Save, frames: Vec<Vec<Cue>>, faults: Vec<Forgiven>) {
+        self.close_tape();
+        self.set_setup(replay::setup_from(&save.setup));
+        self.phone = save.screen.phone;
+        self.apply_size(save.screen.width, save.screen.height);
+        self.set_options(replay::options_from(save.options));
+        self.seeds = replay::seeds_from(save.seeds);
+        self.tape = Tape::Playing { frames, at: 0, faults };
+        self.cut = save.terminated;
+    }
+
+    pub fn forgive_scripted(&mut self) -> bool {
+        let Some(site) = self.tripped else {
+            return false;
+        };
+        let Tape::Playing { frames, at, faults } = &self.tape else {
+            return false;
+        };
+        let Some(failed) = at.checked_sub(1) else {
+            return false;
+        };
+        let scripted = frames.get(*at).is_some_and(|cues| cues.contains(&Cue::Forgive));
+        let Some(entry) = faults.iter().find(|entry| entry.frame == failed) else {
+            return false;
+        };
+
+        if !scripted || entry.site.replace("::", ":") != site.to_string().replace("::", ":") {
+            return false;
+        }
+
+        trace!("emu: replay forgives the recorded fault at frame {failed} ({site}): {}", entry.reason);
+
+        self.forgive();
+
+        true
+    }
+
+    pub fn cut(&self) -> bool {
+        self.cut
+    }
+
+    pub fn end_playback(&mut self) {
+        if !self.watching() {
+            return;
+        }
+
+        self.close_tape();
+        self.phone = self.wanted_phone;
+
+        let (width, height) = self.window;
+
+        self.apply_size(width, height);
+    }
+
+    pub fn watching(&self) -> bool {
+        matches!(self.tape, Tape::Playing { .. })
+    }
+
+    pub fn reel_finished(&self) -> bool {
+        self.finished
+    }
+
+    fn frame_aspect(&self) -> f32 {
+        let width = self.ctx.screen_metrics.design_w;
+
+        if width <= 0 {
+            return 0.0;
+        }
+
+        emulator::engine::get_design_height2(&self.ctx) as f32 / width as f32
+    }
+
+    fn screen(&self) -> (i32, i32) {
+        (self.ctx.device_screen_w, self.ctx.device_screen_h)
+    }
+
+    pub fn keep_assets(&mut self) {
+        let Tape::Recording(footage) = &mut self.tape else {
+            return;
+        };
+        let mut requested = self.ledger.borrow_mut().drain();
+
+        if let Some(needed) = &self.needed {
+            requested.retain(|(name, _)| tape::unit_file(name).is_none_or(|unit| needed.contains(&unit)));
+        }
+
+        for (name, resolved) in requested {
+            if self.kept.insert(name.clone()) {
+                footage.keep(&name, &resolved);
+            }
+        }
     }
 
     pub fn relocalize(&mut self, priority: Vec<String>) {
@@ -320,6 +576,18 @@ impl Driver {
     }
 
     pub fn key(&mut self, action: Action, pressed: bool) {
+        if self.watching() {
+            if action == Action::Pause {
+                self.leaving = pressed.then(|| self.leaving.unwrap_or(0));
+            }
+
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Key(replay::key_of(action), pressed));
+        }
+
         if pressed {
             self.keys.press(action);
         } else {
@@ -327,43 +595,48 @@ impl Driver {
         }
     }
 
-    fn pump_input(&mut self) {
+    fn pump_input(&mut self, script: Option<Vec<Cue>>) -> Vec<Cue> {
         self.keys.pump(&mut self.ctx, &mut self.spread, &mut self.gap);
 
-        let keyed = self.keys.busy();
-        let mut pending: VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
+        let mut played: Vec<Cue> = Vec::new();
 
-        while let Some(touch) = pending.pop_front() {
-            let fed = match touch {
-                Touch::Pinched { spread: step } => {
-                    self.spread = self.spread.wrapping_add(step);
+        match script {
+            Some(cues) => {
+                self.touches.borrow_mut().clear();
 
-                    Ok(())
+                for cue in cues.into_iter().filter(|cue| !cue.before_input()) {
+                    self.play(cue);
                 }
-                Touch::Moved { .. } | Touch::Pressed { .. } | Touch::Released if keyed => Ok(()),
-                Touch::Moved { x, y } => {
-                    self.finger = (x, y);
+            }
+            None => {
+                let keyed = self.keys.busy();
+                let mut pending: VecDeque<Touch> = self.touches.borrow_mut().drain(..).collect();
 
-                    emulator::engine::app_on_touch(&mut self.ctx, TOUCH_MOVED, x, y, 0)
+                while let Some(touch) = pending.pop_front() {
+                    let cue = match touch {
+                        Touch::Pinched { spread: step } => Some(Cue::Pinch(step)),
+                        Touch::Moved { .. } | Touch::Pressed { .. } | Touch::Released if keyed => None,
+                        Touch::Moved { x, y } => Some(Cue::Move(x, y)),
+                        Touch::Pressed { .. } if self.gap.is_some() => {
+                            pending.push_front(touch);
+                            self.touches.borrow_mut().extend(pending.drain(..));
+
+                            Some(Cue::Settle)
+                        }
+                        Touch::Pressed { x, y } => Some(Cue::Press(x, y)),
+                        Touch::Released => Some(Cue::Release),
+                    };
+                    let Some(cue) = cue else {
+                        continue;
+                    };
+
+                    self.play(cue);
+
+                    match (played.last_mut(), cue) {
+                        (Some(last @ Cue::Move(..)), Cue::Move(..)) => *last = cue,
+                        _ => played.push(cue),
+                    }
                 }
-                Touch::Pressed { .. } if self.gap.is_some() => {
-                    self.spread = 0;
-                    self.gap = None;
-                    pending.push_front(touch);
-                    self.touches.borrow_mut().extend(pending.drain(..));
-
-                    Ok(())
-                }
-                Touch::Pressed { x, y } => {
-                    self.finger = (x, y);
-
-                    emulator::engine::app_on_touch(&mut self.ctx, TOUCH_PRESSED, x, y, 0)
-                }
-                Touch::Released => emulator::engine::app_on_touch(&mut self.ctx, TOUCH_RELEASED, self.finger.0, self.finger.1, 0),
-            };
-
-            if let Err(fault) = fed {
-                warn!("emu: touch could not be queued: {fault}");
             }
         }
 
@@ -375,6 +648,64 @@ impl Driver {
 
         if let Err(fault) = emulator::runtime::pump_touch(&mut self.ctx) {
             warn!("emu: touch could not be pumped: {fault}");
+        }
+
+        played
+    }
+
+    fn play(&mut self, cue: Cue) {
+        let fed = match cue {
+            Cue::Pinch(step) => {
+                self.spread = self.spread.wrapping_add(step);
+
+                Ok(())
+            }
+            Cue::Settle => {
+                self.spread = 0;
+                self.gap = None;
+
+                Ok(())
+            }
+            Cue::Move(x, y) => {
+                self.finger = (x, y);
+
+                emulator::engine::app_on_touch(&mut self.ctx, TOUCH_MOVED, x, y, 0)
+            }
+            Cue::Press(x, y) => {
+                self.finger = (x, y);
+
+                emulator::engine::app_on_touch(&mut self.ctx, TOUCH_PRESSED, x, y, 0)
+            }
+            Cue::Release => emulator::engine::app_on_touch(&mut self.ctx, TOUCH_RELEASED, self.finger.0, self.finger.1, 0),
+            Cue::Forgive => Ok(()),
+            Cue::Key(key, pressed) => {
+                let action = replay::action_of(key);
+
+                if pressed {
+                    self.keys.press(action);
+                } else {
+                    self.keys.release(action);
+                }
+
+                Ok(())
+            }
+            Cue::Resize(width, height) => {
+                self.apply_size(width, height);
+
+                Ok(())
+            }
+            Cue::Phone(phone) => {
+                let (width, height) = self.screen();
+
+                self.phone = phone;
+                self.apply_size(width as f32, height as f32);
+
+                Ok(())
+            }
+        };
+
+        if let Err(fault) = fed {
+            warn!("emu: touch could not be queued: {fault}");
         }
     }
 
@@ -413,6 +744,20 @@ impl Driver {
     }
 
     pub fn resize(&mut self, width: f32, height: f32) {
+        if width < 1.0 || height < 1.0 {
+            return;
+        }
+
+        self.window = (width, height);
+
+        if self.watching() {
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Resize(width, height));
+        }
+
         self.apply_size(width, height);
     }
 
@@ -448,6 +793,16 @@ impl Driver {
     }
 
     pub fn set_phone(&mut self, phone: bool) {
+        self.wanted_phone = phone;
+
+        if self.watching() {
+            return;
+        }
+
+        if matches!(self.tape, Tape::Recording(_)) {
+            self.pending.push(Cue::Phone(phone));
+        }
+
         self.phone = phone;
 
         let width = self.ctx.device_screen_w as f32;
@@ -649,6 +1004,11 @@ impl Driver {
         if self.forgiven.insert(site) {
             info!("emu: {site} was continued past, so it stays quiet for the rest of this battle");
         }
+
+        if let Tape::Recording(footage) = &mut self.tape {
+            self.pending.push(Cue::Forgive);
+            footage.forgive(&site.to_string(), &self.reason);
+        }
     }
 
     fn run_frame(&mut self) -> Result<(), (Site, String)> {
@@ -656,7 +1016,39 @@ impl Driver {
             return Ok(());
         }
 
-        self.pump_input();
+        let script = match &mut self.tape {
+            Tape::Playing { frames, at, .. } => {
+                let Some(cues) = frames.get_mut(*at).map(mem::take) else {
+                    self.finished = true;
+
+                    return Ok(());
+                };
+
+                *at += 1;
+
+                Some(cues)
+            }
+            Tape::Off | Tape::Recording(_) => None,
+        };
+
+        if let Some(cues) = &script {
+            for cue in cues.iter().copied().filter(|cue| cue.before_input()) {
+                self.play(cue);
+            }
+        }
+
+        let before = mem::take(&mut self.pending);
+        let played = self.pump_input(script);
+
+        if !self.cut
+            && let Tape::Recording(footage) = &mut self.tape
+        {
+            let line: Vec<Cue> = before.into_iter().chain(played).collect();
+
+            footage.frame(&line);
+        }
+
+        self.keep_assets();
 
         let notice = emulator::engine::notice_popup_update(&mut self.ctx).map_err(|fault| (fault.site(), format!("notice_popup_update::{fault}")))?;
 
@@ -712,6 +1104,7 @@ impl Driver {
         frame.design_width = self.ctx.screen_metrics.design_w as f32;
         frame.design_height = emulator::engine::get_design_height2(&self.ctx) as f32;
         frame.letterbox = self.ctx.i32_at(AppContext::LETTERBOX_PAD).map_or(0.0, |pad| pad.max(0) as f32);
+        frame.aspect = if self.watching() { self.frame_aspect() } else { 0.0 };
     }
 
     fn sync_options(&mut self) {
@@ -775,7 +1168,9 @@ impl Driver {
     }
 
     pub fn take_options(&mut self) -> Option<BattleOptions> {
-        mem::take(&mut self.changed).then_some(self.options)
+        let changed = mem::take(&mut self.changed);
+
+        (changed && !self.watching()).then_some(self.options)
     }
 
     pub fn draw_curtain_over(&mut self, sweep: i32) {
@@ -828,6 +1223,23 @@ impl Driver {
 
         if let Err(fault) = cleared {
             warn!("emu: curtain could not be released: {fault}");
+        }
+    }
+
+    pub fn draw_curtain_aside(&mut self, sweep: i32) {
+        let held = self.ctx.u8_at(AppContext::CURTAIN_ACTIVE).and_then(|active| self.ctx.i32_at(AppContext::FADE_FRAME).map(|fade| (active, fade)));
+        let Ok((active, fade)) = held else {
+            warn!("emu: curtain state could not be read");
+
+            return;
+        };
+
+        self.draw_curtain(sweep);
+
+        let restored = self.ctx.set_block_at::<1>(AppContext::CURTAIN_ACTIVE, [active]).and_then(|()| self.ctx.set_i32_at(AppContext::FADE_FRAME, fade));
+
+        if let Err(fault) = restored {
+            warn!("emu: curtain state could not be restored: {fault}");
         }
     }
 

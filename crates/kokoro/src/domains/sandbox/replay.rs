@@ -1,24 +1,17 @@
+mod footage;
 mod save;
 mod tape;
+#[cfg(all(feature = "disk", feature = "mods"))]
+mod disk;
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, File};
-use std::io::{self, BufWriter, Read, Write};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::UNIX_EPOCH;
-
-use rayon::prelude::*;
-use tracing::warn;
-
-use crate::common::job::JobOutcome;
-use crate::common::architecture::{self, Workspace};
-use crate::common::{dirs, solid};
+use crate::common::architecture;
 use crate::domains::cat::scanner::{self, CatEntry};
 use crate::domains::settings::ScannerConfig;
-use crate::{Memory, Source, Vault};
+use crate::Vault;
 
+#[cfg(all(feature = "disk", feature = "mods"))]
+pub use disk::{Bundle, Recording, delete, export, index, inspect_bundle, inspect_dir, latest, library, list, next_bundle, pack, read_faults, read_input, read_save, rename, restamp, stage, stamp};
+pub use footage::{Footage, Opened, Packer};
 pub use save::{God, Level, Options, Parts, Save, Screen, Seeds, Setup, Stage, Tutorial, Unit, Variant};
 pub use tape::{Cue, Key, format_frame, parse};
 
@@ -30,58 +23,17 @@ const INPUT: &str = "input";
 const FAULT: &str = "fault";
 const MANIFEST: &str = "manifest";
 const ASSETS: &str = architecture::REPLAY;
-const LATEST: &str = "sandbox";
 const BASE_FORMS: usize = 2;
-const BUNDLE_STEM: &str = "Replay";
-const EXPORTS: &str = "exports";
-const STAGING: &str = "replay";
 const FORBIDDEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
-
-pub fn latest() -> Option<PathBuf> {
-    dirs::state().map(|state| state.join(LATEST))
-}
-
-fn signature(path: &Path) -> Option<String> {
-    let meta = fs::metadata(path).ok()?;
-    let modified = meta.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_nanos();
-
-    Some(format!("{}:{}:{modified}", path.display(), meta.len()))
-}
-
-pub fn stamp(target: &Path) -> Option<String> {
-    if !target.is_dir() {
-        return signature(target);
-    }
-
-    let parts: Option<Vec<String>> = [SAVE, INPUT, MANIFEST].iter().map(|name| signature(&target.join(name))).collect();
-
-    parts.map(|parts| parts.join("|"))
-}
+const UNIT_FILE_PREFIX: &str = "unit";
+const UNIT_FILE_SUFFIX: &str = ".csv";
+const EXPLANATION_PREFIX: &str = "Unit_Explanation";
+const LANGUAGE_SEPARATOR: char = '_';
 
 pub struct Staged {
     pub summary: Summary,
     pub vault: Vault,
     pub cats: Vec<CatEntry>,
-}
-
-pub fn stage(target: &Path, config: &ScannerConfig) -> Result<Staged, String> {
-    let vault = Vault::with_priority(&config.language_priority);
-
-    let summary = if target.is_dir() {
-        vault
-            .vfs
-            .create(target.join(ASSETS).as_path())
-            .map_err(|error| format!("the replay's files could not be read: {error}"))?;
-
-        inspect_dir(target)
-    } else {
-        let bundle = Bundle::open(target)?;
-
-        bundle.mount(&vault)?;
-        bundle.summary()
-    };
-
-    Ok(staged(summary, vault, config))
 }
 
 pub fn staged(summary: Summary, vault: Vault, config: &ScannerConfig) -> Staged {
@@ -122,23 +74,6 @@ pub fn staged(summary: Summary, vault: Vault, config: &ScannerConfig) -> Staged 
     }
 
     Staged { summary, vault, cats }
-}
-
-pub fn library() -> PathBuf {
-    PathBuf::from(architecture::SANDBOX)
-}
-
-fn stored_name(path: &Path, taken: &BTreeSet<Box<str>>) -> Box<str> {
-    let base = path.file_name().and_then(|name| name.to_str()).unwrap_or("asset");
-
-    if !taken.contains(base) {
-        return Box::from(base);
-    }
-
-    (1usize..)
-        .map(|copy| format!("{copy}_{base}"))
-        .find(|name| !taken.contains(name.as_str()))
-        .map_or_else(|| Box::from(base), Box::from)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,444 +120,28 @@ fn parse_faults(text: &str) -> Vec<Forgiven> {
         .collect()
 }
 
-pub struct Recording {
-    dir: PathBuf,
-    input: BufWriter<File>,
-    fault: Option<BufWriter<File>>,
-    manifest: BufWriter<File>,
-    kept: BTreeSet<Box<str>>,
-    stored: BTreeMap<PathBuf, Box<str>>,
-    taken: BTreeSet<Box<str>>,
-    written: usize,
-}
-
-impl Recording {
-    pub fn begin(dir: &Path) -> io::Result<Self> {
-        if dir.exists() {
-            let mut stale = Vec::new();
-
-            walk(dir, "", &mut stale)?;
-            stale.par_iter().try_for_each(|(_, path)| fs::remove_file(path))?;
-            fs::remove_dir_all(dir)?;
-        }
-
-        fs::create_dir_all(dir.join(ASSETS))?;
-
-        Ok(Self {
-            dir: dir.to_path_buf(),
-            input: BufWriter::new(File::create(dir.join(INPUT))?),
-            fault: None,
-            manifest: BufWriter::new(File::create(dir.join(MANIFEST))?),
-            kept: BTreeSet::new(),
-            stored: BTreeMap::new(),
-            taken: BTreeSet::new(),
-            written: 0,
-        })
-    }
-
-    pub fn write_save(&self, save: &Save) -> io::Result<()> {
-        let text = serde_json::to_string_pretty(save).map_err(io::Error::other)?;
-
-        fs::write(self.dir.join(SAVE), text)
-    }
-
-    pub fn keep(&mut self, requested: Vec<(Box<str>, PathBuf)>) -> Vec<(Box<str>, io::Error)> {
-        let mut planned: Vec<(Box<str>, Box<str>)> = Vec::new();
-        let mut copies: Vec<(PathBuf, Box<str>)> = Vec::new();
-
-        for (name, path) in requested {
-            if !self.kept.insert(name.clone()) {
-                continue;
-            }
-
-            let stored = match self.stored.get(&path) {
-                Some(stored) => stored.clone(),
-                None => {
-                    let fresh = stored_name(&path, &self.taken);
-
-                    self.taken.insert(fresh.clone());
-                    self.stored.insert(path.clone(), fresh.clone());
-                    copies.push((path, fresh.clone()));
-
-                    fresh
-                }
-            };
-
-            planned.push((name, stored));
-        }
-
-        let assets = self.dir.join(ASSETS);
-        let failed: BTreeMap<Box<str>, io::Error> = copies
-            .par_iter()
-            .filter_map(|(path, stored)| fs::copy(path, assets.join(stored.as_ref())).err().map(|error| (stored.clone(), error)))
-            .collect();
-        let mut problems = Vec::new();
-
-        for (name, stored) in planned {
-            if let Some(error) = failed.get(&stored) {
-                problems.push((name, io::Error::new(error.kind(), error.to_string())));
-
-                continue;
-            }
-
-            if let Err(error) = writeln!(self.manifest, "{name}\t{stored}") {
-                problems.push((name, error));
-            }
-        }
-
-        if let Err(error) = self.manifest.flush() {
-            problems.push((Box::from(MANIFEST), error));
-        }
-
-        problems
-    }
-
-    pub fn frame(&mut self, cues: &[Cue]) -> io::Result<()> {
-        self.written += 1;
-
-        writeln!(self.input, "{}", format_frame(cues))
-    }
-
-    pub fn forgive(&mut self, site: &str, reason: &str) -> io::Result<()> {
-        let frame = self.written.saturating_sub(1);
-        let fault = match self.fault.as_mut() {
-            Some(fault) => fault,
-            None => self.fault.insert(BufWriter::new(File::create(self.dir.join(FAULT))?)),
-        };
-
-        writeln!(fault, "{frame}\t{}\t{}", escape(site), escape(reason))?;
-        fault.flush()
-    }
-
-    pub fn finish(&mut self) -> io::Result<()> {
-        self.input.flush()?;
-
-        if let Some(fault) = self.fault.as_mut() {
-            fault.flush()?;
-        }
-
-        self.manifest.flush()
-    }
-}
-
 fn bundled(name: &str) -> bool {
     name.strip_prefix(ASSETS).is_some_and(|rest| rest.starts_with('/'))
-}
-
-pub fn index(dir: &Path) -> io::Result<BTreeMap<Box<str>, Source>> {
-    let manifest = fs::read_to_string(dir.join(MANIFEST))?;
-    let assets = dir.join(ASSETS);
-
-    Ok(requests(&manifest).map(|(requested, stored)| (Box::from(requested), Source::disk(assets.join(stored)))).collect())
 }
 
 fn requests(manifest: &str) -> impl Iterator<Item = (&str, &str)> {
     manifest.lines().filter_map(|line| line.split_once('\t'))
 }
 
-pub struct Bundle {
-    entries: BTreeMap<Box<str>, Arc<[u8]>>,
-    bytes: u64,
-}
+pub fn unit_file(name: &str) -> Option<u32> {
+    let number = name.strip_prefix(UNIT_FILE_PREFIX).and_then(|rest| rest.strip_suffix(UNIT_FILE_SUFFIX)).or_else(|| {
+        name.strip_prefix(EXPLANATION_PREFIX)?.split_once(LANGUAGE_SEPARATOR).filter(|(_, language)| language.ends_with(UNIT_FILE_SUFFIX)).map(|(number, _)| number)
+    })?;
 
-impl Bundle {
-    pub fn open(bundle: &Path) -> Result<Self, String> {
-        let mut archive = solid::open(bundle).map_err(|error| format!("{} could not be opened: {error}", bundle.display()))?;
-        let mut entries = BTreeMap::new();
-
-        for entry in archive.entries().map_err(|error| format!("{} is not a replay: {error}", bundle.display()))? {
-            let mut entry = entry.map_err(|error| format!("{} is damaged: {error}", bundle.display()))?;
-            let name = entry.path().map_err(|error| format!("{} is damaged: {error}", bundle.display()))?.to_string_lossy().into_owned();
-            let mut bytes = Vec::new();
-
-            entry.read_to_end(&mut bytes).map_err(|error| format!("{name} could not be read from {}: {error}", bundle.display()))?;
-            entries.insert(Box::from(name), Arc::from(bytes));
-        }
-
-        Ok(Self { entries, bytes: fs::metadata(bundle).map_or(0, |meta| meta.len()) })
+    if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
     }
 
-    fn text(&self, name: &str) -> Option<&str> {
-        self.entries.get(name).and_then(|bytes| std::str::from_utf8(bytes).ok())
-    }
-
-    pub fn save(&self) -> Result<Save, String> {
-        let text = self.text(SAVE).ok_or("the replay has no readable save")?;
-
-        serde_json::from_str(text).map_err(|error| format!("the replay save is malformed: {error}"))
-    }
-
-    pub fn input(&self) -> Result<Vec<Vec<Cue>>, String> {
-        parse(self.text(INPUT).ok_or("the replay has no readable input")?)
-    }
-
-    pub fn faults(&self) -> Vec<Forgiven> {
-        self.text(FAULT).map(parse_faults).unwrap_or_default()
-    }
-
-    fn assets(&self) -> impl Iterator<Item = (&str, &Arc<[u8]>)> {
-        self.entries.iter().filter_map(|(name, bytes)| Some((name.strip_prefix(ASSETS)?.strip_prefix('/')?, bytes)))
-    }
-
-    pub fn summary(&self) -> Summary {
-        Summary {
-            save: self.save().ok(),
-            frames: self.text(INPUT).and_then(frames_in),
-            assets: self.assets().count(),
-            bytes: self.bytes,
-        }
-    }
-
-    pub fn mount(&self, vault: &Vault) -> Result<(), String> {
-        let files = self.assets().map(|(name, bytes)| (Box::from(name), Arc::clone(bytes))).collect();
-
-        vault
-            .vfs
-            .create(Memory { key: ASSETS, files })
-            .map(|_| ())
-            .map_err(|error| format!("the replay's files could not be mounted: {error}"))
-    }
-
-    pub fn index(&self) -> BTreeMap<Box<str>, Source> {
-        let stored: BTreeMap<&str, &Arc<[u8]>> = self.assets().collect();
-
-        self.text(MANIFEST)
-            .map(|manifest| {
-                requests(manifest)
-                    .filter_map(|(requested, name)| Some((Box::from(requested), Source::memory(Path::new(ASSETS).join(name), Arc::clone(stored.get(name)?)))))
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-}
-
-pub fn read_save(dir: &Path) -> Result<Save, String> {
-    let text = fs::read_to_string(dir.join(SAVE)).map_err(|error| format!("the replay has no readable save: {error}"))?;
-
-    serde_json::from_str(&text).map_err(|error| format!("the replay save is malformed: {error}"))
-}
-
-pub fn read_faults(dir: &Path) -> Vec<Forgiven> {
-    fs::read_to_string(dir.join(FAULT)).map(|text| parse_faults(&text)).unwrap_or_default()
-}
-
-pub fn read_input(dir: &Path) -> Result<Vec<Vec<Cue>>, String> {
-    let text = fs::read_to_string(dir.join(INPUT)).map_err(|error| format!("the replay has no readable input: {error}"))?;
-
-    parse(&text)
-}
-
-fn walk(dir: &Path, prefix: &str, found: &mut Vec<(String, PathBuf)>) -> io::Result<()> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
-            continue;
-        };
-        let named = if prefix.is_empty() { name } else { format!("{prefix}/{name}") };
-
-        if path.is_dir() {
-            walk(&path, &named, found)?;
-        } else {
-            found.push((named, path));
-        }
-    }
-
-    Ok(())
-}
-
-pub fn next_bundle(library: &Path) -> PathBuf {
-    (1usize..)
-        .map(|number| library.join(format!("{BUNDLE_STEM}{number}.{EXTENSION}")))
-        .find(|path| !path.exists())
-        .unwrap_or_else(|| library.join(format!("{BUNDLE_STEM}.{EXTENSION}")))
-}
-
-pub fn export(bundle: &Path) -> Result<PathBuf, String> {
-    let folder = Path::new(EXPORTS);
-    let stem = bundle.file_stem().map_or_else(|| BUNDLE_STEM.to_owned(), |stem| stem.to_string_lossy().into_owned());
-    let out = (0usize..)
-        .map(|copy| if copy == 0 { format!("{stem}.{EXTENSION}") } else { format!("{stem}{copy}.{EXTENSION}") })
-        .map(|name| folder.join(name))
-        .find(|path| !path.exists())
-        .unwrap_or_else(|| folder.join(format!("{stem}.{EXTENSION}")));
-
-    fs::create_dir_all(folder).map_err(|error| format!("the exports folder could not be created: {error}"))?;
-    fs::copy(bundle, &out).map_err(|error| format!("{} could not be copied: {error}", bundle.display()))?;
-
-    Ok(out)
+    number.parse::<u32>().ok()?.checked_sub(1)
 }
 
 pub fn clean_name(name: &str) -> String {
     name.chars().filter(|c| !FORBIDDEN.contains(c)).collect()
-}
-
-pub fn rename(bundle: &Path, name: &str) -> Result<Option<PathBuf>, String> {
-    let clean = clean_name(name);
-    let clean = clean.trim();
-    let current = bundle.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
-
-    if clean.is_empty() || clean == current {
-        return Ok(None);
-    }
-
-    let parent = bundle.parent().ok_or("the replay has no folder")?;
-    let target = parent.join(format!("{clean}.{EXTENSION}"));
-
-    if !current.eq_ignore_ascii_case(clean) && target.exists() {
-        return Ok(None);
-    }
-
-    fs::rename(bundle, &target).map_err(|error| format!("{} could not be renamed: {error}", bundle.display()))?;
-
-    Ok(Some(target))
-}
-
-pub fn delete(bundle: &Path) -> Result<(), String> {
-    fs::remove_file(bundle).map_err(|error| format!("{} could not be deleted: {error}", bundle.display()))
-}
-
-pub fn pack(dir: &Path, out: &Path, emit: impl Fn(f32), abort: &AtomicBool) -> JobOutcome {
-    let work = match Workspace::claim(STAGING) {
-        Ok(work) => work,
-        Err(error) => {
-            warn!("Replay could not be saved: the work folder could not be created: {error}");
-
-            return JobOutcome::Failed(format!("the work folder could not be created: {error}"));
-        }
-    };
-    let staging = work.path().join(out.file_name().unwrap_or_default());
-
-    match pack_into(dir, &staging, &emit, abort).and_then(|packed| if packed { settle(&staging, out).map(|()| true) } else { Ok(false) }) {
-        Ok(true) => JobOutcome::Completed,
-        Ok(false) => JobOutcome::Aborted,
-        Err(reason) => {
-            warn!("Replay could not be saved to {}: {reason}", out.display());
-
-            JobOutcome::Failed(reason)
-        }
-    }
-}
-
-fn settle(staging: &Path, out: &Path) -> Result<(), String> {
-    if !staging.exists() {
-        return Ok(());
-    }
-
-    if let Some(parent) = out.parent() {
-        fs::create_dir_all(parent).map_err(|error| format!("the replay folder could not be created: {error}"))?;
-    }
-
-    if fs::rename(staging, out).is_ok() {
-        return Ok(());
-    }
-
-    fs::copy(staging, out).map_err(|error| format!("the replay could not be moved into place: {error}"))?;
-    fs::remove_file(staging).map_err(|error| format!("{} could not be cleared: {error}", staging.display()))
-}
-
-fn pack_into(dir: &Path, out: &Path, emit: &dyn Fn(f32), abort: &AtomicBool) -> Result<bool, String> {
-    let mut files = Vec::new();
-
-    walk(dir, "", &mut files).map_err(|error| format!("the latest battle could not be read: {error}"))?;
-
-    if !files.iter().any(|(name, _)| name == SAVE) || !files.iter().any(|(name, _)| name == INPUT) {
-        return Err("the latest battle has no save or input to keep".to_owned());
-    }
-
-    if let Some(parent) = out.parent() {
-        fs::create_dir_all(parent).map_err(|error| format!("the replay folder could not be created: {error}"))?;
-    }
-
-    let rank = |name: &str| [SAVE, INPUT, MANIFEST].iter().position(|head| *head == name).unwrap_or(usize::MAX);
-
-    files.sort_by(|(left, _), (right, _)| rank(left).cmp(&rank(right)).then_with(|| left.cmp(right)));
-
-    let mut writer = solid::Writer::create(out, solid::DEFAULT_LEVEL).map_err(|error| format!("the replay file could not be created: {error}"))?;
-
-    let sizes: Vec<u64> = files.iter().map(|(_, path)| fs::metadata(path).map_or(0, |meta| meta.len())).collect();
-    let total = sizes.iter().sum::<u64>().max(1) as f64;
-    let mut packed = 0u64;
-
-    for ((name, path), size) in files.iter().zip(&sizes) {
-        if abort.load(Ordering::Relaxed) {
-            return Ok(false);
-        }
-
-        writer.add(name, path).map_err(|error| format!("{name} could not be added: {error}"))?;
-        packed += size;
-        emit((packed as f64 / total) as f32);
-    }
-
-    writer.finish().map_err(|error| format!("the replay file could not be finished: {error}"))?;
-
-    Ok(!abort.load(Ordering::Relaxed))
-}
-
-pub fn restamp(target: &Path, version: &str) -> Result<(), String> {
-    let restamped = if target.is_dir() { restamp_dir(target, version) } else { restamp_bundle(target, version) };
-
-    if let Err(reason) = &restamped {
-        warn!("Replay {} could not be restamped: {reason}", target.display());
-    }
-
-    restamped
-}
-
-fn stamped(text: &str, version: &str) -> Result<String, String> {
-    let mut save: Save = serde_json::from_str(text).map_err(|error| format!("the replay save is malformed: {error}"))?;
-
-    save.version = version.to_owned();
-
-    serde_json::to_string_pretty(&save).map_err(|error| format!("the replay save could not be written: {error}"))
-}
-
-fn restamp_dir(dir: &Path, version: &str) -> Result<(), String> {
-    let path = dir.join(SAVE);
-    let text = fs::read_to_string(&path).map_err(|error| format!("the replay has no readable save: {error}"))?;
-
-    fs::write(&path, stamped(&text, version)?).map_err(|error| format!("the replay save could not be written: {error}"))
-}
-
-fn restamp_bundle(bundle: &Path, version: &str) -> Result<(), String> {
-    let partial = bundle.with_extension(format!("{EXTENSION}.part"));
-    let rewritten = rewrite_bundle(bundle, &partial, version);
-
-    if rewritten.is_err() && partial.exists() {
-        let _ = fs::remove_file(&partial);
-    }
-
-    rewritten?;
-
-    fs::rename(&partial, bundle).map_err(|error| format!("{} could not be replaced: {error}", bundle.display()))
-}
-
-fn rewrite_bundle(bundle: &Path, partial: &Path, version: &str) -> Result<(), String> {
-    let mut archive = solid::open(bundle).map_err(|error| format!("{} could not be opened: {error}", bundle.display()))?;
-    let mut writer = solid::Writer::create(partial, solid::DEFAULT_LEVEL).map_err(|error| format!("the replay file could not be created: {error}"))?;
-    let entries = archive.entries().map_err(|error| format!("{} is not a replay: {error}", bundle.display()))?;
-
-    for entry in entries {
-        let mut entry = entry.map_err(|error| format!("{} is damaged: {error}", bundle.display()))?;
-        let name = entry.path().map_err(|error| format!("{} is damaged: {error}", bundle.display()))?.to_string_lossy().into_owned();
-
-        if name == SAVE {
-            let mut text = String::new();
-
-            entry.read_to_string(&mut text).map_err(|error| format!("the replay save could not be read: {error}"))?;
-
-            let text = stamped(&text, version)?;
-
-            writer.add_stream(&name, text.len() as u64, text.as_bytes())
-        } else {
-            let size = entry.size();
-
-            writer.add_stream(&name, size, &mut entry)
-        }
-        .map_err(|error| format!("{name} could not be rewritten: {error}"))?;
-    }
-
-    writer.finish().map_err(|error| format!("the replay file could not be finished: {error}"))
 }
 
 #[derive(Clone, Debug, Default)]
@@ -635,96 +154,6 @@ pub struct Summary {
 
 fn frames_in(text: &str) -> Option<usize> {
     parse(text).ok().map(|frames| frames.len())
-}
-
-pub fn inspect_dir(dir: &Path) -> Summary {
-    let mut files = Vec::new();
-
-    if walk(dir, "", &mut files).is_err() {
-        return Summary::default();
-    }
-
-    let bytes = files.iter().filter_map(|(_, path)| fs::metadata(path).ok()).map(|meta| meta.len()).sum();
-    let assets = files.iter().filter(|(name, _)| bundled(name)).count();
-
-    Summary {
-        save: read_save(dir).ok(),
-        frames: fs::read_to_string(dir.join(INPUT)).ok().as_deref().and_then(frames_in),
-        assets,
-        bytes,
-    }
-}
-
-struct Head {
-    save: Option<String>,
-    input: Option<String>,
-    assets: usize,
-}
-
-fn read_head(bundle: &Path, whole: bool) -> Option<Head> {
-    let mut archive = solid::open(bundle).ok()?;
-    let mut head = Head { save: None, input: None, assets: 0 };
-
-    for entry in archive.entries().ok()? {
-        let mut entry = entry.ok()?;
-        let name = entry.path().ok()?.to_string_lossy().into_owned();
-
-        match name.as_str() {
-            SAVE | INPUT => {
-                let mut text = String::new();
-
-                entry.read_to_string(&mut text).ok()?;
-
-                if name == SAVE {
-                    head.save = Some(text);
-                } else {
-                    head.input = Some(text);
-                }
-            }
-            _ if bundled(&name) => head.assets += 1,
-            _ => (),
-        }
-
-        if !whole && head.save.is_some() && head.input.is_some() {
-            break;
-        }
-    }
-
-    Some(head)
-}
-
-pub fn inspect_bundle(bundle: &Path) -> Summary {
-    let bytes = fs::metadata(bundle).map_or(0, |meta| meta.len());
-    let Some(head) = read_head(bundle, true) else {
-        return Summary { bytes, ..Summary::default() };
-    };
-
-    Summary {
-        save: head.save.and_then(|text| serde_json::from_str(&text).ok()),
-        frames: head.input.as_deref().and_then(frames_in),
-        assets: head.assets,
-        bytes,
-    }
-}
-
-fn playable(bundle: &Path) -> bool {
-    solid::sniff(bundle) && read_head(bundle, false).is_some_and(|head| head.save.is_some() && head.input.is_some())
-}
-
-pub fn list(library: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = fs::read_dir(library) else {
-        return Vec::new();
-    };
-
-    let mut found: Vec<PathBuf> = entries
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case(EXTENSION)))
-        .filter(|path| playable(path))
-        .collect();
-
-    found.sort_by_key(|path| path.file_name().map(|name| name.to_string_lossy().to_lowercase()));
-    found
 }
 
 #[cfg(test)]
@@ -749,5 +178,15 @@ mod tests {
 
         assert!(save.setup.tutorial.battle_cleared && save.setup.tutorial.shop_seen);
         assert_eq!(save.setup.stage.dungeon_stage, None);
+    }
+
+    // Only a unit's own stats and description count as unit files; a hybrid replay falls back to nothing else.
+    #[test]
+    fn unit_files_are_numbered_from_one() {
+        assert_eq!(unit_file("unit001.csv"), Some(0));
+        assert_eq!(unit_file("Unit_Explanation45_en.csv"), Some(44));
+        assert_eq!(unit_file("unit000.csv"), None);
+        assert_eq!(unit_file("unitbuy.csv"), None);
+        assert_eq!(unit_file("stage00.csv"), None);
     }
 }

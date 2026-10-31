@@ -10,8 +10,11 @@ use kokoro::common::formats::SpriteSheet;
 use kokoro::systems::statblock::{self, Fonts, StatblockData};
 
 use crate::platform::{Bytes, Fault, Platform, Script};
+use crate::systems::library::Library;
 
 const FEEDBACK_MS: u32 = 2000;
+const ARRIVAL_POLL_MS: u32 = 50;
+const ARRIVAL_LIMIT_MS: u32 = 10_000;
 
 pub(crate) struct Statblock {
     pub(crate) data: StatblockData,
@@ -98,6 +101,15 @@ pub(crate) fn class(phase: Phase) -> &'static str {
     }
 }
 
+async fn arrived(platform: &Platform, library: Library) {
+    let mut waited = 0;
+
+    while library.waiting() && waited < ARRIVAL_LIMIT_MS {
+        platform.host().sleep(ARRIVAL_POLL_MS).await;
+        waited += ARRIVAL_POLL_MS;
+    }
+}
+
 pub(crate) async fn settle(platform: Platform, mut phase: Signal<Phase>, ok: bool) {
     phase.set(Phase::Done(ok));
     platform.host().sleep(FEEDBACK_MS).await;
@@ -111,6 +123,7 @@ pub(crate) async fn settle(platform: Platform, mut phase: Signal<Phase>, ok: boo
 pub(crate) fn ExportButtons(request: Callback<(), Option<Statblock>>) -> Element {
     let platform = use_context::<Platform>();
     let typefaces = use_context::<Typefaces>();
+    let library = use_context::<Library>();
     let copy_phase = use_signal(|| Phase::Idle);
     let save_phase = use_signal(|| Phase::Idle);
     let can_copy = platform.host().can_copy();
@@ -124,7 +137,7 @@ pub(crate) fn ExportButtons(request: Callback<(), Option<Statblock>>) -> Element
             return;
         }
 
-        let Some(request) = request.call(()) else {
+        let Some(first) = request.call(()) else {
             spawn(settle(platform, phase, false));
             return;
         };
@@ -132,6 +145,13 @@ pub(crate) fn ExportButtons(request: Callback<(), Option<Statblock>>) -> Element
         phase.set(Phase::Busy);
 
         spawn(async move {
+            let request = match library.waiting() {
+                true => {
+                    arrived(&platform, library).await;
+                    request.call(()).unwrap_or(first)
+                }
+                false => first,
+            };
             let outcome = async {
                 let set = fonts(&platform, &typefaces).await?;
                 let image = statblock::build_statblock_image(&request.priority, &request.sheets, request.data.clone(), &set.fonts()).map_err(Fault)?;

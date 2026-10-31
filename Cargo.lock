@@ -3864,6 +3864,7 @@ dependencies = [
  "serde_ignored",
  "serde_json",
  "sha2",
+ "structured-zstd",
  "tar",
  "thiserror 2.0.20",
  "tracing",
@@ -4427,6 +4428,18 @@ name = "mutate_once"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13d2233c9842d08cfe13f9eac96e207ca6a2ea10b80259ebe8ad0268be27d2af"
+
+[[package]]
+name = "muxide"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dfe6cfed2ad65a109cc7e943056a043a290c4d6ad7faff05fdcbced93048fe5"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
 
 [[package]]
 name = "naga"
@@ -6963,6 +6976,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6637bab7722d379c8b41ba849228d680cc12d0a45ba1fa2b48f2a30577a06731"
 
 [[package]]
+name = "structured-zstd"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "973e3e10c087c398d42e55fdf011d2139cb443dfad415f6dc4e415dbe5c695c6"
+dependencies = [
+ "fastrand",
+ "twox-hash",
+]
+
+[[package]]
 name = "subsecond"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8135,6 +8158,7 @@ dependencies = [
  "image",
  "js-sys",
  "kokoro",
+ "muxide",
  "omote",
  "postcard",
  "ruzstd",

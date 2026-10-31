@@ -6,6 +6,7 @@ use kokoro::domains::enemy::scanner::EnemyEntry;
 use kokoro::domains::settings::ScannerConfig;
 use kokoro::domains::stage::scanner::StageBundle;
 use omote::platform::battle::{BattleCommand, BattleEvent};
+use omote::platform::mods::{ModCommand, ModState};
 
 pub(crate) const HELLO: u32 = 0;
 
@@ -55,6 +56,7 @@ pub(crate) enum Request {
     Cats(ScannerConfig),
     Enemies(ScannerConfig),
     Stages(ScannerConfig),
+    Mods(ModCommand),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -74,6 +76,7 @@ pub(crate) enum Reply {
     Cats(Vec<CatEntry>),
     Enemies(Vec<EnemyEntry>),
     Stages(Box<StageBundle>),
+    Mods(ModState),
     Progress { done: usize, total: usize },
     Phase { label: Box<str>, done: usize, total: usize },
     Battle(BattleEvent),

@@ -8,6 +8,7 @@ const REPO: &str = "https://github.com/omochikaeri15/battle-cats-complete";
 const SITE: &str = "https://omochikaeri.app";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const COPIED: &str = "Link Copied!";
+const DISCLAIMER: &str = "Not affiliated with PONOS Corp.";
 const COPIED_MS: u32 = 2000;
 const TIP_GAP: f64 = 4.0;
 
@@ -55,7 +56,11 @@ pub(crate) fn Home() -> Element {
                     Link { to: Route::Sandbox {}, class: "btn btn-primary home-nav", "Sandbox" }
                     Link { to: Route::Cats { segments: Vec::new() }, class: "btn btn-primary home-nav", "Cats" }
                     Link { to: Route::Enemies { segments: Vec::new() }, class: "btn btn-primary home-nav", "Enemies" }
-                    Link { to: Route::Stages {}, class: "btn btn-primary home-nav", "Stages" }
+                    Link { to: Route::Stages { segments: Vec::new() }, class: "btn btn-primary home-nav", "Stages" }
+                }
+                div { class: "home-group", "Data" }
+                div { class: "home-row",
+                    Link { to: Route::Mods {}, class: "btn btn-primary home-nav", "Mods" }
                 }
                 div { class: "home-group", "Other" }
                 div { class: "home-row",
@@ -63,16 +68,20 @@ pub(crate) fn Home() -> Element {
                 }
             }
             div { class: "home-footer",
-                a { class: "btn btn-text", href: "{REPO}/releases/tag/v{VERSION}", target: "_blank", rel: "noopener", "v{VERSION}" }
-                span { class: "home-sep", "|" }
-                a { class: "btn btn-text", href: "{REPO}/releases", target: "_blank", rel: "noopener", "Changelogs" }
-                span { class: "home-spacer" }
-                button { class: "btn btn-text", onmounted: move |event| anchor.set(Some(event)), onclick: share, "Share" }
-                if let Some((x, y)) = copied() {
-                    span { class: "tip-body bordered-box", style: "left: {x}px; top: {y}px;", "{COPIED}" }
+                div { class: "home-links home-links-left",
+                    a { class: "btn btn-text", href: "{REPO}/releases/tag/v{VERSION}", target: "_blank", rel: "noopener", "v{VERSION}" }
+                    span { class: "home-sep", "|" }
+                    a { class: "btn btn-text", href: "{REPO}/releases", target: "_blank", rel: "noopener", "Changelogs" }
                 }
-                span { class: "home-sep", "|" }
-                a { class: "btn btn-text", href: REPO, target: "_blank", rel: "noopener", "GitHub" }
+                div { class: "home-disclaimer weak", "{DISCLAIMER}" }
+                div { class: "home-links home-links-right",
+                    button { class: "btn btn-text", onmounted: move |event| anchor.set(Some(event)), onclick: share, "Share" }
+                    if let Some((x, y)) = copied() {
+                        span { class: "tip-body bordered-box", style: "left: {x}px; top: {y}px;", "{COPIED}" }
+                    }
+                    span { class: "home-sep", "|" }
+                    a { class: "btn btn-text", href: REPO, target: "_blank", rel: "noopener", "GitHub" }
+                }
             }
         }
     }

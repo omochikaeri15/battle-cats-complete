@@ -91,17 +91,66 @@ fn stripped(name: &str) -> Option<(&str, &str)> {
     APP_LANGUAGES.iter().any(|&(language, _)| language == code).then_some((head, extension))
 }
 
+#[derive(Default)]
+pub struct Ledger {
+    armed: bool,
+    seen: BTreeSet<Box<str>>,
+    fresh: Vec<(Box<str>, Box<str>)>,
+}
+
+impl Ledger {
+    pub fn arm(&mut self) {
+        self.armed = true;
+        self.seen.clear();
+        self.fresh.clear();
+    }
+
+    pub fn disarm(&mut self) {
+        self.armed = false;
+        self.seen.clear();
+        self.fresh.clear();
+    }
+
+    pub fn note(&mut self, name: &str, resolved: &str) {
+        if self.armed && !self.seen.contains(name) {
+            self.seen.insert(Box::from(name));
+            self.fresh.push((Box::from(name), Box::from(resolved)));
+        }
+    }
+
+    fn wants(&self, name: &str) -> bool {
+        self.armed && !self.seen.contains(name)
+    }
+
+    pub fn drain(&mut self) -> Vec<(Box<str>, Box<str>)> {
+        std::mem::take(&mut self.fresh)
+    }
+}
+
+pub type SharedLedger = Rc<RefCell<Ledger>>;
+
 pub struct Assets {
     files: Rc<dyn Files>,
     sheets: Rc<RefCell<SheetCache>>,
+    ledger: SharedLedger,
     priority: Vec<String>,
     aliases: RefCell<BTreeMap<Box<str>, Option<Box<str>>>>,
     missing: Vec<Box<str>>,
 }
 
 impl Assets {
-    pub fn new(files: Rc<dyn Files>, sheets: Rc<RefCell<SheetCache>>, priority: &[String]) -> Self {
-        Self { files, sheets, priority: priority.to_vec(), aliases: RefCell::new(BTreeMap::new()), missing: Vec::new() }
+    pub fn new(files: Rc<dyn Files>, sheets: Rc<RefCell<SheetCache>>, ledger: SharedLedger, priority: &[String]) -> Self {
+        Self { files, sheets, ledger, priority: priority.to_vec(), aliases: RefCell::new(BTreeMap::new()), missing: Vec::new() }
+    }
+
+    fn note(&self, name: &str) {
+        if !self.ledger.borrow().wants(name) {
+            return;
+        }
+
+        if let Some(resolved) = self.resolve(name) {
+            self.ledger.borrow_mut().note(name, &resolved);
+        }
     }
 
     pub fn limits(&self) -> HostLimits {
@@ -275,6 +324,10 @@ impl Assets {
             return own;
         }
 
+        for variant in borrowed {
+            self.note(variant);
+        }
+
         if let Some(closer) = closer {
             filled.push(b'\n');
             filled.extend_from_slice(closer);
@@ -299,12 +352,17 @@ impl Assets {
             let Some(bytes) = self.plain(&variant) else {
                 continue;
             };
+            let before = surplus.len();
 
             for row in table_rows(&bytes).0 {
                 if !row.is_empty() && held.insert(row_key(row).to_vec()) {
                     surplus.push(b'\n');
                     surplus.extend_from_slice(row);
                 }
+            }
+
+            if surplus.len() > before {
+                self.note(&variant);
             }
         }
 
@@ -327,7 +385,11 @@ impl Assets {
 
     fn table(&self, name: &str) -> Option<Vec<u8>> {
         if let Some((variant, _)) = self.fuller(name) {
-            return self.files.read(&format!("{variant}{CUT_SUFFIX}"));
+            let fuller = format!("{variant}{CUT_SUFFIX}");
+
+            self.note(&fuller);
+
+            return self.files.read(&fuller);
         }
 
         self.plain(name).map(|own| self.backfill(name, own))
@@ -357,7 +419,11 @@ impl Assets {
 
         let (width, height) = (decoded.width(), decoded.height());
         let patch = name.strip_suffix(SHEET_SUFFIX).and_then(|stem| self.fuller(&format!("{stem}{CUT_SUFFIX}"))).and_then(|(variant, extra)| {
-            let bytes = self.files.read(&format!("{variant}{SHEET_SUFFIX}"))?;
+            let fuller = format!("{variant}{SHEET_SUFFIX}");
+
+            self.note(&fuller);
+
+            let bytes = self.files.read(&fuller)?;
             let donor = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png).ok()?.to_rgba8();
 
             (donor.width() == width && donor.height() == height).then_some((donor, extra))
@@ -387,6 +453,9 @@ impl Assets {
 impl AssetSource for Assets {
     fn open(&mut self, name: &[u8], _packed: u8, _encrypted: u8) -> Option<Vec<u8>> {
         let name = std::str::from_utf8(name).ok()?;
+
+        self.note(name);
+
         let found = self.table(name);
 
         if found.is_none() && !self.missing.iter().any(|seen| seen.as_ref() == name) {
@@ -399,6 +468,9 @@ impl AssetSource for Assets {
 
     fn load_png(&mut self, name: &[u8]) -> Option<SheetImage> {
         let name = std::str::from_utf8(name).ok()?;
+
+        self.note(name);
+
         let sheet = self.decode(name)?;
 
         Some(SheetImage { width: sheet.width as i32, height: sheet.height as i32, whole: 0 })
@@ -406,6 +478,7 @@ impl AssetSource for Assets {
 
     fn upload(&mut self, name: &[u8]) {
         if let Ok(name) = std::str::from_utf8(name) {
+            self.note(name);
             self.decode(name);
         }
     }

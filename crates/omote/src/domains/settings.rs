@@ -2,22 +2,23 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use dioxus::prelude::*;
+use tracing::warn;
 
 use codex::chapter::treasure::ARC_SLOTS;
 use kokoro::domains::cat::files as cat_files;
 use kokoro::domains::sandbox::keybind::Bind;
 use kokoro::domains::settings::Settings as GameSettings;
-use kokoro::domains::settings::{SidebarBehavior, lang};
+use kokoro::domains::settings::{ReplaySource, SidebarBehavior, lang};
 use kokoro::systems::treasure::{ARCS, Catalog, Config as TreasureConfig, FULL_PERCENT};
 
 use crate::app::remember_settings;
-use crate::platform::Platform;
+use crate::platform::{LOGGING_KEY, LOGGING_ON, Platform};
 use crate::systems::animation::{self, Rigs};
 use crate::systems::catalog;
 use crate::systems::context::{self, Shared};
 use crate::systems::images;
 use crate::systems::library::Library;
-use crate::widget::Toggle;
+use crate::widget::{Tip, Toggle};
 
 const CHAPTER_TITLES: [[&str; 3]; 3] = [
     ["Empire of Cats Ch. 1", "Empire of Cats Ch. 2", "Empire of Cats Ch. 3"],
@@ -73,9 +74,49 @@ enum Tab {
     Enemies,
     Stages,
     Sandbox,
+    About,
 }
 
-const TABS: [(Tab, &str); 5] = [(Tab::General, "General"), (Tab::Cats, "Cats"), (Tab::Enemies, "Enemies"), (Tab::Stages, "Stages"), (Tab::Sandbox, "Sandbox")];
+const TABS: [(Tab, &str); 6] = [(Tab::General, "General"), (Tab::Cats, "Cats"), (Tab::Enemies, "Enemies"), (Tab::Stages, "Stages"), (Tab::Sandbox, "Sandbox"), (Tab::About, "About")];
+const FULLSCREEN_HINT: &str = "Fills the whole screen with the app\nF11 switches this at any time";
+const LOGGING_HINT: &str = "Enables logs for easy debugging\nDisable to improve performance\nDevs may refuse to debug without logs";
+const LOGGING_OFF: &str = "off";
+const RELOAD_REQUIRED: &str = "!! Reload Required !!";
+const LOGGING_DETAIL: &str = "The Logging change applies the next time the page loads";
+
+#[derive(Clone, Copy)]
+pub(crate) struct Logging {
+    launched: bool,
+    chosen: Signal<bool>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Fullscreen(Signal<bool>);
+
+pub(crate) fn provide_fullscreen(platform: &Platform) -> Fullscreen {
+    let held = use_context_provider(|| Fullscreen(Signal::new(platform.host().fullscreen())));
+    let watcher = platform.clone();
+
+    use_hook(move || {
+        let shown = held.0;
+
+        watcher.host().fullscreen_watch(Box::new(move |on| {
+            let mut shown = shown;
+
+            shown.set(on);
+        }));
+    });
+
+    held
+}
+
+pub(crate) fn provide_logging(platform: &Platform) -> Logging {
+    let launched = platform.host().recall(LOGGING_KEY).as_deref() == Some(LOGGING_ON);
+
+    use_context_provider(|| Logging { launched, chosen: Signal::new(launched) })
+}
+const LICENSES: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../kokoro/assets/licenses.txt"));
+const REPLAY_SOURCE_HINT: &str = "Hybrid plays a replay with the game files it was recorded with and your own files for anything it did not keep, BCV uses the recorded files only, VFS uses your own game files only";
 const KEY_PROMPT: &str = "Press a key...";
 const KEY_UNBOUND: &str = "Unbound";
 const SPACE: &str = " ";
@@ -112,7 +153,7 @@ fn typable_percent(entry: &str) -> bool {
     entry.len() <= ENTRY_DIGITS && entry.chars().all(|glyph| glyph.is_ascii_digit() || glyph == '%')
 }
 
-fn apply(platform: &Platform, mut settings: Signal<GameSettings>, change: impl FnOnce(&mut GameSettings)) {
+pub(crate) fn apply(platform: &Platform, mut settings: Signal<GameSettings>, change: impl FnOnce(&mut GameSettings)) {
     change(&mut settings.write());
     remember_settings(platform, &settings.read());
 }
@@ -124,9 +165,17 @@ pub(crate) fn Settings() -> Element {
     let globals = context::globals();
     let mut tab = use_signal(Tab::default);
     let current = tab();
+    let logging = use_context::<Logging>();
+    let reload = (logging.chosen)() != logging.launched;
 
     rsx! {
         div { class: "settings-page",
+            div { class: "toast-slot",
+                div { class: if reload { "toast notice-banner" } else { "toast notice-banner hidden" },
+                    div { "{RELOAD_REQUIRED}" }
+                    div { class: "detail", "{LOGGING_DETAIL}" }
+                }
+            }
             div { class: "settings-tabs",
                 for (which, label) in TABS {
                     button {
@@ -136,13 +185,14 @@ pub(crate) fn Settings() -> Element {
                     }
                 }
             }
-            div { class: "settings-body scroll",
+            div { class: if current == Tab::About { "settings-body about-body" } else { "settings-body scroll" },
                 match current {
                     Tab::General => rsx! { General { platform: platform.clone(), settings, globals } },
                     Tab::Cats => rsx! { Cats { platform: platform.clone(), settings } },
                     Tab::Enemies => rsx! { Enemies { platform: platform.clone(), settings } },
                     Tab::Stages => rsx! { Stages { platform: platform.clone(), settings } },
                     Tab::Sandbox => rsx! { SandboxTab { platform: platform.clone(), settings } },
+                    Tab::About => rsx! { About {} },
                 }
             }
         }
@@ -161,6 +211,21 @@ fn relocalize(platform: &Platform, settings: Signal<GameSettings>, library: Libr
 }
 
 #[component]
+fn About() -> Element {
+    rsx! {
+        div { class: "about",
+            div { class: "about-header",
+                div { class: "about-title", "About Battle Cats Complete" }
+                div { "A high-performance Battle Cats toolkit built by Omochi" }
+                div { class: "about-subtitle", "Open Source & Legal Info" }
+            }
+            div { class: "rule" }
+            div { class: "about-legal scroll", "{LICENSES}" }
+        }
+    }
+}
+
+#[component]
 fn General(platform: Platform, settings: Signal<GameSettings>, globals: Option<Shared>) -> Element {
     let library = use_context::<Library>();
     let catalogs = catalog::catalogs();
@@ -168,6 +233,9 @@ fn General(platform: Platform, settings: Signal<GameSettings>, globals: Option<S
     let rigs = animation::rigs();
     let mut drag = use_signal(|| Drag::Idle);
     let mut working: Signal<Option<Vec<String>>> = use_signal(|| None);
+    let fullscreen = (use_context::<Fullscreen>().0)();
+    let mut logged = use_context::<Logging>().chosen;
+    let logging = logged();
     let held = settings.read();
     let saved = held.general.language_priority.clone();
     let priority = working.read().clone().unwrap_or_else(|| saved.clone());
@@ -217,6 +285,36 @@ fn General(platform: Platform, settings: Signal<GameSettings>, globals: Option<S
             }
         }
         div { class: "settings-sections",
+            div { class: "settings-section",
+                div { class: "settings-heading", "System" }
+                Toggle {
+                    value: fullscreen,
+                    label: "Fullscreen",
+                    hint: FULLSCREEN_HINT.to_owned(),
+                    onchange: {
+                        let platform = platform.clone();
+
+                        move |value: bool| {
+                            if let Err(fault) = platform.host().set_fullscreen(value) {
+                                warn!("Fullscreen could not be switched: {fault}");
+                            }
+                        }
+                    },
+                }
+                Toggle {
+                    value: logging,
+                    label: "Enable Logging",
+                    hint: LOGGING_HINT.to_owned(),
+                    onchange: {
+                        let platform = platform.clone();
+
+                        move |value: bool| {
+                            platform.host().remember(LOGGING_KEY, if value { LOGGING_ON } else { LOGGING_OFF });
+                            logged.set(value);
+                        }
+                    },
+                }
+            }
             div { class: "settings-section",
                 div { class: "settings-heading", "Language Priority" }
                 button { class: "btn btn-danger btn-status", onclick: move |_| relocalize(&for_reset, settings, library, catalogs, &pictures_reset, &rigs_reset, lang::default_priority()), "Set to Default" }
@@ -517,6 +615,8 @@ fn Enemies(platform: Platform, settings: Signal<GameSettings>) -> Element {
 fn SandboxTab(platform: Platform, settings: Signal<GameSettings>) -> Element {
     let held = settings.read();
     let banner_form = held.sandbox.banner_form;
+    let disable_replays = held.sandbox.disable_replays;
+    let replay_source = held.sandbox.replay_source;
     let keys = held.sandbox.keys.clone();
 
     drop(held);
@@ -526,6 +626,8 @@ fn SandboxTab(platform: Platform, settings: Signal<GameSettings>) -> Element {
     let form_platform = platform.clone();
     let reset_platform = platform.clone();
     let capture_platform = platform.clone();
+    let replay_platform = platform.clone();
+    let source_platform = platform.clone();
 
     rsx! {
         div { class: "settings-sections",
@@ -543,6 +645,28 @@ fn SandboxTab(platform: Platform, settings: Signal<GameSettings>) -> Element {
                             option { value: "{cat_files::form_name(form)}", selected: form == banner_form, "{cat_files::form_name(form)}" }
                         }
                     }
+                }
+            }
+            div { class: "settings-section",
+                div { class: "settings-heading", "Replay" }
+                label { class: "setting-row inline",
+                    Tip { text: REPLAY_SOURCE_HINT, span { "Replay Source" } }
+                    select { class: "combo", value: "{replay_source}",
+                        onchange: move |event| {
+                            if let Some(picked) = ReplaySource::ALL.into_iter().find(|source| source.to_string() == event.value()) {
+                                apply(&source_platform, settings, |next| next.sandbox.replay_source = picked);
+                            }
+                        },
+                        for source in ReplaySource::ALL {
+                            option { value: "{source}", selected: source == replay_source, "{source}" }
+                        }
+                    }
+                }
+                Toggle {
+                    value: disable_replays,
+                    label: "Disable Replays",
+                    hint: "Disables the replay set-up path\nMay improve battle start speeds",
+                    onchange: move |value| apply(&replay_platform, settings, |next| next.sandbox.disable_replays = value),
                 }
             }
             div { class: "settings-section",

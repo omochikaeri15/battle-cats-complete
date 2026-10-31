@@ -289,6 +289,11 @@ fn variables(theme: AppTheme) -> String {
     block
 }
 
+const RESTING: &str = ".toast-slot { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: center; overflow: hidden; pointer-events: none; z-index: 30; }
+.toast { pointer-events: auto; text-align: center; font-size: 13px; padding: calc(var(--toast-overhang) + 7px) 7px 7px; margin-top: calc(-1 * var(--toast-overhang)); transition: transform var(--slide-ms) ease-out; }
+.toast.hidden { transform: translateY(-100%); }
+";
+
 pub fn stylesheet() -> String {
     let mut css = String::new();
 
@@ -330,5 +335,6 @@ pub fn stylesheet() -> String {
     }
 
     css.push_str("}\n");
+    css.push_str(RESTING);
     css
 }

@@ -1,13 +1,15 @@
 use std::env;
 use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use tracing::{debug, info, Level};
 use tracing_subscriber::fmt::writer::{BoxMakeWriter, MakeWriterExt};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use kokoro::common::dirs;
+
+static LAUNCHED: OnceLock<bool> = OnceLock::new();
 
 const LOG: &str = "log.txt";
 const PREVIOUS_LOG: &str = "log.prev.txt";
@@ -30,7 +32,12 @@ fn rotate(dir: &Path) -> PathBuf {
     log_file
 }
 
+pub(crate) fn launched() -> Option<bool> {
+    LAUNCHED.get().copied()
+}
+
 pub(crate) fn init_logging(enable_logging: bool) {
+    let _ = LAUNCHED.set(enable_logging);
     let cwd = env::current_dir().unwrap_or_default();
 
     let trace_file = find_override_file(&cwd, &["trace.txt", "trace"]);

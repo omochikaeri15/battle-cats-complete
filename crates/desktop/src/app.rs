@@ -44,7 +44,7 @@ use state::AppState;
 
 mod errors;
 pub(crate) mod graphics;
-mod logging;
+pub(crate) mod logging;
 mod notice;
 pub(crate) mod startup;
 pub mod state;

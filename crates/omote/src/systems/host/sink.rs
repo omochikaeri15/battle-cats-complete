@@ -45,6 +45,7 @@ pub struct Frame {
     pub design_width: f32,
     pub design_height: f32,
     pub letterbox: f32,
+    pub aspect: f32,
 }
 
 impl Frame {

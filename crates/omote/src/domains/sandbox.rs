@@ -3,6 +3,7 @@ mod combos;
 mod config;
 mod lineup;
 mod orbs;
+mod replay;
 mod state;
 mod warm;
 
@@ -25,7 +26,7 @@ use kokoro::domains::stage::{GlobalMapId, GlobalStageId, StageRegistry, navigate
 use crate::app::Route;
 use crate::domains::stage;
 use crate::platform::Platform;
-use crate::platform::battle::{BattleCommand, OptionsWire};
+use crate::platform::battle::{BattleCommand, Launch, OptionsWire, ReelWire};
 use crate::systems::catalog::{self, Load};
 use crate::systems::context::{self, Shared};
 use crate::systems::library::Library;
@@ -50,6 +51,10 @@ const ACKNOWLEDGMENT_FACTS: [&str; 4] = [
 const ACKNOWLEDGMENT_CLOSING: &str = "You can accept the agreement by clicking the \"Agree\" button below. Selecting \"Disagree\" will redirect you to the Home menu.";
 const ACKNOWLEDGE_WIDTH: f32 = 560.0;
 const FAULT_WIDTH: f32 = 460.0;
+const VERSION_WIDTH: f32 = 460.0;
+const OUTBREAK_TAG: &str = "Outbreak";
+const INVASION_TAG: &str = "Invasion";
+const REPLAY_TERMINATED: &str = "Replay Terminated!";
 const DIAGNOSTICS_WIDTH: f32 = 520.0;
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0100_0000_01b3;
@@ -106,6 +111,24 @@ fn invaded_slot(registry: &StageRegistry, picked: &GlobalStageId, state: &Sandbo
     let invasions = &state.config.invasions;
 
     navigate::is_invasion(registry, picked).then_some(if picked.category == Category::ZombieOutbreaks { invasions.filibuster_outbreak } else { invasions.filibuster })
+}
+
+fn label(registry: &StageRegistry, picked: &Picked, state: &SandboxState) -> (String, String) {
+    let map_key = GlobalMapId { category: picked.stage.category.clone(), map: picked.stage.map };
+    let map = registry.maps.get(&map_key).map_or_else(String::new, |map| match map.category {
+        Category::ZombieOutbreaks => format!("{} ({OUTBREAK_TAG})", map.name),
+        _ => map.name.clone(),
+    });
+    let name = registry.stages.get(&picked.stage).map(|stage| stage.name.as_str()).unwrap_or_default();
+    let invaded = invaded_slot(registry, &picked.stage, state)
+        .and_then(|slot| registry.stages.get(&GlobalStageId { category: picked.stage.category.clone(), map: picked.stage.map, stage: slot }));
+    let stage = match invaded {
+        Some(invaded) => format!("{} ({INVASION_TAG})", invaded.name),
+        None if navigate::is_invader(registry, &map_key) => format!("{name} ({INVASION_TAG})"),
+        None => name.to_owned(),
+    };
+
+    (map, stage)
 }
 
 fn staged_entry(globals: &Shared, registry: &StageRegistry, picked: &Picked, state: &SandboxState) -> Option<StageEntry> {
@@ -271,6 +294,7 @@ pub(crate) fn Sandbox() -> Element {
         catalogs.load_enemies(&starter, config.clone());
         catalogs.load_stages(&starter, config);
         starter.host().battle(BattleCommand::Prepare { fonts: theme::GAME_FONTS.iter().map(|font| Box::from(font.to_string())).collect() });
+        starter.host().battle(BattleCommand::Latest);
     });
 
     let stopper = platform.clone();
@@ -342,6 +366,7 @@ pub(crate) fn Sandbox() -> Element {
     let rules = Rc::clone(&staging.rules);
     let status = (battle.status)().unwrap_or_default();
     let play_platform = platform.clone();
+    let modding = crate::domains::mods::state();
     let play_globals = globals.clone();
     let play_cats = cats.clone();
     let play_bundle = bundle.clone();
@@ -366,19 +391,29 @@ pub(crate) fn Sandbox() -> Element {
             vibrate: held.vibrate,
         };
 
+        let (map, stage) = label(&bundle.0.registry, &picked, &held);
+        let held_settings = settings.read();
+
         battle.failure.set(None);
         battle.status.set(None);
-        play_platform.host().battle(BattleCommand::Start {
-            setup: Box::new((&setup).into()),
+        play_platform.host().battle(BattleCommand::Start(Box::new(Launch {
+            setup: (&setup).into(),
             options,
             phone: held.device == Device::Phone,
             width,
             height,
             prefixes: warmth.prefixes,
             pools: warmth.pools,
-            priority: settings.read().general.language_priority.clone(),
-        });
+            priority: held_settings.general.language_priority.clone(),
+            record: !held_settings.sandbox.disable_replays,
+            app: modding.app(),
+            map,
+            stage,
+        })));
     };
+    let watch_size = size;
+    let watch_platform = platform.clone();
+    let watchable = (battle.latest)().is_some();
     let agree_platform = platform.clone();
     let tab_platform = platform.clone();
 
@@ -409,14 +444,21 @@ pub(crate) fn Sandbox() -> Element {
                         Some(cats) => rsx! { lineup::Editor { cats, globals: globals.clone(), rules: Ruled(Rc::clone(&rules)), altar: altar_cap } },
                         None => rsx! { Status { title: "Loading Cats...", detail: None } },
                     },
-                    Tab::Stage => rsx! { stage::Stages {} },
+                    Tab::Stage => rsx! { stage::Browser {} },
                     Tab::Config => rsx! { config::Config { globals: globals.clone(), staged: bundle.clone() } },
-                    Tab::Replay => rsx! { div { class: "pick-prompt", "Replays coming soon?" } },
+                    Tab::Replay => rsx! { replay::Replays { globals: globals.clone(), cats: cats.clone() } },
                 }
             }
-            if tab != Tab::Replay {
-                div { class: "sandbox-play",
-                    div { class: "sandbox-status", "{status}" }
+            div { class: "sandbox-play",
+                div { class: "sandbox-status", "{status}" }
+                if tab == Tab::Replay {
+                    button {
+                        class: "btn btn-primary sandbox-play-btn",
+                        disabled: !watchable,
+                        onclick: move |_| watch(&watch_platform, sandbox, settings, watch_size(), ReelWire::Latest, false),
+                        "Watch"
+                    }
+                } else {
                     button { class: "btn btn-primary sandbox-play-btn", disabled: !playable, onclick: play, "Play" }
                 }
             }
@@ -441,9 +483,11 @@ pub(crate) fn Sandbox() -> Element {
             }
         }
         arena::Arena {}
+        VersionDialog { battle, size: watch_size }
         FaultDialog { battle }
         DiagnosticsDialog { battle }
         QualityToast { battle }
+        CutToast { battle }
     }
 }
 
@@ -460,6 +504,57 @@ pub(super) fn Dialog(title: String, width: f32, #[props(default)] modal: bool, #
     rsx! {
         Popup { title, open, width, modal, class,
             div { class: "dialog-body", {children} }
+        }
+    }
+}
+
+fn watch(platform: &Platform, sandbox: Signal<SandboxState>, settings: Signal<kokoro::domains::settings::Settings>, size: (f32, f32), reel: ReelWire, checked: bool) {
+    let phone = sandbox.peek().device == Device::Phone;
+    let held = settings.peek();
+    let priority = held.general.language_priority.clone();
+    let source = held.sandbox.replay_source;
+
+    platform.host().battle(BattleCommand::Watch { reel, checked, source, phone, width: size.0, height: size.1, priority });
+}
+
+#[component]
+fn VersionDialog(battle: Battle, size: Signal<(f32, f32)>) -> Element {
+    let platform = use_context::<Platform>();
+    let sandbox = state::state();
+    let settings = context::settings();
+    let Some(recorded) = (battle.foreign)() else {
+        return rsx! {};
+    };
+    let current = emulator::runtime::VERSION;
+    let mut foreign = battle.foreign;
+
+    rsx! {
+        Dialog { title: "Version Mismatch", width: VERSION_WIDTH, onclose: move |()| foreign.set(None),
+            div { class: "sandbox-notice",
+                p { "This replay was recorded in game version {recorded}, but Sandbox currently replicates game version {current}." }
+                p { "Replays recorded in a different game version may play out differently, desync, or crash partway through. If the replay crashes due to missing files, try setting Replay Source to VFS under Settings > Sandbox." }
+            }
+            div { class: "sandbox-choices",
+                button { class: "btn btn-danger btn-popup-action", onclick: move |_| foreign.set(None), "Close" }
+                button { class: "btn btn-success btn-popup-action",
+                    onclick: move |_| {
+                        foreign.set(None);
+                        watch(&platform, sandbox, settings, size(), ReelWire::Held, true);
+                    },
+                    "Continue"
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn CutToast(battle: Battle) -> Element {
+    let class = if (battle.cut)() { "toast notice-banner headline" } else { "toast notice-banner headline hidden" };
+
+    rsx! {
+        div { class: "toast-slot sandbox-toast",
+            div { class: "{class}", "{REPLAY_TERMINATED}" }
         }
     }
 }

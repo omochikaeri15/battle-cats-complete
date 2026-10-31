@@ -639,6 +639,7 @@ pub(crate) fn Editor(cats: Cats, globals: Shared, rules: Ruled, altar: Option<u3
                     },
                     onpointerup: move |_| released.call(()),
                     onpointercancel: move |_| cancelled.call(()),
+                    onpointerleave: move |_| cancelled.call(()),
                 }
             }
             if let Some((url, (x, y))) = ghost {
@@ -657,7 +658,7 @@ pub(crate) fn Editor(cats: Cats, globals: Shared, rules: Ruled, altar: Option<u3
                     }
                 },
                 div {
-                    class: "card-outlined deck-card",
+                    class: "outlined-card deck-card",
                     style: "width: {metrics.deck_width()}px; height: {metrics.deck_height()}px; padding: {metrics.pad}px;",
                     onmounted: move |event| deck_mount.set(Some(event)),
                     div { class: "deck-title bold", style: "height: {metrics.header}px; font-size: {metrics.text(16.0)}px;", "Lineup" }

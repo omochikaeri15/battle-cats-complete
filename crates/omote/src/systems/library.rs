@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -11,9 +11,11 @@ use tracing::{debug, warn};
 use kokoro::domains::settings::lang;
 use kokoro::{Lazy, Loader, Vault};
 
+use crate::platform::mods::Mounted;
 use crate::platform::{Fault, Phase, Platform};
 
 const GAME: &str = "game";
+const MOD: &str = "mod";
 const STARTING: &str = "Starting the data engine...";
 
 struct Deferred {
@@ -37,6 +39,8 @@ pub(crate) struct Core {
     vault: Vault,
     deferred: Arc<Deferred>,
     pending: RefCell<HashSet<Box<str>>>,
+    modded: RefCell<HashSet<Box<str>>>,
+    epoch: Cell<u64>,
 }
 
 impl Core {
@@ -102,7 +106,7 @@ impl Library {
         let vault = Vault::with_priority(&lang::default_priority());
         let deferred = Arc::new(Deferred { missing: Mutex::new(HashSet::new()), nudge });
 
-        if let Err(err) = vault.vfs.create(Lazy { key: GAME, names }) {
+        if let Err(err) = vault.vfs.create(Lazy { key: GAME, names, withheld: Vec::new() }) {
             warn!("The game mount could not be created: {}", err);
             self.fault.set(Some(Fault(err.to_string())));
             return;
@@ -110,7 +114,7 @@ impl Library {
 
         vault.vfs.install(Arc::clone(&deferred) as Arc<dyn Loader>);
 
-        let core = Rc::new(Core { vault, deferred, pending: RefCell::new(HashSet::new()) });
+        let core = Rc::new(Core { vault, deferred, pending: RefCell::new(HashSet::new()), modded: RefCell::new(HashSet::new()), epoch: Cell::new(0) });
 
         self.core.set(Some(Rc::clone(&core)));
         self.generation += 1;
@@ -140,6 +144,7 @@ impl Library {
 
         debug!(count = wanted.len(), "Fetching files the screens asked for");
 
+        let epoch = core.epoch.get();
         let outcome = platform.host().fetch(wanted.clone()).await;
 
         {
@@ -151,10 +156,20 @@ impl Library {
         }
 
         match outcome {
+            Ok(_) if core.epoch.get() != epoch => debug!("Fetched files were dropped because the mod changed while they were in flight"),
             Ok(files) => {
                 let names: Vec<Box<str>> = files.iter().map(|(name, _)| name.clone()).collect();
+                let (modded, vanilla): (Vec<_>, Vec<_>) = {
+                    let held = core.modded.borrow();
 
-                core.vault.vfs.stock(GAME, files);
+                    files.into_iter().partition(|(name, _)| held.contains(name))
+                };
+
+                core.vault.vfs.stock(GAME, vanilla);
+
+                if !modded.is_empty() {
+                    core.vault.vfs.stock(MOD, modded);
+                }
 
                 let mut tables = false;
 
@@ -175,6 +190,30 @@ impl Library {
                 self.fault.set(Some(fault));
             }
         }
+    }
+
+    pub(crate) fn remount(&mut self, mounted: Option<&Mounted>) {
+        let Some(core) = self.core.peek().clone() else {
+            return;
+        };
+        let mut touched: Vec<Box<str>> = core.modded.borrow_mut().drain().collect();
+
+        core.epoch.set(core.epoch.get() + 1);
+        core.vault.vfs.destroy(Lazy { key: MOD, names: Vec::new(), withheld: Vec::new() });
+
+        if let Some(mounted) = mounted {
+            match core.vault.vfs.create(Lazy { key: MOD, names: mounted.names.clone(), withheld: mounted.withheld.clone() }) {
+                Ok(_) => core.modded.borrow_mut().extend(mounted.names.iter().cloned()),
+                Err(err) => warn!("The mod could not be mounted on the page: {err}"),
+            }
+
+            touched.extend(mounted.names.iter().cloned());
+            touched.extend(mounted.withheld.iter().cloned());
+        }
+
+        core.vault.purge(&touched);
+        self.generation += 1;
+        self.data += 1;
     }
 
     pub(crate) fn relocalize(&mut self, order: &[String]) {

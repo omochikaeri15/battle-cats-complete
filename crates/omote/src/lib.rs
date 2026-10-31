@@ -7,4 +7,4 @@ mod widget;
 
 pub use app::App;
 pub use systems::host;
-pub use platform::{Atlas, Bytes, Captured, Fault, Fetched, Host, Painted, Pending, Phase, Picture, Platform, Prepared, Progress, Report, RigParts, Scene, Script, Shape, Surface, Watch};
+pub use platform::{Atlas, Bytes, Captured, Fault, Fetched, Host, Painted, Pending, Phase, Picked, Picture, Platform, Prepared, Progress, Report, RigParts, Scene, Script, Shape, Surface, Watch};

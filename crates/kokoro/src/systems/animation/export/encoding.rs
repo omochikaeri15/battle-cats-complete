@@ -13,6 +13,8 @@ use rayon::prelude::*;
 use tracing::{error, info, warn};
 use webp_animation::{Encoder as WebpEncoder, EncoderOptions, EncodingConfig, EncodingType};
 
+use crate::systems::animation::alpha;
+
 use super::{EncoderMessage, EncoderStatus, ExportConfig, ExportFormat};
 
 pub(crate) fn encode_native(
@@ -240,20 +242,12 @@ fn quantizer_speed(quality_percent: u32) -> i32 {
 }
 
 pub(crate) fn prepare_image(mut pixel_buffer: Vec<u8>, width: u32, height: u32, is_opaque_background: bool) -> RgbaImage {
-    for chunk in pixel_buffer.as_chunks_mut::<4>().0 {
-        if is_opaque_background {
+    if is_opaque_background {
+        for chunk in pixel_buffer.as_chunks_mut::<4>().0 {
             chunk[3] = 255;
-        } else {
-            let alpha_value = chunk[3].max(chunk[0]).max(chunk[1]).max(chunk[2]);
-            chunk[3] = alpha_value;
-
-            if alpha_value > 0 && alpha_value < 255 {
-                let float_alpha = alpha_value as f32 / 255.0;
-                chunk[0] = (chunk[0] as f32 / float_alpha).min(255.0) as u8;
-                chunk[1] = (chunk[1] as f32 / float_alpha).min(255.0) as u8;
-                chunk[2] = (chunk[2] as f32 / float_alpha).min(255.0) as u8;
-            }
         }
+    } else {
+        alpha::straighten(&mut pixel_buffer);
     }
 
     let image_buffer = match RgbaImage::from_raw(width, height, pixel_buffer) {

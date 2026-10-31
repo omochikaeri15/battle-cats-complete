@@ -41,10 +41,6 @@ const DIM_ALPHA: i32 = 0x80;
 const NOTCH_SHARE: f32 = 0.04;
 const ALTAR_ROW_SHIFT: i32 = -2;
 const BUTTON_SLOTS: i32 = 21;
-const UNIT_FILE_PREFIX: &str = "unit";
-const UNIT_FILE_SUFFIX: &str = ".csv";
-const EXPLANATION_PREFIX: &str = "Unit_Explanation";
-const LANGUAGE_SEPARATOR: char = '_';
 const REWARD_CELLS: usize = 0x2f;
 const FIRST_CHARA_DROP: i32 = 1000;
 const SECOND_CHARA_DROP: i32 = 1100;
@@ -104,21 +100,6 @@ pub struct Label {
     pub map: String,
     pub stage: String,
     pub keepsakes: Vec<(Box<str>, PathBuf)>,
-}
-
-fn unit_file(name: &str) -> Option<u32> {
-    let number = name.strip_prefix(UNIT_FILE_PREFIX).and_then(|rest| rest.strip_suffix(UNIT_FILE_SUFFIX)).or_else(|| {
-        name.strip_prefix(EXPLANATION_PREFIX)?
-            .split_once(LANGUAGE_SEPARATOR)
-            .filter(|(_, language)| language.ends_with(UNIT_FILE_SUFFIX))
-            .map(|(number, _)| number)
-    })?;
-
-    if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-
-    number.parse::<u32>().ok()?.checked_sub(1)
 }
 
 fn reward_unit(ctx: &AppContext, item: i32) -> Option<u32> {
@@ -516,7 +497,7 @@ impl Driver {
         let mut requested = self.ledger.borrow_mut().drain();
 
         if let Some(needed) = &self.needed {
-            requested.retain(|(name, _)| unit_file(name).is_none_or(|unit| needed.contains(&unit)));
+            requested.retain(|(name, _)| tape::unit_file(name).is_none_or(|unit| needed.contains(&unit)));
         }
 
         if requested.is_empty() {

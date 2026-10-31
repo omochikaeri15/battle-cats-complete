@@ -10,6 +10,7 @@ use kokoro::domains::settings::{GraphicsBackend, Settings as CoreSettings, Updat
 use kokoro::systems::treasure::Catalog;
 
 use crate::app::graphics::{self, Report};
+use crate::app::logging;
 use crate::app::theme;
 use crate::app::{CheckFailure, UpdateStatus};
 use crate::common::fonts;
@@ -25,6 +26,8 @@ const ROW_WIDTH: f32 = 140.0;
 const DRAG_HIGHLIGHT_ALPHA: f32 = 0.25;
 const RESTART_REQUIRED: &str = "!! Restart Required !!";
 const RESTART_DETAIL: &str = "The new Graphics Backend applies the next time the app starts";
+const LOGGING_DETAIL: &str = "The Logging change applies the next time the app starts";
+const BOTH_DETAIL: &str = "The new Graphics Backend and the Logging change apply the next time the app starts";
 const NO_GPU: &str = "!! No GPU Detected !!";
 const NO_GPU_DETAIL: &str = "The app is being drawn on the CPU, so it may run slowly";
 const GRAPHICS_HINT: &str = "Which graphics API draws the app\nAuto picks one that works on this PC\nSoftware draws everything on the CPU, which is slower";
@@ -207,12 +210,19 @@ impl State {
         self.backends = Some(available);
     }
 
-    pub(super) fn graphics_toasts<'a, M: 'a>(&self, core_settings: &CoreSettings, general_tab: bool) -> [Element<'a, M>; 2] {
+    pub(super) fn system_toasts<'a, M: 'a>(&self, core_settings: &CoreSettings, general_tab: bool) -> [Element<'a, M>; 2] {
         let selected = core_settings.general.graphics;
-        let restart = selected != graphics::launch().selected;
+        let backend = selected != graphics::launch().selected;
+        let logging = logging::launched().is_some_and(|launched| launched != core_settings.general.enable_logging);
+        let restart = backend || logging;
+        let detail = match (backend, logging) {
+            (true, true) => BOTH_DETAIL,
+            (false, true) => LOGGING_DETAIL,
+            _ => RESTART_DETAIL,
+        };
         let no_gpu = general_tab && !restart && selected != GraphicsBackend::Software && self.graphics.as_ref().is_some_and(|report| report.cpu);
 
-        [toast(RESTART_REQUIRED, Some(RESTART_DETAIL), restart, Tone::Alert), toast(NO_GPU, Some(NO_GPU_DETAIL), no_gpu, Tone::Alert)]
+        [toast(RESTART_REQUIRED, Some(detail), restart, Tone::Alert), toast(NO_GPU, Some(NO_GPU_DETAIL), no_gpu, Tone::Alert)]
     }
 
     pub fn is_dragging(&self) -> bool {

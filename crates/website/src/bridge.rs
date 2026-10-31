@@ -12,7 +12,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    Blob, BlobPropertyBag, Cache, ErrorEvent, Headers, HtmlAnchorElement, HtmlScriptElement, MessageEvent, RegistrationOptions, Response, ResponseInit, Storage, Url, Worker, WorkerOptions, WorkerType,
+    Blob, BlobPropertyBag, Cache, ErrorEvent, Headers, HtmlAnchorElement, HtmlInputElement, HtmlScriptElement, MessageEvent, RegistrationOptions, Response, ResponseInit, Storage, Url, Worker, WorkerOptions, WorkerType,
 };
 
 use codex::graphics::rig::{Opaque, SpriteCut, SpriteSheet};
@@ -23,11 +23,14 @@ use kokoro::domains::stage::scanner::StageBundle;
 
 use omote::host::Phase as BattlePhase;
 use omote::platform::battle::{BattleCommand, BattleEvent, BattleWatch};
-use omote::{Bytes, Fault, Fetched, Host, Pending, Phase, Picture, Prepared, Progress, Report, RigParts, Script, Surface, Watch};
+use omote::platform::mods::{ModCommand, ModState};
+use omote::platform::{LOGGING_KEY, LOGGING_ON};
+use omote::{Bytes, Fault, Fetched, Host, Pending, Phase, Picked, Picture, Prepared, Progress, Report, RigParts, Script, Surface, Watch};
 
 use crate::battle::{self, Screen, SharedScreen};
+use crate::film;
 use crate::protocol::{self, Answer, Call, HELLO, PictureKind, Reply, Request, RigWire};
-use crate::viewer;
+use crate::{viewer, worker};
 
 struct Waiting {
     reply: oneshot::Sender<Reply>,
@@ -75,16 +78,44 @@ impl Link {
     }
 }
 
+type FullscreenWatch = Rc<RefCell<Option<Box<dyn Fn(bool)>>>>;
+
 pub(crate) struct WebHost {
     link: Option<Rc<Link>>,
     calls: Calls,
     listeners: Vec<Closure<dyn FnMut(JsValue)>>,
+    fullscreen: FullscreenWatch,
+}
+
+fn document() -> Option<web_sys::Document> {
+    web_sys::window()?.document()
+}
+
+fn fullscreen_now() -> bool {
+    document().and_then(|document| document.fullscreen_element()).is_some()
 }
 
 impl WebHost {
     pub(crate) fn spawn() -> Self {
         let calls: Calls = Rc::new(RefCell::new(HashMap::new()));
-        let mut host = Self { link: None, calls: Rc::clone(&calls), listeners: Vec::new() };
+        let mut host = Self { link: None, calls: Rc::clone(&calls), listeners: Vec::new(), fullscreen: Rc::default() };
+        let on_fullscreen = {
+            let watch = Rc::clone(&host.fullscreen);
+
+            Closure::<dyn FnMut(JsValue)>::new(move |_: JsValue| {
+                if let Some(watch) = watch.borrow().as_ref() {
+                    watch(fullscreen_now());
+                }
+            })
+        };
+
+        if let Some(document) = document()
+            && let Err(err) = document.add_event_listener_with_callback(FULLSCREEN_CHANGE, on_fullscreen.as_ref().unchecked_ref())
+        {
+            warn!("The fullscreen toggle cannot follow the browser: {:?}", err);
+        }
+
+        host.listeners.push(on_fullscreen);
 
         register_worker();
 
@@ -128,11 +159,31 @@ impl WebHost {
                     Closure::<dyn FnMut(JsValue)>::new(move |event: JsValue| failed(&calls, &link, event))
                 };
 
+                let on_leave = {
+                    let worker = link.worker.clone();
+
+                    Closure::<dyn FnMut(JsValue)>::new(move |event: JsValue| {
+                        let kept = Reflect::get(&event, &JsValue::from_str(PERSISTED)).ok().and_then(|value| value.as_bool()).unwrap_or(false);
+
+                        if !kept {
+                            worker.terminate();
+                        }
+                    })
+                };
+
                 link.worker.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
                 link.worker.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+
+                if let Some(window) = web_sys::window()
+                    && let Err(err) = window.add_event_listener_with_callback(PAGE_HIDE, on_leave.as_ref().unchecked_ref())
+                {
+                    warn!("The data worker will outlive the page: {:?}", err);
+                }
+
                 host.link = Some(link);
                 host.listeners.push(on_message);
                 host.listeners.push(on_error);
+                host.listeners.push(on_leave);
             }
             Err(err) => error!("The data worker could not be started: {:?}", err),
         }
@@ -204,6 +255,7 @@ fn received(calls: &Calls, link: &Link, event: MessageEvent) {
                 }
 
                 match event {
+                    BattleEvent::Rolled(rolled) => film::deliver(rolled),
                     BattleEvent::Frame(_) | BattleEvent::Sheets(_) | BattleEvent::Audio(_) => link.screen.borrow_mut().handle(event),
                     other => {
                         link.screen.borrow_mut().handle(other.clone());
@@ -233,6 +285,10 @@ fn received(calls: &Calls, link: &Link, event: MessageEvent) {
     }
 }
 
+pub(crate) fn logging() -> bool {
+    storage().and_then(|storage| storage.get_item(LOGGING_KEY).ok().flatten()).as_deref() == Some(LOGGING_ON)
+}
+
 fn start() -> Result<Worker, JsValue> {
     let document = web_sys::window().and_then(|window| window.document()).ok_or_else(|| JsValue::from_str("no document"))?;
     let script: HtmlScriptElement = document
@@ -243,11 +299,14 @@ fn start() -> Result<Worker, JsValue> {
     let worker_options = WorkerOptions::new();
 
     worker_options.set_type(WorkerType::Module);
-    worker_options.set_name("data");
+    worker_options.set_name(if logging() { worker::LOGGED_NAME } else { worker::NAME });
 
     Worker::new_with_options(&glue, &worker_options)
 }
 
+const PAGE_HIDE: &str = "pagehide";
+const FULLSCREEN_CHANGE: &str = "fullscreenchange";
+const PERSISTED: &str = "persisted";
 const SERVICE_WORKER: Asset = asset!("/assets/sw.js", AssetOptions::builder().with_hash_suffix(false));
 const IMAGE_CACHE: &str = "bcc-images";
 
@@ -459,21 +518,7 @@ impl Host for WebHost {
     }
 
     fn download(&self, name: &str, mime: &str, bytes: Bytes) {
-        let name = name.to_owned();
-
-        if controlled() {
-            wasm_bindgen_futures::spawn_local(async move {
-                if let Err(err) = save_attachment(&name, &bytes).await {
-                    error!("The download of {name} could not be started: {:?}", err);
-                }
-            });
-
-            return;
-        }
-
-        if let Err(err) = save(&name, mime, &bytes) {
-            error!("The download of {name} could not be started: {:?}", err);
-        }
+        deliver_file(name, mime, &bytes);
     }
 
     fn can_copy(&self) -> bool {
@@ -512,6 +557,41 @@ impl Host for WebHost {
 
             Ok(())
         })
+    }
+
+    fn pick_file(&self, accept: &str, limit: u64) -> Pending<Result<Option<Picked>, Fault>> {
+        let opened = open_picker(accept);
+
+        Box::pin(async move {
+            let (input, chosen) = opened?;
+            let settled = JsFuture::from(chosen).await;
+
+            input.remove();
+            settled.map_err(describe)?;
+
+            let Some(file) = input.files().and_then(|files| files.get(0)) else {
+                return Ok(None);
+            };
+            let size = file.size() as u64;
+
+            if size > limit {
+                return Ok(Some(Picked { name: file.name(), size, bytes: None }));
+            }
+
+            let buffer = JsFuture::from(file.array_buffer()).await.map_err(describe)?;
+
+            Ok(Some(Picked { name: file.name(), size, bytes: Some(Arc::from(Uint8Array::new(&buffer).to_vec())) }))
+        })
+    }
+
+    fn capture_pointer(&self, element: &str, pointer: i32) {
+        let found = web_sys::window().and_then(|window| window.document()).and_then(|document| document.get_element_by_id(element));
+
+        if let Some(found) = found
+            && let Err(err) = found.set_pointer_capture(pointer)
+        {
+            warn!("The pointer could not be captured by {element}: {:?}", err);
+        }
     }
 
     fn can_publish(&self) -> bool {
@@ -628,6 +708,17 @@ impl Host for WebHost {
         })
     }
 
+    fn mods(&self, command: ModCommand, report: Report) -> Pending<Result<ModState, Fault>> {
+        let pending = self.call(Request::Mods(command), Some(report));
+
+        Box::pin(async move {
+            match pending.await? {
+                Reply::Mods(state) => Ok(state),
+                other => Err(unexpected(other)),
+            }
+        })
+    }
+
     fn enemies(&self, config: ScannerConfig, report: Report) -> Pending<Result<Vec<EnemyEntry>, Fault>> {
         let pending = self.call(Request::Enemies(config), Some(report));
 
@@ -651,9 +742,39 @@ impl Host for WebHost {
     }
 
     fn battle(&self, command: BattleCommand) {
-        if let Some(link) = &self.link {
-            post_battle(link, command);
+        let Some(link) = &self.link else {
+            return;
+        };
+
+        match command {
+            BattleCommand::ExportVideo(filming) => film::start(*filming, wiring(link)),
+            BattleCommand::AbortVideo => film::abort(),
+            command => post_battle(link, command),
         }
+    }
+
+    fn can_film(&self) -> bool {
+        film::supported()
+    }
+
+    fn fullscreen(&self) -> bool {
+        fullscreen_now()
+    }
+
+    fn set_fullscreen(&self, on: bool) -> Result<(), Fault> {
+        let document = document().ok_or_else(|| Fault("no document".to_owned()))?;
+
+        if !on {
+            document.exit_fullscreen();
+
+            return Ok(());
+        }
+
+        document.document_element().ok_or_else(|| Fault("the page has no root element".to_owned()))?.request_fullscreen().map_err(describe)
+    }
+
+    fn fullscreen_watch(&self, watch: Box<dyn Fn(bool)>) {
+        *self.fullscreen.borrow_mut() = Some(watch);
     }
 
     fn battle_watch(&self, watch: BattleWatch) {
@@ -692,6 +813,63 @@ impl Host for WebHost {
         if let Some(link) = &self.link {
             link.screen.borrow_mut().display(scale, padded);
         }
+    }
+}
+
+fn open_picker(accept: &str) -> Result<(HtmlInputElement, Promise), Fault> {
+    let document = web_sys::window().and_then(|window| window.document()).ok_or_else(|| Fault("no document".to_owned()))?;
+    let body = document.body().ok_or_else(|| Fault("the page has no body".to_owned()))?;
+    let input: HtmlInputElement = document.create_element("input").map_err(describe)?.dyn_into().map_err(|element: web_sys::Element| describe(element.into()))?;
+
+    input.set_type("file");
+    input.set_accept(accept);
+    input.set_attribute("style", "display: none").map_err(describe)?;
+    body.append_child(&input).map_err(describe)?;
+
+    let chosen = Promise::new(&mut |resolve: Function, _reject: Function| {
+        input.set_onchange(Some(&resolve));
+
+        if let Err(err) = input.add_event_listener_with_callback("cancel", &resolve) {
+            warn!("The file picker cannot report a cancel: {:?}", err);
+        }
+    });
+
+    input.click();
+
+    Ok((input, chosen))
+}
+
+fn wiring(link: &Rc<Link>) -> film::Wiring {
+    let (sender, teller) = (Rc::clone(link), Rc::clone(link));
+
+    film::Wiring {
+        send: Box::new(move |command| post_battle(&sender, command)),
+        tell: Box::new(move |event| {
+            if let Some(watch) = teller.battle_watch.borrow().as_ref() {
+                watch(event);
+            }
+        }),
+        save: Box::new(|bytes| deliver_file(film::FILE_NAME, film::MIME, &bytes)),
+    }
+}
+
+fn deliver_file(name: &str, mime: &str, bytes: &[u8]) {
+    let name = name.to_owned();
+
+    if controlled() {
+        let bytes = bytes.to_vec();
+
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Err(err) = save_attachment(&name, &bytes).await {
+                error!("The download of {name} could not be started: {:?}", err);
+            }
+        });
+
+        return;
+    }
+
+    if let Err(err) = save(&name, mime, bytes) {
+        error!("The download of {name} could not be started: {:?}", err);
     }
 }
 

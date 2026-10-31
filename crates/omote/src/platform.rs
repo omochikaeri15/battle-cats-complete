@@ -1,4 +1,5 @@
 pub mod battle;
+pub mod mods;
 
 use std::fmt;
 use std::future::Future;
@@ -12,6 +13,9 @@ use kokoro::domains::cat::scanner::CatEntry;
 use kokoro::domains::enemy::scanner::EnemyEntry;
 use kokoro::domains::settings::ScannerConfig;
 use kokoro::domains::stage::scanner::StageBundle;
+
+pub const LOGGING_KEY: &str = "logging";
+pub const LOGGING_ON: &str = "on";
 
 pub type Pending<T> = Pin<Box<dyn Future<Output = T>>>;
 pub type Bytes = Arc<[u8]>;
@@ -32,6 +36,12 @@ pub struct Prepared {
     pub width: u32,
     pub height: u32,
     pub png: Bytes,
+}
+
+pub struct Picked {
+    pub name: String,
+    pub size: u64,
+    pub bytes: Option<Bytes>,
 }
 
 pub struct RigParts {
@@ -127,6 +137,13 @@ pub trait Host {
     fn can_copy(&self) -> bool;
     fn copy_image(&self, png: Bytes) -> Pending<Result<(), Fault>>;
     fn copy_text(&self, text: &str) -> Pending<Result<(), Fault>>;
+    fn capture_pointer(&self, element: &str, pointer: i32);
+    fn pick_file(&self, accept: &str, limit: u64) -> Pending<Result<Option<Picked>, Fault>>;
+    fn can_film(&self) -> bool;
+    fn fullscreen(&self) -> bool;
+    fn set_fullscreen(&self, on: bool) -> Result<(), Fault>;
+    fn fullscreen_watch(&self, watch: Box<dyn Fn(bool)>);
+    fn mods(&self, command: mods::ModCommand, report: Report) -> Pending<Result<mods::ModState, Fault>>;
     fn sleep(&self, millis: u32) -> Pending<()>;
     fn can_publish(&self) -> bool;
     fn publish_image(&self, folder: &str, name: &str, png: Bytes) -> Pending<Result<Option<String>, Fault>>;

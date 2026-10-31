@@ -1,14 +1,18 @@
+use std::rc::Rc;
+use std::sync::Arc;
+
 use dioxus::html::geometry::WheelDelta;
+use dioxus::html::input_data::MouseButton;
 use dioxus::prelude::*;
 use futures_channel::mpsc::unbounded;
 use futures_util::StreamExt;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use kokoro::domains::sandbox::keybind::Bind;
 
 use crate::host::{Action, Bounds, Canvas, Diagnostics, Phase, Touch};
 use crate::platform::Platform;
-use crate::platform::battle::{BattleCommand, BattleEvent, Standing};
+use crate::platform::battle::{BattleCommand, BattleEvent, Filmed, Filming, Recorded, Standing};
 use crate::systems::context;
 
 use super::state::{self, Device, Volume};
@@ -24,6 +28,53 @@ const SPREAD_PER_LINE: f32 = 28.0;
 const RESTART_WINDOW_MS: f64 = 400.0;
 const NOTICE_MS: u32 = 2000;
 const STATUS_MS: u32 = 2000;
+const CUT_MS: u32 = 3000;
+const ENDED_MS: u32 = 2000;
+const SETTLED_MS: u32 = 3000;
+const BUNDLE_NAME: &str = "Replay.bcv";
+const BUNDLE_MIME: &str = "application/octet-stream";
+const DONE_LABEL: &str = "Done";
+const EXPORTING_STAGE: &str = "Exporting";
+const UPLOADING_STAGE: &str = "Uploading";
+const RENDERING_STAGE: &str = "Rendering";
+const SOUNDING_STAGE: &str = "Adding Sound";
+const ABORTING_LABEL: &str = "Aborting...";
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Video {
+    Idle,
+    Running,
+    Aborting,
+    Done,
+    Failed,
+    Terminated,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Work {
+    Idle,
+    Running,
+    Done,
+    Failed,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Status {
+    pub(crate) label: String,
+    pub(crate) ratio: f32,
+}
+
+impl Status {
+    fn at(ratio: f32, label: String) -> Self {
+        Self { ratio, label }
+    }
+
+    fn progress(stage: &str, ratio: f32) -> Self {
+        let ratio = ratio.clamp(0.0, 1.0);
+
+        Self::at(ratio, format!("{stage} | {}%", (ratio * 100.0) as i32))
+    }
+}
 const SPACE: &str = " ";
 const SPACE_NAME: &str = "Space";
 
@@ -36,44 +87,142 @@ pub(crate) struct Battle {
     pub(crate) notice: Signal<Option<String>>,
     pub(crate) diagnostics: Signal<Option<Diagnostics>>,
     pub(crate) diagnosing: Signal<bool>,
-    round: Signal<u32>,
+    pub(crate) latest: Signal<Option<Rc<Recorded>>>,
+    pub(crate) exporting: Signal<Work>,
+    pub(crate) uploading: Signal<Work>,
+    pub(crate) video: Signal<Video>,
+    pub(crate) job: Signal<Option<Status>>,
+    pub(crate) foreign: Signal<Option<String>>,
+    pub(crate) cut: Signal<bool>,
+    notice_round: Signal<u32>,
+    status_round: Signal<u32>,
+    cut_round: Signal<u32>,
+    export_round: Signal<u32>,
+    upload_round: Signal<u32>,
+    video_round: Signal<u32>,
+    job_round: Signal<u32>,
+}
+
+fn hold<T: Clone + 'static>(platform: &Platform, mut slot: Signal<T>, mut round: Signal<u32>, shown: T, resting: T, millis: u32) {
+    let next = *round.peek() + 1;
+
+    round.set(next);
+    slot.set(shown);
+
+    let sleeper = platform.clone();
+
+    spawn(async move {
+        sleeper.host().sleep(millis).await;
+
+        if *round.peek() == next {
+            slot.set(resting);
+        }
+    });
 }
 
 impl Battle {
     pub(crate) fn notify(self, platform: &Platform, text: String) {
-        let mut battle = self;
-        let round = *battle.round.peek() + 1;
-
-        battle.round.set(round);
-        battle.notice.set(Some(text));
-
-        let sleeper = platform.clone();
-
-        spawn(async move {
-            sleeper.host().sleep(NOTICE_MS).await;
-
-            if *battle.round.peek() == round {
-                battle.notice.set(None);
-            }
-        });
+        hold(platform, self.notice, self.notice_round, Some(text), None, NOTICE_MS);
     }
 
-    fn report(self, platform: &Platform, text: String) {
-        let mut battle = self;
-        let round = *battle.round.peek() + 1;
+    pub(crate) fn report(self, platform: &Platform, text: String) {
+        hold(platform, self.status, self.status_round, Some(text), None, STATUS_MS);
+    }
 
-        battle.round.set(round);
-        battle.status.set(Some(text));
+    fn progress(self, stage: &str, ratio: f32) {
+        let (mut job, mut round) = (self.job, self.job_round);
 
-        let sleeper = platform.clone();
+        let next = *round.peek() + 1;
 
-        spawn(async move {
-            sleeper.host().sleep(STATUS_MS).await;
+        round.set(next);
+        job.set(Some(Status::progress(stage, ratio)));
+    }
 
-            if *battle.round.peek() == round {
-                battle.status.set(None);
+    fn settle(self, platform: &Platform, slot: Signal<Work>, round: Signal<u32>, outcome: Result<(), String>) {
+        let (ended, status) = match outcome {
+            Ok(()) => (Work::Done, Status::at(1.0, DONE_LABEL.to_owned())),
+            Err(reason) => (Work::Failed, Status::at(1.0, format!("Failed | {reason}"))),
+        };
+
+        hold(platform, slot, round, ended, Work::Idle, ENDED_MS);
+        hold(platform, self.job, self.job_round, Some(status), None, SETTLED_MS);
+    }
+
+    pub(crate) fn export(self, platform: &Platform) {
+        let (mut exporting, mut round) = (self.exporting, self.export_round);
+        let next = *round.peek() + 1;
+
+        round.set(next);
+        exporting.set(Work::Running);
+        self.progress(EXPORTING_STAGE, 0.0);
+        platform.host().battle(BattleCommand::ExportLatest);
+    }
+
+    pub(crate) fn upload(self, platform: &Platform, name: String, bytes: Vec<u8>) {
+        let (mut uploading, mut round) = (self.uploading, self.upload_round);
+        let next = *round.peek() + 1;
+
+        round.set(next);
+        uploading.set(Work::Running);
+        self.progress(UPLOADING_STAGE, 0.0);
+        platform.host().battle(BattleCommand::Upload { name, bytes });
+    }
+
+    pub(crate) fn unreadable(self, platform: &Platform, reason: String) {
+        warn!("A replay could not be read for uploading: {reason}");
+        self.settle(platform, self.uploading, self.upload_round, Err(reason));
+    }
+
+    pub(crate) fn delete(self, platform: &Platform) {
+        platform.host().battle(BattleCommand::DeleteLatest);
+    }
+
+    pub(crate) fn film(self, platform: &Platform, filming: Filming) {
+        let (mut video, mut round) = (self.video, self.video_round);
+        let next = *round.peek() + 1;
+
+        round.set(next);
+        video.set(Video::Running);
+        self.progress(RENDERING_STAGE, 0.0);
+        platform.host().battle(BattleCommand::ExportVideo(Box::new(filming)));
+    }
+
+    pub(crate) fn abort_film(self, platform: &Platform) {
+        let (mut video, mut job) = (self.video, self.job);
+        let ratio = job.peek().as_ref().map_or(0.0, |status| status.ratio);
+
+        video.set(Video::Aborting);
+        job.set(Some(Status::at(ratio, ABORTING_LABEL.to_owned())));
+        platform.host().battle(BattleCommand::AbortVideo);
+    }
+
+    fn filming(self, stage: &str, ratio: f32) {
+        if *self.video.peek() == Video::Running {
+            self.progress(stage, ratio);
+        }
+    }
+
+    fn filmed(self, platform: &Platform, filmed: Filmed) {
+        let ended = match filmed {
+            Filmed::Done => {
+                hold(platform, self.job, self.job_round, Some(Status::at(1.0, DONE_LABEL.to_owned())), None, SETTLED_MS);
+                Video::Done
             }
-        });
+            Filmed::Failed(reason) => {
+                hold(platform, self.job, self.job_round, Some(Status::at(1.0, format!("Failed | {reason}"))), None, SETTLED_MS);
+                Video::Failed
+            }
+            Filmed::Aborted => {
+                let (mut job, mut round) = (self.job, self.job_round);
+                let next = *round.peek() + 1;
+
+                round.set(next);
+                job.set(None);
+                Video::Terminated
+            }
+        };
+
+        hold(platform, self.video, self.video_round, ended, Video::Idle, ENDED_MS);
     }
 }
 
@@ -86,7 +235,20 @@ pub(crate) fn provide(platform: &Platform) -> Battle {
         notice: Signal::new(None),
         diagnostics: Signal::new(None),
         diagnosing: Signal::new(false),
-        round: Signal::new(0),
+        latest: Signal::new(None),
+        exporting: Signal::new(Work::Idle),
+        uploading: Signal::new(Work::Idle),
+        video: Signal::new(Video::Idle),
+        job: Signal::new(None),
+        foreign: Signal::new(None),
+        cut: Signal::new(false),
+        notice_round: Signal::new(0),
+        status_round: Signal::new(0),
+        cut_round: Signal::new(0),
+        export_round: Signal::new(0),
+        upload_round: Signal::new(0),
+        video_round: Signal::new(0),
+        job_round: Signal::new(0),
     });
     let sandbox = state::state();
     let platform = platform.clone();
@@ -135,8 +297,27 @@ pub(crate) fn provide(platform: &Platform) -> Battle {
                         next.vibrate = options.vibrate;
                     }),
                     BattleEvent::Diagnostics(probe) => battle.diagnostics.set(Some(probe)),
+                    BattleEvent::Latest(found) => battle.latest.set(found.map(|recorded| Rc::new(*recorded))),
+                    BattleEvent::Exporting(share) => battle.progress(EXPORTING_STAGE, share),
+                    BattleEvent::Exported(exported) => {
+                        let outcome = exported.map(|bytes| platform.host().download(BUNDLE_NAME, BUNDLE_MIME, Arc::from(bytes)));
+
+                        if let Err(reason) = &outcome {
+                            warn!("The latest battle could not be exported: {reason}");
+                        }
+
+                        battle.settle(&platform, battle.exporting, battle.export_round, outcome);
+                    }
+                    BattleEvent::Uploading(share) => battle.progress(UPLOADING_STAGE, share),
+                    BattleEvent::Uploaded(uploaded) => battle.settle(&platform, battle.uploading, battle.upload_round, uploaded),
+                    BattleEvent::Foreign(version) => battle.foreign.set(Some(version)),
+                    BattleEvent::Rejected(reason) => battle.report(&platform, reason),
+                    BattleEvent::Cut => hold(&platform, battle.cut, battle.cut_round, true, false, CUT_MS),
                     BattleEvent::Warming { done, total } => battle.warming.set((done < total).then_some((done, total))),
-                    BattleEvent::Frame(_) | BattleEvent::Sheets(_) | BattleEvent::Audio(_) => {}
+                    BattleEvent::Rendering(share) => battle.filming(RENDERING_STAGE, share),
+                    BattleEvent::Sounding(share) => battle.filming(SOUNDING_STAGE, share),
+                    BattleEvent::Filmed(filmed) => battle.filmed(&platform, filmed),
+                    BattleEvent::Frame(_) | BattleEvent::Sheets(_) | BattleEvent::Audio(_) | BattleEvent::Rolled(_) => {}
                 }
             }
         });
@@ -229,6 +410,8 @@ pub(crate) fn Arena() -> Element {
     let touch_move = touch.clone();
     let touch_up = touch.clone();
     let touch_cancel = touch.clone();
+    let touch_lost = touch.clone();
+    let capturer = platform.clone();
     let keyer = platform.clone();
     let mut key = move |key: &Key, pressed_now: bool, repeat: bool| {
         let Some(name) = key_name(key) else {
@@ -293,8 +476,6 @@ pub(crate) fn Arena() -> Element {
     let mut key_down = key.clone();
     let attacher = platform.clone();
     let sizer = platform.clone();
-    let ratio = platform.host().pixel_ratio();
-    let (pixel_width, pixel_height) = ((width * ratio).round().max(1.0) as u32, (height * ratio).round().max(1.0) as u32);
 
     rsx! {
         div {
@@ -333,12 +514,10 @@ pub(crate) fn Arena() -> Element {
             canvas {
                 id: CANVAS_ID,
                 class: "battle-canvas",
-                width: "{pixel_width}",
-                height: "{pixel_height}",
                 onmounted: move |_| attacher.host().battle_canvas(CANVAS_ID),
                 oncontextmenu: move |event| event.prevent_default(),
                 onpointerdown: move |event| {
-                    if covered || frozen {
+                    if covered || frozen || event.data().trigger_button() != Some(MouseButton::Primary) {
                         return;
                     }
 
@@ -346,6 +525,7 @@ pub(crate) fn Arena() -> Element {
 
                     if let Some((x, y)) = locate(point.x, point.y) {
                         pressed.set(true);
+                        capturer.host().capture_pointer(CANVAS_ID, event.data().pointer_id());
                         touch_down(Touch::Pressed { x, y });
                     }
                 },
@@ -373,6 +553,12 @@ pub(crate) fn Arena() -> Element {
                     if pressed() {
                         pressed.set(false);
                         touch_cancel(Touch::Released);
+                    }
+                },
+                onlostpointercapture: move |_| {
+                    if pressed() {
+                        pressed.set(false);
+                        touch_lost(Touch::Released);
                     }
                 },
                 onwheel: move |event| {

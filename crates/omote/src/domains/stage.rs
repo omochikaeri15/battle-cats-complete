@@ -21,6 +21,7 @@ use kokoro::domains::stage::fixedlineup as core_fixedlineup;
 use kokoro::domains::stage::scanner::StageBundle;
 use kokoro::domains::stage::{GlobalMapId, GlobalStageId, StageDataState, navigate};
 
+use crate::app::{self, Route};
 use crate::domains::enemy;
 use crate::platform::Platform;
 use crate::systems::catalog::{self, Load};
@@ -39,6 +40,7 @@ const COLUMN_SEPARATOR_WIDTH: f32 = 15.0;
 const SIDEBAR_PADDING: f32 = 15.0;
 const SIDEBAR_PUSH_GAP: f32 = 10.0;
 const SLIDE_SETTLE_MS: u32 = 40;
+const LAST_STAGE_KEY: &str = "last-stage";
 
 #[derive(Clone, Copy)]
 pub(crate) struct StageState {
@@ -104,7 +106,78 @@ fn assemble(bundle: &StageBundle, enemies: Option<&[kokoro::domains::enemy::scan
 }
 
 #[component]
-pub(crate) fn Stages() -> Element {
+pub(crate) fn Stages(segments: Vec<String>) -> Element {
+    let platform = use_context::<Platform>();
+    let navigator = use_navigator();
+    let catalogs = catalog::catalogs();
+    let mut state = state();
+    let wanted = Route::stage_of(&segments);
+    let bare = segments.is_empty();
+    let mut seen: Signal<Option<GlobalStageId>> = use_signal(|| None);
+    let known = match catalogs.stages() {
+        Load::Ready(bundle) => wanted.as_ref().filter(|id| bundle.registry.stages.contains_key(*id)).cloned(),
+        _ => None,
+    };
+
+    use_effect(use_reactive!(|(wanted, bare)| {
+        let current = (state.stage)();
+        let applied = seen();
+        let Load::Ready(bundle) = catalogs.stages() else {
+            return;
+        };
+        let exists = |id: &GlobalStageId| bundle.registry.stages.contains_key(id);
+
+        if bare {
+            let saved = || app::last_visited(&platform, LAST_STAGE_KEY).and_then(|saved| Route::stage_of(&saved));
+
+            if let Some(route) = current.or_else(saved).filter(exists).and_then(|id| Route::stage(&id)) {
+                navigator.replace(route);
+            }
+
+            return;
+        }
+
+        let Some(wanted) = wanted.filter(exists) else {
+            app::forget_visit(&platform, navigator, LAST_STAGE_KEY, Route::Stages { segments: Vec::new() });
+
+            return;
+        };
+
+        if applied.as_ref() != Some(&wanted) {
+            return;
+        }
+
+        match current.filter(|current| *current != wanted).and_then(|current| Route::stage(&current)) {
+            Some(moved) => {
+                navigator.replace(moved);
+            }
+            None => {
+                if let Some(route) = Route::stage(&wanted) {
+                    app::remember_visit(&platform, LAST_STAGE_KEY, &route);
+                }
+            }
+        }
+    }));
+
+    if let Some(id) = known
+        && seen.peek().as_ref() != Some(&id)
+    {
+        seen.set(Some(id.clone()));
+
+        if state.stage.peek().as_ref() != Some(&id) {
+            state.category.set(Some(id.category.clone()));
+            state.map.set(Some(GlobalMapId { category: id.category.clone(), map: id.map }));
+            state.stage.set(Some(id));
+        }
+    }
+
+    rsx! {
+        Browser {}
+    }
+}
+
+#[component]
+pub(crate) fn Browser() -> Element {
     let platform = use_context::<Platform>();
     let slider = platform.clone();
     let library = use_context::<Library>();
