@@ -192,7 +192,7 @@ jobs:
           retention-days: 1
 
   build-website:
-    name: Build & Deploy Website
+    name: Build Website
     needs: check-version
     if: needs.check-version.outputs.should_release == 'true' && needs.check-version.outputs.website == 'true'
     runs-on: ubuntu-latest
@@ -248,12 +248,12 @@ jobs:
       - name: Add the Pages headers file
         run: cp crates/website/_headers target/dx/website/release/web/public/_headers
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - name: Upload Website Bundle
+        uses: actions/upload-artifact@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy target/dx/website/release/web/public --project-name=battle-cats-complete --branch=main --commit-dirty=true
+          name: website-site
+          path: target/dx/website/release/web/public
+          retention-days: 1
 
   create-release:
     name: Publish Release
@@ -268,6 +268,14 @@ jobs:
 
       - name: List artifacts (Verification)
         run: ls -R
+
+      - name: Deploy Website to Cloudflare Pages
+        if: needs.check-version.outputs.website == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website-site --project-name=battle-cats-complete --branch=main --commit-dirty=true
 
       - name: Publish Release
         env:
