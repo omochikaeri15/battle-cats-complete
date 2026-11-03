@@ -1,2 +1,2 @@
 # battle-cats-complete
-repo to migrate
+Only present for migration, may be deleted at any moments notice
